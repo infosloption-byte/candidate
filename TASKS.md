@@ -41,15 +41,27 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 - ✅ Interview queue with status, search, attention and completion filters.
 - ✅ Interview scheduling drawer with candidate, type, date, time, duration, location and interviewer assignment.
-- ⏳ Full calendar-grid view for day/week scheduling and conflict visualization.
+- ✅ Day/week calendar view with responsive mobile agenda.
+- ✅ Calendar date navigation, Today, day/week toggle and direct date jump.
+- ✅ Interview conflict visualization for overlapping active interviewer assignments and rooms.
+- ✅ Calendar interview detail sheet with keyboard focus management and Escape handling.
 - ✅ Interviewer profiles and panel assignment for the MVP.
 - ✅ Profession-aware evaluation scorecards with weighted criteria and 1–5 scoring.
 - ✅ Mandatory failure/decision reasons and structured interviewer notes.
 - ✅ Profession-aware practical test workflow with required and optional tasks.
 - ✅ Interview result review and final decision workflow with Select / Reserve / Reject.
 - ✅ Interview decisions synchronize back to the candidate profile with result, score, reason and note.
+- ⏳ Advanced drag-and-drop rescheduling and conflict-resolution actions.
 
-## Phase 4 — Backend and data
+## Phase 4 — Selection and decision UX
+
+- ⏳ Selection board using the existing candidate comparison model.
+- ⏳ Shortlist / reserve / reject management by job requirement.
+- ⏳ Selection evidence and decision summary.
+- ⏳ Management approval flow.
+- ⏳ Selection history and audit-ready timeline.
+
+## Phase 5 — Backend and data
 
 - ⏳ Create Node.js + TypeScript backend under `backend/`.
 - ⏳ Define REST API contracts matching frontend domain types.
@@ -58,7 +70,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ⏳ Add server-side audit trail.
 - ⏳ Add file/document storage abstraction.
 
-## Phase 5 — Data migration and release
+## Phase 6 — Data migration and release
 
 - ⏳ Build Excel import and validation workflow.
 - ⏳ Map historical interview data to candidate/interview records.
@@ -74,7 +86,7 @@ Primary daily candidate flow:
 
 Interview workflow:
 
-`Queue → Schedule → Assign interviewer(s) → Start interview → Evaluation → Scorecard + Practical test → Final decision → Candidate profile updated`
+`Queue → Schedule → Assign interviewer(s) → Day/Week calendar → Start interview → Evaluation → Scorecard + Practical test → Final decision → Candidate profile updated`
 
 Candidate creation flow:
 
@@ -90,11 +102,15 @@ Candidate intelligence flow:
 
 `Search → Smart filters / saved search → Review matches → Detect possible duplicates → Select up to 4 → Compare → Minimize or resize comparison`
 
+Interview scheduling flow:
+
+`Queue / Calendar → Select day or week → Review appointment → Conflict warning when interviewer or room overlaps → Open interview workspace`
+
 Responsive rules:
 
 - Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
 - Tablet: compact sidebar behavior with flexible content widths.
-- Mobile: slide-over navigation, single-column candidate flow, large tap targets, safe-area-aware action bars, and height-limited comparison tray with minimize and quick resize controls.
+- Mobile: slide-over navigation, single-column candidate/interview flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, and compact day-agenda interview calendar.
 
 ## Current bugfix note
 
