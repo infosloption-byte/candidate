@@ -1,3 +1,5 @@
+import type { Dispatch } from 'react';
+
 export type SelectionTab = 'recommended' | 'selected' | 'reserve' | 'rejected';
 export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'returned';
 export type SelectionDecision = 'recommended' | 'selected' | 'reserve' | 'rejected';
@@ -49,5 +51,5 @@ export type SelectionAction =
 
 export interface SelectionContextValue {
   state: SelectionState;
-  dispatch: React.Dispatch<SelectionAction>;
+  dispatch: Dispatch<SelectionAction>;
 }
