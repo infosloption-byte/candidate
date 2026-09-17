@@ -47,7 +47,8 @@ Interviews ★
   ├─ Interview workspace
   ├─ Profession-aware scorecard
   ├─ Practical test
-  └─ Final decision
+  ├─ Final decision
+  └─ Interview history / decision audit timeline
 Jobs
   └─ Manpower demand / requirement cards
 Selection ★
@@ -204,7 +205,7 @@ The current calendar remains the operational schedule view. Scheduled appointmen
 
 Single scheduling continues to use the focused drawer:
 
-`Candidate → Interview type → Date / time / duration / location → Interviewer(s) → Schedule`
+`Candidate → Interview type → Date / time / duration / location → Interviewer availability → Interviewer(s) → Schedule`
 
 ### Batch scheduling for large campaigns
 
@@ -270,6 +271,10 @@ Every edit is validated against:
 - Shared-room constraints when enabled.
 
 Invalid edits remain unsaved and show the concrete conflict reason. Valid edits immediately refresh the workload summary. `Rebalance workload` or `Regenerate` can still rebuild the whole plan when the recruiter wants a different distribution.
+
+### Interview history and decision audit
+
+The interview workspace now exposes the selected candidate's interview history in one timeline. It combines every recorded interview appointment with schedule changes and decision changes, while each reschedule preserves the before/after date, time, interviewer panel, reason, timestamp, and undo state. Decision changes preserve the previous decision, new decision, reason, note, and timestamp. This frontend audit is persisted with the interview record and remains a replaceable adapter boundary until the backend provides immutable server-side audit storage.
 
 ### Batch commit
 
@@ -427,6 +432,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Bulk scheduling algorithm, conflict validation, workload calculation, and slot allocation: `interviewBatchScheduler` pure service.
 - Interview scorecard evaluation: `useInterviewScorecard`.
 - Interview decision validation: `useInterviewDecisionForm`.
+- Interview history/audit timeline: `interviewHistory` pure service + `InterviewHistoryTimeline` presentational component.
 - Selection board intelligence and suitability: `useSelectionWorkspace` + `useSelectionSuitability`.
 - Selection bulk selection/action state: `useSelectionBulkActions`.
 - Selection decision validation: `useSelectionDecisionForm`.
@@ -436,11 +442,11 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Selection persistence: `selectionRepository` service boundary, including selection history and per-job scoring weights.
 - Duplicate matching: pure `candidateMatching` service.
 - Calendar conflict detection: pure `interviewCalendar` service.
+- Interview scheduling timezone cues: `interviewTimezone` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
 ## 11. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Expand interview history and decision audit views.
-3. Add advanced cross-job candidate allocation.
+2. Add advanced cross-job candidate allocation.
 4. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
