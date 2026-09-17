@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { CandidateContext } from './CandidateContextObject';
-import type { Candidate, CandidateAction, CandidateState } from './CandidateContext';
+import type { CandidateAction, CandidateState } from './CandidateContext';
 import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate';
 import { loadCandidates, saveCandidates } from '../services/candidateRepository';
 import { loadCandidateWorkspacePreferences, saveCandidateWorkspacePreferences, type CandidateWorkspacePreferences } from '../services/candidatePreferencesRepository';
