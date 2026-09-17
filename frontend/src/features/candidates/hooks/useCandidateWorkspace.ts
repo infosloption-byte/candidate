@@ -13,17 +13,7 @@ export const useCandidateWorkspace = () => {
     const smart = state.smartFilters;
 
     return state.candidates.filter((candidate) => {
-      const haystack = [
-        candidate.name,
-        candidate.reference,
-        candidate.profession,
-        candidate.originalProfession,
-        candidate.location,
-        candidate.phone,
-        candidate.passportNumber,
-        ...candidate.secondarySkills,
-        ...candidate.overseasCountries,
-      ].join(' ').toLowerCase();
+      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries].join(' ').toLowerCase();
       const matchesKeyword = !query || haystack.includes(query);
       const matchesStatus = state.filters.status === 'all' || candidate.status === state.filters.status;
       const matchesProfession = state.filters.profession === 'all' || candidate.profession === state.filters.profession;
@@ -31,57 +21,24 @@ export const useCandidateWorkspace = () => {
       const matchesMaxExperience = smart.maxExperience === null || candidate.experienceYears <= smart.maxExperience;
       const matchesEnglish = smart.englishLevel === 'all' || candidate.englishLevel === smart.englishLevel;
       const matchesAvailability = smart.availability === 'all' || candidate.availability === smart.availability;
-      const matchesOverseas = smart.overseasExperience === 'all'
-        || (smart.overseasExperience === 'yes' && candidate.overseasCountries.length > 0)
-        || (smart.overseasExperience === 'no' && candidate.overseasCountries.length === 0);
-      const matchesDriving = smart.drivingLicense === 'all'
-        || (smart.drivingLicense === 'yes' && candidate.drivingLicense)
-        || (smart.drivingLicense === 'no' && !candidate.drivingLicense);
-      const matchesDocuments = smart.documentReadiness === 'all'
-        || (smart.documentReadiness === 'ready' && documentReady(candidate))
-        || (smart.documentReadiness === 'attention' && !documentReady(candidate));
+      const matchesOverseas = smart.overseasExperience === 'all' || (smart.overseasExperience === 'yes' && candidate.overseasCountries.length > 0) || (smart.overseasExperience === 'no' && candidate.overseasCountries.length === 0);
+      const matchesDriving = smart.drivingLicense === 'all' || (smart.drivingLicense === 'yes' && candidate.drivingLicense) || (smart.drivingLicense === 'no' && !candidate.drivingLicense);
+      const matchesDocuments = smart.documentReadiness === 'all' || (smart.documentReadiness === 'ready' && documentReady(candidate)) || (smart.documentReadiness === 'attention' && !documentReady(candidate));
       const matchesSkills = smart.skills.length === 0 || smart.skills.every((skill) => candidate.secondarySkills.includes(skill));
 
       return matchesKeyword && matchesStatus && matchesProfession && matchesMinExperience && matchesMaxExperience && matchesEnglish && matchesAvailability && matchesOverseas && matchesDriving && matchesDocuments && matchesSkills;
     });
   }, [state.candidates, state.filters, state.smartFilters]);
 
-  const selectedCandidate = useMemo<Candidate | null>(
-    () => state.candidates.find((candidate) => candidate.id === state.selectedCandidateId) ?? visibleCandidates[0] ?? state.candidates[0] ?? null,
-    [state.candidates, state.selectedCandidateId, visibleCandidates],
-  );
-
-  const rejectionCandidate = useMemo<Candidate | null>(
-    () => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null,
-    [state.candidates, state.rejectionCandidateId],
-  );
-
-  const compareCandidates = useMemo(
-    () => state.compareCandidateIds.map((id) => state.candidates.find((candidate) => candidate.id === id)).filter((candidate): candidate is Candidate => Boolean(candidate)),
-    [state.candidates, state.compareCandidateIds],
-  );
-
-  const duplicateMatches = useMemo(
-    () => selectedCandidate ? findDuplicateMatches(state.candidates, selectedCandidate.id) : [],
-    [selectedCandidate, state.candidates],
-  );
-
+  const selectedCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.selectedCandidateId) ?? visibleCandidates[0] ?? state.candidates[0] ?? null, [state.candidates, state.selectedCandidateId, visibleCandidates]);
+  const rejectionCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null, [state.candidates, state.rejectionCandidateId]);
+  const compareCandidates = useMemo(() => state.compareCandidateIds.map((id) => state.candidates.find((candidate) => candidate.id === id)).filter((candidate): candidate is Candidate => Boolean(candidate)), [state.candidates, state.compareCandidateIds]);
+  const duplicateMatches = useMemo(() => selectedCandidate ? findDuplicateMatches(state.candidates, selectedCandidate.id) : [], [selectedCandidate, state.candidates]);
   const professions = useMemo(() => ['all', ...Array.from(new Set(state.candidates.map((candidate) => candidate.profession))).sort()], [state.candidates]);
   const skillOptions = useMemo(() => Array.from(new Set(state.candidates.flatMap((candidate) => candidate.secondarySkills))).sort(), [state.candidates]);
   const smartFilterCount = useMemo(() => {
     const smart = state.smartFilters;
-    return [
-      smart.minExperience !== null,
-      smart.maxExperience !== null,
-      smart.englishLevel !== 'all',
-      smart.availability !== 'all',
-      smart.overseasExperience !== 'all',
-      smart.drivingLicense !== 'all',
-      smart.documentReadiness !== 'all',
-      smart.skills.length > 0,
-      state.filters.status !== 'all',
-      state.filters.profession !== 'all',
-    ].filter(Boolean).length;
+    return [smart.minExperience !== null, smart.maxExperience !== null, smart.englishLevel !== 'all', smart.availability !== 'all', smart.overseasExperience !== 'all', smart.drivingLicense !== 'all', smart.documentReadiness !== 'all', smart.skills.length > 0, state.filters.status !== 'all', state.filters.profession !== 'all'].filter(Boolean).length;
   }, [state.filters, state.smartFilters]);
 
   const metrics = useMemo(() => ({
@@ -104,6 +61,7 @@ export const useCandidateWorkspace = () => {
     smartFilterCount,
     metrics,
     actions: {
+      retryLoad: () => dispatch({ type: 'RETRY_LOAD' }),
       setSearch: (value: string) => dispatch({ type: 'SET_SEARCH', value }),
       setStatus: (value: CandidateStatus | 'all') => dispatch({ type: 'SET_STATUS_FILTER', value }),
       setProfession: (value: string) => dispatch({ type: 'SET_PROFESSION_FILTER', value }),
