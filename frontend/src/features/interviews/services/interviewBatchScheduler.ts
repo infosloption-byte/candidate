@@ -9,42 +9,15 @@ const fromIsoDate = (iso: string): Date => { const [year, month, day] = iso.spli
 const dateLabel = (date: Date): string => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const makeId = (prefix: string): string => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `${prefix}-${crypto.randomUUID()}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const overlaps = (startA: number, durationA: number, startB: number, durationB: number): boolean => startA < startB + durationB && startB < startA + durationA;
-const activeInterviewStatuses: string[] = ['scheduled', 'in-progress', 'evaluation'];
-
-const specialtyMatch = (candidate: Candidate, interviewer: Interviewer): boolean => { const profession = candidate.profession.toLowerCase(); return interviewer.specialties.some((specialty) => { const value = specialty.toLowerCase(); return value === profession || value.includes(profession) || profession.includes(value); }); };
+const activeInterviewStatuses = ['scheduled', 'in-progress', 'evaluation'];
+const specialtyMatch = (profession: string, interviewer: Interviewer): boolean => { const key = profession.toLowerCase(); return interviewer.specialties.some((specialty) => { const value = specialty.toLowerCase(); return value === key || value.includes(key) || key.includes(value); }); };
 const isWeekdayAllowed = (date: Date, includeWeekends: boolean): boolean => includeWeekends || (date.getDay() !== 0 && date.getDay() !== 6);
 
 const scorecardFor = (profession: string): ScorecardCriterion[] => { const key = profession.toLowerCase(); const labels = key.includes('welder') ? ['Welding technique', 'Relevant experience', 'Fabrication skill', 'Safety awareness', 'Weld quality'] : key.includes('carpenter') || key.includes('formwork') ? ['Trade / formwork skill', 'Relevant experience', 'Drawing understanding', 'Safety awareness', 'Accuracy / finish'] : ['Technical trade skill', 'Relevant experience', 'Secondary skills', 'Safety awareness', 'Finish quality']; const weights = [30, 20, 20, 15, 15]; return labels.map((label, index) => ({ id: `bulk-${index + 1}`, label, weight: weights[index] ?? 15, score: null, note: '' })); };
 const practicalFor = (profession: string, type: InterviewType): PracticalTestItem[] => { if (type === 'Screening' || type === 'Client') return []; const key = profession.toLowerCase(); if (key.includes('welder')) return [{ id: 'bulk-weld', label: 'Weld execution', required: true, result: 'not-started', note: '' }, { id: 'bulk-fit', label: 'Cut / fit / fabrication', required: true, result: 'not-started', note: '' }, { id: 'bulk-safety', label: 'PPE and safe handling', required: true, result: 'not-started', note: '' }]; if (key.includes('mason') || key.includes('tile')) return [{ id: 'bulk-core', label: 'Core masonry / finish task', required: true, result: 'not-started', note: '' }, { id: 'bulk-quality', label: 'Accuracy / finish quality', required: true, result: 'not-started', note: '' }, { id: 'bulk-safety', label: 'Safe tool handling', required: true, result: 'not-started', note: '' }]; return [{ id: 'bulk-trade', label: 'Core practical trade task', required: true, result: 'not-started', note: '' }, { id: 'bulk-quality', label: 'Accuracy / finish quality', required: true, result: 'not-started', note: '' }, { id: 'bulk-safety', label: 'PPE and safe handling', required: true, result: 'not-started', note: '' }]; };
 
-const slotConflictReasons = (slot: { isoDate: string; time: string; interviewerId: string; durationMinutes: number; location: string }, interviews: Interview[], sharedLocation: boolean): string[] => {
-  const start = toMinutes(slot.time);
-  return interviews.filter((interview) => interview.date === dateLabel(fromIsoDate(slot.isoDate)) && overlaps(start, slot.durationMinutes, toMinutes(interview.time), interview.durationMinutes)).flatMap((interview) => {
-    const reasons: string[] = [];
-    if (interview.interviewers.some((person) => person.id === slot.interviewerId)) reasons.push(`Interviewer busy: ${interview.candidateName}`);
-    if (sharedLocation && slot.location && interview.location && interview.location.trim().toLowerCase() === slot.location.trim().toLowerCase()) reasons.push(`Location busy: ${interview.location}`);
-    return reasons;
-  });
-};
-
-const slotConflictsWithPlan = (slot: BulkInterviewScheduleSlot, others: BulkInterviewScheduleSlot[], sharedLocation: boolean): string[] => {
-  const start = toMinutes(slot.time);
-  return others.filter((other) => other.candidateId !== slot.candidateId && other.isoDate === slot.isoDate && overlaps(start, 0 + 30, toMinutes(other.time), 30)).flatMap((other) => {
-    const reasons: string[] = [];
-    if (other.interviewer.id === slot.interviewer.id) reasons.push(`Interviewer already assigned to ${other.candidateName}`);
-    if (sharedLocation && other.location === slot.location) reasons.push(`Location already assigned to ${other.candidateName}`);
-    return reasons;
-  });
-};
-
-const buildInterviewerLoads = (activeInterviewers: Interviewer[], existingInterviews: Interview[], slots: BulkInterviewScheduleSlot[], dates: Date[], slotsPerInterviewer: number): BulkInterviewInterviewerLoad[] => activeInterviewers.map((interviewer) => {
-  const existingCount = existingInterviews.filter((interview) => activeInterviewStatuses.includes(interview.status) && dates.some((date) => dateLabel(date) === interview.date) && interview.interviewers.some((person) => person.id === interviewer.id)).length;
-  const plannedCount = slots.filter((slot) => slot.interviewer.id === interviewer.id).length;
-  const totalCount = existingCount + plannedCount;
-  const capacity = dates.length * slotsPerInterviewer;
-  return { interviewerId: interviewer.id, interviewerName: interviewer.name, existingCount, plannedCount, totalCount, utilizationPercent: capacity > 0 ? Math.min(999, Math.round((totalCount / capacity) * 100)) : 0 };
-});
-
+const slotConflictReasons = (slot: { isoDate: string; time: string; interviewerId: string; durationMinutes: number; location: string }, interviews: Interview[], sharedLocation: boolean): string[] => { const start = toMinutes(slot.time); return interviews.filter((interview) => interview.date === dateLabel(fromIsoDate(slot.isoDate)) && overlaps(start, slot.durationMinutes, toMinutes(interview.time), interview.durationMinutes)).flatMap((interview) => { const reasons: string[] = []; if (interview.interviewers.some((person) => person.id === slot.interviewerId)) reasons.push(`Interviewer busy: ${interview.candidateName}`); if (sharedLocation && slot.location && interview.location && interview.location.trim().toLowerCase() === slot.location.trim().toLowerCase()) reasons.push(`Location busy: ${interview.location}`); return reasons; }); };
+const buildInterviewerLoads = (activeInterviewers: Interviewer[], existingInterviews: Interview[], slots: BulkInterviewScheduleSlot[], dates: Date[], slotsPerInterviewer: number): BulkInterviewInterviewerLoad[] => activeInterviewers.map((interviewer) => { const existingCount = existingInterviews.filter((interview) => activeInterviewStatuses.includes(interview.status) && dates.some((date) => dateLabel(date) === interview.date) && interview.interviewers.some((person) => person.id === interviewer.id)).length; const plannedCount = slots.filter((slot) => slot.interviewer.id === interviewer.id).length; const totalCount = existingCount + plannedCount; const capacity = dates.length * slotsPerInterviewer; return { interviewerId: interviewer.id, interviewerName: interviewer.name, existingCount, plannedCount, totalCount, utilizationPercent: capacity > 0 ? Math.min(999, Math.round((totalCount / capacity) * 100)) : 0 }; });
 const makeEmptyPlan = (unscheduled: BulkInterviewScheduleIssue[], capacity: number, requested: number, interviewerLoads: BulkInterviewInterviewerLoad[] = []): BulkInterviewSchedulePlan => ({ slots: [], unscheduled, capacity, requested, interviewerLoads });
 
 export const planBulkInterviewSchedule = (candidates: Candidate[], interviewers: Interviewer[], existingInterviews: Interview[], config: BulkInterviewScheduleConfig): BulkInterviewSchedulePlan => {
@@ -69,45 +42,34 @@ export const planBulkInterviewSchedule = (candidates: Candidate[], interviewers:
 
   const existingWindow = existingInterviews.filter((interview) => activeInterviewStatuses.includes(interview.status));
   const slots: BulkInterviewScheduleSlot[] = [];
-  const reserved: BulkInterviewScheduleSlot[] = [];
   const totalLoad = new Map<string, number>();
   const dailyLoad = new Map<string, number>();
   for (const interviewer of activeInterviewers) totalLoad.set(interviewer.id, existingWindow.filter((interview) => interview.interviewers.some((person) => person.id === interviewer.id) && dates.some((date) => dateLabel(date) === interview.date)).length);
 
-  const candidateOrder = [...availableCandidates].sort((left, right) => {
-    const leftMatches = activeInterviewers.filter((person) => specialtyMatch(left, person)).length;
-    const rightMatches = activeInterviewers.filter((person) => specialtyMatch(right, person)).length;
-    return leftMatches - rightMatches || left.id.localeCompare(right.id);
-  });
+  const candidateOrder = [...availableCandidates].sort((left, right) => { const leftMatches = activeInterviewers.filter((person) => specialtyMatch(left.profession, person)).length; const rightMatches = activeInterviewers.filter((person) => specialtyMatch(right.profession, person)).length; return leftMatches - rightMatches || left.id.localeCompare(right.id); });
 
   for (const candidate of candidateOrder) {
-    const matchingPool = activeInterviewers.filter((person) => specialtyMatch(candidate, person));
+    const matchingPool = activeInterviewers.filter((person) => specialtyMatch(candidate.profession, person));
     const interviewerPool = matchingPool.length > 0 ? matchingPool : activeInterviewers;
-    type CandidateOption = { dateIndex: number; date: Date; time: number; interviewer: Interviewer; score: [number, number, number, number, string]; };
+    type CandidateOption = { date: Date; time: number; interviewer: Interviewer; load: number; dayLoad: number; dateIndex: number };
     let bestOption: CandidateOption | null = null;
-
     dates.forEach((date, dateIndex) => {
       const iso = toIsoDate(date);
       for (let time = dayStart; time + config.durationMinutes <= dayEnd; time += step) {
         for (const interviewer of interviewerPool) {
-          const slotBase = { isoDate: iso, date: dateLabel(date), time: toTime(time), interviewerId: interviewer.id, durationMinutes: config.durationMinutes, location: config.location.trim() };
+          const slotBase = { isoDate: iso, time: toTime(time), interviewerId: interviewer.id, durationMinutes: config.durationMinutes, location: config.location.trim() };
           if (slotConflictReasons(slotBase, existingWindow, config.sharedLocation).length > 0) continue;
-          const reservedConflict = reserved.some((other) => other.isoDate === iso && overlaps(time, config.durationMinutes, toMinutes(other.time), config.durationMinutes) && (other.interviewer.id === interviewer.id || (config.sharedLocation && other.location && slotBase.location && other.location.toLowerCase() === slotBase.location.toLowerCase())));
+          const reservedConflict = slots.some((other) => other.isoDate === iso && overlaps(time, config.durationMinutes, toMinutes(other.time), config.durationMinutes) && (other.interviewer.id === interviewer.id || (config.sharedLocation && other.location && slotBase.location && other.location.toLowerCase() === slotBase.location.toLowerCase())));
           if (reservedConflict) continue;
-          const projectedLoad = (totalLoad.get(interviewer.id) ?? 0) + (dailyLoad.get(`${iso}::${interviewer.id}`) ?? 0);
-          const score: [number, number, number, number, string] = [totalLoad.get(interviewer.id) ?? 0, projectedLoad, dateIndex, time, interviewer.id];
-          if (!bestOption || score[0] < bestOption.score[0] || score[0] === bestOption.score[0] && (score[1] < bestOption.score[1] || score[1] === bestOption.score[1] && (score[2] < bestOption.score[2] || score[2] === bestOption.score[2] && (score[3] < bestOption.score[3] || score[3] === bestOption.score[3] && score[4] < bestOption.score[4])))) bestOption = { dateIndex, date, time, interviewer, score };
+          const load = totalLoad.get(interviewer.id) ?? 0;
+          const dayLoad = dailyLoad.get(`${iso}::${interviewer.id}`) ?? 0;
+          const option = { date, time, interviewer, load, dayLoad, dateIndex };
+          if (!bestOption || load < bestOption.load || load === bestOption.load && (dayLoad < bestOption.dayLoad || dayLoad === bestOption.dayLoad && (dateIndex < bestOption.dateIndex || dateIndex === bestOption.dateIndex && (time < bestOption.time || time === bestOption.time && interviewer.id < bestOption.interviewer.id)))) bestOption = option;
         }
       }
     });
-
-    if (!bestOption) {
-      unscheduled.push({ candidateId: candidate.id, candidateName: candidate.name, reason: matchingPool.length > 0 ? 'No free slot remained for a specialty-matched interviewer in the selected window.' : 'No free interviewer slot remained in the selected window.' });
-      continue;
-    }
-
-    const slot: BulkInterviewScheduleSlot = { candidateId: candidate.id, candidateName: candidate.name, isoDate: toIsoDate(bestOption.date), date: dateLabel(bestOption.date), time: toTime(bestOption.time), interviewer: bestOption.interviewer, conflicts: [] };
-    reserved.push(slot);
+    if (!bestOption) { unscheduled.push({ candidateId: candidate.id, candidateName: candidate.name, reason: matchingPool.length > 0 ? 'No free slot remained for a specialty-matched interviewer in the selected window.' : 'No free interviewer slot remained in the selected window.' }); continue; }
+    const slot: BulkInterviewScheduleSlot = { candidateId: candidate.id, candidateName: candidate.name, profession: candidate.profession, isoDate: toIsoDate(bestOption.date), date: dateLabel(bestOption.date), time: toTime(bestOption.time), interviewer: bestOption.interviewer, location: config.location.trim(), conflicts: [] };
     slots.push(slot);
     totalLoad.set(bestOption.interviewer.id, (totalLoad.get(bestOption.interviewer.id) ?? 0) + 1);
     const dailyKey = `${slot.isoDate}::${bestOption.interviewer.id}`;
@@ -126,35 +88,18 @@ export const validateBulkInterviewScheduleEdit = (plan: BulkInterviewSchedulePla
   const date = fromIsoDate(edit.isoDate);
   if (edit.isoDate < config.startDate || edit.isoDate > config.endDate || !isWeekdayAllowed(date, config.includeWeekends)) return 'The edited date is outside the working window.';
   const start = toMinutes(edit.time);
-  const end = start + config.durationMinutes;
-  if (start < toMinutes(config.dayStart) || end > toMinutes(config.dayEnd)) return 'The edited time is outside the configured working hours.';
-  const matchingPool = slotCandidateProfession(plan, slot, existingInterviews, interviewers);
-  if (matchingPool.length > 0 && !matchingPool.some((person) => person.id === interviewer.id)) return 'This interviewer is not matched to the candidate trade.';
+  if (start < toMinutes(config.dayStart) || start + config.durationMinutes > toMinutes(config.dayEnd)) return 'The edited time is outside the configured working hours.';
+  if (specialtyMatch(slot.profession, interviewer) === false && interviewers.some((person) => specialtyMatch(slot.profession, person))) return 'This interviewer is not matched to the candidate trade.';
   const existingConflict = slotConflictReasons({ isoDate: edit.isoDate, time: edit.time, interviewerId: interviewer.id, durationMinutes: config.durationMinutes, location: config.location.trim() }, existingInterviews.filter((item) => activeInterviewStatuses.includes(item.status)), config.sharedLocation);
   if (existingConflict.length > 0) return existingConflict[0] ?? 'The interviewer or location is already occupied.';
-  const otherSlots = plan.slots.filter((item) => item.candidateId !== edit.candidateId);
-  const generatedSlot: BulkInterviewScheduleSlot = { ...slot, isoDate: edit.isoDate, date: dateLabel(date), time: edit.time, interviewer };
-  const planConflict = otherSlots.flatMap((other) => {
-    if (other.isoDate !== generatedSlot.isoDate || !overlaps(toMinutes(generatedSlot.time), config.durationMinutes, toMinutes(other.time), config.durationMinutes)) return [];
-    const reasons: string[] = [];
-    if (other.interviewer.id === generatedSlot.interviewer.id) reasons.push(`Interviewer already assigned to ${other.candidateName}`);
-    if (config.sharedLocation && other.location && generatedSlot.location && other.location.toLowerCase() === generatedSlot.location.toLowerCase()) reasons.push(`Location already assigned to ${other.candidateName}`);
-    return reasons;
-  });
-  if (planConflict.length > 0) return planConflict[0] ?? 'The edited slot conflicts with another planned interview.';
-  return null;
+  const planConflict = plan.slots.filter((item) => item.candidateId !== edit.candidateId && item.isoDate === edit.isoDate && overlaps(start, config.durationMinutes, toMinutes(item.time), config.durationMinutes)).flatMap((other) => { const reasons: string[] = []; if (other.interviewer.id === interviewer.id) reasons.push(`Interviewer already assigned to ${other.candidateName}`); if (config.sharedLocation && other.location && config.location.trim() && other.location.toLowerCase() === config.location.trim().toLowerCase()) reasons.push(`Location already assigned to ${other.candidateName}`); return reasons; });
+  return planConflict[0] ?? null;
 };
-
-const slotCandidateProfession = (plan: BulkInterviewSchedulePlan, slot: BulkInterviewScheduleSlot, _existingInterviews: Interview[], interviewers: Interviewer[]): Interviewer[] => interviewers.filter((person) => person.specialties.some((specialty) => { const candidateName = slot.candidateName.toLowerCase(); const specialtyName = specialty.toLowerCase(); return candidateName.includes(specialtyName) || specialtyName.includes(candidateName) || plan.slots.some((item) => item.candidateId === slot.candidateId && item.interviewer.id === person.id); }));
 
 export const applyBulkInterviewScheduleEdit = (plan: BulkInterviewSchedulePlan, edit: BulkInterviewScheduleEdit, interviewer: Interviewer, config: BulkInterviewScheduleConfig): BulkInterviewSchedulePlan => {
   const date = fromIsoDate(edit.isoDate);
   const slots = plan.slots.map((slot) => slot.candidateId === edit.candidateId ? { ...slot, isoDate: edit.isoDate, date: dateLabel(date), time: edit.time, interviewer, conflicts: [] } : slot);
-  const interviewerLoads = plan.interviewerLoads.map((load) => {
-    const plannedCount = slots.filter((slot) => slot.interviewer.id === load.interviewerId).length;
-    const capacity = Math.max(1, plan.capacity / Math.max(1, config.interviewerIds.length));
-    return { ...load, plannedCount, totalCount: load.existingCount + plannedCount, utilizationPercent: Math.min(999, Math.round(((load.existingCount + plannedCount) / capacity) * 100)) };
-  });
+  const interviewerLoads = plan.interviewerLoads.map((load) => { const plannedCount = slots.filter((slot) => slot.interviewer.id === load.interviewerId).length; const capacity = Math.max(1, plan.capacity / Math.max(1, config.interviewerIds.length)); const totalCount = load.existingCount + plannedCount; return { ...load, plannedCount, totalCount, utilizationPercent: Math.min(999, Math.round((totalCount / capacity) * 100)) }; });
   return { ...plan, slots, interviewerLoads };
 };
 
