@@ -29,8 +29,10 @@ export interface BulkInterviewScheduleConfig {
 }
 
 export interface BulkInterviewScheduleIssue { candidateId: string; candidateName: string; reason: string; }
-export interface BulkInterviewScheduleSlot { candidateId: string; candidateName: string; date: string; time: string; interviewer: Interviewer; conflicts: string[]; }
-export interface BulkInterviewSchedulePlan { slots: BulkInterviewScheduleSlot[]; unscheduled: BulkInterviewScheduleIssue[]; capacity: number; requested: number; }
+export interface BulkInterviewScheduleSlot { candidateId: string; candidateName: string; isoDate: string; date: string; time: string; interviewer: Interviewer; conflicts: string[]; }
+export interface BulkInterviewInterviewerLoad { interviewerId: string; interviewerName: string; existingCount: number; plannedCount: number; totalCount: number; utilizationPercent: number; }
+export interface BulkInterviewSchedulePlan { slots: BulkInterviewScheduleSlot[]; unscheduled: BulkInterviewScheduleIssue[]; capacity: number; requested: number; interviewerLoads: BulkInterviewInterviewerLoad[]; }
+export interface BulkInterviewScheduleEdit { candidateId: string; isoDate: string; time: string; interviewerId: string; }
 
 export interface InterviewState { loadState: InterviewLoadState; errorMessage: string | null; loadAttempt: number; interviews: Interview[]; interviewers: Interviewer[]; selectedInterviewId: string | null; isScheduleDrawerOpen: boolean; calendarView: InterviewCalendarView; calendarDate: string; }
 export interface InterviewCalendarDay { isoDate: string; date: Date; label: string; shortLabel: string; isToday: boolean; }
