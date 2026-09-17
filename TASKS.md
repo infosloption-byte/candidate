@@ -12,6 +12,9 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Move the application into a clear `frontend/` + `backend/` repository structure.
 - ✅ Make shell navigation, content scrolling, and candidate workspace responsive across desktop/tablet/mobile.
 - ✅ Refine candidate profile states and the multi-step add-candidate experience.
+- ✅ Add candidate storage migration/normalization so legacy browser data cannot crash the current profile UI.
+- ✅ Align candidate TypeScript contracts with migration/default states.
+- ✅ Add BuildHire favicon and remove the browser favicon 404.
 - ⏳ Add reusable loading, error/retry, empty, and success state components.
 - 🔄 Complete accessibility pass with keyboard navigation, focus management, reduced motion, and mobile interaction checks.
 
@@ -71,3 +74,7 @@ Responsive rules:
 - Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
 - Tablet: compact sidebar behavior with flexible content widths.
 - Mobile: slide-over navigation, single-column candidate flow, large tap targets, safe-area-aware action bars.
+
+## Current bugfix note
+
+The candidate profile previously crashed on `candidate.journey.map(...)` when an older `buildhire.candidates` localStorage payload from the previous MVP schema was loaded. The candidate repository now treats storage as untrusted input, normalizes legacy `timeline` data and missing arrays, and returns a complete `Candidate` shape before the data reaches the React view.
