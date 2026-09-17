@@ -6,6 +6,7 @@ export type CandidateLoadState = 'loading' | 'error' | 'success';
 export interface CandidateState {
   loadState: CandidateLoadState;
   errorMessage: string | null;
+  loadAttempt: number;
   candidates: Candidate[];
   filters: CandidateFilters;
   smartFilters: CandidateSmartFilters;
@@ -18,6 +19,7 @@ export interface CandidateState {
 export type CandidateAction =
   | { type: 'HYDRATE'; candidates: Candidate[] }
   | { type: 'LOAD_ERROR'; message: string }
+  | { type: 'RETRY_LOAD' }
   | { type: 'SET_SEARCH'; value: string }
   | { type: 'SET_STATUS_FILTER'; value: CandidateStatus | 'all' }
   | { type: 'SET_PROFESSION_FILTER'; value: string }
