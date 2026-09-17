@@ -1,8 +1,9 @@
-import type { ApprovalStatus, SelectionApproval, SelectionJob, SelectionRecord } from '../types/selection';
+import type { ApprovalStatus, SelectionApproval, SelectionHistoryEntry, SelectionJob, SelectionRecord } from '../types/selection';
 
 const JOBS_KEY = 'buildhire.selection.jobs';
 const RECORDS_KEY = 'buildhire.selection.records';
 const APPROVAL_KEY = 'buildhire.selection.approval';
+const HISTORY_KEY = 'buildhire.selection.history';
 
 export const selectionJobSeed: SelectionJob[] = [
   {
@@ -70,6 +71,18 @@ const recordSeed: SelectionRecord[] = [
   },
 ];
 
+const historySeed: SelectionHistoryEntry[] = recordSeed.map((record) => ({
+  candidateId: record.candidateId,
+  jobId: record.jobId,
+  action: 'decision_changed',
+  fromDecision: null,
+  toDecision: record.decision,
+  reason: record.reason,
+  note: record.note,
+  occurredAt: record.decidedAt,
+  occurredBy: record.decidedBy,
+}));
+
 const defaultApproval: SelectionApproval = { status: 'draft', note: '' };
 
 const parseArray = <T>(raw: string | null, fallback: T[]): T[] => {
@@ -82,11 +95,46 @@ const parseArray = <T>(raw: string | null, fallback: T[]): T[] => {
   }
 };
 
+const isHistoryAction = (value: unknown): value is SelectionHistoryEntry['action'] => ['decision_changed', 'reassigned', 'approval_changed'].includes(value as string);
+
+const parseHistory = (raw: string | null): SelectionHistoryEntry[] => {
+  if (!raw) return historySeed;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return historySeed;
+    return parsed.filter((item): item is SelectionHistoryEntry => {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) return false;
+      const record = item as Record<string, unknown>;
+      return (typeof record.jobId === 'string') && isHistoryAction(record.action) && typeof record.reason === 'string' && typeof record.note === 'string' && typeof record.occurredAt === 'string' && typeof record.occurredBy === 'string' && (record.candidateId === null || typeof record.candidateId === 'string');
+    }).map((item) => ({
+      candidateId: item.candidateId,
+      jobId: item.jobId,
+      relatedJobId: typeof item.relatedJobId === 'string' ? item.relatedJobId : undefined,
+      action: item.action,
+      fromDecision: item.fromDecision,
+      toDecision: item.toDecision,
+      reason: item.reason,
+      note: item.note,
+      occurredAt: item.occurredAt,
+      occurredBy: item.occurredBy,
+    }));
+  } catch {
+    return historySeed;
+  }
+};
+
 export const loadSelectionJobs = async (): Promise<SelectionJob[]> => parseArray(window.localStorage.getItem(JOBS_KEY), selectionJobSeed);
 export const loadSelectionRecords = async (): Promise<SelectionRecord[]> => parseArray(window.localStorage.getItem(RECORDS_KEY), recordSeed);
+export const loadSelectionHistory = async (): Promise<SelectionHistoryEntry[]> => parseHistory(window.localStorage.getItem(HISTORY_KEY));
+
 export const saveSelectionRecords = async (records: SelectionRecord[]): Promise<void> => {
   window.localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
 };
+
+export const saveSelectionHistory = async (history: SelectionHistoryEntry[]): Promise<void> => {
+  window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+};
+
 export const loadSelectionApproval = async (): Promise<Record<string, SelectionApproval>> => {
   const raw = window.localStorage.getItem(APPROVAL_KEY);
   if (!raw) return {};
@@ -108,6 +156,7 @@ export const loadSelectionApproval = async (): Promise<Record<string, SelectionA
     return {};
   }
 };
+
 export const saveSelectionApproval = async (approvalByJob: Record<string, SelectionApproval>): Promise<void> => {
   window.localStorage.setItem(APPROVAL_KEY, JSON.stringify(approvalByJob));
 };
