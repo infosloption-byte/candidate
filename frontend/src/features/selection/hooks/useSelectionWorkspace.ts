@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useSelectionContext } from '../context/useSelectionContext';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
 import type { Candidate } from '../../candidates/types/candidate';
-import type { SelectionApproval, SelectionDecision, SelectionJob, SelectionRecord, SelectionTab } from '../types/selection';
+import type { SelectionApproval, SelectionDecision, SelectionHistoryAction, SelectionHistoryEntry, SelectionJob, SelectionRecord, SelectionTab } from '../types/selection';
 
 export interface SelectionCandidateRow {
   candidate: Candidate;
@@ -14,6 +14,21 @@ export interface SelectionCandidateRow {
   documentsReady: boolean;
   interviewScore: number | null;
   evidenceFlags: string[];
+}
+
+export interface SelectionHistoryView {
+  id: string;
+  candidateName: string;
+  candidateId: string | null;
+  action: SelectionHistoryAction;
+  actionLabel: string;
+  summary: string;
+  jobTitle: string;
+  relatedJobTitle: string | null;
+  reason: string;
+  note: string;
+  occurredAt: string;
+  occurredBy: string;
 }
 
 const documentReady = (candidate: Candidate): boolean => Object.values(candidate.documents).every((state) => state === 'verified');
@@ -54,6 +69,23 @@ const compareRows = (left: SelectionCandidateRow, right: SelectionCandidateRow):
   return (right.interviewScore ?? 0) - (left.interviewScore ?? 0) || right.candidate.fitScore - left.candidate.fitScore;
 };
 
+const historyActionLabel: Record<SelectionHistoryAction, string> = {
+  decision_changed: 'Decision change',
+  reassigned: 'Reassigned',
+  approval_changed: 'Approval change',
+};
+
+const decisionLabel = (decision: SelectionDecision | null | undefined): string => {
+  if (!decision) return 'No previous decision';
+  return decision.charAt(0).toUpperCase() + decision.slice(1);
+};
+
+const historySummary = (entry: SelectionHistoryEntry, relatedJob: SelectionJob | undefined): string => {
+  if (entry.action === 'reassigned') return `${decisionLabel(entry.fromDecision)} → Recommended${relatedJob ? ` in ${relatedJob.title}` : ''}`;
+  if (entry.action === 'approval_changed') return entry.reason;
+  return `${decisionLabel(entry.fromDecision)} → ${decisionLabel(entry.toDecision)}`;
+};
+
 export const useSelectionWorkspace = () => {
   const { state, dispatch } = useSelectionContext();
   const { state: candidateState } = useCandidateWorkspace();
@@ -72,6 +104,38 @@ export const useSelectionWorkspace = () => {
   }, [rows, state.activeTab]);
   const selectedRow = useMemo(() => rows.find((row) => row.candidate.id === state.selectedCandidateId) ?? tabRows[0] ?? rows[0] ?? null, [rows, state.selectedCandidateId, tabRows]);
   const approval = useMemo<SelectionApproval>(() => activeJob ? (state.approvalByJob[activeJob.id] ?? { status: 'draft', note: '' }) : { status: 'draft', note: '' }, [activeJob, state.approvalByJob]);
+
+  const history = useMemo<SelectionHistoryView[]>(() => {
+    if (!activeJob) return [];
+    const relevant = state.history.filter((entry) => entry.jobId === activeJob.id || entry.relatedJobId === activeJob.id);
+    return relevant
+      .map((entry) => {
+        const candidate = entry.candidateId ? candidateState.candidates.find((item) => item.id === entry.candidateId) : undefined;
+        const job = state.jobs.find((item) => item.id === entry.jobId);
+        const relatedJob = entry.relatedJobId ? state.jobs.find((item) => item.id === entry.relatedJobId) : undefined;
+        return {
+          id: `${entry.occurredAt}::${entry.candidateId ?? 'job'}::${entry.action}::${entry.jobId}::${entry.relatedJobId ?? ''}`,
+          candidateName: candidate?.name ?? (entry.candidateId ?? 'Job-level action'),
+          candidateId: entry.candidateId,
+          action: entry.action,
+          actionLabel: historyActionLabel[entry.action],
+          summary: historySummary(entry, relatedJob),
+          jobTitle: job?.title ?? entry.jobId,
+          relatedJobTitle: relatedJob?.title ?? null,
+          reason: entry.reason,
+          note: entry.note,
+          occurredAt: entry.occurredAt,
+          occurredBy: entry.occurredBy,
+        };
+      })
+      .sort((left, right) => {
+        const leftTime = Date.parse(left.occurredAt);
+        const rightTime = Date.parse(right.occurredAt);
+        if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) return 0;
+        return rightTime - leftTime;
+      })
+      .slice(0, 40);
+  }, [activeJob, candidateState.candidates, state.history, state.jobs]);
 
   const metrics = useMemo(() => {
     if (!activeJob) return { total: 0, recommended: 0, selected: 0, reserve: 0, rejected: 0, remaining: 0, readyToSelect: 0, approvalReady: false };
@@ -94,10 +158,10 @@ export const useSelectionWorkspace = () => {
     },
     setApproval: (status: SelectionApproval['status'], note: string) => {
       if (!activeJob) return;
-      dispatch({ type: 'SET_APPROVAL', jobId: activeJob.id, status, note });
+      dispatch({ type: 'SET_APPROVAL', jobId: activeJob.id, status, note, changedAt: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), changedBy: 'Current recruiter' });
     },
     retryLoad: () => dispatch({ type: 'RETRY_LOAD' }),
   };
 
-  return { state, activeJob, rows: [...rows].sort(compareRows), tabRows: [...tabRows].sort(compareRows), selectedRow, approval, metrics, visibleJobs: state.jobs, actions };
+  return { state, activeJob, rows: [...rows].sort(compareRows), tabRows: [...tabRows].sort(compareRows), selectedRow, approval, history, metrics, visibleJobs: state.jobs, actions };
 };
