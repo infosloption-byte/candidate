@@ -4,6 +4,7 @@ import type {
   CandidateJourneyEvent,
   CandidateSource,
   CandidateStatus,
+  CandidateOnboardingStatus,
   DocumentState,
   EnglishLevel,
   RejectionReason,
@@ -27,10 +28,24 @@ const asNumber = (value: unknown, fallback = 0): number => typeof value === 'num
 const asBoolean = (value: unknown, fallback = false): boolean => typeof value === 'boolean' ? value : fallback;
 const asStringArray = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 const asCandidateStatus = (value: unknown): CandidateStatus => ['new', 'screening', 'interview', 'selected', 'reserve', 'rejected'].includes(value as string) ? value as CandidateStatus : 'new';
-const asCandidateSource = (value: unknown): CandidateSource => ['Walk-in', 'Referral', 'Agency', 'Existing database'].includes(value as string) ? value as CandidateSource : 'Existing database';
+const asCandidateSource = (value: unknown): CandidateSource => ['Walk-in', 'Referral', 'Agency', 'Existing database', 'Bulk import'].includes(value as string) ? value as CandidateSource : 'Existing database';
 const asEnglishLevel = (value: unknown): EnglishLevel => ['Basic', 'Working', 'Good', 'Strong', 'Not assessed'].includes(value as string) ? value as EnglishLevel : 'Not assessed';
 const asAvailability = (value: unknown): Availability => ['Available now', 'Within 2 weeks', 'Within 1 month', 'Not available'].includes(value as string) ? value as Availability : 'Available now';
 const asDocumentState = (value: unknown, fallback: DocumentState = 'missing'): DocumentState => ['verified', 'needs-review', 'missing', 'pending'].includes(value as string) ? (value === 'pending' ? 'needs-review' : value as DocumentState) : fallback;
+const asOnboardingStatus = (value: unknown): CandidateOnboardingStatus => ['not-started', 'invited', 'in-progress', 'submitted', 'needs-changes', 'completed'].includes(value as string) ? value as CandidateOnboardingStatus : 'not-started';
+const normalizeOnboarding = (record: CandidateRecord): Candidate['onboarding'] => {
+  if (!isRecord(record.onboarding)) return { status: 'not-started', completionPercent: 0 };
+  return {
+    status: asOnboardingStatus(record.onboarding.status),
+    completionPercent: Math.min(100, Math.max(0, asNumber(record.onboarding.completionPercent, 0))),
+    invitedAt: asString(record.onboarding.invitedAt) || undefined,
+    lastActivityAt: asString(record.onboarding.lastActivityAt) || undefined,
+    submittedAt: asString(record.onboarding.submittedAt) || undefined,
+    reviewedAt: asString(record.onboarding.reviewedAt) || undefined,
+    reviewerNote: asString(record.onboarding.reviewerNote) || undefined,
+  };
+};
+
 const asRejectionReason = (value: unknown): RejectionReason | undefined => ['Technical skill', 'Experience gap', 'Required skill missing', 'Communication', 'Documents', 'Availability', 'Client requirement', 'Other'].includes(value as string) ? value as RejectionReason : undefined;
 const toneFromLegacy = (tone: unknown): CandidateJourneyEvent['tone'] => tone === 'positive' || tone === 'negative' || tone === 'warning' || tone === 'neutral' ? tone : 'neutral';
 
@@ -108,6 +123,7 @@ const normalizeCandidate = (value: unknown, index: number): Candidate => {
     availability: asAvailability(record.availability),
     source: asCandidateSource(record.source),
     status: asCandidateStatus(record.status),
+    onboarding: normalizeOnboarding(record),
     fitScore: asNumber(record.fitScore, 0),
     documents: {
       passport: asDocumentState(documents.passport),
