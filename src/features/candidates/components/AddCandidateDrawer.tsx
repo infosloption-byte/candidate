@@ -28,7 +28,7 @@ export const AddCandidateDrawer = ({ open, onClose, onCreate }: AddCandidateDraw
       <button type="button" aria-label="Close add candidate drawer" onClick={onClose} className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]" />
       <aside className="absolute bottom-0 right-0 top-0 flex w-full max-w-xl flex-col bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6"><div><h2 id="add-candidate-title" className="text-lg font-bold text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Capture the minimum information needed to start the workflow.</p></div><button type="button" onClick={onClose} aria-label="Close" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"><Icon name="x" /></button></header>
-        <form className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-5 sm:p-6" onSubmit={(event) => { event.preventDefault(); form.submit(); }}>
+        <form id="candidate-add-form" className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-5 sm:p-6" onSubmit={(event) => { event.preventDefault(); form.submit(); }}>
           <div className="space-y-5">
             {form.error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">{form.error}</div>}
             <div className="grid gap-4 sm:grid-cols-2">
@@ -42,7 +42,7 @@ export const AddCandidateDrawer = ({ open, onClose, onCreate }: AddCandidateDraw
             </div>
           </div>
         </form>
-        <footer className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 sm:px-6"><button type="button" onClick={onClose} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" form="candidate-add-form" onClick={form.submit} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><Icon name="user-plus" size={16} /> Create candidate</button></footer>
+        <footer className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 sm:px-6"><button type="button" onClick={onClose} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" form="candidate-add-form" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"><Icon name="user-plus" size={16} /> Create candidate</button></footer>
       </aside>
     </div>
   );
