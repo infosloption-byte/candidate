@@ -47,6 +47,7 @@ const EntryCard = ({ entry, compact, onSelect }: { entry: InterviewCalendarEntry
       {entry.conflicts.length > 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/75 px-1.5 py-1 text-[8px] font-black text-rose-700" title={entry.conflicts.join('; ')}><Icon name="alert" size={10}/>{entry.conflicts.length}</span>}
     </div>
     {!compact && <p className="mt-2 truncate text-[9px] font-medium opacity-70">{entry.interview.location}</p>}
+    {entry.conflicts.length > 0 && <p className="mt-1 truncate text-[8px] font-bold text-rose-700">Conflict detected</p>}
   </button>
 );
 
@@ -92,7 +93,7 @@ export const InterviewCalendar = ({ view, days, entriesByDay, conflictCount, onV
         </div>
 
         <div className="md:hidden">
-          {visibleEntryCount === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-50 text-slate-300"><Icon name="calendar" size={22}/></div><h3 className="mt-3 text-sm font-black text-slate-800">No interviews this day</h3><p className="mt-1 text-xs leading-5 text-slate-500">Move to another day or schedule a new interview.</p></div> : <div className="space-y-3">{days.slice(0, 1).map((day) => <section key={day.isoDate} aria-labelledby="mobile-calendar-day-title"><div className="sticky top-0 z-10 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 backdrop-blur"><p id="mobile-calendar-day-title" className="text-xs font-black text-slate-800">{day.label}</p></div><div className="mt-2 space-y-2">{(entriesByDay.get(day.isoDate) ?? []).map((entry) => <EntryCard key={entry.interview.id} entry={entry} onSelect={onSelectInterview}/>)}</div></section>)}</div>}
+          {visibleEntryCount === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-50 text-slate-300"><Icon name="calendar" size={22}/></div><h3 className="mt-3 text-sm font-black text-slate-800">No interviews in this range</h3><p className="mt-1 text-xs leading-5 text-slate-500">Move to another day or schedule a new interview.</p></div> : <div className="space-y-3">{days.map((day) => { const dayEntries = entriesByDay.get(day.isoDate) ?? []; if (dayEntries.length === 0) return null; return <section key={day.isoDate} aria-labelledby={`mobile-calendar-${day.isoDate}`}><div className={`sticky top-0 z-10 rounded-xl border border-slate-200 px-3 py-2 backdrop-blur ${day.isToday ? 'bg-cyan-50/95' : 'bg-white/95'}`}><p id={`mobile-calendar-${day.isoDate}`} className={`text-xs font-black ${day.isToday ? 'text-cyan-800' : 'text-slate-800'}`}>{day.label}</p></div><div className="mt-2 space-y-2">{dayEntries.map((entry) => <EntryCard key={entry.interview.id} entry={entry} onSelect={onSelectInterview}/>)}</div></section>; })}</div>}
         </div>
       </div>
     </section>
