@@ -12,9 +12,10 @@ const initialState: SelectionState = {
   activeJobId: null,
   activeTab: 'recommended',
   selectedCandidateId: null,
-  approvalStatus: 'draft',
-  approvalNote: '',
+  approvalByJob: {},
 };
+
+const isApprovalStatus = (value: unknown): value is ApprovalStatus => ['draft', 'pending', 'approved', 'returned'].includes(value as string);
 
 const reducer = (state: SelectionState, action: SelectionAction): SelectionState => {
   switch (action.type) {
@@ -25,9 +26,8 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
         errorMessage: null,
         jobs: action.jobs,
         records: action.records,
+        approvalByJob: action.approvalByJob,
         activeJobId: state.activeJobId ?? action.jobs[0]?.id ?? null,
-        approvalStatus: action.approvalStatus,
-        approvalNote: action.approvalNote,
         selectedCandidateId: null,
       };
     case 'LOAD_ERROR':
@@ -42,16 +42,22 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
       return { ...state, selectedCandidateId: action.candidateId };
     case 'SAVE_DECISION': {
       const sameCandidate = (record: typeof action.record) => record.candidateId === action.record.candidateId && record.jobId === action.record.jobId;
-      return { ...state, records: [action.record, ...state.records.filter((record) => !sameCandidate(record))], approvalStatus: state.approvalStatus === 'approved' ? 'draft' : state.approvalStatus };
+      const nextRecords = [action.record, ...state.records.filter((record) => !sameCandidate(record))];
+      const jobApproval = state.approvalByJob[action.record.jobId];
+      return {
+        ...state,
+        records: nextRecords,
+        approvalByJob: action.record.decision === 'selected' && jobApproval?.status === 'approved'
+          ? { ...state.approvalByJob, [action.record.jobId]: { status: 'draft', note: '' } }
+          : state.approvalByJob,
+      };
     }
     case 'SET_APPROVAL':
-      return { ...state, approvalStatus: action.status, approvalNote: action.note };
+      return { ...state, approvalByJob: { ...state.approvalByJob, [action.jobId]: { status: action.status, note: action.note } } };
     default:
       return state;
   }
 };
-
-const isApprovalStatus = (value: unknown): value is ApprovalStatus => ['draft', 'pending', 'approved', 'returned'].includes(value as string);
 
 export const SelectionProvider = ({ children }: PropsWithChildren) => {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -60,8 +66,9 @@ export const SelectionProvider = ({ children }: PropsWithChildren) => {
     let cancelled = false;
     const hydrate = async () => {
       try {
-        const [jobs, records, approval] = await Promise.all([loadSelectionJobs(), loadSelectionRecords(), loadSelectionApproval()]);
-        if (!cancelled) dispatch({ type: 'HYDRATE', jobs, records, approvalStatus: isApprovalStatus(approval.status) ? approval.status : 'draft', approvalNote: approval.note });
+        const [jobs, records, approvalByJob] = await Promise.all([loadSelectionJobs(), loadSelectionRecords(), loadSelectionApproval()]);
+        const normalizedApproval = Object.fromEntries(Object.entries(approvalByJob).map(([jobId, approval]) => [jobId, { status: isApprovalStatus(approval.status) ? approval.status : 'draft', note: approval.note }]));
+        if (!cancelled) dispatch({ type: 'HYDRATE', jobs, records, approvalByJob: normalizedApproval });
       } catch {
         if (!cancelled) dispatch({ type: 'LOAD_ERROR', message: 'Selection data could not be loaded. Retry to restore the selection board.' });
       }
@@ -73,8 +80,8 @@ export const SelectionProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (state.loadState !== 'success') return;
     void saveSelectionRecords(state.records).catch(() => undefined);
-    void saveSelectionApproval({ status: state.approvalStatus, note: state.approvalNote }).catch(() => undefined);
-  }, [state.records, state.approvalNote, state.approvalStatus, state.loadState]);
+    void saveSelectionApproval(state.approvalByJob).catch(() => undefined);
+  }, [state.records, state.approvalByJob, state.loadState]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
