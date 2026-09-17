@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { parseCandidateImport, type CandidateImportPreview } from '../services/candidateImport';
 import type { Candidate } from '../types/candidate';
 
-const makeId = (prefix: string): string => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? \`\${prefix}-\${crypto.randomUUID()}\` : \`\${prefix}-\${Date.now()}-\${Math.random().toString(16).slice(2)}\`;
+const makeId = (prefix: string): string => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `${prefix}-${crypto.randomUUID()}` : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export const useCandidateBulkImport = (
   existingCandidates: Candidate[],
@@ -55,7 +55,7 @@ export const useCandidateBulkImport = (
         const id = makeId('cand');
         return {
           id,
-          reference: \`CA-\${String(Date.now() + index).slice(-6)}\`,
+          reference: `CA-${String(Date.now() + index).slice(-6)}`,
           name: draft.name.trim(),
           phone: draft.phone.trim(),
           passportNumber: draft.passportNumber.trim() || 'Not provided',
