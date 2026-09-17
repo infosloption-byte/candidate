@@ -21,7 +21,11 @@ The product is being built frontend-first. Local browser persistence is a protot
 
 ```text
 Dashboard
-  └─ Recruitment overview + daily actions
+  ├─ Recruitment overview + daily actions
+  ├─ Candidate pipeline snapshot
+  ├─ Action center for onboarding, documents and interview decisions
+  ├─ Today's interview desk and workload
+  └─ Recent candidate intake
 Candidates ★
   ├─ Search / smart filters
   ├─ Saved searches
@@ -63,8 +67,13 @@ Selection ★
   ├─ Selection decision
   ├─ Management approval
   └─ Selection history / audit timeline
-Reports
-  └─ Pipeline + rejection reason insights
+Reports ★
+  ├─ Date-range and trade filters
+  ├─ Recruitment pipeline and candidate source
+  ├─ Onboarding lifecycle
+  ├─ Interview outcomes and rejection reasons
+  ├─ Trade/profession performance
+  └─ CSV export
 Settings
   ├─ Professions & skills
   ├─ Interview scorecards
@@ -450,6 +459,8 @@ Selection data is currently persisted locally behind a replaceable service bound
 
 - `/` focuses global search; `Ctrl+K` focuses candidate search.
 - Search covers names, reference IDs, professions, locations, phone/passport values, skills, countries, and tags.
+- The dashboard prioritizes operational exceptions instead of static vanity metrics.
+- Reports reuse candidate and interview domain data through derived services and support filtered CSV export without a third-party charting dependency.
 - Loading uses skeleton content.
 - Loading failure shows a retry action without requiring a full page reload.
 - Empty filtered results explain what to do next and offer filter reset.
@@ -507,7 +518,11 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Interview scheduling timezone cues: `interviewTimezone` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
-## 12. Next frontend milestones
+## 12. Dashboard & reports analytics
+
+The dashboard and reports surfaces are now implemented as frontend workspaces over the existing candidate and interview domain state. The dashboard is optimized for daily recruiter action, while Reports supports operational analysis by date range and profession plus CSV export. Both remain local-data adapters until backend API contracts replace the browser persistence layer.
+
+## 13. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
 2. Complete authenticated candidate self-service onboarding UI once backend identity/invitation contracts are available.
