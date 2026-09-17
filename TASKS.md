@@ -36,6 +36,10 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Candidate tags participate in keyword search.
 - ✅ Job-fit evidence and configurable suitability score presentation.
 - ✅ Full interview history and decision audit timeline.
+- ✅ Candidate onboarding workspace with recruiter handoff, progress tracking, submitted/review/needs-changes/completed states, and onboarding activity in the candidate journey.
+- ✅ Recruiter/system-admin frontend bulk candidate CSV intake with automatic header mapping, validation preview, duplicate protection, import template and atomic local commit.
+- ⏳ Candidate self-service onboarding portal for authenticated candidate access, profile editing, consent and document upload.
+- ⏳ Invitation delivery, reminder/escalation workflows and candidate-facing authentication.
 
 ## Phase 3 — Interview workflow UX
 
@@ -90,13 +94,13 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ⏳ Create Node.js + TypeScript backend under `backend/`.
 - ⏳ Define REST API contracts matching frontend domain types.
 - ⏳ Add MySQL database and migration strategy.
-- ⏳ Add authentication, roles, and permissions.
+- ⏳ Add authentication, roles, and permissions, including recruiter/system-admin authorization for candidate import and onboarding administration.
 - ⏳ Add server-side audit trail.
 - ⏳ Add file/document storage abstraction.
 
 ## Phase 6 — Data migration and release
 
-- ⏳ Build Excel import and validation workflow.
+- ⏳ Extend the frontend CSV importer to XLSX import and server-side validation/processing.
 - ⏳ Map historical interview data to candidate/interview records.
 - ⏳ Add duplicate/quality review before import.
 - ⏳ End-to-end testing with real recruitment workflows.
@@ -123,6 +127,17 @@ Selection workflow:
 Candidate creation flow:
 
 `Essentials → Trade → Readiness → duplicate review if needed → Create → New state`
+
+Candidate acquisition and onboarding flow:
+
+`Manual add / CSV bulk import → duplicate + validation review → Candidate created in New / Onboarding not started → Send onboarding invitation → Candidate completes identity, trade, readiness and documents → Candidate submits → Recruiter reviews → Request changes or Verify → Screening → Interview → Selection`
+
+Bulk import rules:
+
+- Recruiter and system-administrator UI entry is available in the frontend MVP; backend role enforcement remains a backend milestone.
+- CSV import is preview-first: validation errors block rows, high-confidence duplicates are skipped by default, possible duplicates are flagged for review.
+- Imported candidates retain source=`Bulk import`, start in `New` recruitment status and `Not started` onboarding.
+- The importer provides a downloadable template and preserves source row numbers for operational cleanup.
 
 Candidate profile states:
 
