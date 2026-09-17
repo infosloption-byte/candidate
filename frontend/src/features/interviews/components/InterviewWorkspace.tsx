@@ -1,15 +1,18 @@
 import { InterviewScorecard } from './InterviewScorecard';
 import { PracticalTestPanel } from './PracticalTestPanel';
 import { InterviewDecisionPanel } from './InterviewDecisionPanel';
+import { InterviewRescheduleHistory } from './InterviewRescheduleHistory';
 import { Icon } from '../../../shared/components/Icon';
 import { useInterviewScorecard } from '../hooks/useInterviewScorecard';
-import type { Decision, Interview, InterviewStatus, PracticalResult } from '../types/interview';
+import type { Decision, Interview, InterviewStatus, Interviewer, PracticalResult } from '../types/interview';
 
 interface InterviewWorkspaceProps {
   interview: Interview | null;
+  interviewers: Interviewer[];
   onBack?: () => void;
   onStatusChange: (interviewId: string, status: InterviewStatus) => void;
   onDecisionRecorded: (candidateId: string, decision: Exclude<Decision, 'pending'>, score: number, date: string, interviewer: string, profession: string, reason: string, note: string) => void;
+  onReschedule?: (interviewId: string) => void;
 }
 
 const statusLabel: Record<InterviewStatus, string> = {
@@ -30,7 +33,7 @@ const statusClass: Record<InterviewStatus, string> = {
   cancelled: 'bg-slate-100 text-slate-500',
 };
 
-export const InterviewWorkspace = ({ interview, onBack, onStatusChange, onDecisionRecorded }: InterviewWorkspaceProps) => {
+export const InterviewWorkspace = ({ interview, interviewers, onBack, onStatusChange, onDecisionRecorded, onReschedule }: InterviewWorkspaceProps) => {
   const scorecard = useInterviewScorecard(interview);
 
   if (!interview) return <section className="grid min-h-full place-items-center bg-slate-50 p-8"><div className="max-w-sm text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="calendar" size={24}/></div><h2 className="mt-4 text-base font-black text-slate-800">Select an interview</h2><p className="mt-1 text-sm leading-6 text-slate-500">Choose an appointment from the queue to review its schedule, evidence and decision.</p></div></section>;
@@ -70,6 +73,7 @@ export const InterviewWorkspace = ({ interview, onBack, onStatusChange, onDecisi
         <div className="mt-4 flex flex-wrap gap-2"><div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[10px] font-bold text-slate-400">Interviewers</span>{interview.interviewers.map((person) => <span key={person.id} className="rounded-lg bg-white px-2 py-1 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">{person.name}</span>)}</div></div>
 
         <div className="mt-4 flex flex-wrap gap-2">
+          {interview.status === 'scheduled' && onReschedule && <button type="button" onClick={() => onReschedule(interview.id)} className="rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-xs font-bold text-cyan-700 hover:bg-cyan-100">Reschedule</button>}
           {interview.status === 'scheduled' && <><button type="button" onClick={startInterview} className="rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800">Start interview</button><button type="button" onClick={markNoShow} className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100">No show</button><button type="button" onClick={cancelInterview} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancel</button></>}
           {interview.status === 'in-progress' && <button type="button" onClick={openEvaluation} className="rounded-xl bg-violet-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-violet-700">Open evaluation</button>}
           {interview.status === 'evaluation' && <span className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 px-3.5 py-2.5 text-xs font-bold text-violet-700"><Icon name="sparkles" size={14}/>Evaluation mode</span>}
@@ -83,6 +87,7 @@ export const InterviewWorkspace = ({ interview, onBack, onStatusChange, onDecisi
         <InterviewScorecard interview={interview} completedCriteria={scorecard.progress.completedCriteria} totalCriteria={scorecard.progress.totalCriteria} totalScore={scorecard.progress.totalScore} editable={canEditEvidence} onScore={scorecard.setScore} onCriterionNote={scorecard.setCriterionNote}/>
         <PracticalTestPanel interview={interview} editable={canEditEvidence} onResult={handlePracticalResult} onNote={scorecard.setPracticalNote}/>
         <InterviewDecisionPanel interview={interview} canComplete={scorecard.canComplete && canEditEvidence} validationMessage={scorecard.validationMessage} onSubmit={handleDecision}/>
+        <InterviewRescheduleHistory history={interview.rescheduleHistory ?? []} interviewers={interviewers}/>
       </div>
     </section>
   );

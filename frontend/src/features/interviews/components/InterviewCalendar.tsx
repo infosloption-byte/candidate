@@ -1,3 +1,4 @@
+import { useState, type DragEvent } from 'react';
 import { Icon } from '../../../shared/components/Icon';
 import type { InterviewCalendarDay, InterviewCalendarEntry, InterviewCalendarView } from '../types/interview';
 
@@ -11,6 +12,7 @@ interface InterviewCalendarProps {
   onMove: (direction: -1 | 1) => void;
   onToday: () => void;
   onSelectInterview: (interviewId: string) => void;
+  onDropInterview: (interviewId: string, date: string, time: string) => void;
   onSchedule: () => void;
 }
 
@@ -40,26 +42,47 @@ const entryClass = (entry: InterviewCalendarEntry): string => {
   return 'border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100';
 };
 
-const EntryCard = ({ entry, compact, onSelect }: { entry: InterviewCalendarEntry; compact?: boolean; onSelect: (id: string) => void }) => (
-  <button type="button" onClick={() => onSelect(entry.interview.id)} className={`w-full border text-left transition focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 ${entryClass(entry)} ${compact ? 'rounded-lg px-2 py-2' : 'rounded-xl px-2.5 py-2.5'}`} aria-label={`Open interview ${entry.interview.reference} for ${entry.interview.candidateName}`}>
+const EntryCard = ({ entry, compact, onSelect, onDragStart, onDragEnd }: { entry: InterviewCalendarEntry; compact?: boolean; onSelect: (id: string) => void; onDragStart: (event: DragEvent<HTMLButtonElement>, id: string) => void; onDragEnd: () => void }) => {
+  const draggable = entry.interview.status === 'scheduled';
+  return <button type="button" draggable={draggable} onDragStart={(event) => onDragStart(event, entry.interview.id)} onDragEnd={onDragEnd} onClick={() => onSelect(entry.interview.id)} className={`w-full border text-left transition focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 ${entryClass(entry)} ${compact ? 'rounded-lg px-2 py-2' : 'rounded-xl px-2.5 py-2.5'}`} aria-label={`Open interview ${entry.interview.reference} for ${entry.interview.candidateName}${draggable ? '. Drag to another calendar slot to reschedule.' : ''}`} title={draggable ? 'Drag to another date and time to reschedule' : undefined}>
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0"><p className="truncate text-[11px] font-black">{entry.interview.candidateName}</p><p className="mt-0.5 truncate text-[9px] font-semibold opacity-70">{entry.interview.time} · {entry.interview.type}</p></div>
       {entry.conflicts.length > 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/75 px-1.5 py-1 text-[8px] font-black text-rose-700" title={entry.conflicts.join('; ')}><Icon name="alert" size={10}/>{entry.conflicts.length}</span>}
     </div>
     {!compact && <p className="mt-2 truncate text-[9px] font-medium opacity-70">{entry.interview.location}</p>}
     {entry.conflicts.length > 0 && <p className="mt-1 truncate text-[8px] font-bold text-rose-700">Conflict detected</p>}
-  </button>
-);
+  </button>;
+};
 
-export const InterviewCalendar = ({ view, days, entriesByDay, conflictCount, onViewChange, onDateChange, onMove, onToday, onSelectInterview, onSchedule }: InterviewCalendarProps) => {
+export const InterviewCalendar = ({ view, days, entriesByDay, conflictCount, onViewChange, onDateChange, onMove, onToday, onSelectInterview, onDropInterview, onSchedule }: InterviewCalendarProps) => {
+  const [draggingInterviewId, setDraggingInterviewId] = useState<string | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const firstDay = days[0];
   const visibleEntryCount = days.reduce((total, day) => total + (entriesByDay.get(day.isoDate)?.length ?? 0), 0);
+
+  const handleDragStart = (event: DragEvent<HTMLButtonElement>, interviewId: string) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/interview-id', interviewId);
+    setDraggingInterviewId(interviewId);
+  };
+
+  const clearDrag = () => {
+    setDraggingInterviewId(null);
+    setDragOverCell(null);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>, isoDate: string, hour: number) => {
+    event.preventDefault();
+    const interviewId = event.dataTransfer.getData('text/interview-id') || draggingInterviewId;
+    if (interviewId) onDropInterview(interviewId, isoDate, `${String(hour).padStart(2, '0')}:00`);
+    clearDrag();
+  };
 
   return (
     <section className="flex min-h-full flex-col bg-slate-50" aria-label="Interview calendar">
       <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black tracking-tight text-slate-950">{formatTitle(days, view)}</h2>{conflictCount > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2 py-1 text-[10px] font-black text-rose-700"><Icon name="alert" size={11}/> {conflictCount} conflict{conflictCount === 1 ? '' : 's'}</span>}</div><p className="mt-1 text-xs text-slate-500">{visibleEntryCount} interview{visibleEntryCount === 1 ? '' : 's'} in view. Conflicts are highlighted automatically.</p></div>
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black tracking-tight text-slate-950">{formatTitle(days, view)}</h2>{conflictCount > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2 py-1 text-[10px] font-black text-rose-700"><Icon name="alert" size={11}/> {conflictCount} conflict{conflictCount === 1 ? '' : 's'}</span>}</div><p className="mt-1 text-xs text-slate-500">{visibleEntryCount} interview{visibleEntryCount === 1 ? '' : 's'} in view. Drag scheduled cards to another hour to reschedule; use the details action for keyboard or touch.</p></div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Calendar view"><button type="button" aria-pressed={view === 'day'} onClick={() => onViewChange('day')} className={`rounded-lg px-3 py-2 text-[11px] font-bold ${view === 'day' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Day</button><button type="button" aria-pressed={view === 'week'} onClick={() => onViewChange('week')} className={`rounded-lg px-3 py-2 text-[11px] font-bold ${view === 'week' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Week</button></div>
             <button type="button" onClick={onToday} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50">Today</button>
@@ -83,8 +106,9 @@ export const InterviewCalendar = ({ view, days, entriesByDay, conflictCount, onV
                 <div className="border-b border-r border-slate-100 bg-white px-3 py-2 text-[9px] font-semibold text-slate-400">{formatHour(hour)}</div>
                 {days.map((day) => {
                   const entries = (entriesByDay.get(day.isoDate) ?? []).filter((entry) => Math.floor(entry.startMinutes / 60) === hour);
-                  return <div key={`${day.isoDate}-${hour}`} className={`border-b border-r border-slate-100 p-1.5 last:border-r-0 ${day.isToday ? 'bg-cyan-50/20' : 'bg-white'}`}>
-                    <div className="space-y-1.5">{entries.map((entry) => <EntryCard key={entry.interview.id} entry={entry} compact={entries.length > 1} onSelect={onSelectInterview}/>)}</div>
+                  const cellKey = `${day.isoDate}-${hour}`;
+                  return <div key={cellKey} onDragOver={(event) => { if (!draggingInterviewId) return; event.preventDefault(); setDragOverCell(cellKey); event.dataTransfer.dropEffect = 'move'; }} onDrop={(event) => handleDrop(event, day.isoDate, hour)} className={`border-b border-r border-slate-100 p-1.5 last:border-r-0 ${dragOverCell === cellKey ? 'bg-cyan-100/70 ring-2 ring-inset ring-cyan-300' : day.isToday ? 'bg-cyan-50/20' : 'bg-white'}`} title={draggingInterviewId ? `Move interview to ${day.label} at ${formatHour(hour)}` : undefined}>
+                    <div className="space-y-1.5">{entries.map((entry) => <EntryCard key={entry.interview.id} entry={entry} compact={entries.length > 1} onSelect={onSelectInterview} onDragStart={handleDragStart} onDragEnd={clearDrag}/>)}</div>
                   </div>;
                 })}
               </div>
@@ -93,7 +117,7 @@ export const InterviewCalendar = ({ view, days, entriesByDay, conflictCount, onV
         </div>
 
         <div className="md:hidden">
-          {visibleEntryCount === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-50 text-slate-300"><Icon name="calendar" size={22}/></div><h3 className="mt-3 text-sm font-black text-slate-800">No interviews in this range</h3><p className="mt-1 text-xs leading-5 text-slate-500">Move to another day or schedule a new interview.</p></div> : <div className="space-y-3">{days.map((day) => { const dayEntries = entriesByDay.get(day.isoDate) ?? []; if (dayEntries.length === 0) return null; return <section key={day.isoDate} aria-labelledby={`mobile-calendar-${day.isoDate}`}><div className={`sticky top-0 z-10 rounded-xl border border-slate-200 px-3 py-2 backdrop-blur ${day.isToday ? 'bg-cyan-50/95' : 'bg-white/95'}`}><p id={`mobile-calendar-${day.isoDate}`} className={`text-xs font-black ${day.isToday ? 'text-cyan-800' : 'text-slate-800'}`}>{day.label}</p></div><div className="mt-2 space-y-2">{dayEntries.map((entry) => <EntryCard key={entry.interview.id} entry={entry} onSelect={onSelectInterview}/>)}</div></section>; })}</div>}
+          {visibleEntryCount === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-50 text-slate-300"><Icon name="calendar" size={22}/></div><h3 className="mt-3 text-sm font-black text-slate-800">No interviews in this range</h3><p className="mt-1 text-xs leading-5 text-slate-500">Move to another day or schedule a new interview.</p></div> : <div className="space-y-3">{days.map((day) => { const dayEntries = entriesByDay.get(day.isoDate) ?? []; if (dayEntries.length === 0) return null; return <section key={day.isoDate} aria-labelledby={`mobile-calendar-${day.isoDate}`}><div className={`sticky top-0 z-10 rounded-xl border border-slate-200 px-3 py-2 backdrop-blur ${day.isToday ? 'bg-cyan-50/95' : 'bg-white/95'}`}><p id={`mobile-calendar-${day.isoDate}`} className={`text-xs font-black ${day.isToday ? 'text-cyan-800' : 'text-slate-800'}`}>{day.label}</p></div><div className="mt-2 space-y-2">{dayEntries.map((entry) => <EntryCard key={entry.interview.id} entry={entry} onSelect={onSelectInterview} onDragStart={handleDragStart} onDragEnd={clearDrag}/>)}</div></section>; })}</div>}
         </div>
       </div>
     </section>

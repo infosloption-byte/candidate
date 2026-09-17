@@ -4,6 +4,8 @@ import { InterviewQueue } from './InterviewQueue';
 import { InterviewWorkspace } from './InterviewWorkspace';
 import { ScheduleInterviewDrawer } from './ScheduleInterviewDrawer';
 import { BulkScheduleInterviewDrawer } from './BulkScheduleInterviewDrawer';
+import { RescheduleInterviewDialog } from './RescheduleInterviewDialog';
+import { InterviewRescheduleBanner } from './InterviewRescheduleBanner';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -12,6 +14,7 @@ import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import { useInterviewWorkspace } from '../hooks/useInterviewWorkspace';
 import { useInterviewBulkScheduler } from '../hooks/useInterviewBulkScheduler';
 import { useInterviewCalendar } from '../hooks/useInterviewCalendar';
+import { useInterviewRescheduler } from '../hooks/useInterviewRescheduler';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
 import type { CandidateStatus, RejectionReason } from '../../candidates/types/candidate';
 import type { Decision, Interview } from '../types/interview';
@@ -24,6 +27,7 @@ const mapRejectionReason = (reason: string): RejectionReason => candidateRejecti
 export const InterviewPage = () => {
   const { state, selectedInterview, sortedInterviews, interviewers, metrics, actions } = useInterviewWorkspace();
   const calendar = useInterviewCalendar();
+  const rescheduler = useInterviewRescheduler();
   const { state: candidateState, actions: candidateActions } = useCandidateWorkspace();
   const [mode, setMode] = useState<InterviewPageMode>('queue');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
@@ -42,7 +46,16 @@ export const InterviewPage = () => {
     const candidateReason: RejectionReason | '' = decision === 'rejected' ? mapRejectionReason(reason) : '';
     candidateActions.recordInterviewOutcome(candidateId, candidateStatus, date, interviewer, profession, score, candidateReason, note);
   };
+  const openReschedule = (interviewId: string) => {
+    actions.selectInterview(interviewId);
+    rescheduler.actions.openForInterview(interviewId);
+  };
+  const handleCalendarDrop = (interviewId: string, date: string, time: string) => {
+    actions.selectInterview(interviewId);
+    rescheduler.actions.handleDrop(interviewId, date, time);
+  };
   const selectCalendarInterview = (interviewId: string) => { actions.selectInterview(interviewId); setCalendarDetailOpen(true); };
+  const rescheduleInterview = rescheduler.draft ? state.interviews.find((interview) => interview.id === rescheduler.draft?.interviewId) ?? null : null;
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50">
@@ -54,10 +67,11 @@ export const InterviewPage = () => {
         {mode === 'queue' && <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-xl bg-slate-50 p-2.5"><p className="text-[9px] uppercase tracking-wider text-slate-400">Scheduled</p><p className="mt-1 text-sm font-black text-slate-900">{metrics.scheduled}</p></div><div className="rounded-xl bg-violet-50 p-2.5"><p className="text-[9px] uppercase tracking-wider text-violet-600">Evaluation</p><p className="mt-1 text-sm font-black text-violet-800">{metrics.evaluation}</p></div><div className="rounded-xl bg-emerald-50 p-2.5"><p className="text-[9px] uppercase tracking-wider text-emerald-600">Completed</p><p className="mt-1 text-sm font-black text-emerald-800">{metrics.completed}</p></div><div className="rounded-xl bg-amber-50 p-2.5"><p className="text-[9px] uppercase tracking-wider text-amber-600">Needs action</p><p className="mt-1 text-sm font-black text-amber-800">{metrics.needsDecision}</p></div></div>}
       </header>
       {candidateState.loadState === 'error' && <div className="mx-4 mt-4 sm:mx-6"><div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Candidate data could not be loaded, so bulk scheduling is temporarily unavailable.</div></div>}
-      {mode === 'queue' ? <div className="grid min-h-0 flex-1 xl:grid-cols-[380px_minmax(0,1fr)]"><div className={`${mobileDetailOpen ? 'hidden xl:block' : 'block'} min-h-0`}><InterviewQueue interviews={sortedInterviews} selectedInterviewId={selectedInterview?.id ?? null} onSelect={(id) => { actions.selectInterview(id); setMobileDetailOpen(true); }} onSchedule={actions.openSchedule} onBulkSchedule={() => setBulkScheduleOpen(true)}/></div><div className={`${mobileDetailOpen ? 'block' : 'hidden xl:block'} min-w-0`}><InterviewWorkspace interview={selectedInterview} onBack={() => setMobileDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded}/></div></div> : <div className="min-h-0 flex-1">{sortedInterviews.length === 0 ? <div className="grid min-h-[55dvh] place-items-center p-6"><EmptyState title="No interviews scheduled" message="Schedule the first interview to start building your calendar and interview history." icon="calendar" actionLabel="Schedule interview" onAction={actions.openSchedule}/></div> : <InterviewCalendar view={calendar.view} days={calendar.days} entriesByDay={calendar.entriesByDay} conflictCount={calendar.conflictCount} onViewChange={calendar.setView} onDateChange={calendar.setDate} onMove={calendar.move} onToday={calendar.goToday} onSelectInterview={selectCalendarInterview} onSchedule={actions.openSchedule}/>}</div>}
+      {mode === 'queue' ? <div className="grid min-h-0 flex-1 xl:grid-cols-[380px_minmax(0,1fr)]"><div className={`${mobileDetailOpen ? 'hidden xl:block' : 'block'} min-h-0`}><InterviewQueue interviews={sortedInterviews} selectedInterviewId={selectedInterview?.id ?? null} onSelect={(id) => { actions.selectInterview(id); setMobileDetailOpen(true); }} onSchedule={actions.openSchedule} onBulkSchedule={() => setBulkScheduleOpen(true)}/></div><div className={`${mobileDetailOpen ? 'block' : 'hidden xl:block'} min-w-0`}><InterviewWorkspace interview={selectedInterview} interviewers={interviewers} onBack={() => setMobileDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded} onReschedule={openReschedule}/></div></div> : <div className="min-h-0 flex-1">{sortedInterviews.length === 0 ? <div className="grid min-h-[55dvh] place-items-center p-6"><EmptyState title="No interviews scheduled" message="Schedule the first interview to start building your calendar and interview history." icon="calendar" actionLabel="Schedule interview" onAction={actions.openSchedule}/></div> : <>{rescheduler.lastReschedule && <InterviewRescheduleBanner candidateName={rescheduler.lastReschedule.candidateName} changedAt={rescheduler.lastReschedule.changedAt} onUndo={rescheduler.actions.undo}/>}<InterviewCalendar view={calendar.view} days={calendar.days} entriesByDay={calendar.entriesByDay} conflictCount={calendar.conflictCount} onViewChange={calendar.setView} onDateChange={calendar.setDate} onMove={calendar.move} onToday={calendar.goToday} onSelectInterview={selectCalendarInterview} onDropInterview={handleCalendarDrop} onSchedule={actions.openSchedule}/></>}</div>}
       <ScheduleInterviewDrawer open={state.isScheduleDrawerOpen} candidates={scheduleCandidates} interviewers={interviewers} onClose={actions.closeSchedule} onCreate={handleCreateInterview}/>
       <BulkScheduleInterviewDrawer open={bulkScheduleOpen} candidates={bulk.eligibleCandidates} interviewers={interviewers} pageCandidates={bulk.pageCandidates} filteredCount={bulk.filteredCandidates.length} page={bulk.page} pageCount={bulk.pageCount} selectedIds={bulk.selectedIds} allFilteredSelected={bulk.allFilteredSelected} query={bulk.query} config={bulk.config} plan={bulk.plan} error={bulk.error} editingSlot={bulk.editingSlot} editDraft={bulk.editDraft} editError={bulk.editError} onClose={() => setBulkScheduleOpen(false)} onQueryChange={bulk.actions.setQuery} onPageChange={bulk.actions.setPage} onToggleCandidate={bulk.actions.toggleCandidate} onToggleAllFiltered={bulk.actions.toggleAllFiltered} onConfigField={bulk.actions.setConfigField} onToggleInterviewer={bulk.actions.toggleInterviewer} onGenerate={bulk.actions.generatePlan} onRebalance={bulk.actions.rebalance} onApply={bulk.actions.applyPlan} onReset={bulk.actions.reset} onStartEdit={bulk.actions.startEdit} onEditField={bulk.actions.setEditField} onSaveEdit={bulk.actions.saveEdit} onCancelEdit={bulk.actions.cancelEdit}/>
-      {calendarDetailOpen && selectedInterview && <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Interview details for ${selectedInterview.candidateName}`}><button type="button" aria-label="Close interview details" onClick={() => setCalendarDetailOpen(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"/><aside ref={calendarDetailRef} tabIndex={-1} className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-slate-50 shadow-2xl"><InterviewWorkspace interview={selectedInterview} onBack={() => setCalendarDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded}/></aside></div>}
+      {calendarDetailOpen && selectedInterview && <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Interview details for ${selectedInterview.candidateName}`}><button type="button" aria-label="Close interview details" onClick={() => setCalendarDetailOpen(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"/><aside ref={calendarDetailRef} tabIndex={-1} className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-slate-50 shadow-2xl"><InterviewWorkspace interview={selectedInterview} interviewers={interviewers} onBack={() => setCalendarDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded} onReschedule={openReschedule}/></aside></div>}
+      <RescheduleInterviewDialog open={rescheduler.open} interview={rescheduleInterview} interviewers={interviewers} draft={rescheduler.draft} error={rescheduler.error} alternatives={rescheduler.alternatives} onClose={rescheduler.actions.close} onDateChange={rescheduler.actions.setDate} onTimeChange={rescheduler.actions.setTime} onToggleInterviewer={rescheduler.actions.toggleInterviewer} onReasonChange={rescheduler.actions.setReason} onUseAlternative={rescheduler.actions.useAlternative} onSave={rescheduler.actions.save}/>
     </div>
   );
 };

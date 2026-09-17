@@ -11,7 +11,10 @@ export interface ScorecardCriterion { id: string; label: string; weight: number;
 export interface PracticalTestItem { id: string; label: string; required: boolean; result: PracticalResult; note: string; }
 export interface InterviewScorecard { templateId: string; criteria: ScorecardCriterion[]; }
 export interface InterviewDecision { decision: Decision; reason: string; note: string; }
-export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; createdAt: string; }
+export interface InterviewRescheduleHistory { id: string; fromDate: string; fromTime: string; fromInterviewerIds: string[]; toDate: string; toTime: string; toInterviewerIds: string[]; reason: string; changedAt: string; undoneAt: string | null; }
+export interface InterviewRescheduleDraft { interviewId: string; date: string; time: string; interviewerIds: string[]; reason: string; }
+export interface InterviewRescheduleAlternative { date: string; time: string; interviewerIds: string[]; label: string; }
+export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; createdAt: string; rescheduleHistory?: InterviewRescheduleHistory[]; }
 export interface InterviewDraft { candidateId: string; type: InterviewType; date: string; time: string; durationMinutes: string; location: string; interviewerIds: string[]; }
 
 export interface BulkInterviewScheduleConfig { type: InterviewType; startDate: string; endDate: string; dayStart: string; dayEnd: string; durationMinutes: number; breakMinutes: number; location: string; sharedLocation: boolean; interviewerIds: string[]; includeWeekends: boolean; }
@@ -41,6 +44,8 @@ export type InterviewAction =
   | { type: 'SET_PRACTICAL_NOTE'; interviewId: string; itemId: string; note: string }
   | { type: 'SET_INTERVIEW_NOTE'; interviewId: string; note: string }
   | { type: 'SET_DECISION'; interviewId: string; decision: Decision; reason: string; note: string }
+  | { type: 'RESCHEDULE_INTERVIEW'; interviewId: string; date: string; time: string; interviewerIds: string[]; reason: string; changedAt: string; historyId: string }
+  | { type: 'UNDO_RESCHEDULE'; interviewId: string; historyId: string; undoneAt: string }
   | { type: 'SET_CALENDAR_VIEW'; value: InterviewCalendarView }
   | { type: 'SET_CALENDAR_DATE'; value: string };
 

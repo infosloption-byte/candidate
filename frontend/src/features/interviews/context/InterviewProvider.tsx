@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { InterviewContext } from './InterviewContextObject';
 import { loadInterviews, loadInterviewers, saveInterviews } from '../services/interviewRepository';
-import type { InterviewAction, InterviewState } from '../types/interview';
+import type { InterviewAction, InterviewState, Interviewer } from '../types/interview';
 
 const toIsoDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -22,7 +22,9 @@ const initialState: InterviewState = {
   calendarDate: toIsoDate(new Date()),
 };
 
-const interviewReducer = (state: InterviewState, action: InterviewAction): InterviewState => {
+const resolveInterviewers = (ids: string[], interviewers: Interviewer[], fallback: Interviewer[]): Interviewer[] => ids.map((id) => interviewers.find((person) => person.id === id) ?? fallback.find((person) => person.id === id)).filter((person): person is Interviewer => Boolean(person));
+
+export const interviewReducer = (state: InterviewState, action: InterviewAction): InterviewState => {
   switch (action.type) {
     case 'HYDRATE':
       return { ...state, loadState: 'success', errorMessage: null, interviews: action.interviews, interviewers: action.interviewers, selectedInterviewId: state.selectedInterviewId ?? action.interviews[0]?.id ?? null };
@@ -48,6 +50,45 @@ const interviewReducer = (state: InterviewState, action: InterviewAction): Inter
     case 'SET_INTERVIEW_NOTE': return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, notes: action.note } : interview) };
     case 'SET_DECISION':
       return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, decision: { decision: action.decision, reason: action.reason, note: action.note }, status: 'completed' } : interview) };
+    case 'RESCHEDULE_INTERVIEW':
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => {
+          if (interview.id !== action.interviewId) return interview;
+          const updatedInterviewerList = resolveInterviewers(action.interviewerIds, state.interviewers, interview.interviewers);
+          if (updatedInterviewerList.length !== action.interviewerIds.length) return interview;
+          const history = {
+            id: action.historyId,
+            fromDate: interview.date,
+            fromTime: interview.time,
+            fromInterviewerIds: interview.interviewers.map((person) => person.id),
+            toDate: action.date,
+            toTime: action.time,
+            toInterviewerIds: updatedInterviewerList.map((person) => person.id),
+            reason: action.reason,
+            changedAt: action.changedAt,
+            undoneAt: null,
+          } as const;
+          return { ...interview, date: action.date, time: action.time, interviewers: updatedInterviewerList, rescheduleHistory: [...(interview.rescheduleHistory ?? []), history] };
+        }),
+      };
+    case 'UNDO_RESCHEDULE':
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => {
+          if (interview.id !== action.interviewId) return interview;
+          const history = interview.rescheduleHistory?.find((item) => item.id === action.historyId);
+          if (!history || history.undoneAt) return interview;
+          const restoreInterviewerList = resolveInterviewers(history.fromInterviewerIds, state.interviewers, interview.interviewers);
+          return {
+            ...interview,
+            date: history.fromDate,
+            time: history.fromTime,
+            interviewers: restoreInterviewerList,
+            rescheduleHistory: (interview.rescheduleHistory ?? []).map((item) => item.id === action.historyId ? { ...item, undoneAt: action.undoneAt } : item),
+          };
+        }),
+      };
     case 'SET_CALENDAR_VIEW': return { ...state, calendarView: action.value };
     case 'SET_CALENDAR_DATE': return { ...state, calendarDate: action.value };
     default: return state;
