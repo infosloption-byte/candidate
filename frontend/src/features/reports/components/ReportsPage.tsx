@@ -1,5 +1,6 @@
 import { Icon } from '../../../shared/components/Icon';
 import { useReportsWorkspace } from '../hooks/useReportsWorkspace';
+import type { ReportRange } from '../types/reports';
 
 interface BarListProps {
   title: string;
