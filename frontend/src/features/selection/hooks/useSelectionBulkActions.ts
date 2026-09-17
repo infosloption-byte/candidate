@@ -6,7 +6,7 @@ import type { SelectionDecision, SelectionJob, SelectionRecord } from '../types/
 type BulkDecision = Extract<SelectionDecision, 'selected' | 'reserve' | 'rejected'>;
 
 interface UseSelectionBulkActionsProps {
-  job: SelectionJob;
+  job: SelectionJob | null;
   rows: SelectionCandidateRow[];
 }
 
@@ -17,7 +17,7 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
-  const [targetJobId, setTargetJobId] = useState<string>(() => state.jobs.find((item) => item.id !== job.id)?.id ?? '');
+  const [targetJobId, setTargetJobId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,13 +25,13 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
     setReason('');
     setNote('');
     setError(null);
-    setTargetJobId(state.jobs.find((item) => item.id !== job.id)?.id ?? '');
-  }, [job.id, state.activeTab, state.jobs]);
+    setTargetJobId(job ? (state.jobs.find((item) => item.id !== job.id)?.id ?? '') : '');
+  }, [job, state.activeTab, state.jobs]);
 
   const selectedRows = useMemo(() => rows.filter((row) => selectedIds.includes(row.candidate.id)), [rows, selectedIds]);
   const selectedCount = selectedRows.length;
   const allVisibleSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.candidate.id));
-  const currentSelectedCount = state.records.filter((record) => record.jobId === job.id && record.decision === 'selected').length;
+  const currentSelectedCount = job ? state.records.filter((record) => record.jobId === job.id && record.decision === 'selected').length : 0;
   const targetJob = state.jobs.find((item) => item.id === targetJobId) ?? null;
 
   const toggleCandidate = (candidateId: string) => {
@@ -55,6 +55,10 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
   };
 
   const applyDecision = (decision: BulkDecision): string[] => {
+    if (!job) {
+      setError('Selection data is still loading.');
+      return [];
+    }
     if (selectedRows.length === 0) {
       setError('Select at least one candidate first.');
       return [];
@@ -93,6 +97,10 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
   };
 
   const reassign = (): string[] => {
+    if (!job) {
+      setError('Selection data is still loading.');
+      return [];
+    }
     if (selectedRows.length === 0) {
       setError('Select at least one candidate first.');
       return [];
