@@ -33,6 +33,8 @@ Candidates ★
   └─ Compare up to 4 candidates
 Interviews ★
   ├─ Interview queue
+  ├─ Queue / Calendar view switch
+  ├─ Day / Week calendar
   ├─ Search / status filters
   ├─ Schedule interview
   ├─ Interviewer assignment / panel
@@ -167,6 +169,21 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 
 The Interview Desk is a split workspace using the same list/detail interaction pattern as Candidates. Recruiters can search by candidate, trade, location or interviewer and filter by All, Today, Needs attention, or Completed.
 
+### Calendar
+
+The Interview Desk has a dedicated full-width Calendar view alongside the queue. It supports:
+
+- Day view for focused scheduling.
+- Week view for workload planning across seven days.
+- Today shortcut and previous/next navigation.
+- Direct date jump.
+- Responsive mobile day agenda when the screen is narrow.
+- Appointment cards that open the existing interview workspace in a detail sheet.
+- Conflict visualization when active interviews overlap on the same interviewer or room.
+- Conflict indicators with the affected candidate shown as the reason.
+
+The current calendar is a scheduling UX prototype. Drag-and-drop rescheduling and server-side conflict enforcement remain later milestones.
+
 ### Scheduling
 
 Scheduling uses a focused drawer:
@@ -218,6 +235,7 @@ Final decision is available only after the scorecard is complete and every requi
 - Independent main-content scrolling.
 - Candidate and interview queues use split workspaces.
 - Comparison and scheduling drawers remain available without leaving the workspace.
+- Interview calendar uses the full main content width for week planning.
 
 ### Tablet
 
@@ -237,6 +255,7 @@ Final decision is available only after the scorecard is complete and every requi
 - Candidate comparison becomes a scrollable, height-limited bottom tray with minimize and quick resize controls.
 - Advanced filters use independent scrolling.
 - Schedule drawer and evaluation workspace use full-width mobile layouts.
+- Interview calendar becomes a compact day agenda instead of a dense seven-column grid.
 
 ## 8. Smart SaaS UX
 
@@ -252,6 +271,7 @@ Final decision is available only after the scorecard is complete and every requi
 - Interview scorecard progress is visible before final decision.
 - Required practical tasks block incomplete final decisions.
 - Interview decisions synchronize back to candidate state.
+- Calendar conflicts are explained rather than shown as opaque warning colors.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
 
@@ -264,19 +284,21 @@ Final decision is available only after the scorecard is complete and every requi
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
 - Interview queue and workflow actions: `useInterviewWorkspace`.
+- Interview calendar navigation and derived scheduling state: `useInterviewCalendar` + reducer actions.
 - Interview scheduling: `useInterviewForm`.
 - Interview scorecard evaluation: `useInterviewScorecard`.
 - Interview decision validation: `useInterviewDecisionForm`.
 - Candidate persistence: `candidateRepository` service boundary.
 - Interview persistence: `interviewRepository` service boundary.
 - Duplicate matching: pure `candidateMatching` service.
+- Calendar conflict detection: pure `interviewCalendar` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
 ## 10. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Add full day/week interview calendar with conflict detection.
-3. Build selection board using the comparison model already established.
-4. Add job-fit evidence and configurable suitability score presentation.
-5. Expand interview history and decision audit views.
+2. Build the Selection Board using the existing candidate comparison model.
+3. Add job-fit evidence and configurable suitability score presentation.
+4. Expand interview history and decision audit views.
+5. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
 6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
