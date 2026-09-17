@@ -15,7 +15,7 @@ candidate/
 └── README.md
 ```
 
-The product is being built frontend-first. Local browser persistence is a prototype adapter behind candidate service boundaries; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
+The product is being built frontend-first. Local browser persistence is a prototype adapter behind candidate and interview service boundaries; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
 
 ## 2. MVP navigation
 
@@ -31,8 +31,15 @@ Candidates ★
   ├─ Add candidate: Essentials → Trade → Readiness
   ├─ Creation-time duplicate review
   └─ Compare up to 4 candidates
-Interviews
-  └─ Today queue + interviewer assignments
+Interviews ★
+  ├─ Interview queue
+  ├─ Search / status filters
+  ├─ Schedule interview
+  ├─ Interviewer assignment / panel
+  ├─ Interview workspace
+  ├─ Profession-aware scorecard
+  ├─ Practical test
+  └─ Final decision
 Jobs
   └─ Manpower demand / requirement cards
 Selection
@@ -154,7 +161,54 @@ The tray supports:
 
 The tray is height-limited on small screens so it never blocks the entire workspace.
 
-## 6. Responsive shell
+## 6. Interview workflow UX
+
+### Queue
+
+The Interview Desk is a split workspace using the same list/detail interaction pattern as Candidates. Recruiters can search by candidate, trade, location or interviewer and filter by All, Today, Needs attention, or Completed.
+
+### Scheduling
+
+Scheduling uses a focused drawer:
+
+`Candidate → Interview type → Date / time / duration / location → Interviewer(s) → Schedule`
+
+The interviewer list displays role and specialties so HR can assign the appropriate panel without opening another screen.
+
+### Interview lifecycle
+
+```text
+Scheduled
+   ↓ Start interview
+In progress
+   ↓ Open evaluation
+Evaluation
+   ↓ complete evidence
+Final decision
+   ├── Selected
+   ├── Reserve
+   └── Rejected → reason + note
+   ↓
+Completed
+```
+
+No-show and cancelled are explicit appointment outcomes.
+
+### Profession-aware scorecard
+
+The schedule form prepares a scorecard from the profession. Criteria use 1–5 ratings and configurable weights, with automatic weighted-score calculation. The interviewer can add an observation note to every criterion.
+
+The scorecard is editable only while the appointment is `In progress` or `Evaluation`.
+
+### Practical test
+
+Practical tasks are generated from the trade and interview type. Screening and Client interviews can omit practical testing. Required tasks must be recorded as Pass, Fail or Pending before final decision; optional tasks can be left unassessed.
+
+### Final decision
+
+Final decision is available only after the scorecard is complete and every required practical task has a recorded result. Rejections require both a reason and written decision note. The final result is synchronized back to the candidate profile with the interview date, interviewer, score and decision evidence.
+
+## 7. Responsive shell
 
 ### Desktop
 
@@ -162,28 +216,29 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 - Sidebar collapses from full navigation to an icon rail and remembers the preference.
 - Sticky top bar.
 - Independent main-content scrolling.
-- Candidate directory and profile use a split workspace.
-- Comparison remains available without leaving the candidate workspace.
+- Candidate and interview queues use split workspaces.
+- Comparison and scheduling drawers remain available without leaving the workspace.
 
 ### Tablet
 
 - Same workspace principles with fluid widths.
 - Dense controls wrap rather than overflow.
-- Candidate profile content uses responsive grids.
-- Smart filters remain usable with touch controls.
+- Candidate and interview profile content uses responsive grids.
+- Smart filters and interview controls remain usable with touch input.
 
 ### Mobile
 
 - Sidebar becomes a slide-over navigation panel.
 - Mobile navigation always opens expanded.
-- Candidate directory and profile become a single-panel flow.
-- Selecting a candidate opens their profile with a back action.
+- Candidate and interview queues become a single-panel flow.
+- Selecting an item opens its detail workspace with a back action.
 - Fixed action bars respect device safe areas.
 - Tap targets and controls use touch-friendly spacing.
-- Comparison becomes a scrollable, height-limited bottom tray with minimize and quick resize controls.
+- Candidate comparison becomes a scrollable, height-limited bottom tray with minimize and quick resize controls.
 - Advanced filters use independent scrolling.
+- Schedule drawer and evaluation workspace use full-width mobile layouts.
 
-## 7. Smart SaaS UX
+## 8. Smart SaaS UX
 
 - `/` focuses global search; `Ctrl+K` focuses candidate search.
 - Search covers names, reference IDs, professions, locations, phone/passport values, skills, countries, and tags.
@@ -194,30 +249,34 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 - Candidate status changes append to the visible journey.
 - Saved searches restore complete filter state.
 - Duplicate warnings explain the matched fields before creation.
-- Comparison selection survives minimize/restore until candidates are removed or cleared.
+- Interview scorecard progress is visible before final decision.
+- Required practical tasks block incomplete final decisions.
+- Interview decisions synchronize back to candidate state.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
 
-## 8. State architecture
+## 9. State architecture
 
 - App shell state: `AppProvider` + `useReducer`.
 - Candidate domain state: `CandidateProvider` + `useReducer`.
+- Interview domain state: `InterviewProvider` + `useReducer`.
 - Candidate filtering, saved searches, duplicate review, tags, and comparison actions: `useCandidateWorkspace` + reducer actions.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
-- Recruiter tag input state: `useCandidateTags`.
-- Saved search naming/validation: `useSavedFilterForm`.
-- Comparison resizing: `useComparisonResize`.
+- Interview queue and workflow actions: `useInterviewWorkspace`.
+- Interview scheduling: `useInterviewForm`.
+- Interview scorecard evaluation: `useInterviewScorecard`.
+- Interview decision validation: `useInterviewDecisionForm`.
 - Candidate persistence: `candidateRepository` service boundary.
-- Workspace preferences persistence: `candidatePreferencesRepository` service boundary.
+- Interview persistence: `interviewRepository` service boundary.
 - Duplicate matching: pure `candidateMatching` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
-## 9. Next frontend milestones
+## 10. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Build interview scheduling and the interview queue.
-3. Build profession-specific interview scorecards and practical-test UX.
-4. Build the selection board using the comparison model already established.
-5. Add job-fit evidence and configurable suitability score presentation.
+2. Add full day/week interview calendar with conflict detection.
+3. Build selection board using the comparison model already established.
+4. Add job-fit evidence and configurable suitability score presentation.
+5. Expand interview history and decision audit views.
 6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
