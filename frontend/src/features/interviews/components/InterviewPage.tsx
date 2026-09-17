@@ -10,19 +10,12 @@ import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorksp
 import type { CandidateStatus, RejectionReason } from '../../candidates/types/candidate';
 import type { Decision, Interview } from '../types/interview';
 
-const candidateRejectionReasons: RejectionReason[] = ['Technical skill', 'Experience gap', 'Required skill missing', 'Safety concern', 'Communication', 'Documents', 'Availability', 'Client requirement', 'Other'];
+const candidateRejectionReasons: RejectionReason[] = ['Technical skill', 'Experience gap', 'Required skill missing', 'Communication', 'Documents', 'Availability', 'Client requirement', 'Other'];
 
 const mapRejectionReason = (reason: string): RejectionReason => candidateRejectionReasons.includes(reason as RejectionReason) ? reason as RejectionReason : 'Other';
 
 export const InterviewPage = () => {
-  const {
-    state,
-    selectedInterview,
-    sortedInterviews,
-    interviewers,
-    metrics,
-    actions,
-  } = useInterviewWorkspace();
+  const { state, selectedInterview, sortedInterviews, interviewers, metrics, actions } = useInterviewWorkspace();
   const { state: candidateState, actions: candidateActions } = useCandidateWorkspace();
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
@@ -36,7 +29,8 @@ export const InterviewPage = () => {
   };
   const handleDecisionRecorded = (candidateId: string, decision: Exclude<Decision, 'pending'>, score: number, date: string, interviewer: string, profession: string, reason: string, note: string) => {
     const candidateStatus: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'> = decision;
-    candidateActions.recordInterviewOutcome(candidateId, candidateStatus, date, interviewer, profession, score, decision === 'rejected' ? mapRejectionReason(reason) : '', note);
+    const candidateReason: RejectionReason | '' = decision === 'rejected' ? mapRejectionReason(reason) : '';
+    candidateActions.recordInterviewOutcome(candidateId, candidateStatus, date, interviewer, profession, score, candidateReason, note);
   };
 
   return (
