@@ -66,7 +66,7 @@ export const CandidatePage = () => {
           </div>
         </section>
         <div className={`${mobileDetailOpen ? 'block' : 'hidden xl:block'} min-w-0`}>
-          <CandidateProfile candidate={selectedCandidate} allCandidates={state.candidates} duplicateMatches={duplicateMatches} onBack={() => setMobileDetailOpen(false)} onOpenDuplicate={(id) => { actions.closeAddCandidate(); actions.selectCandidate(id); setMobileDetailOpen(true); }} onAddTag={actions.addTag} onRemoveTag={actions.removeTag} onScreen={actions.moveToScreening} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection}/>
+          <CandidateProfile candidate={selectedCandidate} allCandidates={state.candidates} duplicateMatches={duplicateMatches} onBack={() => setMobileDetailOpen(false)} onOpenDuplicate={(id) => { actions.closeAddCandidate(); actions.selectCandidate(id); setMobileDetailOpen(true); }} onOpenOnboarding={(id) => { actions.selectCandidate(id); setWorkspaceView('onboarding'); }} onAddTag={actions.addTag} onRemoveTag={actions.removeTag} onScreen={actions.moveToScreening} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection}/>
         </div>
       </div>}
 
