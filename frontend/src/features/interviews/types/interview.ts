@@ -71,6 +71,41 @@ export interface InterviewDraft {
   interviewerIds: string[];
 }
 
+export interface BulkInterviewScheduleConfig {
+  type: InterviewType;
+  startDate: string;
+  endDate: string;
+  dayStart: string;
+  dayEnd: string;
+  durationMinutes: number;
+  breakMinutes: number;
+  location: string;
+  interviewerIds: string[];
+  includeWeekends: boolean;
+}
+
+export interface BulkInterviewScheduleIssue {
+  candidateId: string;
+  candidateName: string;
+  reason: string;
+}
+
+export interface BulkInterviewScheduleSlot {
+  candidateId: string;
+  candidateName: string;
+  date: string;
+  time: string;
+  interviewer: Interviewer;
+  conflicts: string[];
+}
+
+export interface BulkInterviewSchedulePlan {
+  slots: BulkInterviewScheduleSlot[];
+  unscheduled: BulkInterviewScheduleIssue[];
+  capacity: number;
+  requested: number;
+}
+
 export interface InterviewState {
   loadState: InterviewLoadState;
   errorMessage: string | null;
@@ -106,6 +141,7 @@ export type InterviewAction =
   | { type: 'OPEN_SCHEDULE_DRAWER' }
   | { type: 'CLOSE_SCHEDULE_DRAWER' }
   | { type: 'CREATE_INTERVIEW'; interview: Interview }
+  | { type: 'CREATE_INTERVIEWS'; interviews: Interview[] }
   | { type: 'UPDATE_STATUS'; interviewId: string; status: InterviewStatus }
   | { type: 'SET_SCORE'; interviewId: string; criterionId: string; score: number | null }
   | { type: 'SET_CRITERION_NOTE'; interviewId: string; criterionId: string; note: string }
