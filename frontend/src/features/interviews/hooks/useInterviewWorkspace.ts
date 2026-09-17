@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useInterviewContext } from '../context/useInterviewContext';
-import type { Interview, InterviewStatus } from '../types/interview';
+import type { Decision, Interview, InterviewStatus, PracticalResult } from '../types/interview';
 
 export const useInterviewWorkspace = () => {
   const { state, dispatch } = useInterviewContext();
@@ -32,10 +32,11 @@ export const useInterviewWorkspace = () => {
     updateStatus: (interviewId: string, status: InterviewStatus) => dispatch({ type: 'UPDATE_STATUS', interviewId, status }),
     setScore: (interviewId: string, criterionId: string, score: number | null) => dispatch({ type: 'SET_SCORE', interviewId, criterionId, score }),
     setCriterionNote: (interviewId: string, criterionId: string, note: string) => dispatch({ type: 'SET_CRITERION_NOTE', interviewId, criterionId, note }),
-    setPracticalResult: (interviewId: string, itemId: string, result: import('../types/interview').PracticalResult, note: string) => dispatch({ type: 'SET_PRACTICAL_RESULT', interviewId, itemId, result, note }),
+    setPracticalResult: (interviewId: string, itemId: string, result: PracticalResult) => dispatch({ type: 'SET_PRACTICAL_RESULT', interviewId, itemId, result }),
+    setPracticalNote: (interviewId: string, itemId: string, note: string) => dispatch({ type: 'SET_PRACTICAL_NOTE', interviewId, itemId, note }),
     setInterviewNote: (interviewId: string, note: string) => dispatch({ type: 'SET_INTERVIEW_NOTE', interviewId, note }),
-    setDecision: (interviewId: string, decision: import('../types/interview').Decision, reason: string, note: string) => dispatch({ type: 'SET_DECISION', interviewId, decision, reason, note }),
+    setDecision: (interviewId: string, decision: Decision, reason: string, note: string) => dispatch({ type: 'SET_DECISION', interviewId, decision, reason, note }),
   };
 
-  return { state, selectedInterview, sortedInterviews, metrics, actions };
+  return { state, selectedInterview, sortedInterviews, interviewers: state.interviewers, metrics, actions };
 };
