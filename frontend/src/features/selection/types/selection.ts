@@ -3,6 +3,7 @@ import type { Dispatch } from 'react';
 export type SelectionTab = 'recommended' | 'selected' | 'reserve' | 'rejected';
 export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'returned';
 export type SelectionDecision = 'recommended' | 'selected' | 'reserve' | 'rejected';
+export type SelectionHistoryAction = 'decision_changed' | 'reassigned' | 'approval_changed';
 
 export interface SelectionJob {
   id: string;
@@ -31,12 +32,26 @@ export interface SelectionApproval {
   note: string;
 }
 
+export interface SelectionHistoryEntry {
+  candidateId: string | null;
+  jobId: string;
+  relatedJobId?: string;
+  action: SelectionHistoryAction;
+  fromDecision?: SelectionDecision | null;
+  toDecision?: SelectionDecision | null;
+  reason: string;
+  note: string;
+  occurredAt: string;
+  occurredBy: string;
+}
+
 export interface SelectionState {
   loadState: 'loading' | 'error' | 'success';
   errorMessage: string | null;
   loadAttempt: number;
   jobs: SelectionJob[];
   records: SelectionRecord[];
+  history: SelectionHistoryEntry[];
   activeJobId: string | null;
   activeTab: SelectionTab;
   selectedCandidateId: string | null;
@@ -44,14 +59,16 @@ export interface SelectionState {
 }
 
 export type SelectionAction =
-  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; approvalByJob: Record<string, SelectionApproval> }
+  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; history: SelectionHistoryEntry[]; approvalByJob: Record<string, SelectionApproval> }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SET_JOB'; jobId: string }
   | { type: 'SET_TAB'; tab: SelectionTab }
   | { type: 'SELECT_CANDIDATE'; candidateId: string | null }
   | { type: 'SAVE_DECISION'; record: SelectionRecord }
-  | { type: 'SET_APPROVAL'; jobId: string; status: ApprovalStatus; note: string };
+  | { type: 'BULK_SAVE_DECISIONS'; records: SelectionRecord[] }
+  | { type: 'REASSIGN_CANDIDATES'; candidateIds: string[]; fromJobId: string; toJobId: string; reason: string; note: string; occurredAt: string; occurredBy: string }
+  | { type: 'SET_APPROVAL'; jobId: string; status: ApprovalStatus; note: string; changedAt: string; changedBy: string };
 
 export interface SelectionContextValue {
   state: SelectionState;
