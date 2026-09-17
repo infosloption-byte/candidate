@@ -89,6 +89,7 @@ export const useCandidateWorkspace = () => {
       moveToInterview: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' }),
       selectCandidateForJob: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'selected' }),
       moveToReserve: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' }),
+      recordInterviewOutcome: (candidateId: string, status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>, interviewDate: string, interviewer: string, profession: string, score: number, reason: RejectionReason | '', note: string) => dispatch({ type: 'RECORD_INTERVIEW_OUTCOME', candidateId, status, interviewDate, interviewer, profession, score, reason, note }),
       openRejection: (candidateId: string) => dispatch({ type: 'OPEN_REJECTION_DIALOG', candidateId }),
       closeRejection: () => dispatch({ type: 'CLOSE_REJECTION_DIALOG' }),
       rejectCandidate: (candidateId: string, reason: RejectionReason, note: string) => dispatch({ type: 'REJECT_CANDIDATE', candidateId, reason, note }),
