@@ -166,7 +166,7 @@ export const parseCandidateImport = (text: string, existingCandidates: Candidate
 
     const duplicates = findDuplicateMatchesForDraft(existingCandidates, draft);
     const highConfidence = duplicates.filter((match) => match.confidence === 'high');
-    if (highConfidence.length > 0) warnings.push(\`High-confidence duplicate: \${highConfidence.map((match) => match.reasons.join(', ')).join(' · ')}\`);
+    if (highConfidence.length > 0) warnings.push(`High-confidence duplicate: ${highConfidence.map((match) => match.reasons.join(', ')).join(' · ')}`);
     else if (duplicates.length > 0) warnings.push('Possible duplicate match found; review before import.');
 
     return {
