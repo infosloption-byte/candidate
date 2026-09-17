@@ -71,7 +71,15 @@ const interviewReducer = (state: InterviewState, action: InterviewAction): Inter
         ...state,
         interviews: state.interviews.map((interview) => interview.id !== action.interviewId ? interview : {
           ...interview,
-          practicalTest: interview.practicalTest.map((item) => item.id === action.itemId ? { ...item, result: action.result, note: action.note } : item),
+          practicalTest: interview.practicalTest.map((item) => item.id === action.itemId ? { ...item, result: action.result } : item),
+        }),
+      };
+    case 'SET_PRACTICAL_NOTE':
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => interview.id !== action.interviewId ? interview : {
+          ...interview,
+          practicalTest: interview.practicalTest.map((item) => item.id === action.itemId ? { ...item, note: action.note } : item),
         }),
       };
     case 'SET_INTERVIEW_NOTE':
