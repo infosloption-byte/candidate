@@ -15,8 +15,8 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-export const useFocusTrap = ({ enabled, onEscape, restoreFocusRef }: UseFocusTrapOptions): RefObject<HTMLElement | null> => {
-  const containerRef = useRef<HTMLElement | null>(null);
+export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onEscape, restoreFocusRef }: UseFocusTrapOptions): RefObject<T | null> => {
+  const containerRef = useRef<T | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -46,6 +46,7 @@ export const useFocusTrap = ({ enabled, onEscape, restoreFocusRef }: UseFocusTra
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       const current = document.activeElement;
+      if (!first || !last) return;
       if (event.shiftKey && current === first) {
         event.preventDefault();
         last.focus();
