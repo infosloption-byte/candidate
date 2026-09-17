@@ -61,6 +61,10 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Bulk schedule preview shows requested, capacity, planned and unscheduled candidates before commit.
 - ✅ Large batches are created with one atomic interview reducer action, then candidate statuses are updated atomically.
 - ✅ Responsive bulk planner uses paged candidate rendering and touch-safe controls for 200–300 candidate workflows.
+- ✅ Interviewer load balancing accounts for existing workload and planned batch workload before choosing slots.
+- ✅ Batch schedule editing allows date/time/interviewer changes with existing-calendar and intra-batch conflict validation.
+- ✅ Batch workload panel exposes existing, planned, total and utilization metrics per interviewer.
+- ✅ Rebalance and regenerate controls let recruiters iterate on a batch before committing it.
 - ⏳ Advanced drag-and-drop rescheduling and conflict-resolution actions.
 
 ## Phase 4 — Selection and decision UX
@@ -106,11 +110,11 @@ Primary daily candidate flow:
 
 Interview workflow:
 
-`Queue → Schedule one or Batch schedule → Select candidate group → Configure window / duration / breaks / location mode → Select interviewer pool → Build capacity-safe plan → Review planned + unscheduled candidates → Commit batch → Candidate statuses updated → Day/Week calendar`
+`Queue → Schedule one or Batch schedule → Select candidate group → Configure window / duration / breaks / location mode → Select interviewer pool → Balance interviewer workload → Build capacity-safe plan → Edit or rebalance planned slots → Review planned + unscheduled candidates → Commit batch → Candidate statuses updated → Day/Week calendar`
 
 Large interview campaign flow:
 
-`Search / filter → Select all matching candidates → Work across pages without losing selection → Set multi-day capacity → Parallel interviewer allocation → Conflict / duplicate check → Preview → Schedule batch → Review calendar workload`
+`Search / filter → Select all matching candidates → Work across pages without losing selection → Set multi-day capacity → Balance existing + planned interviewer load → Conflict / duplicate check → Preview → Edit individual slots when needed → Schedule batch → Review calendar workload`
 
 Selection workflow:
 
@@ -132,7 +136,7 @@ Candidate intelligence flow:
 
 Interview scheduling flow:
 
-`Queue / Calendar → Batch schedule when volume is high → Select date window → Allocate interviewer capacity → Preview conflicts / overflow → Commit → Day/Week calendar`
+`Queue / Calendar → Batch schedule when volume is high → Select date window → Allocate and balance interviewer capacity → Preview conflicts / overflow → Edit / rebalance if needed → Commit → Day/Week calendar`
 
 Responsive rules:
 
@@ -141,6 +145,7 @@ Responsive rules:
 - Mobile: slide-over navigation, single-column candidate/interview/selection flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, compact day-agenda interview calendar, and stacked selection evidence/decision panels.
 - Large-batch scheduling: candidate results are paged so a 200–300 candidate selection does not render one giant DOM list; selection state survives page changes and search-filtered select-all.
 - Bulk scheduling: configuration and candidate selection remain in one planner surface, while schedule generation happens before persistence so recruiters can adjust the window rather than cleaning up hundreds of conflicts afterward.
+- Batch editing: planned slots can be edited one candidate at a time inside the same planner, with date/time/interviewer validation against both existing appointments and other planned slots.
 
 ## Current bugfix note
 
