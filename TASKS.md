@@ -64,8 +64,11 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Job-scoped management approval workflow: Draft → Pending → Approved / Returned.
 - ✅ Any change to an approved shortlist automatically returns that job to Draft for re-review.
 - ✅ Selection decisions persist locally behind a replaceable service boundary.
-- ⏳ Bulk shortlist/reassignment actions.
-- ⏳ Selection history and audit-ready timeline.
+- ✅ Bulk shortlist actions with multi-candidate Select / Reserve / Reject decisions.
+- ✅ Bulk reassignment to another job with target-job conflict protection.
+- ✅ Bulk decisions and reassignment use atomic reducer actions and preserve decision reasons/notes.
+- ✅ Selection history records decision changes, reassignment events, and approval changes.
+- ✅ Selection history is persisted locally and displayed as an audit-ready timeline per job.
 - ⏳ Advanced cross-job candidate allocation.
 
 ## Phase 5 — Backend and data
@@ -97,7 +100,7 @@ Interview workflow:
 
 Selection workflow:
 
-`Choose job requirement → Review recommended candidates → Open evidence → Select / Reserve / Reject → Build shortlist → Submit for management approval → Approve / Return`
+`Choose job requirement → Review recommended candidates → Multi-select / bulk action or open evidence → Select / Reserve / Reject / Reassign → Build shortlist → Submit for management approval → Approve / Return → review history`
 
 Candidate creation flow:
 
