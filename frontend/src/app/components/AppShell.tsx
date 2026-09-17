@@ -12,7 +12,13 @@ export const AppShell = ({ children, searchValue, onSearch }: AppShellProps) => 
   const { state, actions } = useAppShell();
   const mobileNavRef = useFocusTrap({ enabled: state.mobileNavOpen, onEscape: actions.closeMobileNav });
   useGlobalShortcuts();
-  const subtitle = state.activeView === 'candidates' ? 'Find the right people without losing interview context.' : 'Construction recruitment workspace';
+  const subtitle = state.activeView === 'dashboard'
+    ? 'Daily recruiter overview and action center.'
+    : state.activeView === 'candidates'
+      ? 'Find the right people without losing interview context.'
+      : state.activeView === 'reports'
+        ? 'Operational recruitment analytics and exports.'
+        : 'Construction recruitment workspace';
 
   return <div className="flex h-dvh overflow-hidden bg-slate-100">
     <aside className={`hidden shrink-0 border-r border-slate-900/10 transition-[width] duration-200 lg:block ${state.sidebarCollapsed ? 'w-[72px]' : 'w-[248px]'}`}><Sidebar /></aside>
