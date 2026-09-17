@@ -54,9 +54,25 @@ export const interviewReducer = (state: InterviewState, action: InterviewAction)
         interviews: state.interviews.map((interview) => {
           if (interview.id !== action.interviewId) return interview;
           const changedAt = new Date().toISOString();
-          const decisionHistory = action.decision === interview.decision.decision && action.reason === interview.decision.reason && action.note === interview.decision.note
-            ? (interview.decisionHistory ?? [])
-            : [...(interview.decisionHistory ?? []), { id: `decision-${Date.now()}-${interview.id}`, fromDecision: interview.decision.decision, toDecision: action.decision, reason: action.reason, note: action.note, changedAt }];
+          const isSameDecision = action.decision === interview.decision.decision
+            && action.reason === interview.decision.reason
+            && action.note === interview.decision.note;
+          let decisionHistory = interview.decisionHistory ?? [];
+
+          if (!isSameDecision && action.decision !== 'pending') {
+            decisionHistory = [
+              ...decisionHistory,
+              {
+                id: `decision-${Date.now()}-${interview.id}`,
+                fromDecision: interview.decision.decision,
+                toDecision: action.decision,
+                reason: action.reason,
+                note: action.note,
+                changedAt,
+              },
+            ];
+          }
+
           return { ...interview, decision: { decision: action.decision, reason: action.reason, note: action.note }, status: 'completed', decisionHistory };
         }),
       };
