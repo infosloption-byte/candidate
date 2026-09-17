@@ -26,9 +26,10 @@ export const useCandidateForm = (existingCandidates: Candidate[], onCreate: (can
 
   const next = () => {
     if (step === 1) {
-      if (!draft.name.trim() || !draft.phone.trim() || !draft.profession.trim()) { setError('Add the candidate name, phone number and profession to continue.'); return; }
+      if (!draft.name.trim() || !draft.phone.trim()) { setError('Add the candidate name and phone number to continue.'); return; }
       setStep(2); return;
     }
+    if (!draft.profession.trim()) { setError('Add the candidate primary profession before continuing.'); return; }
     if (!draft.experienceYears || Number(draft.experienceYears) < 0) { setError('Enter the candidate experience in years.'); return; }
     setStep(3); setError(null);
   };
