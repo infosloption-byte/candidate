@@ -1,4 +1,5 @@
-import { useAppContext, type AppView } from '../context/AppContext';
+import { useAppContext } from './useAppContext';
+import type { AppView } from '../context/AppContextTypes';
 
 export const useAppShell = () => {
   const { state, dispatch } = useAppContext();
