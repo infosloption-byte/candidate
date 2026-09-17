@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SelectionDecision, SelectionJob } from '../types/selection';
 
 interface UseSelectionDecisionFormProps {
+  candidateId: string | null;
   job: SelectionJob | null;
   selectedCount: number;
   currentDecision: SelectionDecision | null;
@@ -15,14 +16,20 @@ const reasons: Record<SelectionDecision, string[]> = {
   rejected: ['Technical gap', 'Experience gap', 'Required skill missing', 'Documents', 'Availability', 'Client requirement', 'Other'],
 };
 
-export const useSelectionDecisionForm = ({ job, selectedCount, currentDecision, onSubmit }: UseSelectionDecisionFormProps) => {
+export const useSelectionDecisionForm = ({ candidateId, job, selectedCount, currentDecision, onSubmit }: UseSelectionDecisionFormProps) => {
   const [decision, setDecision] = useState<SelectionDecision>(currentDecision ?? 'selected');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const decisionReasons = useMemo(() => reasons[decision], [decision]);
+  useEffect(() => {
+    setDecision(currentDecision ?? 'selected');
+    setReason('');
+    setNote('');
+    setError(null);
+  }, [candidateId, currentDecision]);
 
+  const decisionReasons = useMemo(() => reasons[decision], [decision]);
   const changeDecision = (value: SelectionDecision) => {
     setDecision(value);
     setReason('');
@@ -58,5 +65,5 @@ export const useSelectionDecisionForm = ({ job, selectedCount, currentDecision, 
     setError(null);
   };
 
-  return useMemo(() => ({ decision, reason, note, error, decisionReasons, changeDecision, setReason, setNote, submit, reset }), [decision, reason, note, error, decisionReasons, currentDecision]);
+  return useMemo(() => ({ decision, reason, note, error, decisionReasons, changeDecision, setReason, setNote, submit, reset }), [decision, reason, note, error, decisionReasons]);
 };
