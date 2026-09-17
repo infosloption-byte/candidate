@@ -5,12 +5,13 @@ import type { Interview, Interviewer } from '../types/interview';
 interface ScheduleInterviewDrawerProps {
   open: boolean;
   candidates: Candidate[];
+  interviews: Interview[];
   interviewers: Interviewer[];
   onClose: () => void;
   onCreate: (interview: Interview) => void;
 }
 
-export const ScheduleInterviewDrawer = ({ open, candidates, interviewers, onClose, onCreate }: ScheduleInterviewDrawerProps) => {
+export const ScheduleInterviewDrawer = ({ open, candidates, interviews, interviewers, onClose, onCreate }: ScheduleInterviewDrawerProps) => {
   if (!open) return null;
-  return <ScheduleInterviewDrawerContent candidates={candidates} interviewers={interviewers} onClose={onClose} onCreate={onCreate} />;
+  return <ScheduleInterviewDrawerContent candidates={candidates} interviews={interviews} interviewers={interviewers} onClose={onClose} onCreate={onCreate} />;
 };
