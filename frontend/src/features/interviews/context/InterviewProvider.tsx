@@ -3,6 +3,13 @@ import { InterviewContext } from './InterviewContextObject';
 import { loadInterviews, loadInterviewers, saveInterviews } from '../services/interviewRepository';
 import type { InterviewAction, InterviewState } from '../types/interview';
 
+const toIsoDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const initialState: InterviewState = {
   loadState: 'loading',
   errorMessage: null,
@@ -11,6 +18,8 @@ const initialState: InterviewState = {
   interviewers: [],
   selectedInterviewId: null,
   isScheduleDrawerOpen: false,
+  calendarView: 'week',
+  calendarDate: toIsoDate(new Date()),
 };
 
 const interviewReducer = (state: InterviewState, action: InterviewAction): InterviewState => {
@@ -40,6 +49,7 @@ const interviewReducer = (state: InterviewState, action: InterviewAction): Inter
         interviews: [action.interview, ...state.interviews],
         selectedInterviewId: action.interview.id,
         isScheduleDrawerOpen: false,
+        calendarDate: toIsoDate(new Date(`${action.interview.date} ${action.interview.time}`)),
       };
     case 'UPDATE_STATUS':
       return {
@@ -95,6 +105,10 @@ const interviewReducer = (state: InterviewState, action: InterviewAction): Inter
           status: 'completed',
         } : interview),
       };
+    case 'SET_CALENDAR_VIEW':
+      return { ...state, calendarView: action.value };
+    case 'SET_CALENDAR_DATE':
+      return { ...state, calendarDate: action.value };
     default:
       return state;
   }
