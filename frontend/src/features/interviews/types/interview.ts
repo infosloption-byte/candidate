@@ -24,11 +24,12 @@ export interface ScorecardCriterion { id: string; label: string; weight: number;
 export interface PracticalTestItem { id: string; label: string; required: boolean; result: PracticalResult; note: string; }
 export interface InterviewScorecard { templateId: string; criteria: ScorecardCriterion[]; }
 export interface InterviewDecision { decision: Decision; reason: string; note: string; }
+export interface InterviewDecisionHistory { id: string; fromDecision: Decision; toDecision: Exclude<Decision, 'pending'>; reason: string; note: string; changedAt: string; }
 export interface InterviewRescheduleHistory { id: string; fromDate: string; fromTime: string; fromInterviewerIds: string[]; toDate: string; toTime: string; toInterviewerIds: string[]; reason: string; changedAt: string; undoneAt: string | null; }
 export interface InterviewRescheduleDraft { interviewId: string; date: string; time: string; interviewerIds: string[]; reason: string; }
 export interface InterviewRescheduleAlternative { date: string; time: string; interviewerIds: string[]; label: string; }
 export interface InterviewScheduleValidation { valid: boolean; reasons: string[]; warnings: string[]; }
-export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; createdAt: string; rescheduleHistory?: InterviewRescheduleHistory[]; }
+export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; decisionHistory?: InterviewDecisionHistory[]; createdAt: string; rescheduleHistory?: InterviewRescheduleHistory[]; }
 export interface InterviewDraft { candidateId: string; type: InterviewType; date: string; time: string; durationMinutes: string; location: string; interviewerIds: string[]; }
 
 export interface BulkInterviewScheduleConfig { type: InterviewType; startDate: string; endDate: string; dayStart: string; dayEnd: string; durationMinutes: number; breakMinutes: number; location: string; sharedLocation: boolean; interviewerIds: string[]; includeWeekends: boolean; }
