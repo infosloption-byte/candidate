@@ -18,12 +18,14 @@ const createScorecard = (profession: string) => {
       : [['technical', 'Technical trade skill', 30], ['experience', 'Relevant experience', 15], ['secondary', 'Secondary skills', 15], ['safety', 'Safety awareness', 15], ['quality', 'Finish quality', 10], ['english', 'English / communication', 5], ['tools', 'Tools & methods', 10]];
 
   return {
-    templateId: normalized.includes('welder') ? 'welding-standard' : normalized.includes('carpenter') ? 'carpentry-standard' : 'mason-standard',
+    templateId: normalized.includes('welder') ? 'welding-standard' : normalized.includes('carpenter') ? 'carpentry-standard' : 'general-trade-standard',
     criteria: labels.map(([id, label, weight]) => ({ id: String(id), label: String(label), weight: Number(weight), score: null, note: '' })),
   };
 };
 
-const createPracticalTest = (profession: string) => {
+const createPracticalTest = (profession: string, type: InterviewType) => {
+  if (type === 'Screening' || type === 'Client') return [];
+
   const normalized = profession.toLowerCase();
   if (normalized.includes('mason') || normalized.includes('tile')) {
     return [
@@ -101,6 +103,11 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
     }
 
     const assigned = interviewerIdsToObjects(draft.interviewerIds, interviewers);
+    if (assigned.length === 0) {
+      setError('The selected interviewer could not be found. Choose an active interviewer and try again.');
+      return;
+    }
+
     const profession = selectedCandidate.profession;
     const interview: Interview = {
       id: makeId('iv'),
@@ -117,7 +124,7 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
       interviewers: assigned,
       notes: '',
       scorecard: createScorecard(profession),
-      practicalTest: createPracticalTest(profession),
+      practicalTest: createPracticalTest(profession, draft.type),
       decision: { decision: 'pending', reason: '', note: '' },
       createdAt: new Date().toISOString(),
     };
