@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useInterviewContext } from '../context/useInterviewContext';
-import { addDays, buildCalendarDays, buildCalendarEntries, fromIsoDate, startOfWeek, toIsoDate } from '../services/interviewCalendar';
+import { addDays, buildCalendarDays, buildCalendarEntries, fromIsoDate, parseInterviewDate, startOfWeek, toIsoDate } from '../services/interviewCalendar';
 import type { InterviewCalendarDay, InterviewCalendarEntry, InterviewCalendarView } from '../types/interview';
 
 interface UseInterviewCalendarResult {
@@ -25,26 +25,20 @@ export const useInterviewCalendar = (): UseInterviewCalendarResult => {
   const entriesByDay = useMemo(() => {
     const grouped = new Map<string, InterviewCalendarEntry[]>();
     entries.forEach((entry) => {
-      const interviewDay = entry.interview.date;
-      const parsed = new Date(entry.interview.date);
-      const calendarDay = Number.isNaN(parsed.getTime()) ? null : toIsoDate(parsed);
-      if (calendarDay) {
-        const existing = grouped.get(calendarDay) ?? [];
-        existing.push(entry);
-        grouped.set(calendarDay, existing);
-        return;
-      }
-      const matchingDay = days.find((day) => day.label.startsWith(interviewDay.split(' ')[0]));
-      if (matchingDay) {
-        const existing = grouped.get(matchingDay.isoDate) ?? [];
-        existing.push(entry);
-        grouped.set(matchingDay.isoDate, existing);
-      }
+      const parsed = parseInterviewDate(entry.interview.date, entry.interview.time);
+      if (!parsed) return;
+      const calendarDay = toIsoDate(parsed);
+      const existing = grouped.get(calendarDay) ?? [];
+      existing.push(entry);
+      grouped.set(calendarDay, existing);
     });
     return grouped;
-  }, [days, entries]);
+  }, [entries]);
 
-  const conflictCount = useMemo(() => entries.filter((entry) => entry.conflicts.length > 0).length, [entries]);
+  const conflictCount = useMemo(() => {
+    const visibleDates = new Set(days.map((day) => day.isoDate));
+    return entries.filter((entry) => visibleDates.has(toIsoDate(parseInterviewDate(entry.interview.date, entry.interview.time) ?? new Date(0))) && entry.conflicts.length > 0).length;
+  }, [days, entries]);
 
   return {
     view: state.calendarView,
