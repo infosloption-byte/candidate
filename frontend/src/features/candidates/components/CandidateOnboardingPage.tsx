@@ -19,7 +19,7 @@ export const CandidateOnboardingPage = () => {
   const { state, actions } = useCandidateWorkspace();
   const { counts, actions: onboardingActions } = useCandidateOnboarding();
   const [statusFilter, setStatusFilter] = useState<CandidateOnboardingStatus | 'all'>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(state.candidates[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(state.selectedCandidateId ?? state.candidates[0]?.id ?? null);
   const [reviewNote, setReviewNote] = useState('');
 
   const filteredCandidates = useMemo(
@@ -107,8 +107,8 @@ export const CandidateOnboardingPage = () => {
               <p className="text-sm font-black text-slate-900">Recruiter handoff</p>
               <p className="mt-1 text-xs text-slate-500">Use the primary action to simulate the candidate handoff until authenticated invitation delivery is connected to the backend.</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {selectedStatus !== 'completed' && selectedStatus !== 'needs-changes' && <button type="button" onClick={mainAction} title={\`Advance onboarding: \${onboardingNextAction(selectedStatus)}\`} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white"><Icon name={selectedStatus === 'not-started' ? 'plus' : 'arrow-right'} size={14} />{onboardingNextAction(selectedStatus)}</button>}
-                {selectedStatus === 'submitted' && <button type="button" onClick={mainAction} title="Verify the submitted candidate profile" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white"><Icon name="check" size={14} /> Mark verified</button>}
+                {selectedStatus !== 'completed' && selectedStatus !== 'needs-changes' && <button type="button" onClick={mainAction} title={\`Advance onboarding: \${onboardingNextAction(selectedStatus)}\`} className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white ${selectedStatus === 'submitted' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-900 hover:bg-slate-800'}`}><Icon name={selectedStatus === 'submitted' ? 'check' : selectedStatus === 'not-started' ? 'plus' : 'arrow-right'} size={14} />{selectedStatus === 'submitted' ? 'Mark verified' : onboardingNextAction(selectedStatus)}</button>}
+                
               </div>
               <label className="mt-4 block"><span className="field-label">Reviewer note / requested changes</span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} className="field-input min-h-24 resize-y" placeholder="Example: Please upload the trade certificate and correct the passport number." /></label>
               <button type="button" onClick={requestChanges} disabled={!reviewNote.trim() || selectedStatus === 'completed'} title="Request the candidate to correct missing or inaccurate information" className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40">Request changes</button>
