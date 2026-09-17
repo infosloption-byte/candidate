@@ -36,7 +36,11 @@ Interviews ★
   ├─ Queue / Calendar view switch
   ├─ Day / Week calendar
   ├─ Search / status filters
-  ├─ Schedule interview
+  ├─ Schedule one interview
+  ├─ Batch interview planner
+  ├─ Large candidate multi-select / select-all-filtered
+  ├─ Multi-day interviewer capacity planning
+  ├─ Shared-room / parallel-workstation resource mode
   ├─ Interviewer assignment / panel
   ├─ Interview workspace
   ├─ Profession-aware scorecard
@@ -48,6 +52,7 @@ Selection ★
   ├─ Job-specific openings / requirements
   ├─ Recommended / Selected / Reserve / Rejected
   ├─ Candidate evidence workspace
+  ├─ Configurable job suitability score
   ├─ Bulk shortlist decisions
   ├─ Bulk reassignment to another job
   ├─ Selection decision
@@ -176,6 +181,8 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 
 The Interview Desk is a split workspace using the same list/detail interaction pattern as Candidates. Recruiters can search by candidate, trade, location or interviewer and filter by All, Today, Needs attention, or Completed.
 
+A `Batch schedule` action is available from both Queue and Calendar views so high-volume campaigns do not require returning to a specific list state.
+
 ### Calendar
 
 The Interview Desk has a dedicated full-width Calendar view alongside the queue. It supports:
@@ -189,15 +196,55 @@ The Interview Desk has a dedicated full-width Calendar view alongside the queue.
 - Conflict visualization when active interviews overlap on the same interviewer or room.
 - Conflict indicators with the affected candidate shown as the reason.
 
-The current calendar is a scheduling UX prototype. Drag-and-drop rescheduling and server-side conflict enforcement remain later milestones.
+The current calendar remains a scheduling UX surface. Drag-and-drop rescheduling and server-side conflict enforcement remain later milestones.
 
-### Scheduling
+### Single scheduling
 
-Scheduling uses a focused drawer:
+Single scheduling continues to use the focused drawer:
 
 `Candidate → Interview type → Date / time / duration / location → Interviewer(s) → Schedule`
 
-The interviewer list displays role and specialties so HR can assign the appropriate panel without opening another screen.
+### Batch scheduling for large campaigns
+
+High-volume interviewing uses a dedicated planner instead of opening one scheduling drawer per candidate.
+
+The batch planner supports:
+
+- Multi-candidate selection with search.
+- `Select all` across the complete filtered result set.
+- Cross-page selection without losing previously selected candidates.
+- Paginated candidate rendering so 200–300 candidates do not produce one huge DOM list.
+- Date range spanning multiple days.
+- Working-day/weekend control.
+- Day start and end time.
+- Interview duration.
+- Break between interviews.
+- Active interviewer pool selection.
+- Specialty-aware interviewer assignment where matching specialties exist.
+- Existing active-interview detection so the same candidate is not scheduled twice.
+- Existing interviewer conflict detection.
+- Optional shared-location conflict detection.
+- Parallel interviewer capacity when the location represents multiple independent workstations.
+- A preview showing requested candidates, calculated capacity, planned interviews, and candidates that still need another scheduling window.
+
+The planner does not immediately mutate the schedule. Recruiters first build a plan, review the result, adjust capacity inputs if necessary, and then commit the complete batch in one reducer transition.
+
+### Capacity model
+
+The initial frontend capacity calculation is:
+
+`eligible working days × active interviewers × usable slots per interviewer`
+
+Usable slots are derived from the working window, interview duration, and between-interview break. Existing appointments are excluded during planning. Specialty matching is used during assignment, so the displayed `Planned` count is the authoritative result for the selected candidate group.
+
+Location handling has two explicit modes:
+
+- `Parallel workstations`: the entered location is not treated as one exclusive room, allowing multiple interviewers to work simultaneously.
+- `Shared room`: the entered location is a single exclusive resource, so overlapping appointments are blocked.
+
+### Batch commit
+
+Batch creation uses one interview-domain reducer action. Candidate status changes to `Interview` are also applied with one candidate-domain bulk action rather than hundreds of separate dispatches. This is the frontend prototype boundary; persistence becomes server-transactional in the backend milestone.
 
 ### Interview lifecycle
 
@@ -253,6 +300,14 @@ Candidates with relevant interview evidence are shown under:
 
 The board uses the same candidate evidence model already established. Each candidate shows interview score, experience fit, required-skill coverage, documents, readiness, tags, and interview observations.
 
+### Configurable job-fit suitability
+
+Each job has an explainable suitability model using configurable weights for:
+
+`Experience + Required skills + Interview evidence + Documents + Readiness + Communication`
+
+Weights are normalized to 100% and persisted per job in the frontend adapter. The active candidate evidence panel shows each factor's observed value, weight, and contribution so the final suitability score is inspectable rather than opaque.
+
 ### Bulk shortlist
 
 Recruiters can multi-select visible candidates from any selection tab and apply a shared decision with one reason and written note:
@@ -306,6 +361,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Selection uses a split evidence/decision workspace.
 - Comparison and scheduling drawers remain available without leaving the workspace.
 - Interview calendar uses the full main content width for week planning.
+- Batch planner uses a two-column candidate/configuration layout with a dense plan preview.
 
 ### Tablet
 
@@ -313,6 +369,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Dense controls wrap rather than overflow.
 - Candidate, interview, and selection profile content uses responsive grids.
 - Smart filters and interview/selection controls remain usable with touch input.
+- Batch planner maintains separate candidate and scheduling panes where width allows and stacks them when necessary.
 
 ### Mobile
 
@@ -326,6 +383,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Advanced filters use independent scrolling.
 - Schedule drawer and evaluation workspace use full-width mobile layouts.
 - Interview calendar becomes a compact day agenda instead of a dense seven-column grid.
+- Bulk planner stacks candidate selection above scheduling configuration, preserves cross-page selection, and keeps the commit action in a safe-area-aware footer.
 - Selection bulk actions wrap into stacked touch controls, and evidence, decision, approval, and history panels stack vertically.
 
 ## 9. Smart SaaS UX
@@ -343,10 +401,14 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Required practical tasks block incomplete final decisions.
 - Interview decisions synchronize back to candidate state.
 - Calendar conflicts are explained rather than shown as opaque warning colors.
+- Batch scheduling detects already-scheduled candidates before allocating slots.
+- Batch scheduling previews overflow before persistence so recruiters can extend the window or add capacity without manual cleanup.
+- Bulk status updates use atomic reducer transitions so large batches do not generate hundreds of state mutations.
 - Selection decisions require capacity-safe, explainable reasons and notes.
 - Bulk selection mutations use the same capacity and approval-reset rules as individual decisions.
 - Reassignment prevents target-job record collisions and records an explicit audit event.
 - Selection history is visible without leaving the active job workflow.
+- Suitability scoring remains explainable and per-job configurable.
 - Approval is scoped to the selected job and invalidated when that shortlist changes.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
@@ -357,21 +419,23 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Candidate domain state: `CandidateProvider` + `useReducer`.
 - Interview domain state: `InterviewProvider` + `useReducer`.
 - Selection domain state: `SelectionProvider` + `useReducer`.
-- Candidate filtering, saved searches, duplicate review, tags, and comparison actions: `useCandidateWorkspace` + reducer actions.
+- Candidate filtering, saved searches, duplicate review, tags, comparison, and bulk status actions: `useCandidateWorkspace` + reducer actions.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
 - Interview queue and workflow actions: `useInterviewWorkspace`.
 - Interview calendar navigation and derived scheduling state: `useInterviewCalendar` + reducer actions.
 - Interview scheduling: `useInterviewForm`.
+- Large-batch interview planning and selection: `useInterviewBulkScheduler`.
+- Bulk scheduling algorithm / slot allocation: `interviewBatchScheduler` pure service.
 - Interview scorecard evaluation: `useInterviewScorecard`.
 - Interview decision validation: `useInterviewDecisionForm`.
-- Selection board intelligence: `useSelectionWorkspace`.
+- Selection board intelligence and suitability: `useSelectionWorkspace` + `useSelectionSuitability`.
 - Selection bulk selection/action state: `useSelectionBulkActions`.
 - Selection decision validation: `useSelectionDecisionForm`.
 - Selection approval form state: `useSelectionApprovalForm`.
 - Candidate persistence: `candidateRepository` service boundary.
 - Interview persistence: `interviewRepository` service boundary.
-- Selection persistence: `selectionRepository` service boundary, including selection history.
+- Selection persistence: `selectionRepository` service boundary, including selection history and per-job scoring weights.
 - Duplicate matching: pure `candidateMatching` service.
 - Calendar conflict detection: pure `interviewCalendar` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
@@ -379,8 +443,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 ## 11. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Add configurable job-fit evidence and suitability score presentation.
-3. Expand interview history and decision audit views.
-4. Add advanced cross-job candidate allocation.
-5. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
-6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
+2. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
+3. Add advanced cross-job candidate allocation.
+4. Expand interview history and decision audit views.
+5. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
