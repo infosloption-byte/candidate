@@ -1,6 +1,6 @@
 import type { Candidate } from '../../candidates/types/candidate';
 import { formatInterviewDateLabel } from './interviewRescheduler';
-import { getConflictReasons, interviewOverlaps, fromIsoDate, toIsoDate } from './interviewCalendar';
+import { fromIsoDate, getConflictReasons, interviewOverlaps, toIsoDate } from './interviewCalendar';
 import type { Interview, InterviewDraft, InterviewScheduleValidation, Interviewer } from '../types/interview';
 
 const buildValidationTarget = (draft: InterviewDraft, candidate: Candidate, interviewers: Interviewer[]): Interview => ({
@@ -24,6 +24,7 @@ const buildValidationTarget = (draft: InterviewDraft, candidate: Candidate, inte
 });
 
 const normalize = (value: string): string => value.trim().toLowerCase();
+const activeStatuses: Interview['status'][] = ['scheduled', 'in-progress', 'evaluation'];
 
 export const validateInterviewSchedule = (
   draft: InterviewDraft,
@@ -74,18 +75,20 @@ export const validateInterviewSchedule = (
 
   if (candidate && reasons.size === 0) {
     const target = buildValidationTarget(draft, candidate, selected);
-    const activeInterviews = interviews.filter((interview) => interview.status === 'scheduled' || interview.status === 'in-progress' || interview.status === 'evaluation');
+    const activeInterviews = interviews.filter((interview) => activeStatuses.includes(interview.status));
 
     const sameCandidate = activeInterviews.find((interview) => interview.candidateId === candidate.id && interviewOverlaps(target, interview));
     if (sameCandidate) {
-      reasons.add(`Candidate already has an overlapping interview with ${sameCandidate.candidateName} at ${sameCandidate.time}.`);
+      reasons.add(`Candidate already has an overlapping interview at ${sameCandidate.time}.`);
     }
 
-    reasons.forEach(() => undefined);
     getConflictReasons(target, activeInterviews).forEach((reason) => reasons.add(reason));
 
     const profession = normalize(candidate.profession);
-    const specialtyMatches = selected.filter((interviewer) => interviewer.specialties.some((specialty) => normalize(specialty) === profession || profession.includes(normalize(specialty)) || normalize(specialty).includes(profession)));
+    const specialtyMatches = selected.filter((interviewer) => interviewer.specialties.some((specialty) => {
+      const normalizedSpecialty = normalize(specialty);
+      return normalizedSpecialty === profession || profession.includes(normalizedSpecialty) || normalizedSpecialty.includes(profession);
+    }));
     if (specialtyMatches.length === 0 && selected.length > 0) {
       warnings.add(`None of the selected interviewers lists ${candidate.profession} as a specialty. Confirm the panel before scheduling.`);
     }
