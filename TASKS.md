@@ -34,7 +34,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Comparison height/minimized preferences persist locally.
 - ✅ Recruiter tags and user-defined labels with quick suggestions.
 - ✅ Candidate tags participate in keyword search.
-- ⏳ Job-fit evidence and configurable suitability score presentation.
+- ✅ Job-fit evidence and configurable suitability score presentation.
 - ⏳ Full interview history and decision audit timeline.
 
 ## Phase 3 — Interview workflow UX
@@ -51,6 +51,16 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Profession-aware practical test workflow with required and optional tasks.
 - ✅ Interview result review and final decision workflow with Select / Reserve / Reject.
 - ✅ Interview decisions synchronize back to the candidate profile with result, score, reason and note.
+- ✅ Multi-candidate interview selection with search, select-all-filtered, paging and persistent cross-page selection.
+- ✅ Bulk interview scheduling planner for large candidate groups across a configurable date window.
+- ✅ Scheduler capacity model across multiple interviewers with specialty-aware assignment.
+- ✅ Existing active interview detection prevents duplicate interview scheduling.
+- ✅ Existing interviewer conflicts are surfaced through the generated plan instead of silently overwriting appointments.
+- ✅ Parallel interviewer capacity supported when a location is not a shared resource.
+- ✅ Shared-location resource mode prevents double-booking a single interview room/centre.
+- ✅ Bulk schedule preview shows requested, capacity, planned and unscheduled candidates before commit.
+- ✅ Large batches are created with one atomic interview reducer action, then candidate statuses are updated atomically.
+- ✅ Responsive bulk planner uses paged candidate rendering and touch-safe controls for 200–300 candidate workflows.
 - ⏳ Advanced drag-and-drop rescheduling and conflict-resolution actions.
 
 ## Phase 4 — Selection and decision UX
@@ -96,7 +106,11 @@ Primary daily candidate flow:
 
 Interview workflow:
 
-`Queue → Schedule → Assign interviewer(s) → Day/Week calendar → Start interview → Evaluation → Scorecard + Practical test → Final decision → Candidate profile updated`
+`Queue → Schedule one or Batch schedule → Select candidate group → Configure window / duration / breaks / location mode → Select interviewer pool → Build capacity-safe plan → Review planned + unscheduled candidates → Commit batch → Candidate statuses updated → Day/Week calendar`
+
+Large interview campaign flow:
+
+`Search / filter → Select all matching candidates → Work across pages without losing selection → Set multi-day capacity → Parallel interviewer allocation → Conflict / duplicate check → Preview → Schedule batch → Review calendar workload`
 
 Selection workflow:
 
@@ -118,13 +132,15 @@ Candidate intelligence flow:
 
 Interview scheduling flow:
 
-`Queue / Calendar → Select day or week → Review appointment → Conflict warning when interviewer or room overlaps → Open interview workspace`
+`Queue / Calendar → Batch schedule when volume is high → Select date window → Allocate interviewer capacity → Preview conflicts / overflow → Commit → Day/Week calendar`
 
 Responsive rules:
 
 - Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
 - Tablet: compact sidebar behavior with flexible content widths.
 - Mobile: slide-over navigation, single-column candidate/interview/selection flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, compact day-agenda interview calendar, and stacked selection evidence/decision panels.
+- Large-batch scheduling: candidate results are paged so a 200–300 candidate selection does not render one giant DOM list; selection state survives page changes and search-filtered select-all.
+- Bulk scheduling: configuration and candidate selection remain in one planner surface, while schedule generation happens before persistence so recruiters can adjust the window rather than cleaning up hundreds of conflicts afterward.
 
 ## Current bugfix note
 
