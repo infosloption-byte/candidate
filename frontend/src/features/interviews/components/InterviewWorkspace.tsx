@@ -9,7 +9,7 @@ interface InterviewWorkspaceProps {
   interview: Interview | null;
   onBack?: () => void;
   onStatusChange: (interviewId: string, status: InterviewStatus) => void;
-  onDecisionRecorded: (candidateId: string, decision: Exclude<Decision, 'pending'>) => void;
+  onDecisionRecorded: (candidateId: string, decision: Exclude<Decision, 'pending'>, reason: string, note: string) => void;
 }
 
 const statusLabel: Record<InterviewStatus, string> = {
@@ -46,7 +46,7 @@ export const InterviewWorkspace = ({ interview, onBack, onStatusChange, onDecisi
   const handleDecision = (decision: Decision, reason: string, note: string) => {
     if (decision === 'pending') return;
     scorecard.setDecision(decision, reason, note);
-    onDecisionRecorded(interview.candidateId, decision);
+    onDecisionRecorded(interview.candidateId, decision, reason, note);
   };
 
   return (
