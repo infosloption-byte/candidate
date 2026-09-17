@@ -67,6 +67,33 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
     case 'UPDATE_STATUS': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, status: action.status, journey: [{ id: makeEventId(), date: today(), title: statusTitle(action.status), detail: statusDetail(action.status), tone: statusTone(action.status) }, ...candidate.journey] } : candidate) };
+    case 'RECORD_INTERVIEW_OUTCOME': {
+      const result = action.status === 'rejected' ? 'Failed' : 'Passed';
+      return {
+        ...state,
+        candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? {
+          ...candidate,
+          status: action.status,
+          rejectionReason: action.status === 'rejected' && action.reason ? action.reason : undefined,
+          rejectionNote: action.status === 'rejected' ? action.note : undefined,
+          lastInterview: {
+            date: action.interviewDate,
+            interviewer: action.interviewer,
+            role: action.profession,
+            result,
+            score: action.score,
+            note: action.note || undefined,
+          },
+          journey: [{
+            id: makeEventId(),
+            date: action.interviewDate,
+            title: action.status === 'rejected' ? 'Interview failed' : action.status === 'selected' ? 'Interview passed — selected' : 'Interview passed — reserve',
+            detail: action.status === 'rejected' ? `${action.reason}: ${action.note}` : `${action.score}% interview result.`,
+            tone: action.status === 'rejected' ? 'negative' : action.status === 'selected' ? 'positive' : 'warning',
+          }, ...candidate.journey],
+        } : candidate),
+      };
+    }
     case 'OPEN_REJECTION_DIALOG': return { ...state, rejectionCandidateId: action.candidateId };
     case 'CLOSE_REJECTION_DIALOG': return { ...state, rejectionCandidateId: null };
     case 'REJECT_CANDIDATE': return { ...state, rejectionCandidateId: null, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, status: 'rejected', rejectionReason: action.reason, rejectionNote: action.note, journey: [{ id: makeEventId(), date: today(), title: 'Rejected', detail: `${action.reason}: ${action.note}`, tone: 'negative' }, ...candidate.journey] } : candidate) };
