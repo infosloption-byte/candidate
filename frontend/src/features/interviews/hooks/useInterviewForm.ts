@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Candidate } from '../../candidates/types/candidate';
 import type { Interview, InterviewDraft, InterviewType, Interviewer } from '../types/interview';
 import { getInterviewerAvailabilities } from '../services/interviewerAvailability';
+import { getInterviewTimezoneInfo } from '../services/interviewTimezone';
+import { loadInterviews } from '../services/interviewRepository';
 import { validateInterviewSchedule } from '../services/interviewScheduling';
 
 interface UseInterviewFormProps {
@@ -80,6 +82,13 @@ const makeId = (prefix: string): string => typeof crypto !== 'undefined' && 'ran
 export const useInterviewForm = ({ candidates, interviewers, interviews, onCreate, onClose }: UseInterviewFormProps) => {
   const [draft, setDraft] = useState<InterviewDraft>(createEmptyDraft);
   const [error, setError] = useState<string | null>(null);
+  const [availabilityInterviews, setAvailabilityInterviews] = useState<Interview[]>(interviews);
+  const [availabilityRefreshing, setAvailabilityRefreshing] = useState(false);
+  const [availabilityRefreshedAt, setAvailabilityRefreshedAt] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    setAvailabilityInterviews(interviews);
+  }, [interviews]);
 
   const selectedCandidate = useMemo(() => candidates.find((candidate) => candidate.id === draft.candidateId) ?? null, [candidates, draft.candidateId]);
   const selectedInterviewers = useMemo(
@@ -89,12 +98,12 @@ export const useInterviewForm = ({ candidates, interviewers, interviews, onCreat
     [draft.interviewerIds, interviewers],
   );
   const interviewerAvailability = useMemo(
-    () => getInterviewerAvailabilities(interviewers, draft.date, draft.time, draft.durationMinutes, interviews),
-    [draft.date, draft.durationMinutes, draft.time, interviews, interviewers],
+    () => getInterviewerAvailabilities(interviewers, draft.date, draft.time, draft.durationMinutes, availabilityInterviews),
+    [availabilityInterviews, draft.date, draft.durationMinutes, draft.time, interviewers],
   );
   const validation = useMemo(
-    () => validateInterviewSchedule(draft, selectedCandidate, interviewers, interviews),
-    [draft, interviews, interviewers, selectedCandidate],
+    () => validateInterviewSchedule(draft, selectedCandidate, interviewers, availabilityInterviews),
+    [availabilityInterviews, draft, interviewers, selectedCandidate],
   );
 
   const updateField = useCallback(<K extends keyof InterviewDraft>(field: K, value: InterviewDraft[K]) => {
@@ -102,6 +111,19 @@ export const useInterviewForm = ({ candidates, interviewers, interviews, onCreat
     setError(null);
   }, []);
 
+  const refreshAvailability = useCallback(async () => {
+    setAvailabilityRefreshing(true);
+    try {
+      const latestInterviews = await loadInterviews();
+      setAvailabilityInterviews(latestInterviews);
+      setAvailabilityRefreshedAt(new Date());
+      setError(null);
+    } catch {
+      setError('Availability could not be refreshed. The current schedule remains in use.');
+    } finally {
+      setAvailabilityRefreshing(false);
+    }
+  }, []);
   const toggleInterviewer = useCallback((interviewerId: string) => {
     setDraft((current) => ({
       ...current,
@@ -161,9 +183,13 @@ export const useInterviewForm = ({ candidates, interviewers, interviews, onCreat
     selectedInterviewers,
     interviewerAvailability,
     validation,
+    timezoneInfo: getInterviewTimezoneInfo(draft.date, draft.time),
+    availabilityRefreshing,
+    availabilityRefreshedAt,
+    refreshAvailability,
     updateField,
     toggleInterviewer,
     submit,
     reset,
-  }), [draft, error, interviewerAvailability, reset, selectedCandidate, selectedInterviewers, submit, toggleInterviewer, updateField, validation]);
+  }), [availabilityRefreshedAt, availabilityRefreshing, draft, error, interviewerAvailability, refreshAvailability, reset, selectedCandidate, selectedInterviewers, submit, toggleInterviewer, updateField, validation]);
 };
