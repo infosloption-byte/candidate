@@ -90,7 +90,8 @@ export type InterviewAction =
   | { type: 'UPDATE_STATUS'; interviewId: string; status: InterviewStatus }
   | { type: 'SET_SCORE'; interviewId: string; criterionId: string; score: number | null }
   | { type: 'SET_CRITERION_NOTE'; interviewId: string; criterionId: string; note: string }
-  | { type: 'SET_PRACTICAL_RESULT'; interviewId: string; itemId: string; result: PracticalResult; note: string }
+  | { type: 'SET_PRACTICAL_RESULT'; interviewId: string; itemId: string; result: PracticalResult }
+  | { type: 'SET_PRACTICAL_NOTE'; interviewId: string; itemId: string; note: string }
   | { type: 'SET_INTERVIEW_NOTE'; interviewId: string; note: string }
   | { type: 'SET_DECISION'; interviewId: string; decision: Decision; reason: string; note: string };
 
