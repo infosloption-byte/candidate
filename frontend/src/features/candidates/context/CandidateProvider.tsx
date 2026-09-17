@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { CandidateContext } from './CandidateContextObject';
-import type { Candidate, CandidateAction, CandidateSavedFilter, CandidateState } from './CandidateContext';
+import type { Candidate, CandidateAction, CandidateState } from './CandidateContext';
 import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate';
 import { loadCandidates, saveCandidates } from '../services/candidateRepository';
 import { loadCandidateWorkspacePreferences, saveCandidateWorkspacePreferences, type CandidateWorkspacePreferences } from '../services/candidatePreferencesRepository';
@@ -119,7 +119,8 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
     let cancelled = false;
     const hydrate = async () => {
       try {
-        const candidates = await loadCandidates();
+        const loadedCandidates = await loadCandidates();
+        const candidates = loadedCandidates.map((candidate) => ({ ...candidate, tags: Array.isArray(candidate.tags) ? candidate.tags : [] }));
         let preferences: CandidateWorkspacePreferences = defaultPreferences;
         try {
           preferences = await loadCandidateWorkspacePreferences();
