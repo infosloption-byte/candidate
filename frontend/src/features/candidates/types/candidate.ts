@@ -4,6 +4,9 @@ export type EnglishLevel = 'Not assessed' | 'Basic' | 'Working' | 'Good' | 'Stro
 export type Availability = 'Available now' | 'Within 2 weeks' | 'Within 1 month' | 'Not available';
 export type DocumentState = 'verified' | 'needs-review' | 'missing';
 export type RejectionReason = 'Technical skill' | 'Experience gap' | 'Required skill missing' | 'Communication' | 'Documents' | 'Availability' | 'Client requirement' | 'Other';
+export type BooleanFilter = 'all' | 'yes' | 'no';
+export type DocumentReadinessFilter = 'all' | 'ready' | 'attention';
+export type DuplicateConfidence = 'high' | 'possible';
 
 export interface CandidateDocumentSummary {
   passport: DocumentState;
@@ -78,4 +81,22 @@ export interface CandidateFilters {
   search: string;
   status: CandidateStatus | 'all';
   profession: string;
+}
+
+export interface CandidateSmartFilters {
+  minExperience: number | null;
+  maxExperience: number | null;
+  englishLevel: EnglishLevel | 'all';
+  availability: Availability | 'all';
+  overseasExperience: BooleanFilter;
+  drivingLicense: BooleanFilter;
+  documentReadiness: DocumentReadinessFilter;
+  skills: string[];
+}
+
+export interface CandidateDuplicateMatch {
+  candidateId: string;
+  confidence: DuplicateConfidence;
+  score: number;
+  reasons: string[];
 }
