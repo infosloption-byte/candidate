@@ -2,12 +2,14 @@ import { InterviewScorecard } from './InterviewScorecard';
 import { PracticalTestPanel } from './PracticalTestPanel';
 import { InterviewDecisionPanel } from './InterviewDecisionPanel';
 import { InterviewRescheduleHistory } from './InterviewRescheduleHistory';
+import { InterviewHistoryTimeline } from './InterviewHistoryTimeline';
 import { Icon } from '../../../shared/components/Icon';
 import { useInterviewScorecard } from '../hooks/useInterviewScorecard';
 import type { Decision, Interview, InterviewStatus, Interviewer, PracticalResult } from '../types/interview';
 
 interface InterviewWorkspaceProps {
   interview: Interview | null;
+  interviews: Interview[];
   interviewers: Interviewer[];
   onBack?: () => void;
   onStatusChange: (interviewId: string, status: InterviewStatus) => void;
@@ -33,7 +35,7 @@ const statusClass: Record<InterviewStatus, string> = {
   cancelled: 'bg-slate-100 text-slate-500',
 };
 
-export const InterviewWorkspace = ({ interview, interviewers, onBack, onStatusChange, onDecisionRecorded, onReschedule }: InterviewWorkspaceProps) => {
+export const InterviewWorkspace = ({ interview, interviews, interviewers, onBack, onStatusChange, onDecisionRecorded, onReschedule }: InterviewWorkspaceProps) => {
   const scorecard = useInterviewScorecard(interview);
 
   if (!interview) return <section className="grid min-h-full place-items-center bg-slate-50 p-8"><div className="max-w-sm text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="calendar" size={24}/></div><h2 className="mt-4 text-base font-black text-slate-800">Select an interview</h2><p className="mt-1 text-sm leading-6 text-slate-500">Choose an appointment from the queue to review its schedule, evidence and decision.</p></div></section>;
@@ -88,6 +90,7 @@ export const InterviewWorkspace = ({ interview, interviewers, onBack, onStatusCh
         <PracticalTestPanel interview={interview} editable={canEditEvidence} onResult={handlePracticalResult} onNote={scorecard.setPracticalNote}/>
         <InterviewDecisionPanel interview={interview} canComplete={scorecard.canComplete && canEditEvidence} validationMessage={scorecard.validationMessage} onSubmit={handleDecision}/>
         <InterviewRescheduleHistory history={interview.rescheduleHistory ?? []} interviewers={interviewers}/>
+        <InterviewHistoryTimeline candidateId={interview.candidateId} interviews={interviews}/>
       </div>
     </section>
   );
