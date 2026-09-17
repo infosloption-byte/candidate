@@ -1,5 +1,5 @@
 export type CandidateStatus = 'new' | 'screening' | 'interview' | 'selected' | 'reserve' | 'rejected';
-export type CandidateSource = 'Walk-in' | 'Referral' | 'Agency' | 'Existing database';
+export type CandidateSource = 'Walk-in' | 'Referral' | 'Agency' | 'Existing database' | 'Bulk import';
 export type EnglishLevel = 'Not assessed' | 'Basic' | 'Working' | 'Good' | 'Strong';
 export type Availability = 'Available now' | 'Within 2 weeks' | 'Within 1 month' | 'Not available';
 export type DocumentState = 'verified' | 'needs-review' | 'missing';
@@ -7,6 +7,7 @@ export type RejectionReason = 'Technical skill' | 'Experience gap' | 'Required s
 export type BooleanFilter = 'all' | 'yes' | 'no';
 export type DocumentReadinessFilter = 'all' | 'ready' | 'attention';
 export type DuplicateConfidence = 'high' | 'possible';
+export type CandidateOnboardingStatus = 'not-started' | 'invited' | 'in-progress' | 'submitted' | 'needs-changes' | 'completed';
 
 export interface CandidateDocumentSummary {
   passport: DocumentState;
@@ -31,6 +32,16 @@ export interface CandidateJourneyEvent {
   tone: 'neutral' | 'positive' | 'warning' | 'negative';
 }
 
+export interface CandidateOnboarding {
+  status: CandidateOnboardingStatus;
+  completionPercent: number;
+  invitedAt?: string;
+  lastActivityAt?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewerNote?: string;
+}
+
 export interface Candidate {
   id: string;
   reference: string;
@@ -51,6 +62,7 @@ export interface Candidate {
   availability: Availability;
   source: CandidateSource;
   status: CandidateStatus;
+  onboarding?: CandidateOnboarding;
   fitScore: number;
   documents: CandidateDocumentSummary;
   lastInterview?: CandidateInterviewSummary;
