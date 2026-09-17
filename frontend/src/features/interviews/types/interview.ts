@@ -5,8 +5,21 @@ export type Decision = 'pending' | 'selected' | 'reserve' | 'rejected';
 export type PracticalResult = 'not-started' | 'passed' | 'failed' | 'pending';
 export type InterviewLoadState = 'loading' | 'error' | 'success';
 export type InterviewCalendarView = 'day' | 'week';
+export type InterviewerAvailabilityStatus = 'available' | 'busy';
 
 export interface Interviewer { id: string; name: string; role: string; specialties: string[]; active: boolean; }
+export interface InterviewerAvailabilityConflict { interviewId: string; candidateName: string; time: string; endTime: string; }
+export interface InterviewerAvailabilityNextAppointment { time: string; endTime: string; candidateName: string; }
+export interface InterviewerAvailability {
+  interviewerId: string;
+  status: InterviewerAvailabilityStatus;
+  dayAppointmentCount: number;
+  bookedMinutes: number;
+  bookedLabel: string;
+  requestedSlotLabel: string;
+  conflict: InterviewerAvailabilityConflict | null;
+  nextAppointment: InterviewerAvailabilityNextAppointment | null;
+}
 export interface ScorecardCriterion { id: string; label: string; weight: number; score: number | null; note: string; }
 export interface PracticalTestItem { id: string; label: string; required: boolean; result: PracticalResult; note: string; }
 export interface InterviewScorecard { templateId: string; criteria: ScorecardCriterion[]; }
