@@ -38,6 +38,8 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Full interview history and decision audit timeline.
 - ✅ Candidate onboarding workspace with recruiter handoff, progress tracking, submitted/review/needs-changes/completed states, and onboarding activity in the candidate journey.
 - ✅ Recruiter/system-admin frontend bulk candidate CSV intake with automatic header mapping, validation preview, duplicate protection, import template and atomic local commit.
+- ✅ Recruiter dashboard workspace with live candidate/interview metrics, pipeline visibility, action center, today's interview view and responsive navigation actions.
+- ✅ Recruitment reports workspace with date/trade filters, pipeline/source/onboarding/interview/rejection breakdowns, profession performance table and CSV export.
 - ⏳ Candidate self-service onboarding portal for authenticated candidate access, profile editing, consent and document upload.
 - ⏳ Invitation delivery, reminder/escalation workflows and candidate-facing authentication.
 
