@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { CandidateContext } from './CandidateContextObject';
-import type { Candidate, CandidateAction, CandidateState } from './CandidateContext';
+import type { Candidate, CandidateAction, CandidateSavedFilter, CandidateState } from './CandidateContext';
 import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate';
 import { loadCandidates, saveCandidates } from '../services/candidateRepository';
+import { loadCandidateWorkspacePreferences, saveCandidateWorkspacePreferences, type CandidateWorkspacePreferences } from '../services/candidatePreferencesRepository';
 
 const defaultSmartFilters: CandidateSmartFilters = {
   minExperience: null,
@@ -15,6 +16,12 @@ const defaultSmartFilters: CandidateSmartFilters = {
   skills: [],
 };
 
+const defaultPreferences: CandidateWorkspacePreferences = {
+  savedFilters: [],
+  comparisonMinimized: false,
+  comparisonHeight: 360,
+};
+
 const initialState: CandidateState = {
   loadState: 'loading',
   errorMessage: null,
@@ -22,8 +29,12 @@ const initialState: CandidateState = {
   candidates: [],
   filters: { search: '', status: 'all', profession: 'all' },
   smartFilters: defaultSmartFilters,
+  savedFilters: [],
+  activeSavedFilterId: null,
   selectedCandidateId: null,
   compareCandidateIds: [],
+  comparisonMinimized: false,
+  comparisonHeight: 360,
   isAddDrawerOpen: false,
   rejectionCandidateId: null,
 };
@@ -33,31 +44,63 @@ const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', mon
 const statusTitle = (status: CandidateStatus): string => ({ new: 'Candidate added', screening: 'Screening started', interview: 'Moved to interview', selected: 'Selected', reserve: 'Placed on reserve', rejected: 'Rejected' }[status]);
 const statusDetail = (status: CandidateStatus): string => ({ new: 'Candidate is ready for screening.', screening: 'Recruiter is checking job fit.', interview: 'Candidate is ready for interview assessment.', selected: 'Candidate was added to the selection shortlist.', reserve: 'Candidate remains available as a reserve option.', rejected: 'A structured rejection decision was recorded.' }[status]);
 const statusTone = (status: CandidateStatus): 'neutral' | 'positive' | 'warning' | 'negative' => status === 'rejected' ? 'negative' : status === 'selected' ? 'positive' : status === 'reserve' || status === 'screening' ? 'warning' : 'neutral';
+const normalizeTag = (tag: string): string => tag.trim().replace(/\s+/g, ' ');
 
 const candidateReducer = (state: CandidateState, action: CandidateAction): CandidateState => {
   switch (action.type) {
-    case 'HYDRATE': return { ...state, loadState: 'success', errorMessage: null, candidates: action.candidates, selectedCandidateId: action.candidates[0]?.id ?? null };
+    case 'HYDRATE':
+      return {
+        ...state,
+        loadState: 'success',
+        errorMessage: null,
+        candidates: action.candidates,
+        savedFilters: action.savedFilters,
+        activeSavedFilterId: null,
+        comparisonMinimized: action.comparisonMinimized,
+        comparisonHeight: action.comparisonHeight,
+        selectedCandidateId: action.candidates[0]?.id ?? null,
+      };
     case 'LOAD_ERROR': return { ...state, loadState: 'error', errorMessage: action.message };
     case 'RETRY_LOAD': return { ...state, loadState: 'loading', errorMessage: null, loadAttempt: state.loadAttempt + 1 };
-    case 'SET_SEARCH': return { ...state, filters: { ...state.filters, search: action.value } };
-    case 'SET_STATUS_FILTER': return { ...state, filters: { ...state.filters, status: action.value } };
-    case 'SET_PROFESSION_FILTER': return { ...state, filters: { ...state.filters, profession: action.value } };
-    case 'SET_SMART_FILTERS': return { ...state, smartFilters: action.filters };
+    case 'SET_SEARCH': return { ...state, activeSavedFilterId: null, filters: { ...state.filters, search: action.value } };
+    case 'SET_STATUS_FILTER': return { ...state, activeSavedFilterId: null, filters: { ...state.filters, status: action.value } };
+    case 'SET_PROFESSION_FILTER': return { ...state, activeSavedFilterId: null, filters: { ...state.filters, profession: action.value } };
+    case 'SET_SMART_FILTERS': return { ...state, activeSavedFilterId: null, smartFilters: action.filters };
     case 'TOGGLE_SKILL_FILTER': {
       const skills = state.smartFilters.skills.includes(action.skill)
         ? state.smartFilters.skills.filter((skill) => skill !== action.skill)
         : [...state.smartFilters.skills, action.skill];
-      return { ...state, smartFilters: { ...state.smartFilters, skills } };
+      return { ...state, activeSavedFilterId: null, smartFilters: { ...state.smartFilters, skills } };
     }
-    case 'CLEAR_SMART_FILTERS': return { ...state, smartFilters: defaultSmartFilters };
+    case 'CLEAR_SMART_FILTERS': return { ...state, activeSavedFilterId: null, smartFilters: defaultSmartFilters };
+    case 'CLEAR_ALL_FILTERS': return { ...state, activeSavedFilterId: null, filters: { search: '', status: 'all', profession: 'all' }, smartFilters: defaultSmartFilters };
+    case 'SAVE_FILTER': {
+      const duplicateName = action.filter.name.trim().toLowerCase();
+      const withoutSameName = state.savedFilters.filter((filter) => filter.name.trim().toLowerCase() !== duplicateName);
+      return { ...state, savedFilters: [action.filter, ...withoutSameName], activeSavedFilterId: action.filter.id };
+    }
+    case 'APPLY_SAVED_FILTER': return { ...state, activeSavedFilterId: action.filter.id, filters: action.filter.filters, smartFilters: action.filter.smartFilters };
+    case 'DELETE_SAVED_FILTER': return { ...state, savedFilters: state.savedFilters.filter((filter) => filter.id !== action.filterId), activeSavedFilterId: state.activeSavedFilterId === action.filterId ? null : state.activeSavedFilterId };
     case 'SELECT_CANDIDATE': return { ...state, selectedCandidateId: action.candidateId };
     case 'TOGGLE_COMPARE_CANDIDATE': {
       const exists = state.compareCandidateIds.includes(action.candidateId);
       if (exists) return { ...state, compareCandidateIds: state.compareCandidateIds.filter((id) => id !== action.candidateId) };
       if (state.compareCandidateIds.length >= 4) return state;
-      return { ...state, compareCandidateIds: [...state.compareCandidateIds, action.candidateId] };
+      return { ...state, compareCandidateIds: [...state.compareCandidateIds, action.candidateId], comparisonMinimized: false };
     }
     case 'CLEAR_COMPARISON': return { ...state, compareCandidateIds: [] };
+    case 'SET_COMPARISON_MINIMIZED': return { ...state, comparisonMinimized: action.value };
+    case 'SET_COMPARISON_HEIGHT': return { ...state, comparisonHeight: Math.min(720, Math.max(180, action.value)), comparisonMinimized: false };
+    case 'ADD_TAG': {
+      const tag = normalizeTag(action.tag);
+      if (!tag) return state;
+      return { ...state, candidates: state.candidates.map((candidate) => {
+        if (candidate.id !== action.candidateId) return candidate;
+        const exists = candidate.tags.some((item) => item.toLowerCase() === tag.toLowerCase());
+        return exists ? candidate : { ...candidate, tags: [...candidate.tags, tag] };
+      }) };
+    }
+    case 'REMOVE_TAG': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, tags: candidate.tags.filter((tag) => tag.toLowerCase() !== action.tag.toLowerCase()) } : candidate) };
     case 'OPEN_ADD_DRAWER': return { ...state, isAddDrawerOpen: true };
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
@@ -77,7 +120,21 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
     const hydrate = async () => {
       try {
         const candidates = await loadCandidates();
-        if (!cancelled) dispatch({ type: 'HYDRATE', candidates });
+        let preferences: CandidateWorkspacePreferences = defaultPreferences;
+        try {
+          preferences = await loadCandidateWorkspacePreferences();
+        } catch {
+          preferences = defaultPreferences;
+        }
+        if (!cancelled) {
+          dispatch({
+            type: 'HYDRATE',
+            candidates,
+            savedFilters: preferences.savedFilters,
+            comparisonMinimized: preferences.comparisonMinimized,
+            comparisonHeight: preferences.comparisonHeight,
+          });
+        }
       } catch {
         if (!cancelled) dispatch({ type: 'LOAD_ERROR', message: 'Candidate data could not be loaded. Retry to restore the local workspace.' });
       }
@@ -89,7 +146,12 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (state.loadState !== 'success') return;
     void saveCandidates(state.candidates).catch(() => undefined);
-  }, [state.candidates, state.loadState]);
+    void saveCandidateWorkspacePreferences({
+      savedFilters: state.savedFilters,
+      comparisonMinimized: state.comparisonMinimized,
+      comparisonHeight: state.comparisonHeight,
+    }).catch(() => undefined);
+  }, [state.candidates, state.loadState, state.savedFilters, state.comparisonMinimized, state.comparisonHeight]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <CandidateContext.Provider value={value}>{children}</CandidateContext.Provider>;
