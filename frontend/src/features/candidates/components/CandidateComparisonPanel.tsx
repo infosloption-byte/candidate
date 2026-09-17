@@ -57,7 +57,7 @@ export const CandidateComparisonPanel = ({ candidates, minimized, height, onRemo
             <ComparisonRow label="Profession" values={values((candidate) => candidate.profession)} />
             <ComparisonRow label="Experience" values={values((candidate) => `${candidate.experienceYears} years`)} />
             <ComparisonRow label="Key skills" values={values((candidate) => candidate.secondarySkills.slice(0, 4).join(', ') || 'None recorded')} />
-            <ComparisonRow label="Tags" values={values((candidate) => candidate.tags.slice(0, 3).join(', ') || 'None')} />
+            <ComparisonRow label="Tags" values={values((candidate) => (candidate.tags ?? []).slice(0, 3).join(', ') || 'None')} />
             <ComparisonRow label="Overseas" values={values((candidate) => candidate.overseasCountries.join(', ') || 'None')} />
             <ComparisonRow label="English" values={values((candidate) => candidate.englishLevel)} />
             <ComparisonRow label="Availability" values={values((candidate) => candidate.availability)} />
