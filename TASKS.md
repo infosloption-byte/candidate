@@ -55,11 +55,18 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Phase 4 — Selection and decision UX
 
-- ⏳ Selection board using the existing candidate comparison model.
-- ⏳ Shortlist / reserve / reject management by job requirement.
-- ⏳ Selection evidence and decision summary.
-- ⏳ Management approval flow.
+- ✅ Selection board using the candidate comparison/evidence model.
+- ✅ Job-specific selection requirements with openings, profession, minimum experience and required skills.
+- ✅ Recommended / Selected / Reserve / Rejected board views.
+- ✅ Explainable selection evidence for experience, skills, documents, readiness and interview results.
+- ✅ Capacity protection prevents selecting more candidates than the job openings allow.
+- ✅ Selection decision form requires a reason and written decision note.
+- ✅ Job-scoped management approval workflow: Draft → Pending → Approved / Returned.
+- ✅ Any change to an approved shortlist automatically returns that job to Draft for re-review.
+- ✅ Selection decisions persist locally behind a replaceable service boundary.
+- ⏳ Bulk shortlist/reassignment actions.
 - ⏳ Selection history and audit-ready timeline.
+- ⏳ Advanced cross-job candidate allocation.
 
 ## Phase 5 — Backend and data
 
@@ -88,6 +95,10 @@ Interview workflow:
 
 `Queue → Schedule → Assign interviewer(s) → Day/Week calendar → Start interview → Evaluation → Scorecard + Practical test → Final decision → Candidate profile updated`
 
+Selection workflow:
+
+`Choose job requirement → Review recommended candidates → Open evidence → Select / Reserve / Reject → Build shortlist → Submit for management approval → Approve / Return`
+
 Candidate creation flow:
 
 `Essentials → Trade → Readiness → duplicate review if needed → Create → New state`
@@ -110,7 +121,7 @@ Responsive rules:
 
 - Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
 - Tablet: compact sidebar behavior with flexible content widths.
-- Mobile: slide-over navigation, single-column candidate/interview flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, and compact day-agenda interview calendar.
+- Mobile: slide-over navigation, single-column candidate/interview/selection flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, compact day-agenda interview calendar, and stacked selection evidence/decision panels.
 
 ## Current bugfix note
 
