@@ -10,7 +10,7 @@ const defaultPreferences: CandidateWorkspacePreferences = { savedFilters: [], co
 
 const initialState: CandidateState = {
   loadState: 'loading', errorMessage: null, loadAttempt: 0, candidates: [], filters: { search: '', status: 'all', profession: 'all' }, smartFilters: defaultSmartFilters,
-  savedFilters: [], activeSavedFilterId: null, selectedCandidateId: null, compareCandidateIds: [], comparisonMinimized: false, comparisonHeight: 360, isAddDrawerOpen: false, rejectionCandidateId: null,
+  savedFilters: [], activeSavedFilterId: null, selectedCandidateId: null, compareCandidateIds: [], comparisonMinimized: false, comparisonHeight: 360, isAddDrawerOpen: false, isBulkImportOpen: false, rejectionCandidateId: null,
 };
 
 const makeEventId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `event-${Date.now()}`);
@@ -65,7 +65,11 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'REMOVE_TAG': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, tags: (candidate.tags ?? []).filter((tag) => tag.toLowerCase() !== action.tag.toLowerCase()) } : candidate) };
     case 'OPEN_ADD_DRAWER': return { ...state, isAddDrawerOpen: true };
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
-    case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
+    case 'OPEN_BULK_IMPORT': return { ...state, isBulkImportOpen: true };
+    case 'CLOSE_BULK_IMPORT': return { ...state, isBulkImportOpen: false };
+    case 'ADD_CANDIDATE': return { ...state, candidates: [{ ...action.candidate, onboarding: action.candidate.onboarding ?? { status: 'not-started', completionPercent: 0, lastActivityAt: new Date().toISOString() } }, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
+    case 'BULK_ADD_CANDIDATES': return action.candidates.length === 0 ? state : { ...state, candidates: [...action.candidates, ...state.candidates], selectedCandidateId: action.candidates[0]?.id ?? state.selectedCandidateId, isBulkImportOpen: false };
+    case 'UPDATE_ONBOARDING': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, onboarding: action.onboarding, journey: [action.journeyEvent, ...candidate.journey] } : candidate) };
     case 'UPDATE_STATUS': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, status: action.status, journey: [{ id: makeEventId(), date: today(), title: statusTitle(action.status), detail: statusDetail(action.status), tone: statusTone(action.status) }, ...candidate.journey] } : candidate) };
     case 'BULK_UPDATE_STATUS': {
       const ids = new Set(action.candidateIds);
