@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Candidate } from '../../candidates/types/candidate';
 import type { Interview, InterviewDraft, InterviewType, Interviewer } from '../types/interview';
+import { getInterviewerAvailabilities } from '../services/interviewerAvailability';
 import { validateInterviewSchedule } from '../services/interviewScheduling';
 
 interface UseInterviewFormProps {
@@ -87,6 +88,10 @@ export const useInterviewForm = ({ candidates, interviewers, interviews, onCreat
       .filter((interviewer): interviewer is Interviewer => Boolean(interviewer)),
     [draft.interviewerIds, interviewers],
   );
+  const interviewerAvailability = useMemo(
+    () => getInterviewerAvailabilities(interviewers, draft.date, draft.time, draft.durationMinutes, interviews),
+    [draft.date, draft.durationMinutes, draft.time, interviews, interviewers],
+  );
   const validation = useMemo(
     () => validateInterviewSchedule(draft, selectedCandidate, interviewers, interviews),
     [draft, interviews, interviewers, selectedCandidate],
@@ -154,10 +159,11 @@ export const useInterviewForm = ({ candidates, interviewers, interviews, onCreat
     error,
     selectedCandidate,
     selectedInterviewers,
+    interviewerAvailability,
     validation,
     updateField,
     toggleInterviewer,
     submit,
     reset,
-  }), [draft, error, reset, selectedCandidate, selectedInterviewers, submit, toggleInterviewer, updateField, validation]);
+  }), [draft, error, interviewerAvailability, reset, selectedCandidate, selectedInterviewers, submit, toggleInterviewer, updateField, validation]);
 };
