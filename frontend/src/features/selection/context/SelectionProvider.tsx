@@ -66,7 +66,7 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
       const key = recordKey(action.record);
       const previous = state.records.find((record) => recordKey(record) === key);
       const nextRecords = [action.record, ...state.records.filter((record) => recordKey(record) !== key)];
-      const nextApproval = previous ? resetApprovedJobs(state.approvalByJob, [action.record.jobId]) : state.approvalByJob;
+      const nextApproval = resetApprovedJobs(state.approvalByJob, [action.record.jobId]);
       return {
         ...state,
         records: nextRecords,
