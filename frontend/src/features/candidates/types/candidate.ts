@@ -44,6 +44,7 @@ export interface Candidate {
   experienceYears: number;
   secondarySkills: string[];
   overseasCountries: string[];
+  tags: string[];
   englishLevel: EnglishLevel;
   locationReady: boolean;
   drivingLicense: boolean;
@@ -92,6 +93,14 @@ export interface CandidateSmartFilters {
   drivingLicense: BooleanFilter;
   documentReadiness: DocumentReadinessFilter;
   skills: string[];
+}
+
+export interface CandidateSavedFilter {
+  id: string;
+  name: string;
+  filters: CandidateFilters;
+  smartFilters: CandidateSmartFilters;
+  createdAt: string;
 }
 
 export interface CandidateDuplicateMatch {
