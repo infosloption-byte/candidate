@@ -7,7 +7,12 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { useInterviewWorkspace } from '../hooks/useInterviewWorkspace';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
-import type { Decision } from '../types/interview';
+import type { CandidateStatus, RejectionReason } from '../../candidates/types/candidate';
+import type { Decision, Interview } from '../types/interview';
+
+const candidateRejectionReasons: RejectionReason[] = ['Technical skill', 'Experience gap', 'Required skill missing', 'Safety concern', 'Communication', 'Documents', 'Availability', 'Client requirement', 'Other'];
+
+const mapRejectionReason = (reason: string): RejectionReason => candidateRejectionReasons.includes(reason as RejectionReason) ? reason as RejectionReason : 'Other';
 
 export const InterviewPage = () => {
   const {
@@ -18,21 +23,20 @@ export const InterviewPage = () => {
     metrics,
     actions,
   } = useInterviewWorkspace();
-  const { state: candidateState, visibleCandidates, actions: candidateActions } = useCandidateWorkspace();
+  const { state: candidateState, actions: candidateActions } = useCandidateWorkspace();
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   if (state.loadState === 'loading') return <LoadingState label="Loading interviews" rows={5} />;
   if (state.loadState === 'error') return <ErrorState title="We could not load interviews" message={state.errorMessage ?? 'Interview data is temporarily unavailable.'} onRetry={actions.retryLoad} />;
 
   const scheduleCandidates = candidateState.candidates.filter((candidate) => candidate.status !== 'rejected');
-  const handleCreateInterview = (interview: import('../types/interview').Interview) => {
+  const handleCreateInterview = (interview: Interview) => {
     actions.createInterview(interview);
     candidateActions.moveToInterview(interview.candidateId);
   };
-  const handleDecisionRecorded = (candidateId: string, decision: Exclude<Decision, 'pending'>) => {
-    if (decision === 'selected') candidateActions.selectCandidateForJob(candidateId);
-    if (decision === 'reserve') candidateActions.moveToReserve(candidateId);
-    if (decision === 'rejected') candidateActions.openRejection(candidateId);
+  const handleDecisionRecorded = (candidateId: string, decision: Exclude<Decision, 'pending'>, score: number, date: string, interviewer: string, profession: string, reason: string, note: string) => {
+    const candidateStatus: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'> = decision;
+    candidateActions.recordInterviewOutcome(candidateId, candidateStatus, date, interviewer, profession, score, decision === 'rejected' ? mapRejectionReason(reason) : '', note);
   };
 
   return (
@@ -66,7 +70,6 @@ export const InterviewPage = () => {
       {sortedInterviews.length === 0 && <div className="pointer-events-none fixed inset-0 z-10 hidden place-items-center xl:grid"><div className="pointer-events-auto"><EmptyState title="No interviews scheduled" message="Create the first interview from the queue to start building your interview history." icon="calendar" actionLabel="Schedule interview" onAction={actions.openSchedule}/></div></div>}
 
       <ScheduleInterviewDrawer open={state.isScheduleDrawerOpen} candidates={scheduleCandidates} interviewers={interviewers} onClose={actions.closeSchedule} onCreate={handleCreateInterview}/>
-      {visibleCandidates.length === 0 && candidateState.loadState === 'success' && <p className="sr-only">No candidates are available for scheduling.</p>}
     </div>
   );
 };
