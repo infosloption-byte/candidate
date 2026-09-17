@@ -14,7 +14,7 @@ export const useCandidateWorkspace = () => {
     const smart = state.smartFilters;
 
     return state.candidates.filter((candidate) => {
-      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries, ...candidate.tags].join(' ').toLowerCase();
+      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries, ...(candidate.tags ?? [])].join(' ').toLowerCase();
       const matchesKeyword = !query || haystack.includes(query);
       const matchesStatus = state.filters.status === 'all' || candidate.status === state.filters.status;
       const matchesProfession = state.filters.profession === 'all' || candidate.profession === state.filters.profession;
@@ -70,13 +70,7 @@ export const useCandidateWorkspace = () => {
       clearSmartFilters: () => dispatch({ type: 'CLEAR_SMART_FILTERS' }),
       clearAllFilters: () => dispatch({ type: 'CLEAR_ALL_FILTERS' }),
       saveCurrentFilter: (name: string) => {
-        const filter: CandidateSavedFilter = {
-          id: createId('filter'),
-          name,
-          filters: { ...state.filters },
-          smartFilters: { ...state.smartFilters, skills: [...state.smartFilters.skills] },
-          createdAt: new Date().toISOString(),
-        };
+        const filter: CandidateSavedFilter = { id: createId('filter'), name, filters: { ...state.filters }, smartFilters: { ...state.smartFilters, skills: [...state.smartFilters.skills] }, createdAt: new Date().toISOString() };
         dispatch({ type: 'SAVE_FILTER', filter });
       },
       applySavedFilter: (filter: CandidateSavedFilter) => dispatch({ type: 'APPLY_SAVED_FILTER', filter }),
