@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { InterviewContext } from './InterviewContextObject';
 import { loadInterviews, saveInterviews } from '../services/interviewRepository';
-import type { Interview, InterviewAction, InterviewInterviewer } from '../types/interview';
-import type { InterviewStatus } from '../types/interview';
+import type { InterviewAction, InterviewState } from '../types/interview';
 
-const initialState: import('../types/interview').InterviewState = {
+const initialState: InterviewState = {
   loadState: 'loading',
   errorMessage: null,
   loadAttempt: 0,
@@ -13,7 +12,7 @@ const initialState: import('../types/interview').InterviewState = {
   isScheduleDrawerOpen: false,
 };
 
-const interviewReducer = (state: import('../types/interview').InterviewState, action: InterviewAction): import('../types/interview').InterviewState => {
+const interviewReducer = (state: InterviewState, action: InterviewAction): InterviewState => {
   switch (action.type) {
     case 'HYDRATE':
       return {
@@ -41,7 +40,10 @@ const interviewReducer = (state: import('../types/interview').InterviewState, ac
         isScheduleDrawerOpen: false,
       };
     case 'UPDATE_STATUS':
-      return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, status: action.status } : interview) };
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, status: action.status } : interview),
+      };
     case 'SET_SCORE':
       return {
         ...state,
@@ -75,7 +77,14 @@ const interviewReducer = (state: import('../types/interview').InterviewState, ac
     case 'SET_INTERVIEW_NOTE':
       return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, notes: action.note } : interview) };
     case 'SET_DECISION':
-      return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, decision: { decision: action.decision, reason: action.reason, note: action.note } } : interview) };
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => interview.id === action.interviewId ? {
+          ...interview,
+          decision: { decision: action.decision, reason: action.reason, note: action.note },
+          status: 'completed',
+        } : interview),
+      };
     default:
       return state;
   }
