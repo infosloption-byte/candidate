@@ -5,8 +5,14 @@ interface UseSavedFilterFormProps {
 }
 
 export const useSavedFilterForm = ({ onSave }: UseSavedFilterFormProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const open = () => {
+    setIsOpen(true);
+    setError(null);
+  };
 
   const submit = () => {
     const trimmed = name.trim();
@@ -17,12 +23,14 @@ export const useSavedFilterForm = ({ onSave }: UseSavedFilterFormProps) => {
     onSave(trimmed);
     setName('');
     setError(null);
+    setIsOpen(false);
   };
 
   const cancel = () => {
     setName('');
     setError(null);
+    setIsOpen(false);
   };
 
-  return { name, error, setName, submit, cancel };
+  return { isOpen, name, error, setName, open, submit, cancel };
 };
