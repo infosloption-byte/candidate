@@ -36,7 +36,7 @@ export const CandidateSmartFiltersPanel = ({ filters, topLevelFilters, englishLe
   };
 
   return (
-    <section className="border-b border-slate-200 bg-slate-50/90 p-3 sm:p-4" aria-label="Smart candidate filters">
+    <section className="max-h-[min(72dvh,720px)] overflow-y-auto border-b border-slate-200 bg-slate-50/90 p-3 overscroll-contain sm:p-4" aria-label="Smart candidate filters">
       <div className="grid gap-3 sm:grid-cols-2">
         <label><span className="field-label">Experience from</span><input type="number" min="0" max="50" value={filters.minExperience ?? ''} onChange={(event) => setExperience('minExperience', event.target.value)} className="field-input bg-white" placeholder="Any" /></label>
         <label><span className="field-label">Experience to</span><input type="number" min="0" max="50" value={filters.maxExperience ?? ''} onChange={(event) => setExperience('maxExperience', event.target.value)} className="field-input bg-white" placeholder="Any" /></label>
