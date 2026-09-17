@@ -8,11 +8,9 @@ const createId = (prefix: string): string => (typeof crypto !== 'undefined' && '
 
 export const useCandidateWorkspace = () => {
   const { state, dispatch } = useCandidateContext();
-
   const visibleCandidates = useMemo(() => {
     const query = state.filters.search.trim().toLowerCase();
     const smart = state.smartFilters;
-
     return state.candidates.filter((candidate) => {
       const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries, ...(candidate.tags ?? [])].join(' ').toLowerCase();
       const matchesKeyword = !query || haystack.includes(query);
@@ -29,37 +27,17 @@ export const useCandidateWorkspace = () => {
       return matchesKeyword && matchesStatus && matchesProfession && matchesMinExperience && matchesMaxExperience && matchesEnglish && matchesAvailability && matchesOverseas && matchesDriving && matchesDocuments && matchesSkills;
     });
   }, [state.candidates, state.filters, state.smartFilters]);
-
   const selectedCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.selectedCandidateId) ?? visibleCandidates[0] ?? state.candidates[0] ?? null, [state.candidates, state.selectedCandidateId, visibleCandidates]);
   const rejectionCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null, [state.candidates, state.rejectionCandidateId]);
   const compareCandidates = useMemo(() => state.compareCandidateIds.map((id) => state.candidates.find((candidate) => candidate.id === id)).filter((candidate): candidate is Candidate => Boolean(candidate)), [state.candidates, state.compareCandidateIds]);
   const duplicateMatches = useMemo(() => selectedCandidate ? findDuplicateMatches(state.candidates, selectedCandidate.id) : [], [selectedCandidate, state.candidates]);
   const professions = useMemo(() => ['all', ...Array.from(new Set(state.candidates.map((candidate) => candidate.profession))).sort()], [state.candidates]);
   const skillOptions = useMemo(() => Array.from(new Set(state.candidates.flatMap((candidate) => candidate.secondarySkills))).sort(), [state.candidates]);
-  const smartFilterCount = useMemo(() => {
-    const smart = state.smartFilters;
-    return [smart.minExperience !== null, smart.maxExperience !== null, smart.englishLevel !== 'all', smart.availability !== 'all', smart.overseasExperience !== 'all', smart.drivingLicense !== 'all', smart.documentReadiness !== 'all', smart.skills.length > 0, state.filters.status !== 'all', state.filters.profession !== 'all'].filter(Boolean).length;
-  }, [state.filters, state.smartFilters]);
-
-  const metrics = useMemo(() => ({
-    total: state.candidates.length,
-    available: state.candidates.filter((candidate) => candidate.availability === 'Available now').length,
-    interviewing: state.candidates.filter((candidate) => candidate.status === 'interview').length,
-    selected: state.candidates.filter((candidate) => candidate.status === 'selected').length,
-    attention: state.candidates.filter((candidate) => candidate.status === 'rejected' || Object.values(candidate.documents).some((status) => status !== 'verified')).length,
-  }), [state.candidates]);
+  const smartFilterCount = useMemo(() => { const smart = state.smartFilters; return [smart.minExperience !== null, smart.maxExperience !== null, smart.englishLevel !== 'all', smart.availability !== 'all', smart.overseasExperience !== 'all', smart.drivingLicense !== 'all', smart.documentReadiness !== 'all', smart.skills.length > 0, state.filters.status !== 'all', state.filters.profession !== 'all'].filter(Boolean).length; }, [state.filters, state.smartFilters]);
+  const metrics = useMemo(() => ({ total: state.candidates.length, available: state.candidates.filter((candidate) => candidate.availability === 'Available now').length, interviewing: state.candidates.filter((candidate) => candidate.status === 'interview').length, selected: state.candidates.filter((candidate) => candidate.status === 'selected').length, attention: state.candidates.filter((candidate) => candidate.status === 'rejected' || Object.values(candidate.documents).some((status) => status !== 'verified')).length }), [state.candidates]);
 
   return {
-    state,
-    visibleCandidates,
-    selectedCandidate,
-    rejectionCandidate,
-    compareCandidates,
-    duplicateMatches,
-    professions,
-    skillOptions,
-    smartFilterCount,
-    metrics,
+    state, visibleCandidates, selectedCandidate, rejectionCandidate, compareCandidates, duplicateMatches, professions, skillOptions, smartFilterCount, metrics,
     actions: {
       retryLoad: () => dispatch({ type: 'RETRY_LOAD' }),
       setSearch: (value: string) => dispatch({ type: 'SET_SEARCH', value }),
@@ -69,10 +47,7 @@ export const useCandidateWorkspace = () => {
       toggleSkillFilter: (skill: string) => dispatch({ type: 'TOGGLE_SKILL_FILTER', skill }),
       clearSmartFilters: () => dispatch({ type: 'CLEAR_SMART_FILTERS' }),
       clearAllFilters: () => dispatch({ type: 'CLEAR_ALL_FILTERS' }),
-      saveCurrentFilter: (name: string) => {
-        const filter: CandidateSavedFilter = { id: createId('filter'), name, filters: { ...state.filters }, smartFilters: { ...state.smartFilters, skills: [...state.smartFilters.skills] }, createdAt: new Date().toISOString() };
-        dispatch({ type: 'SAVE_FILTER', filter });
-      },
+      saveCurrentFilter: (name: string) => { const filter: CandidateSavedFilter = { id: createId('filter'), name, filters: { ...state.filters }, smartFilters: { ...state.smartFilters, skills: [...state.smartFilters.skills] }, createdAt: new Date().toISOString() }; dispatch({ type: 'SAVE_FILTER', filter }); },
       applySavedFilter: (filter: CandidateSavedFilter) => dispatch({ type: 'APPLY_SAVED_FILTER', filter }),
       deleteSavedFilter: (filterId: string) => dispatch({ type: 'DELETE_SAVED_FILTER', filterId }),
       selectCandidate: (candidateId: string) => dispatch({ type: 'SELECT_CANDIDATE', candidateId }),
@@ -88,6 +63,7 @@ export const useCandidateWorkspace = () => {
       moveToScreening: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'screening' }),
       moveToInterview: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' }),
       moveCandidatesToInterview: (candidateIds: string[]) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status: 'interview' }),
+      moveCandidatesToStatus: (candidateIds: string[], status: CandidateStatus) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status }),
       selectCandidateForJob: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'selected' }),
       moveToReserve: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' }),
       recordInterviewOutcome: (candidateId: string, status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>, interviewDate: string, interviewer: string, profession: string, score: number, reason: RejectionReason | '', note: string) => dispatch({ type: 'RECORD_INTERVIEW_OUTCOME', candidateId, status, interviewDate, interviewer, profession, score, reason, note }),
