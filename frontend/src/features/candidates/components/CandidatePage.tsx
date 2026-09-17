@@ -7,6 +7,7 @@ import { CandidateComparisonPanel } from './CandidateComparisonPanel';
 import { AddCandidateDrawer } from './AddCandidateDrawer';
 import { CandidateBulkImportDrawer } from './CandidateBulkImportDrawer';
 import { CandidateOnboardingPage } from './CandidateOnboardingPage';
+import { Icon } from '../../../shared/components/Icon';
 import { RejectCandidateDialog } from './RejectCandidateDialog';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
