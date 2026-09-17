@@ -1,5 +1,5 @@
 import type { Dispatch } from 'react';
-import type { Candidate, CandidateFilters, CandidateSavedFilter, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
+import type { Candidate, CandidateFilters, CandidateJourneyEvent, CandidateOnboarding, CandidateSavedFilter, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
 
 export type CandidateLoadState = 'loading' | 'error' | 'success';
 
@@ -17,6 +17,7 @@ export interface CandidateState {
   comparisonMinimized: boolean;
   comparisonHeight: number;
   isAddDrawerOpen: boolean;
+  isBulkImportOpen: boolean;
   rejectionCandidateId: string | null;
 }
 
@@ -43,7 +44,11 @@ export type CandidateAction =
   | { type: 'REMOVE_TAG'; candidateId: string; tag: string }
   | { type: 'OPEN_ADD_DRAWER' }
   | { type: 'CLOSE_ADD_DRAWER' }
+  | { type: 'OPEN_BULK_IMPORT' }
+  | { type: 'CLOSE_BULK_IMPORT' }
   | { type: 'ADD_CANDIDATE'; candidate: Candidate }
+  | { type: 'BULK_ADD_CANDIDATES'; candidates: Candidate[] }
+  | { type: 'UPDATE_ONBOARDING'; candidateId: string; onboarding: CandidateOnboarding; journeyEvent: CandidateJourneyEvent }
   | { type: 'UPDATE_STATUS'; candidateId: string; status: CandidateStatus }
   | { type: 'BULK_UPDATE_STATUS'; candidateIds: string[]; status: CandidateStatus }
   | { type: 'RECORD_INTERVIEW_OUTCOME'; candidateId: string; status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>; interviewDate: string; interviewer: string; profession: string; score: number; reason: RejectionReason | ''; note: string }
