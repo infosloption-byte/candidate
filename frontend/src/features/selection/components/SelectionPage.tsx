@@ -7,7 +7,7 @@ import { useSelectionWorkspace } from '../hooks/useSelectionWorkspace';
 import type { SelectionDecision } from '../types/selection';
 
 export const SelectionPage = () => {
-  const { state, activeJob, tabRows, selectedRow, metrics, visibleJobs, actions } = useSelectionWorkspace();
+  const { state, activeJob, tabRows, selectedRow, approval, metrics, visibleJobs, actions } = useSelectionWorkspace();
   const { actions: candidateActions } = useCandidateWorkspace();
 
   if (state.loadState === 'loading') return <LoadingState label="Loading selection board" rows={6} />;
@@ -33,9 +33,9 @@ export const SelectionPage = () => {
         reserveCount={metrics.reserve}
         recommendedCount={metrics.recommended}
         remaining={metrics.remaining}
-        approvalStatus={state.approvalStatus}
+        approvalStatus={approval.status}
         approvalReady={metrics.approvalReady}
-        approvalNote={state.approvalNote}
+        approvalNote={approval.note}
         onChangeJob={actions.setJob}
         onTabChange={actions.setTab}
         onSelectCandidate={actions.selectCandidate}
