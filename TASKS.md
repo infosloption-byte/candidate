@@ -15,8 +15,11 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Add candidate storage migration/normalization so legacy browser data cannot crash the current profile UI.
 - ✅ Align candidate TypeScript contracts with migration/default states.
 - ✅ Add BuildHire favicon and remove the browser favicon 404.
-- ⏳ Add reusable loading, error/retry, empty, and success state components.
-- 🔄 Complete accessibility pass with keyboard navigation, focus management, reduced motion, and mobile interaction checks.
+- ✅ Add reusable loading, error/retry, and empty state components for async candidate flows.
+- ✅ Add retryable candidate hydration without a full page reload.
+- ✅ Add shared focus trapping with Escape handling for mobile navigation, candidate drawer, and rejection dialog.
+- ✅ Respect reduced-motion preferences and safe-area interactions.
+- 🧪 Complete accessibility QA with keyboard navigation and real-device mobile interaction checks.
 
 ## Phase 2 — Candidate intelligence UX
 
@@ -84,3 +87,7 @@ Responsive rules:
 ## Current bugfix note
 
 The candidate profile previously crashed on `candidate.journey.map(...)` when an older `buildhire.candidates` localStorage payload from the previous MVP schema was loaded. The candidate repository now treats storage as untrusted input, normalizes legacy `timeline` data and missing arrays, and returns a complete `Candidate` shape before the data reaches the React view.
+
+## Accessibility foundation
+
+The async state primitives and focus-management utilities are now shared building blocks. Runtime accessibility QA remains marked for real keyboard and device validation rather than being inferred from source inspection alone.
