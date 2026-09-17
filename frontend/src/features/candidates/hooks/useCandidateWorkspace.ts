@@ -1,20 +1,89 @@
 import { useMemo } from 'react';
 import { useCandidateContext } from './useCandidateContext';
-import type { Candidate, CandidateFilters, CandidateStatus } from '../types/candidate';
+import { findDuplicateMatches } from '../services/candidateMatching';
+import type { Candidate, CandidateFilters, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
+
+const documentReady = (candidate: Candidate): boolean => Object.values(candidate.documents).every((status) => status === 'verified');
 
 export const useCandidateWorkspace = () => {
   const { state, dispatch } = useCandidateContext();
+
   const visibleCandidates = useMemo(() => {
     const query = state.filters.search.trim().toLowerCase();
-    return state.candidates.filter((candidate) => {
-      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.location, ...candidate.secondarySkills, ...candidate.overseasCountries].join(' ').toLowerCase();
-      return (!query || haystack.includes(query)) && (state.filters.status === 'all' || candidate.status === state.filters.status) && (state.filters.profession === 'all' || candidate.profession === state.filters.profession);
-    });
-  }, [state.candidates, state.filters]);
+    const smart = state.smartFilters;
 
-  const selectedCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.selectedCandidateId) ?? visibleCandidates[0] ?? state.candidates[0] ?? null, [state.candidates, state.selectedCandidateId, visibleCandidates]);
-  const rejectionCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null, [state.candidates, state.rejectionCandidateId]);
-  const professions = useMemo(() => ['all', ...Array.from(new Set(state.candidates.map((candidate) => candidate.profession)))], [state.candidates]);
+    return state.candidates.filter((candidate) => {
+      const haystack = [
+        candidate.name,
+        candidate.reference,
+        candidate.profession,
+        candidate.originalProfession,
+        candidate.location,
+        candidate.phone,
+        candidate.passportNumber,
+        ...candidate.secondarySkills,
+        ...candidate.overseasCountries,
+      ].join(' ').toLowerCase();
+      const matchesKeyword = !query || haystack.includes(query);
+      const matchesStatus = state.filters.status === 'all' || candidate.status === state.filters.status;
+      const matchesProfession = state.filters.profession === 'all' || candidate.profession === state.filters.profession;
+      const matchesMinExperience = smart.minExperience === null || candidate.experienceYears >= smart.minExperience;
+      const matchesMaxExperience = smart.maxExperience === null || candidate.experienceYears <= smart.maxExperience;
+      const matchesEnglish = smart.englishLevel === 'all' || candidate.englishLevel === smart.englishLevel;
+      const matchesAvailability = smart.availability === 'all' || candidate.availability === smart.availability;
+      const matchesOverseas = smart.overseasExperience === 'all'
+        || (smart.overseasExperience === 'yes' && candidate.overseasCountries.length > 0)
+        || (smart.overseasExperience === 'no' && candidate.overseasCountries.length === 0);
+      const matchesDriving = smart.drivingLicense === 'all'
+        || (smart.drivingLicense === 'yes' && candidate.drivingLicense)
+        || (smart.drivingLicense === 'no' && !candidate.drivingLicense);
+      const matchesDocuments = smart.documentReadiness === 'all'
+        || (smart.documentReadiness === 'ready' && documentReady(candidate))
+        || (smart.documentReadiness === 'attention' && !documentReady(candidate));
+      const matchesSkills = smart.skills.length === 0 || smart.skills.every((skill) => candidate.secondarySkills.includes(skill));
+
+      return matchesKeyword && matchesStatus && matchesProfession && matchesMinExperience && matchesMaxExperience && matchesEnglish && matchesAvailability && matchesOverseas && matchesDriving && matchesDocuments && matchesSkills;
+    });
+  }, [state.candidates, state.filters, state.smartFilters]);
+
+  const selectedCandidate = useMemo<Candidate | null>(
+    () => state.candidates.find((candidate) => candidate.id === state.selectedCandidateId) ?? visibleCandidates[0] ?? state.candidates[0] ?? null,
+    [state.candidates, state.selectedCandidateId, visibleCandidates],
+  );
+
+  const rejectionCandidate = useMemo<Candidate | null>(
+    () => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null,
+    [state.candidates, state.rejectionCandidateId],
+  );
+
+  const compareCandidates = useMemo(
+    () => state.compareCandidateIds.map((id) => state.candidates.find((candidate) => candidate.id === id)).filter((candidate): candidate is Candidate => Boolean(candidate)),
+    [state.candidates, state.compareCandidateIds],
+  );
+
+  const duplicateMatches = useMemo(
+    () => selectedCandidate ? findDuplicateMatches(state.candidates, selectedCandidate.id) : [],
+    [selectedCandidate, state.candidates],
+  );
+
+  const professions = useMemo(() => ['all', ...Array.from(new Set(state.candidates.map((candidate) => candidate.profession))).sort()], [state.candidates]);
+  const skillOptions = useMemo(() => Array.from(new Set(state.candidates.flatMap((candidate) => candidate.secondarySkills))).sort(), [state.candidates]);
+  const smartFilterCount = useMemo(() => {
+    const smart = state.smartFilters;
+    return [
+      smart.minExperience !== null,
+      smart.maxExperience !== null,
+      smart.englishLevel !== 'all',
+      smart.availability !== 'all',
+      smart.overseasExperience !== 'all',
+      smart.drivingLicense !== 'all',
+      smart.documentReadiness !== 'all',
+      smart.skills.length > 0,
+      state.filters.status !== 'all',
+      state.filters.profession !== 'all',
+    ].filter(Boolean).length;
+  }, [state.filters, state.smartFilters]);
+
   const metrics = useMemo(() => ({
     total: state.candidates.length,
     available: state.candidates.filter((candidate) => candidate.availability === 'Available now').length,
@@ -28,13 +97,22 @@ export const useCandidateWorkspace = () => {
     visibleCandidates,
     selectedCandidate,
     rejectionCandidate,
+    compareCandidates,
+    duplicateMatches,
     professions,
+    skillOptions,
+    smartFilterCount,
     metrics,
     actions: {
       setSearch: (value: string) => dispatch({ type: 'SET_SEARCH', value }),
       setStatus: (value: CandidateStatus | 'all') => dispatch({ type: 'SET_STATUS_FILTER', value }),
       setProfession: (value: string) => dispatch({ type: 'SET_PROFESSION_FILTER', value }),
+      setSmartFilters: (filters: CandidateSmartFilters) => dispatch({ type: 'SET_SMART_FILTERS', filters }),
+      toggleSkillFilter: (skill: string) => dispatch({ type: 'TOGGLE_SKILL_FILTER', skill }),
+      clearSmartFilters: () => dispatch({ type: 'CLEAR_SMART_FILTERS' }),
       selectCandidate: (candidateId: string) => dispatch({ type: 'SELECT_CANDIDATE', candidateId }),
+      toggleCompareCandidate: (candidateId: string) => dispatch({ type: 'TOGGLE_COMPARE_CANDIDATE', candidateId }),
+      clearComparison: () => dispatch({ type: 'CLEAR_COMPARISON' }),
       openAddCandidate: () => dispatch({ type: 'OPEN_ADD_DRAWER' }),
       closeAddCandidate: () => dispatch({ type: 'CLOSE_ADD_DRAWER' }),
       createCandidate: (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate }),
@@ -44,7 +122,7 @@ export const useCandidateWorkspace = () => {
       moveToReserve: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' }),
       openRejection: (candidateId: string) => dispatch({ type: 'OPEN_REJECTION_DIALOG', candidateId }),
       closeRejection: () => dispatch({ type: 'CLOSE_REJECTION_DIALOG' }),
-      rejectCandidate: (candidateId: string, reason: import('../types/candidate').RejectionReason, note: string) => dispatch({ type: 'REJECT_CANDIDATE', candidateId, reason, note }),
+      rejectCandidate: (candidateId: string, reason: RejectionReason, note: string) => dispatch({ type: 'REJECT_CANDIDATE', candidateId, reason, note }),
     },
   };
 };
