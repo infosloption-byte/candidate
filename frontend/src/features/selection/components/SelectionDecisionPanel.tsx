@@ -18,7 +18,7 @@ const decisionButtons: Array<{ value: SelectionDecision; label: string }> = [
 ];
 
 export const SelectionDecisionPanel = ({ row, job, selectedCount, onSubmit }: SelectionDecisionPanelProps) => {
-  const form = useSelectionDecisionForm({ job, selectedCount, onSubmit });
+  const form = useSelectionDecisionForm({ job, selectedCount, currentDecision: row?.record?.decision ?? null, onSubmit });
 
   if (!row || !job) return null;
 
