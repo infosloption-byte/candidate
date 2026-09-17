@@ -1,4 +1,4 @@
-import type { ApprovalStatus, SelectionJob, SelectionRecord } from '../types/selection';
+import type { ApprovalStatus, SelectionApproval, SelectionJob, SelectionRecord } from '../types/selection';
 
 const JOBS_KEY = 'buildhire.selection.jobs';
 const RECORDS_KEY = 'buildhire.selection.records';
@@ -70,7 +70,7 @@ const recordSeed: SelectionRecord[] = [
   },
 ];
 
-const defaultApproval = { status: 'draft' as ApprovalStatus, note: '' };
+const defaultApproval: SelectionApproval = { status: 'draft', note: '' };
 
 const parseArray = <T>(raw: string | null, fallback: T[]): T[] => {
   if (!raw) return fallback;
@@ -87,22 +87,27 @@ export const loadSelectionRecords = async (): Promise<SelectionRecord[]> => pars
 export const saveSelectionRecords = async (records: SelectionRecord[]): Promise<void> => {
   window.localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
 };
-export const saveSelectionJobs = async (jobs: SelectionJob[]): Promise<void> => {
-  window.localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
-};
-export const loadSelectionApproval = async (): Promise<{ status: ApprovalStatus; note: string }> => {
+export const loadSelectionApproval = async (): Promise<Record<string, SelectionApproval>> => {
   const raw = window.localStorage.getItem(APPROVAL_KEY);
-  if (!raw) return defaultApproval;
+  if (!raw) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return defaultApproval;
-    const record = parsed as Record<string, unknown>;
-    const status = ['draft', 'pending', 'approved', 'returned'].includes(record.status as string) ? record.status as ApprovalStatus : 'draft';
-    return { status, note: typeof record.note === 'string' ? record.note : '' };
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+    const source = parsed as Record<string, unknown>;
+    if (typeof source.status === 'string') {
+      const status: ApprovalStatus = ['draft', 'pending', 'approved', 'returned'].includes(source.status) ? source.status as ApprovalStatus : 'draft';
+      return { legacy: { status, note: typeof source.note === 'string' ? source.note : '' } };
+    }
+    return Object.fromEntries(Object.entries(source).map(([jobId, value]) => {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return [jobId, defaultApproval];
+      const record = value as Record<string, unknown>;
+      const status: ApprovalStatus = ['draft', 'pending', 'approved', 'returned'].includes(record.status as string) ? record.status as ApprovalStatus : 'draft';
+      return [jobId, { status, note: typeof record.note === 'string' ? record.note : '' }];
+    }));
   } catch {
-    return defaultApproval;
+    return {};
   }
 };
-export const saveSelectionApproval = async (approval: { status: ApprovalStatus; note: string }): Promise<void> => {
-  window.localStorage.setItem(APPROVAL_KEY, JSON.stringify(approval));
+export const saveSelectionApproval = async (approvalByJob: Record<string, SelectionApproval>): Promise<void> => {
+  window.localStorage.setItem(APPROVAL_KEY, JSON.stringify(approvalByJob));
 };
