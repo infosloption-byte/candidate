@@ -9,11 +9,11 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Introduce Context + `useReducer` candidate domain state.
 - ✅ Create initial navigation, dashboard, candidates, interviews, jobs, selection, reports, and settings surfaces.
 - ✅ Add candidate workflow and structured rejection capture.
-- 🔄 Move the application into a clear `frontend/` + `backend/` repository structure.
-- 🔄 Make shell navigation, content scrolling, and candidate workspace responsive across desktop/tablet/mobile.
-- 🔄 Refine candidate profile states and the multi-step add-candidate experience.
+- ✅ Move the application into a clear `frontend/` + `backend/` repository structure.
+- ✅ Make shell navigation, content scrolling, and candidate workspace responsive across desktop/tablet/mobile.
+- ✅ Refine candidate profile states and the multi-step add-candidate experience.
 - ⏳ Add reusable loading, error/retry, empty, and success state components.
-- ⏳ Add accessibility pass with keyboard navigation and focus management.
+- 🔄 Complete accessibility pass with keyboard navigation, focus management, reduced motion, and mobile interaction checks.
 
 ## Phase 2 — Candidate intelligence UX
 
@@ -56,4 +56,18 @@ Primary daily user flow:
 
 `Find candidate → Open profile → Review evidence → Start screening / schedule interview / select / reserve / reject → preserve reason and timeline`
 
-Candidate creation should require only essential information first, then progressively collect professional and readiness information. The form must remain usable one-handed on mobile.
+Candidate creation flow:
+
+`Essentials → Trade → Readiness → Create → New state`
+
+Candidate profile states:
+
+`New → Screening → Interview → Selected / Reserve / Rejected`
+
+Rejection is always accompanied by a structured reason and written decision note.
+
+Responsive rules:
+
+- Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
+- Tablet: compact sidebar behavior with flexible content widths.
+- Mobile: slide-over navigation, single-column candidate flow, large tap targets, safe-area-aware action bars.
