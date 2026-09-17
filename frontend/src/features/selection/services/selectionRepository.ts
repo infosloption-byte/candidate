@@ -55,7 +55,9 @@ const normalizeWeights = (value: SelectionScoringWeights): SelectionScoringWeigh
     scaled[index] = [key, weight + (remainder > 0 ? 1 : -1)];
     remainder += remainder > 0 ? -1 : 1;
   }
-  return Object.fromEntries(scaled) as SelectionScoringWeights;
+  const normalized: SelectionScoringWeights = { ...defaultSelectionScoringWeights };
+  for (const [key, weight] of scaled) normalized[key] = weight;
+  return normalized;
 };
 
 export const loadSelectionJobs = async (): Promise<SelectionJob[]> => parseArray(window.localStorage.getItem(JOBS_KEY), selectionJobSeed);
