@@ -1,0 +1,34 @@
+import { Icon } from '../../../shared/components/Icon';
+import type { SelectionCandidateRow } from '../hooks/useSelectionWorkspace';
+
+interface SelectionEvidencePanelProps {
+  row: SelectionCandidateRow | null;
+}
+
+export const SelectionEvidencePanel = ({ row }: SelectionEvidencePanelProps) => {
+  if (!row) return <section className="grid min-h-full place-items-center bg-slate-50 p-6"><div className="max-w-sm text-center"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="users" size={22}/></div><h2 className="mt-3 text-sm font-black text-slate-800">Select a candidate</h2><p className="mt-1 text-xs leading-5 text-slate-500">Open a candidate to review the evidence before recording a selection decision.</p></div></section>;
+
+  const { candidate, record } = row;
+  const decision = record?.decision ?? 'recommended';
+  return (
+    <section className="min-h-full bg-slate-50" aria-label={`Evidence for ${candidate.name}`}>
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">
+        <div className="flex items-start gap-3"><div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-slate-900 text-sm font-black text-white">{candidate.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</div><div className="min-w-0 flex-1"><h2 className="text-base font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.profession} · {candidate.reference}</p></div><span className="rounded-full bg-cyan-50 px-2 py-1 text-[9px] font-bold text-cyan-700">{decision[0].toUpperCase() + decision.slice(1)}</span></div>
+      </div>
+
+      <div className="space-y-4 p-4 sm:p-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><div><h3 className="text-sm font-black text-slate-900">Evidence snapshot</h3><p className="mt-0.5 text-[10px] text-slate-400">The reasons behind the current fit.</p></div><span className="text-2xl font-black text-slate-950">{row.interviewScore ?? candidate.fitScore}%</span></div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] font-bold uppercase text-slate-400">Experience</p><p className="mt-1 text-sm font-black text-slate-800">{candidate.experienceYears} yrs</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] font-bold uppercase text-slate-400">Skills</p><p className="mt-1 text-sm font-black text-slate-800">{row.skillMatchCount}/{row.skillMatchTotal || '—'}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] font-bold uppercase text-slate-400">English</p><p className="mt-1 text-sm font-black text-slate-800">{candidate.englishLevel}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] font-bold uppercase text-slate-400">Availability</p><p className="mt-1 text-sm font-black text-slate-800">{candidate.availability}</p></div></div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><h3 className="text-sm font-black text-slate-900">Required skills</h3><div className="mt-3 flex flex-wrap gap-2">{candidate.secondarySkills.length > 0 ? candidate.secondarySkills.map((skill) => <span key={skill} className="rounded-xl bg-slate-50 px-2.5 py-2 text-[10px] font-bold text-slate-600">{skill}</span>) : <p className="text-xs text-slate-400">No secondary skills recorded.</p>}</div></section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><h3 className="text-sm font-black text-slate-900">Documents & readiness</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{Object.entries(candidate.documents).map(([key, status]) => <div key={key} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-[10px] font-semibold capitalize text-slate-600">{key === 'tradeCertificate' ? 'Trade certificate' : key}</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${status === 'verified' ? 'bg-emerald-50 text-emerald-700' : status === 'needs-review' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{status === 'verified' ? 'Verified' : status === 'needs-review' ? 'Needs review' : 'Missing'}</span></div>)}<div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-[10px] font-semibold text-slate-600">Location ready</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${candidate.locationReady ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{candidate.locationReady ? 'Yes' : 'Confirm'}</span></div><div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-[10px] font-semibold text-slate-600">Driving licence</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${candidate.drivingLicense ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>{candidate.drivingLicense ? 'Available' : 'No'}</span></div></div></section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><h3 className="text-sm font-black text-slate-900">Interview evidence</h3>{candidate.lastInterview ? <div className="mt-3 rounded-2xl bg-slate-50 p-3.5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black text-slate-800">{candidate.lastInterview.role}</p><p className="mt-1 text-[10px] text-slate-500">{candidate.lastInterview.date} · {candidate.lastInterview.interviewer}</p></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${candidate.lastInterview.result === 'Passed' ? 'bg-emerald-50 text-emerald-700' : candidate.lastInterview.result === 'Failed' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{candidate.lastInterview.result} · {candidate.lastInterview.score}%</span></div>{candidate.lastInterview.note && <p className="mt-3 text-xs leading-5 text-slate-600">{candidate.lastInterview.note}</p>}</div> : <p className="mt-3 text-xs text-amber-700">No completed interview evidence is linked to this candidate yet.</p>}</section>
+
+        {row.evidenceFlags.length > 0 && <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><div className="flex items-center gap-2 text-amber-800"><Icon name="alert" size={15}/><h3 className="text-xs font-black">Review before selecting</h3></div><div className="mt-2 space-y-1.5">{row.evidenceFlags.map((flag) => <p key={flag} className="text-[10px] font-semibold text-amber-800">• {flag}</p>)}</div></section>}
+      </div>
+    </section>
+  );
+};
