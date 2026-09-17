@@ -45,6 +45,24 @@ export interface SelectionHistoryEntry {
   occurredBy: string;
 }
 
+export interface SelectionScoringWeights {
+  experience: number;
+  skills: number;
+  interview: number;
+  documents: number;
+  readiness: number;
+  communication: number;
+}
+
+export const defaultSelectionScoringWeights: SelectionScoringWeights = {
+  experience: 25,
+  skills: 25,
+  interview: 25,
+  documents: 10,
+  readiness: 10,
+  communication: 5,
+};
+
 export interface SelectionState {
   loadState: 'loading' | 'error' | 'success';
   errorMessage: string | null;
@@ -52,6 +70,7 @@ export interface SelectionState {
   jobs: SelectionJob[];
   records: SelectionRecord[];
   history: SelectionHistoryEntry[];
+  scoringByJob: Record<string, SelectionScoringWeights>;
   activeJobId: string | null;
   activeTab: SelectionTab;
   selectedCandidateId: string | null;
@@ -59,7 +78,7 @@ export interface SelectionState {
 }
 
 export type SelectionAction =
-  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; history: SelectionHistoryEntry[]; approvalByJob: Record<string, SelectionApproval> }
+  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; history: SelectionHistoryEntry[]; approvalByJob: Record<string, SelectionApproval>; scoringByJob: Record<string, SelectionScoringWeights> }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SET_JOB'; jobId: string }
@@ -68,7 +87,8 @@ export type SelectionAction =
   | { type: 'SAVE_DECISION'; record: SelectionRecord }
   | { type: 'BULK_SAVE_DECISIONS'; records: SelectionRecord[] }
   | { type: 'REASSIGN_CANDIDATES'; candidateIds: string[]; fromJobId: string; toJobId: string; reason: string; note: string; occurredAt: string; occurredBy: string }
-  | { type: 'SET_APPROVAL'; jobId: string; status: ApprovalStatus; note: string; changedAt: string; changedBy: string };
+  | { type: 'SET_APPROVAL'; jobId: string; status: ApprovalStatus; note: string; changedAt: string; changedBy: string }
+  | { type: 'SET_SCORING_WEIGHTS'; jobId: string; weights: SelectionScoringWeights };
 
 export interface SelectionContextValue {
   state: SelectionState;
