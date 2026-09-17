@@ -80,9 +80,9 @@ export const InterviewWorkspace = ({ interview, onBack, onStatusChange, onDecisi
       <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="interview-notes-title"><div className="flex items-start justify-between gap-3"><div><h2 id="interview-notes-title" className="text-sm font-black text-slate-900">Interview notes</h2><p className="mt-0.5 text-[11px] text-slate-500">Capture context that is useful alongside the scorecard.</p></div><span className="text-[10px] font-semibold text-slate-400">Autosaved locally</span></div><textarea rows={4} value={interview.notes} onChange={(event) => canEditEvidence && scorecard.setInterviewNote(event.target.value)} disabled={!canEditEvidence} className="field-input mt-4 min-h-28 resize-y bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60" placeholder="What stood out? What should the next reviewer know?"/></section>
 
-        <InterviewScorecard interview={interview} completedCriteria={scorecard.progress.completedCriteria} totalCriteria={scorecard.progress.totalCriteria} totalScore={scorecard.progress.totalScore} onScore={scorecard.setScore} onCriterionNote={scorecard.setCriterionNote}/>
-        <PracticalTestPanel interview={interview} onResult={handlePracticalResult} onNote={scorecard.setPracticalNote}/>
-        <InterviewDecisionPanel interview={interview} canComplete={scorecard.canComplete} validationMessage={scorecard.validationMessage} onSubmit={handleDecision}/>
+        <InterviewScorecard interview={interview} completedCriteria={scorecard.progress.completedCriteria} totalCriteria={scorecard.progress.totalCriteria} totalScore={scorecard.progress.totalScore} editable={canEditEvidence} onScore={scorecard.setScore} onCriterionNote={scorecard.setCriterionNote}/>
+        <PracticalTestPanel interview={interview} editable={canEditEvidence} onResult={handlePracticalResult} onNote={scorecard.setPracticalNote}/>
+        <InterviewDecisionPanel interview={interview} canComplete={scorecard.canComplete && canEditEvidence} validationMessage={scorecard.validationMessage} onSubmit={handleDecision}/>
       </div>
     </section>
   );
