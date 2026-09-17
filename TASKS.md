@@ -102,7 +102,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 - ⏳ Extend the frontend CSV importer to XLSX import and server-side validation/processing.
 - ⏳ Map historical interview data to candidate/interview records.
-- ⏳ Add duplicate/quality review before import.
+- ⏳ Add server-side duplicate/quality review and import job controls before persistence.
 - ⏳ End-to-end testing with real recruitment workflows.
 - ⏳ Production deployment and backup/monitoring plan.
 
