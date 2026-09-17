@@ -16,7 +16,8 @@ interface UseInterviewScorecardResult {
   validationMessage: string | null;
   setScore: (criterionId: string, score: number | null) => void;
   setCriterionNote: (criterionId: string, note: string) => void;
-  setPracticalResult: (itemId: string, result: PracticalResult, note: string) => void;
+  setPracticalResult: (itemId: string, result: PracticalResult) => void;
+  setPracticalNote: (itemId: string, note: string) => void;
   setInterviewNote: (note: string) => void;
   setDecision: (decision: Decision, reason: string, note: string) => void;
 }
@@ -46,8 +47,6 @@ export const useInterviewScorecard = (interview: Interview | null): UseInterview
     if (!interview) return 'Select an interview first.';
     if (progress.completedCriteria < progress.totalCriteria) return 'Complete every scorecard criterion before recording the final decision.';
     if (!progress.requiredPracticalComplete) return 'Complete every required practical-test item before recording the final decision.';
-    if (interview.decision.decision === 'pending') return 'Choose Select, Reserve or Reject to complete this interview.';
-    if (interview.decision.decision === 'rejected' && (!interview.decision.reason.trim() || !interview.decision.note.trim())) return 'Rejected interviews require a reason and a written decision note.';
     return null;
   }, [interview, progress]);
 
@@ -61,9 +60,14 @@ export const useInterviewScorecard = (interview: Interview | null): UseInterview
     dispatch({ type: 'SET_CRITERION_NOTE', interviewId: interview.id, criterionId, note });
   };
 
-  const setPracticalResult = (itemId: string, result: PracticalResult, note: string) => {
+  const setPracticalResult = (itemId: string, result: PracticalResult) => {
     if (!interview) return;
-    dispatch({ type: 'SET_PRACTICAL_RESULT', interviewId: interview.id, itemId, result, note });
+    dispatch({ type: 'SET_PRACTICAL_RESULT', interviewId: interview.id, itemId, result });
+  };
+
+  const setPracticalNote = (itemId: string, note: string) => {
+    if (!interview) return;
+    dispatch({ type: 'SET_PRACTICAL_NOTE', interviewId: interview.id, itemId, note });
   };
 
   const setInterviewNote = (note: string) => {
@@ -83,6 +87,7 @@ export const useInterviewScorecard = (interview: Interview | null): UseInterview
     setScore,
     setCriterionNote,
     setPracticalResult,
+    setPracticalNote,
     setInterviewNote,
     setDecision,
   };
