@@ -2,13 +2,17 @@ import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
+import { useSelectionBulkActions } from '../hooks/useSelectionBulkActions';
 import { SelectionBoard } from './SelectionBoard';
 import { useSelectionWorkspace } from '../hooks/useSelectionWorkspace';
 import type { SelectionDecision } from '../types/selection';
 
+type BulkDecision = Extract<SelectionDecision, 'selected' | 'reserve' | 'rejected'>;
+
 export const SelectionPage = () => {
-  const { state, activeJob, tabRows, selectedRow, approval, metrics, visibleJobs, actions } = useSelectionWorkspace();
+  const { state, activeJob, tabRows, selectedRow, approval, history, metrics, visibleJobs, actions } = useSelectionWorkspace();
   const { actions: candidateActions } = useCandidateWorkspace();
+  const bulk = useSelectionBulkActions({ job: activeJob ?? { id: '', title: '', project: '', location: '', openings: 0, profession: '', requiredExperience: 0, requiredSkills: [], client: '' }, rows: tabRows });
 
   if (state.loadState === 'loading') return <LoadingState label="Loading selection board" rows={6} />;
   if (state.loadState === 'error') return <ErrorState title="We could not load the selection board" message={state.errorMessage ?? 'Selection data is temporarily unavailable.'} onRetry={actions.retryLoad} />;
@@ -21,6 +25,12 @@ export const SelectionPage = () => {
     if (decision === 'reserve') candidateActions.moveToReserve(selectedRow.candidate.id);
   };
 
+  const applyBulkDecision = (decision: BulkDecision) => {
+    const candidateIds = bulk.actions.applyDecision(decision);
+    if (decision === 'selected') candidateIds.forEach((candidateId) => candidateActions.selectCandidateForJob(candidateId));
+    if (decision === 'reserve') candidateIds.forEach((candidateId) => candidateActions.moveToReserve(candidateId));
+  };
+
   return (
     <div className="min-h-full">
       <SelectionBoard
@@ -28,6 +38,7 @@ export const SelectionPage = () => {
         jobs={visibleJobs}
         tabRows={tabRows}
         selectedRow={selectedRow}
+        history={history}
         activeTab={state.activeTab}
         selectedCount={metrics.selected}
         reserveCount={metrics.reserve}
@@ -36,9 +47,25 @@ export const SelectionPage = () => {
         approvalStatus={approval.status}
         approvalReady={metrics.approvalReady}
         approvalNote={approval.note}
+        bulkSelectedIds={bulk.selectedIds}
+        bulkAllVisibleSelected={bulk.allVisibleSelected}
+        bulkReason={bulk.reason}
+        bulkNote={bulk.note}
+        bulkTargetJobId={bulk.targetJobId}
+        bulkError={bulk.error}
         onChangeJob={actions.setJob}
         onTabChange={actions.setTab}
         onSelectCandidate={actions.selectCandidate}
+        onToggleBulkCandidate={bulk.actions.toggleCandidate}
+        onToggleAllBulk={bulk.actions.toggleAll}
+        onClearBulk={bulk.actions.clearSelection}
+        onBulkReasonChange={bulk.actions.setReason}
+        onBulkNoteChange={bulk.actions.setNote}
+        onBulkTargetJobChange={bulk.actions.setTargetJob}
+        onBulkSelect={() => applyBulkDecision('selected')}
+        onBulkReserve={() => applyBulkDecision('reserve')}
+        onBulkReject={() => applyBulkDecision('rejected')}
+        onBulkReassign={bulk.actions.reassign}
         onDecision={saveDecision}
         onApproval={actions.setApproval}
       />
