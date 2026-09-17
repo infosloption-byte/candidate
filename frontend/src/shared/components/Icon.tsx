@@ -1,8 +1,8 @@
-import type { SVGProps } from 'react';
+import type { ReactNode, SVGProps } from 'react';
 
 export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders';
 
-const paths: Record<IconName, JSX.Element> = {
+const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   'chevron-left': <path d="m15 18-6-6 6-6" />,
   'chevron-right': <path d="m9 18 6-6-6-6" />,
@@ -34,8 +34,4 @@ const paths: Record<IconName, JSX.Element> = {
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'children'> { name: IconName; size?: number; }
 
-export const Icon = ({ name, size = 20, strokeWidth = 1.8, ...props }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-    {paths[name]}
-  </svg>
-);
+export const Icon = ({ name, size = 20, strokeWidth = 1.8, ...props }: IconProps) => <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name]}</svg>;
