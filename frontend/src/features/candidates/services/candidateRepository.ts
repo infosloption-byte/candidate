@@ -34,7 +34,7 @@ const asAvailability = (value: unknown): Availability => ['Available now', 'With
 const asDocumentState = (value: unknown, fallback: DocumentState = 'missing'): DocumentState => ['verified', 'needs-review', 'missing', 'pending'].includes(value as string) ? (value === 'pending' ? 'needs-review' : value as DocumentState) : fallback;
 const asOnboardingStatus = (value: unknown): CandidateOnboardingStatus => ['not-started', 'invited', 'in-progress', 'submitted', 'needs-changes', 'completed'].includes(value as string) ? value as CandidateOnboardingStatus : 'not-started';
 const normalizeOnboarding = (record: CandidateRecord): Candidate['onboarding'] => {
-  if (!isRecord(record.onboarding)) return { status: 'not-started', completionPercent: 0 };
+  if (!isRecord(record.onboarding)) return { status: 'completed', completionPercent: 100, lastActivityAt: asString(record.createdAt) || undefined, reviewerNote: 'Legacy candidate record; onboarding tracking was introduced after this record was created.' };
   return {
     status: asOnboardingStatus(record.onboarding.status),
     completionPercent: Math.min(100, Math.max(0, asNumber(record.onboarding.completionPercent, 0))),
