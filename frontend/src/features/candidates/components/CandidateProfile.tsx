@@ -1,10 +1,14 @@
 import { Icon } from '../../../shared/components/Icon';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
-import type { Candidate, CandidateStatus, DocumentState } from '../types/candidate';
+import { CandidateDuplicatePanel } from './CandidateDuplicatePanel';
+import type { Candidate, CandidateDuplicateMatch, CandidateStatus, DocumentState } from '../types/candidate';
 
 interface CandidateProfileProps {
   candidate: Candidate | null;
+  allCandidates: Candidate[];
+  duplicateMatches: CandidateDuplicateMatch[];
   onBack?: () => void;
+  onOpenDuplicate: (candidateId: string) => void;
   onScreen: (id: string) => void;
   onInterview: (id: string) => void;
   onSelect: (id: string) => void;
@@ -24,7 +28,7 @@ const statusCopy: Record<CandidateStatus, { title: string; text: string }> = {
 const documentLabel = (state: DocumentState) => state === 'verified' ? 'Verified' : state === 'needs-review' ? 'Needs review' : 'Missing';
 const documentStyle = (state: DocumentState) => state === 'verified' ? 'bg-emerald-50 text-emerald-700' : state === 'needs-review' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700';
 
-export const CandidateProfile = ({ candidate, onBack, onScreen, onInterview, onSelect, onReserve, onReject }: CandidateProfileProps) => {
+export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, onBack, onOpenDuplicate, onScreen, onInterview, onSelect, onReserve, onReject }: CandidateProfileProps) => {
   if (!candidate) return <section className="hidden min-h-full place-items-center bg-slate-50 p-8 xl:grid"><div className="max-w-sm text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="users" size={25}/></div><h2 className="mt-4 text-base font-bold text-slate-800">Select a candidate</h2><p className="mt-1 text-sm leading-6 text-slate-500">Choose someone from the directory to review their profile and workflow.</p></div></section>;
 
   const initials = candidate.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
@@ -52,6 +56,8 @@ export const CandidateProfile = ({ candidate, onBack, onScreen, onInterview, onS
       </div>
 
       <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
+        <CandidateDuplicatePanel matches={duplicateMatches} candidates={allCandidates} onOpenCandidate={onOpenDuplicate} />
+
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-slate-900">Readiness snapshot</h2><p className="mt-0.5 text-xs text-slate-500">The quick facts recruiters check most often.</p></div><Icon name="sparkles" size={18} className="text-cyan-600"/></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">English</p><p className="mt-1 text-sm font-bold text-slate-800">{candidate.englishLevel}</p></div>
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Availability</p><p className="mt-1 text-sm font-bold text-slate-800">{candidate.availability.replace('Within ', '< ').replace('Available now', 'Now')}</p></div>
