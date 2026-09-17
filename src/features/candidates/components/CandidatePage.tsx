@@ -33,7 +33,7 @@ export const CandidatePage = () => {
         </section>
         <CandidateProfile candidate={selectedCandidate} onScreen={actions.moveToScreening} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection} />
       </main>
-      <AddCandidateDrawer open={state.isAddDrawerOpen} onClose={actions.closeAddCandidate} onCreate={actions.createCandidate} />
+      <AddCandidateDrawer open={state.isAddDrawerOpen} professions={professions} onClose={actions.closeAddCandidate} onCreate={actions.createCandidate} />
       <RejectCandidateDialog open={Boolean(rejectionCandidate)} candidateName={rejectionCandidate?.name ?? 'this candidate'} onClose={actions.closeRejection} onReject={actions.rejectCandidate} />
     </div>
   );
