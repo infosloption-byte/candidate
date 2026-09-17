@@ -14,6 +14,7 @@ export interface InterviewDecision { decision: Decision; reason: string; note: s
 export interface InterviewRescheduleHistory { id: string; fromDate: string; fromTime: string; fromInterviewerIds: string[]; toDate: string; toTime: string; toInterviewerIds: string[]; reason: string; changedAt: string; undoneAt: string | null; }
 export interface InterviewRescheduleDraft { interviewId: string; date: string; time: string; interviewerIds: string[]; reason: string; }
 export interface InterviewRescheduleAlternative { date: string; time: string; interviewerIds: string[]; label: string; }
+export interface InterviewScheduleValidation { valid: boolean; reasons: string[]; warnings: string[]; }
 export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; createdAt: string; rescheduleHistory?: InterviewRescheduleHistory[]; }
 export interface InterviewDraft { candidateId: string; type: InterviewType; date: string; time: string; durationMinutes: string; location: string; interviewerIds: string[]; }
 
