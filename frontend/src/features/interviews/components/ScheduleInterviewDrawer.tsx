@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Icon } from '../../../shared/components/Icon';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import { useInterviewForm } from '../hooks/useInterviewForm';
@@ -18,9 +18,17 @@ const types: InterviewType[] = ['Screening', 'Technical', 'Practical', 'Client',
 export const ScheduleInterviewDrawer = ({ open, candidates, interviewers, onClose, onCreate }: ScheduleInterviewDrawerProps) => {
   const form = useInterviewForm({ candidates, interviewers, onCreate, onClose });
   const drawerRef = useFocusTrap({ enabled: open, onEscape: onClose });
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!open) form.reset();
+    if (open) {
+      wasOpenRef.current = true;
+      return;
+    }
+
+    if (!wasOpenRef.current) return;
+    wasOpenRef.current = false;
+    form.reset();
   }, [open, form.reset]);
 
   if (!open) return null;
