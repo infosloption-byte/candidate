@@ -45,6 +45,7 @@ export type CandidateAction =
   | { type: 'CLOSE_ADD_DRAWER' }
   | { type: 'ADD_CANDIDATE'; candidate: Candidate }
   | { type: 'UPDATE_STATUS'; candidateId: string; status: CandidateStatus }
+  | { type: 'RECORD_INTERVIEW_OUTCOME'; candidateId: string; status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>; interviewDate: string; interviewer: string; profession: string; score: number; reason: RejectionReason | ''; note: string }
   | { type: 'OPEN_REJECTION_DIALOG'; candidateId: string }
   | { type: 'CLOSE_REJECTION_DIALOG' }
   | { type: 'REJECT_CANDIDATE'; candidateId: string; reason: RejectionReason; note: string };
