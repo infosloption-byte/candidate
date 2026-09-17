@@ -9,13 +9,25 @@ const isApprovalStatus = (value: unknown): value is ApprovalStatus => ['draft', 
 const recordKey = (record: SelectionRecord): string => `${record.candidateId}::${record.jobId}`;
 const decisionHistory = (record: SelectionRecord, previous: SelectionRecord | undefined): SelectionHistoryEntry => ({ candidateId: record.candidateId, jobId: record.jobId, action: 'decision_changed', fromDecision: previous?.decision ?? null, toDecision: record.decision, reason: record.reason, note: record.note, occurredAt: record.decidedAt, occurredBy: record.decidedBy });
 const resetApprovedJobs = (approvalByJob: SelectionState['approvalByJob'], jobIds: string[]): SelectionState['approvalByJob'] => Array.from(new Set(jobIds)).reduce((next, jobId) => next[jobId]?.status === 'approved' ? { ...next, [jobId]: { status: 'draft', note: '' } } : next, approvalByJob);
+const scoringKeys: Array<keyof SelectionScoringWeights> = ['experience', 'skills', 'interview', 'documents', 'readiness', 'communication'];
+
 const normalizeScoring = (weights: SelectionScoringWeights): SelectionScoringWeights => {
-  const safe = Object.fromEntries(Object.entries(defaultSelectionScoringWeights).map(([key, fallback]) => [key, Math.max(0, Math.min(100, Number.isFinite(weights[key as keyof SelectionScoringWeights]) ? weights[key as keyof SelectionScoringWeights] : fallback))])) as SelectionScoringWeights;
+  const safe: SelectionScoringWeights = { ...defaultSelectionScoringWeights };
+  for (const key of scoringKeys) {
+    const value = weights[key];
+    const fallback = defaultSelectionScoringWeights[key];
+    safe[key] = Math.max(0, Math.min(100, Number.isFinite(value) ? value : fallback));
+  }
   const total = Object.values(safe).reduce((sum, value) => sum + value, 0);
-  if (total <= 0) return defaultSelectionScoringWeights;
-  const normalized = Object.fromEntries(Object.entries(safe).map(([key, value]) => [key, Math.round((value / total) * 100)])) as SelectionScoringWeights;
+  if (total <= 0) return { ...defaultSelectionScoringWeights };
+  const normalized: SelectionScoringWeights = { ...safe };
+  for (const key of scoringKeys) normalized[key] = Math.round((safe[key] / total) * 100);
   let remainder = 100 - Object.values(normalized).reduce((sum, value) => sum + value, 0);
-  for (const key of Object.keys(normalized) as Array<keyof SelectionScoringWeights>) { if (remainder === 0) break; normalized[key] += remainder > 0 ? 1 : -1; remainder += remainder > 0 ? -1 : 1; }
+  for (const key of scoringKeys) {
+    if (remainder === 0) break;
+    normalized[key] += remainder > 0 ? 1 : -1;
+    remainder += remainder > 0 ? -1 : 1;
+  }
   return normalized;
 };
 
