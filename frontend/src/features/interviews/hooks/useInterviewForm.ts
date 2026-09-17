@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Candidate } from '../../candidates/types/candidate';
 import type { Interview, InterviewDraft, InterviewType, Interviewer } from '../types/interview';
+import { validateInterviewSchedule } from '../services/interviewScheduling';
 
 interface UseInterviewFormProps {
   candidates: Candidate[];
   interviewers: Interviewer[];
+  interviews: Interview[];
   onCreate: (interview: Interview) => void;
   onClose: () => void;
 }
@@ -49,13 +51,20 @@ const createPracticalTest = (profession: string, type: InterviewType) => {
   ];
 };
 
+const toLocalIsoDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getNextDate = (): string => {
   const date = new Date();
   date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
+  return toLocalIsoDate(date);
 };
 
-const emptyDraft: InterviewDraft = {
+const createEmptyDraft = (): InterviewDraft => ({
   candidateId: '',
   type: 'Technical',
   date: getNextDate(),
@@ -63,15 +72,25 @@ const emptyDraft: InterviewDraft = {
   durationMinutes: '45',
   location: 'Colombo Interview Room 1',
   interviewerIds: [],
-};
+});
 
 const makeId = (prefix: string): string => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `${prefix}-${crypto.randomUUID()}` : `${prefix}-${Date.now()}`;
 
-export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }: UseInterviewFormProps) => {
-  const [draft, setDraft] = useState<InterviewDraft>(emptyDraft);
+export const useInterviewForm = ({ candidates, interviewers, interviews, onCreate, onClose }: UseInterviewFormProps) => {
+  const [draft, setDraft] = useState<InterviewDraft>(createEmptyDraft);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCandidate = useMemo(() => candidates.find((candidate) => candidate.id === draft.candidateId) ?? null, [candidates, draft.candidateId]);
+  const selectedInterviewers = useMemo(
+    () => draft.interviewerIds
+      .map((id) => interviewers.find((interviewer) => interviewer.id === id))
+      .filter((interviewer): interviewer is Interviewer => Boolean(interviewer)),
+    [draft.interviewerIds, interviewers],
+  );
+  const validation = useMemo(
+    () => validateInterviewSchedule(draft, selectedCandidate, interviewers, interviews),
+    [draft, interviews, interviewers, selectedCandidate],
+  );
 
   const updateField = useCallback(<K extends keyof InterviewDraft>(field: K, value: InterviewDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -89,26 +108,17 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
   }, []);
 
   const submit = useCallback(() => {
-    if (!selectedCandidate) {
+    if (!validation.valid) {
+      setError(validation.reasons[0] ?? 'Review the schedule before continuing.');
+      return;
+    }
+
+    const profession = selectedCandidate?.profession;
+    if (!selectedCandidate || !profession) {
       setError('Choose a candidate before scheduling the interview.');
       return;
     }
-    if (!draft.date || !draft.time || Number(draft.durationMinutes) < 15) {
-      setError('Add a valid date, time and duration of at least 15 minutes.');
-      return;
-    }
-    if (draft.interviewerIds.length === 0) {
-      setError('Assign at least one interviewer.');
-      return;
-    }
 
-    const assigned = interviewerIdsToObjects(draft.interviewerIds, interviewers);
-    if (assigned.length === 0) {
-      setError('The selected interviewer could not be found. Choose an active interviewer and try again.');
-      return;
-    }
-
-    const profession = selectedCandidate.profession;
     const interview: Interview = {
       id: makeId('iv'),
       reference: `IV-${Math.floor(1000 + Math.random() * 8999)}`,
@@ -120,8 +130,8 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
       date: new Date(`${draft.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: draft.time,
       durationMinutes: Number(draft.durationMinutes),
-      location: draft.location.trim() || 'Interview room',
-      interviewers: assigned,
+      location: draft.location.trim(),
+      interviewers: selectedInterviewers,
       notes: '',
       scorecard: createScorecard(profession),
       practicalTest: createPracticalTest(profession, draft.type),
@@ -130,19 +140,24 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
     };
 
     onCreate(interview);
-    setDraft({ ...emptyDraft, interviewerIds: [] });
     setError(null);
     onClose();
-  }, [draft, interviewers, onClose, onCreate, selectedCandidate]);
+  }, [draft, onClose, onCreate, selectedCandidate, selectedInterviewers, validation]);
 
   const reset = useCallback(() => {
-    setDraft({ ...emptyDraft, interviewerIds: [] });
+    setDraft(createEmptyDraft());
     setError(null);
   }, []);
 
-  return useMemo(() => ({ draft, error, selectedCandidate, updateField, toggleInterviewer, submit, reset }), [draft, error, reset, selectedCandidate, submit, toggleInterviewer, updateField]);
+  return useMemo(() => ({
+    draft,
+    error,
+    selectedCandidate,
+    selectedInterviewers,
+    validation,
+    updateField,
+    toggleInterviewer,
+    submit,
+    reset,
+  }), [draft, error, reset, selectedCandidate, selectedInterviewers, submit, toggleInterviewer, updateField, validation]);
 };
-
-const interviewerIdsToObjects = (ids: string[], interviewers: Interviewer[]): Interviewer[] => ids
-  .map((id) => interviewers.find((interviewer) => interviewer.id === id))
-  .filter((interviewer): interviewer is Interviewer => Boolean(interviewer));
