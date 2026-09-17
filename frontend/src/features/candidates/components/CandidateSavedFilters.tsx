@@ -35,11 +35,11 @@ export const CandidateSavedFilters = ({ filters, smartFilters, savedFilters, act
           <h3 id="saved-filters-title" className="text-xs font-black text-slate-800">Saved searches</h3>
           <p className="mt-0.5 text-[10px] text-slate-400">Save a useful candidate search for one-tap reuse.</p>
         </div>
-        {hasCurrentCriteria && <button type="button" onClick={() => form.setName('')} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-bold text-cyan-700 hover:bg-cyan-50"><Icon name="plus" size={12}/>Save current</button>}
+        {hasCurrentCriteria && !form.isOpen && <button type="button" onClick={form.open} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-cyan-700 hover:bg-cyan-50"><Icon name="plus" size={12}/>Save current</button>}
       </div>
 
-      {hasCurrentCriteria && form.name !== undefined && (form.name.length > 0 || form.error !== null) && <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/50 p-3">
-        <label className="block"><span className="field-label">Search name</span><input autoFocus value={form.name} onChange={(event) => { form.setName(event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); form.submit(); } if (event.key === 'Escape') form.cancel(); }} className="field-input bg-white" placeholder="e.g. Ready mason shortlist" /></label>
+      {hasCurrentCriteria && form.isOpen && <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/50 p-3">
+        <label className="block"><span className="field-label">Search name</span><input autoFocus value={form.name} onChange={(event) => form.setName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); form.submit(); } if (event.key === 'Escape') form.cancel(); }} className="field-input bg-white" placeholder="e.g. Ready mason shortlist" /></label>
         {form.error && <p role="alert" className="mt-2 text-[10px] font-semibold text-rose-600">{form.error}</p>}
         <div className="mt-2 flex justify-end gap-2"><button type="button" onClick={form.cancel} className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-500 hover:bg-white">Cancel</button><button type="button" onClick={form.submit} className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-white">Save search</button></div>
       </div>}
