@@ -39,12 +39,15 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Phase 3 — Interview workflow UX
 
-- ⏳ Interview calendar and schedule management.
-- ⏳ Interviewer profiles and panel assignment.
-- ⏳ Profession-specific evaluation scorecards.
-- ⏳ Mandatory failure reasons and structured interviewer notes.
-- ⏳ Practical test workflow.
-- ⏳ Interview result review/approval states.
+- ✅ Interview queue with status, search, attention and completion filters.
+- ✅ Interview scheduling drawer with candidate, type, date, time, duration, location and interviewer assignment.
+- ⏳ Full calendar-grid view for day/week scheduling and conflict visualization.
+- ✅ Interviewer profiles and panel assignment for the MVP.
+- ✅ Profession-aware evaluation scorecards with weighted criteria and 1–5 scoring.
+- ✅ Mandatory failure/decision reasons and structured interviewer notes.
+- ✅ Profession-aware practical test workflow with required and optional tasks.
+- ✅ Interview result review and final decision workflow with Select / Reserve / Reject.
+- ✅ Interview decisions synchronize back to the candidate profile with result, score, reason and note.
 
 ## Phase 4 — Backend and data
 
@@ -65,9 +68,13 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Current UX definition
 
-Primary daily user flow:
+Primary daily candidate flow:
 
-`Find candidate → Filter / search → Open profile → Review evidence → Compare or start screening / schedule interview / select / reserve / reject → preserve reason and timeline`
+`Find candidate → Filter / search → Open profile → Review evidence → Compare or start screening / schedule interview → interview evaluation → Select / Reserve / Reject → preserve reason and timeline`
+
+Interview workflow:
+
+`Queue → Schedule → Assign interviewer(s) → Start interview → Evaluation → Scorecard + Practical test → Final decision → Candidate profile updated`
 
 Candidate creation flow:
 
