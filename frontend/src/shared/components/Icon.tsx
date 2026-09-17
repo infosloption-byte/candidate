@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from 'react';
 
-export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders';
+export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders' | 'refresh';
 
 const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
@@ -30,6 +30,7 @@ const paths: Record<IconName, ReactNode> = {
   sparkles: <><path d="m12 3-1.2 4.8L6 9l4.8 1.2L12 15l1.2-4.8L18 9l-4.8-1.2L12 3Z"/><path d="m19 15-.7 2.3L16 18l2.3.7L19 21l.7-2.3L22 18l-2.3-.7L19 15ZM5 13l-.6 1.9L2.5 15.5l1.9.6L5 18l.6-1.9 1.9-.6-1.9-.6L5 13Z"/></>,
   download: <><path d="M12 3v11M8 10l4 4 4-4M4 20h16"/></>,
   sliders: <><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/></>,
+  refresh: <><path d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4M4 13a8 8 0 0 0 14.9 4M20 19v-4h-4"/></>,
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'children'> { name: IconName; size?: number; }
