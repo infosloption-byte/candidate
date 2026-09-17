@@ -20,10 +20,12 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Phase 2 — Candidate intelligence UX
 
-- ⏳ Advanced candidate search and saved filters.
-- ⏳ Candidate tags, skills, experience, country history, and availability views.
-- ⏳ Candidate duplicate detection UX.
-- ⏳ Candidate comparison workspace.
+- ✅ Advanced candidate search with keyword, status, profession, experience, English, availability, overseas, driving, document readiness, and multi-skill filters.
+- ⏳ Saved filters and reusable search presets.
+- ✅ Candidate skills, experience, country history, availability, and readiness views are available in smart filtering/comparison.
+- ✅ Explainable duplicate detection based on passport, phone, name, profession, and age signals.
+- ✅ Responsive candidate comparison workspace supporting up to four candidates.
+- ⏳ Candidate tags and recruiter-defined labels.
 - ⏳ Job-fit evidence and configurable suitability score presentation.
 - ⏳ Full interview history and decision audit timeline.
 
@@ -57,7 +59,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 Primary daily user flow:
 
-`Find candidate → Open profile → Review evidence → Start screening / schedule interview / select / reserve / reject → preserve reason and timeline`
+`Find candidate → Filter / search → Open profile → Review evidence → Compare or start screening / schedule interview / select / reserve / reject → preserve reason and timeline`
 
 Candidate creation flow:
 
@@ -69,11 +71,15 @@ Candidate profile states:
 
 Rejection is always accompanied by a structured reason and written decision note.
 
+Candidate intelligence flow:
+
+`Search → Smart filters → Review matches → Detect possible duplicates → Select up to 4 → Compare side by side`
+
 Responsive rules:
 
 - Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
 - Tablet: compact sidebar behavior with flexible content widths.
-- Mobile: slide-over navigation, single-column candidate flow, large tap targets, safe-area-aware action bars.
+- Mobile: slide-over navigation, single-column candidate flow, large tap targets, safe-area-aware action bars, and height-limited comparison tray.
 
 ## Current bugfix note
 
