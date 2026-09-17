@@ -4,6 +4,7 @@ import type { SelectionDecision, SelectionJob } from '../types/selection';
 interface UseSelectionDecisionFormProps {
   job: SelectionJob | null;
   selectedCount: number;
+  currentDecision: SelectionDecision | null;
   onSubmit: (decision: SelectionDecision, reason: string, note: string) => void;
 }
 
@@ -14,8 +15,8 @@ const reasons: Record<SelectionDecision, string[]> = {
   rejected: ['Technical gap', 'Experience gap', 'Required skill missing', 'Documents', 'Availability', 'Client requirement', 'Other'],
 };
 
-export const useSelectionDecisionForm = ({ job, selectedCount, onSubmit }: UseSelectionDecisionFormProps) => {
-  const [decision, setDecision] = useState<SelectionDecision>('selected');
+export const useSelectionDecisionForm = ({ job, selectedCount, currentDecision, onSubmit }: UseSelectionDecisionFormProps) => {
+  const [decision, setDecision] = useState<SelectionDecision>(currentDecision ?? 'selected');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,8 @@ export const useSelectionDecisionForm = ({ job, selectedCount, onSubmit }: UseSe
       setError('Choose a job requirement first.');
       return;
     }
-    if (decision === 'selected' && selectedCount >= job.openings) {
+    const stayingSelected = currentDecision === 'selected' && decision === 'selected';
+    if (decision === 'selected' && selectedCount >= job.openings && !stayingSelected) {
       setError(`All ${job.openings} selection positions are already filled. Move a selected candidate to Reserve before adding another.`);
       return;
     }
@@ -50,11 +52,11 @@ export const useSelectionDecisionForm = ({ job, selectedCount, onSubmit }: UseSe
   };
 
   const reset = () => {
-    setDecision('selected');
+    setDecision(currentDecision ?? 'selected');
     setReason('');
     setNote('');
     setError(null);
   };
 
-  return useMemo(() => ({ decision, reason, note, error, decisionReasons, changeDecision, setReason, setNote, submit, reset }), [decision, reason, note, error, decisionReasons]);
+  return useMemo(() => ({ decision, reason, note, error, decisionReasons, changeDecision, setReason, setNote, submit, reset }), [decision, reason, note, error, decisionReasons, currentDecision]);
 };
