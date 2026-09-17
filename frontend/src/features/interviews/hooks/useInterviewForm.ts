@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { Candidate } from '../../candidates/types/candidate';
 import type { Interview, InterviewDraft, InterviewType, Interviewer } from '../types/interview';
 
@@ -73,12 +73,12 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
 
   const selectedCandidate = useMemo(() => candidates.find((candidate) => candidate.id === draft.candidateId) ?? null, [candidates, draft.candidateId]);
 
-  const updateField = <K extends keyof InterviewDraft>(field: K, value: InterviewDraft[K]) => {
+  const updateField = useCallback(<K extends keyof InterviewDraft>(field: K, value: InterviewDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }));
     setError(null);
-  };
+  }, []);
 
-  const toggleInterviewer = (interviewerId: string) => {
+  const toggleInterviewer = useCallback((interviewerId: string) => {
     setDraft((current) => ({
       ...current,
       interviewerIds: current.interviewerIds.includes(interviewerId)
@@ -86,9 +86,9 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
         : [...current.interviewerIds, interviewerId],
     }));
     setError(null);
-  };
+  }, []);
 
-  const submit = () => {
+  const submit = useCallback(() => {
     if (!selectedCandidate) {
       setError('Choose a candidate before scheduling the interview.');
       return;
@@ -133,14 +133,14 @@ export const useInterviewForm = ({ candidates, interviewers, onCreate, onClose }
     setDraft({ ...emptyDraft, interviewerIds: [] });
     setError(null);
     onClose();
-  };
+  }, [draft, interviewers, onClose, onCreate, selectedCandidate]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setDraft({ ...emptyDraft, interviewerIds: [] });
     setError(null);
-  };
+  }, []);
 
-  return useMemo(() => ({ draft, error, selectedCandidate, updateField, toggleInterviewer, submit, reset }), [draft, error, selectedCandidate, interviewers]);
+  return useMemo(() => ({ draft, error, selectedCandidate, updateField, toggleInterviewer, submit, reset }), [draft, error, reset, selectedCandidate, submit, toggleInterviewer, updateField]);
 };
 
 const interviewerIdsToObjects = (ids: string[], interviewers: Interviewer[]): Interviewer[] => ids
