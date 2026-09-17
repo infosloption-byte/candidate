@@ -67,6 +67,16 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
     case 'UPDATE_STATUS': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, status: action.status, journey: [{ id: makeEventId(), date: today(), title: statusTitle(action.status), detail: statusDetail(action.status), tone: statusTone(action.status) }, ...candidate.journey] } : candidate) };
+    case 'BULK_UPDATE_STATUS': {
+      const ids = new Set(action.candidateIds);
+      if (ids.size === 0) return state;
+      return {
+        ...state,
+        candidates: state.candidates.map((candidate) => ids.has(candidate.id) && candidate.status !== action.status
+          ? { ...candidate, status: action.status, journey: [{ id: makeEventId(), date: today(), title: statusTitle(action.status), detail: statusDetail(action.status), tone: statusTone(action.status) }, ...candidate.journey] }
+          : candidate),
+      };
+    }
     case 'RECORD_INTERVIEW_OUTCOME': {
       const result = action.status === 'rejected' ? 'Failed' : 'Passed';
       return {
