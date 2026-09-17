@@ -41,7 +41,7 @@ export const CandidatePage = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setWorkspaceView('onboarding')} title="Open candidate onboarding workspace" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'onboarding' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="users" size={15} /> Onboarding</button>
-            <button type="button" onClick={actions.openBulkImport} title="Bulk import candidates from a CSV" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Icon name="download" size={15} /> Bulk import</button>
+            <button type="button" onClick={actions.openBulkImport} title="Bulk import candidates from a CSV" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Icon name="file" size={15} /> Bulk import</button>
             <button type="button" onClick={actions.openAddCandidate} title="Create one candidate record manually" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Icon name="plus" size={15} /> Add candidate</button>
           </div>
         </div>
