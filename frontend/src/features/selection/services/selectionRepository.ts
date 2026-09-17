@@ -1,4 +1,4 @@
-import type { ApprovalStatus, SelectionApproval, SelectionHistoryEntry, SelectionJob, SelectionRecord } from '../types/selection';
+import type { ApprovalStatus, SelectionApproval, SelectionDecision, SelectionHistoryEntry, SelectionJob, SelectionRecord } from '../types/selection';
 
 const JOBS_KEY = 'buildhire.selection.jobs';
 const RECORDS_KEY = 'buildhire.selection.records';
@@ -71,6 +71,8 @@ const recordSeed: SelectionRecord[] = [
   },
 ];
 
+const isDecision = (value: unknown): value is SelectionDecision => ['recommended', 'selected', 'reserve', 'rejected'].includes(value as string);
+
 const historySeed: SelectionHistoryEntry[] = recordSeed.map((record) => ({
   candidateId: record.candidateId,
   jobId: record.jobId,
@@ -102,21 +104,22 @@ const parseHistory = (raw: string | null): SelectionHistoryEntry[] => {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return historySeed;
-    return parsed.filter((item): item is SelectionHistoryEntry => {
-      if (typeof item !== 'object' || item === null || Array.isArray(item)) return false;
-      const record = item as Record<string, unknown>;
-      return (typeof record.jobId === 'string') && isHistoryAction(record.action) && typeof record.reason === 'string' && typeof record.note === 'string' && typeof record.occurredAt === 'string' && typeof record.occurredBy === 'string' && (record.candidateId === null || typeof record.candidateId === 'string');
+    return parsed.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item)).filter((item) => {
+      const candidateIdValid = item.candidateId === null || typeof item.candidateId === 'string';
+      const fromDecisionValid = item.fromDecision === undefined || item.fromDecision === null || isDecision(item.fromDecision);
+      const toDecisionValid = item.toDecision === undefined || item.toDecision === null || isDecision(item.toDecision);
+      return typeof item.jobId === 'string' && candidateIdValid && isHistoryAction(item.action) && fromDecisionValid && toDecisionValid && typeof item.reason === 'string' && typeof item.note === 'string' && typeof item.occurredAt === 'string' && typeof item.occurredBy === 'string';
     }).map((item) => ({
-      candidateId: item.candidateId,
-      jobId: item.jobId,
+      candidateId: item.candidateId as string | null,
+      jobId: item.jobId as string,
       relatedJobId: typeof item.relatedJobId === 'string' ? item.relatedJobId : undefined,
-      action: item.action,
-      fromDecision: item.fromDecision,
-      toDecision: item.toDecision,
-      reason: item.reason,
-      note: item.note,
-      occurredAt: item.occurredAt,
-      occurredBy: item.occurredBy,
+      action: item.action as SelectionHistoryEntry['action'],
+      fromDecision: item.fromDecision as SelectionDecision | null | undefined,
+      toDecision: item.toDecision as SelectionDecision | null | undefined,
+      reason: item.reason as string,
+      note: item.note as string,
+      occurredAt: item.occurredAt as string,
+      occurredBy: item.occurredBy as string,
     }));
   } catch {
     return historySeed;
