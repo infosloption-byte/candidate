@@ -1,6 +1,6 @@
 export type CandidateStatus = 'new' | 'screening' | 'interview' | 'selected' | 'reserve' | 'rejected';
 export type CandidateSource = 'Walk-in' | 'Referral' | 'Agency' | 'Existing database';
-export type EnglishLevel = 'Basic' | 'Working' | 'Good' | 'Strong';
+export type EnglishLevel = 'Not assessed' | 'Basic' | 'Working' | 'Good' | 'Strong';
 export type Availability = 'Available now' | 'Within 2 weeks' | 'Within 1 month' | 'Not available';
 export type DocumentState = 'verified' | 'needs-review' | 'missing';
 export type RejectionReason = 'Technical skill' | 'Experience gap' | 'Required skill missing' | 'Communication' | 'Documents' | 'Availability' | 'Client requirement' | 'Other';
