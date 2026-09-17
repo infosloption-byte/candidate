@@ -4,6 +4,7 @@ export type ScoreLabel = 'Needs improvement' | 'Basic' | 'Good' | 'Strong' | 'Ex
 export type Decision = 'pending' | 'selected' | 'reserve' | 'rejected';
 export type PracticalResult = 'not-started' | 'passed' | 'failed' | 'pending';
 export type InterviewLoadState = 'loading' | 'error' | 'success';
+export type InterviewCalendarView = 'day' | 'week';
 
 export interface Interviewer {
   id: string;
@@ -78,6 +79,23 @@ export interface InterviewState {
   interviewers: Interviewer[];
   selectedInterviewId: string | null;
   isScheduleDrawerOpen: boolean;
+  calendarView: InterviewCalendarView;
+  calendarDate: string;
+}
+
+export interface InterviewCalendarDay {
+  isoDate: string;
+  date: Date;
+  label: string;
+  shortLabel: string;
+  isToday: boolean;
+}
+
+export interface InterviewCalendarEntry {
+  interview: Interview;
+  startMinutes: number;
+  endMinutes: number;
+  conflicts: string[];
 }
 
 export type InterviewAction =
@@ -94,7 +112,9 @@ export type InterviewAction =
   | { type: 'SET_PRACTICAL_RESULT'; interviewId: string; itemId: string; result: PracticalResult }
   | { type: 'SET_PRACTICAL_NOTE'; interviewId: string; itemId: string; note: string }
   | { type: 'SET_INTERVIEW_NOTE'; interviewId: string; note: string }
-  | { type: 'SET_DECISION'; interviewId: string; decision: Decision; reason: string; note: string };
+  | { type: 'SET_DECISION'; interviewId: string; decision: Decision; reason: string; note: string }
+  | { type: 'SET_CALENDAR_VIEW'; value: InterviewCalendarView }
+  | { type: 'SET_CALENDAR_DATE'; value: string };
 
 export const scoreLabel = (score: number | null): ScoreLabel => {
   if (score === null || score < 1) return 'Needs improvement';
