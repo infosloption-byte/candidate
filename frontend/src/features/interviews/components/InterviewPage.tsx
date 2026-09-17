@@ -7,6 +7,7 @@ import { LoadingState } from '../../../shared/components/LoadingState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { Icon } from '../../../shared/components/Icon';
+import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import { useInterviewWorkspace } from '../hooks/useInterviewWorkspace';
 import { useInterviewCalendar } from '../hooks/useInterviewCalendar';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
@@ -26,6 +27,7 @@ export const InterviewPage = () => {
   const [mode, setMode] = useState<InterviewPageMode>('queue');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [calendarDetailOpen, setCalendarDetailOpen] = useState(false);
+  const calendarDetailRef = useFocusTrap({ enabled: calendarDetailOpen, onEscape: () => setCalendarDetailOpen(false) });
 
   if (state.loadState === 'loading') return <LoadingState label="Loading interviews" rows={5} />;
   if (state.loadState === 'error') return <ErrorState title="We could not load interviews" message={state.errorMessage ?? 'Interview data is temporarily unavailable.'} onRetry={actions.retryLoad} />;
@@ -82,7 +84,7 @@ export const InterviewPage = () => {
 
       <ScheduleInterviewDrawer open={state.isScheduleDrawerOpen} candidates={scheduleCandidates} interviewers={interviewers} onClose={actions.closeSchedule} onCreate={handleCreateInterview}/>
 
-      {calendarDetailOpen && selectedInterview && <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Interview details for ${selectedInterview.candidateName}`}><button type="button" aria-label="Close interview details" onClick={() => setCalendarDetailOpen(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"/><aside className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-slate-50 shadow-2xl"><InterviewWorkspace interview={selectedInterview} onBack={() => setCalendarDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded}/></aside></div>}
+      {calendarDetailOpen && selectedInterview && <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Interview details for ${selectedInterview.candidateName}`}><button type="button" aria-label="Close interview details" onClick={() => setCalendarDetailOpen(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"/><aside ref={calendarDetailRef} tabIndex={-1} className="absolute inset-y-0 right-0 flex w-full max-w-3xl flex-col overflow-y-auto bg-slate-50 shadow-2xl"><InterviewWorkspace interview={selectedInterview} onBack={() => setCalendarDetailOpen(false)} onStatusChange={actions.updateStatus} onDecisionRecorded={handleDecisionRecorded}/></aside></div>}
     </div>
   );
 };
