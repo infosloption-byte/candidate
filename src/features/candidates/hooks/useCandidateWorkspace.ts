@@ -20,6 +20,8 @@ export const useCandidateWorkspace = () => {
     return selected ?? state.candidates[0] ?? null;
   }, [state.candidates, state.selectedCandidateId]);
 
+  const rejectionCandidate = useMemo<Candidate | null>(() => state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId) ?? null, [state.candidates, state.rejectionCandidateId]);
+
   const professions = useMemo(() => ['all', ...Array.from(new Set(state.candidates.map((candidate) => candidate.profession)))], [state.candidates]);
 
   const metrics = useMemo(() => ({
@@ -36,19 +38,24 @@ export const useCandidateWorkspace = () => {
   const selectCandidate = (candidateId: string) => dispatch({ type: 'SELECT_CANDIDATE', candidateId });
   const openAddCandidate = () => dispatch({ type: 'OPEN_ADD_DRAWER' });
   const closeAddCandidate = () => dispatch({ type: 'CLOSE_ADD_DRAWER' });
+  const createCandidate = (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate });
   const moveToScreening = (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'screening' });
   const moveToInterview = (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' });
   const selectCandidateForJob = (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'selected' });
   const moveToReserve = (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' });
   const openRejection = (candidateId: string) => dispatch({ type: 'OPEN_REJECTION_DIALOG', candidateId });
   const closeRejection = () => dispatch({ type: 'CLOSE_REJECTION_DIALOG' });
+  const rejectCandidate = (reason: string, note: string) => {
+    if (!rejectionCandidate) return;
+    dispatch({ type: 'REJECT_CANDIDATE', candidateId: rejectionCandidate.id, reason, note });
+  };
 
   return {
     state,
-    dispatch,
     filters: state.filters as CandidateFilters,
     visibleCandidates,
     selectedCandidate,
+    rejectionCandidate,
     professions,
     metrics,
     actions: {
@@ -58,12 +65,14 @@ export const useCandidateWorkspace = () => {
       selectCandidate,
       openAddCandidate,
       closeAddCandidate,
+      createCandidate,
       moveToScreening,
       moveToInterview,
       selectCandidateForJob,
       moveToReserve,
       openRejection,
       closeRejection,
+      rejectCandidate,
     },
   };
 };
