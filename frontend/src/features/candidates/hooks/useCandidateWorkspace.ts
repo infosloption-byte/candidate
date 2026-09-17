@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { useCandidateContext } from './useCandidateContext';
 import { findDuplicateMatches } from '../services/candidateMatching';
-import type { Candidate, CandidateFilters, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
+import type { Candidate, CandidateFilters, CandidateSavedFilter, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
 
 const documentReady = (candidate: Candidate): boolean => Object.values(candidate.documents).every((status) => status === 'verified');
+const createId = (prefix: string): string => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `${prefix}-${crypto.randomUUID()}` : `${prefix}-${Date.now()}`);
 
 export const useCandidateWorkspace = () => {
   const { state, dispatch } = useCandidateContext();
@@ -13,7 +14,7 @@ export const useCandidateWorkspace = () => {
     const smart = state.smartFilters;
 
     return state.candidates.filter((candidate) => {
-      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries].join(' ').toLowerCase();
+      const haystack = [candidate.name, candidate.reference, candidate.profession, candidate.originalProfession, candidate.location, candidate.phone, candidate.passportNumber, ...candidate.secondarySkills, ...candidate.overseasCountries, ...candidate.tags].join(' ').toLowerCase();
       const matchesKeyword = !query || haystack.includes(query);
       const matchesStatus = state.filters.status === 'all' || candidate.status === state.filters.status;
       const matchesProfession = state.filters.profession === 'all' || candidate.profession === state.filters.profession;
@@ -25,7 +26,6 @@ export const useCandidateWorkspace = () => {
       const matchesDriving = smart.drivingLicense === 'all' || (smart.drivingLicense === 'yes' && candidate.drivingLicense) || (smart.drivingLicense === 'no' && !candidate.drivingLicense);
       const matchesDocuments = smart.documentReadiness === 'all' || (smart.documentReadiness === 'ready' && documentReady(candidate)) || (smart.documentReadiness === 'attention' && !documentReady(candidate));
       const matchesSkills = smart.skills.length === 0 || smart.skills.every((skill) => candidate.secondarySkills.includes(skill));
-
       return matchesKeyword && matchesStatus && matchesProfession && matchesMinExperience && matchesMaxExperience && matchesEnglish && matchesAvailability && matchesOverseas && matchesDriving && matchesDocuments && matchesSkills;
     });
   }, [state.candidates, state.filters, state.smartFilters]);
@@ -68,9 +68,26 @@ export const useCandidateWorkspace = () => {
       setSmartFilters: (filters: CandidateSmartFilters) => dispatch({ type: 'SET_SMART_FILTERS', filters }),
       toggleSkillFilter: (skill: string) => dispatch({ type: 'TOGGLE_SKILL_FILTER', skill }),
       clearSmartFilters: () => dispatch({ type: 'CLEAR_SMART_FILTERS' }),
+      clearAllFilters: () => dispatch({ type: 'CLEAR_ALL_FILTERS' }),
+      saveCurrentFilter: (name: string) => {
+        const filter: CandidateSavedFilter = {
+          id: createId('filter'),
+          name,
+          filters: { ...state.filters },
+          smartFilters: { ...state.smartFilters, skills: [...state.smartFilters.skills] },
+          createdAt: new Date().toISOString(),
+        };
+        dispatch({ type: 'SAVE_FILTER', filter });
+      },
+      applySavedFilter: (filter: CandidateSavedFilter) => dispatch({ type: 'APPLY_SAVED_FILTER', filter }),
+      deleteSavedFilter: (filterId: string) => dispatch({ type: 'DELETE_SAVED_FILTER', filterId }),
       selectCandidate: (candidateId: string) => dispatch({ type: 'SELECT_CANDIDATE', candidateId }),
       toggleCompareCandidate: (candidateId: string) => dispatch({ type: 'TOGGLE_COMPARE_CANDIDATE', candidateId }),
       clearComparison: () => dispatch({ type: 'CLEAR_COMPARISON' }),
+      setComparisonMinimized: (value: boolean) => dispatch({ type: 'SET_COMPARISON_MINIMIZED', value }),
+      setComparisonHeight: (value: number) => dispatch({ type: 'SET_COMPARISON_HEIGHT', value }),
+      addTag: (candidateId: string, tag: string) => dispatch({ type: 'ADD_TAG', candidateId, tag }),
+      removeTag: (candidateId: string, tag: string) => dispatch({ type: 'REMOVE_TAG', candidateId, tag }),
       openAddCandidate: () => dispatch({ type: 'OPEN_ADD_DRAWER' }),
       closeAddCandidate: () => dispatch({ type: 'CLOSE_ADD_DRAWER' }),
       createCandidate: (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate }),
