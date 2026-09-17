@@ -482,6 +482,9 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Interview domain state: `InterviewProvider` + `useReducer`.
 - Selection domain state: `SelectionProvider` + `useReducer`.
 - Candidate filtering, saved searches, duplicate review, tags, comparison, and bulk status actions: `useCandidateWorkspace` + reducer actions.
+- Candidate onboarding state transitions: `useCandidateOnboarding` + candidate reducer actions.
+- Candidate bulk intake parsing, validation, header mapping and duplicate preview: `candidateImport` pure service + `useCandidateBulkImport`.
+- Candidate onboarding and import workspace presentation: `CandidateOnboardingPage` + `CandidateBulkImportDrawer`.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
 - Interview queue and workflow actions: `useInterviewWorkspace`.
