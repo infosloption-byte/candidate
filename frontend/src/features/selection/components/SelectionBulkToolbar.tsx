@@ -26,10 +26,10 @@ export const SelectionBulkToolbar = ({ selectedCount, visibleCount, allVisibleSe
   <section className="border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6" aria-label="Bulk selection actions">
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={onToggleAll} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 hover:border-slate-300">
-          <input type="checkbox" checked={allVisibleSelected} onChange={onToggleAll} onClick={(event) => event.stopPropagation()} aria-label="Select all visible candidates" className="size-4 rounded border-slate-300" />
+        <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 hover:border-slate-300">
+          <input type="checkbox" checked={allVisibleSelected} onChange={onToggleAll} aria-label="Select all visible candidates" className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-400" />
           {allVisibleSelected ? 'Clear visible' : 'Select visible'}
-        </button>
+        </label>
         <span className="rounded-xl bg-white px-3 py-2 text-[10px] font-black text-slate-500">{selectedCount} selected · {visibleCount} visible</span>
         {selectedCount > 0 && <button type="button" onClick={onClear} className="rounded-xl px-3 py-2 text-[10px] font-black text-slate-500 hover:bg-white hover:text-slate-800">Clear selection</button>}
       </div>
