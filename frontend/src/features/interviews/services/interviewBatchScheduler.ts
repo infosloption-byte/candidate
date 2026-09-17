@@ -53,7 +53,7 @@ export const planBulkInterviewSchedule = (candidates: Candidate[], interviewers:
     const interviewerPool = matchingPool.length > 0 ? matchingPool : activeInterviewers;
     type CandidateOption = { date: Date; time: number; interviewer: Interviewer; load: number; dayLoad: number; dateIndex: number };
     let bestOption: CandidateOption | null = null;
-    dates.forEach((date, dateIndex) => {
+    for (const [dateIndex, date] of dates.entries()) {
       const iso = toIsoDate(date);
       for (let time = dayStart; time + config.durationMinutes <= dayEnd; time += step) {
         for (const interviewer of interviewerPool) {
@@ -67,8 +67,8 @@ export const planBulkInterviewSchedule = (candidates: Candidate[], interviewers:
           if (!bestOption || load < bestOption.load || load === bestOption.load && (dayLoad < bestOption.dayLoad || dayLoad === bestOption.dayLoad && (dateIndex < bestOption.dateIndex || dateIndex === bestOption.dateIndex && (time < bestOption.time || time === bestOption.time && interviewer.id < bestOption.interviewer.id)))) bestOption = option;
         }
       }
-    });
-    if (!bestOption) { unscheduled.push({ candidateId: candidate.id, candidateName: candidate.name, reason: matchingPool.length > 0 ? 'No free slot remained for a specialty-matched interviewer in the selected window.' : 'No free interviewer slot remained in the selected window.' }); continue; }
+    }
+    if (bestOption === null) { unscheduled.push({ candidateId: candidate.id, candidateName: candidate.name, reason: matchingPool.length > 0 ? 'No free slot remained for a specialty-matched interviewer in the selected window.' : 'No free interviewer slot remained in the selected window.' }); continue; }
     const slot: BulkInterviewScheduleSlot = { candidateId: candidate.id, candidateName: candidate.name, profession: candidate.profession, isoDate: toIsoDate(bestOption.date), date: dateLabel(bestOption.date), time: toTime(bestOption.time), interviewer: bestOption.interviewer, location: config.location.trim(), conflicts: [] };
     slots.push(slot);
     totalLoad.set(bestOption.interviewer.id, (totalLoad.get(bestOption.interviewer.id) ?? 0) + 1);
