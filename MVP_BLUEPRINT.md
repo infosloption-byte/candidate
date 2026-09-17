@@ -48,8 +48,11 @@ Selection ★
   ├─ Job-specific openings / requirements
   ├─ Recommended / Selected / Reserve / Rejected
   ├─ Candidate evidence workspace
+  ├─ Bulk shortlist decisions
+  ├─ Bulk reassignment to another job
   ├─ Selection decision
-  └─ Management approval
+  ├─ Management approval
+  └─ Selection history / audit timeline
 Reports
   └─ Pipeline + rejection reason insights
 Settings
@@ -250,6 +253,18 @@ Candidates with relevant interview evidence are shown under:
 
 The board uses the same candidate evidence model already established. Each candidate shows interview score, experience fit, required-skill coverage, documents, readiness, tags, and interview observations.
 
+### Bulk shortlist
+
+Recruiters can multi-select visible candidates from any selection tab and apply a shared decision with one reason and written note:
+
+`Select / Reserve / Reject`
+
+Bulk Select uses the same opening-capacity protection as individual selection. Each candidate receives a selection record and an audit-history event through a single reducer transition. When a bulk mutation changes an approved shortlist, that job returns to Draft.
+
+### Bulk reassignment
+
+Selected candidates can be moved from the current job to another job in one operation. The target job must be different and cannot already contain the candidate. A reassigned candidate is reintroduced to the target as `Recommended` so the target-specific evidence can be reviewed again. The source job records a reassignment history event and any approved source shortlist is returned to Draft.
+
 ### Selection decision
 
 The recruiter records one of:
@@ -265,6 +280,17 @@ Each job has its own approval state:
 `Draft → Pending approval → Approved / Returned`
 
 Changing any decision after approval automatically returns that job to Draft so management cannot accidentally approve an outdated shortlist.
+
+### Selection history
+
+Selection history is append-only in the frontend persistence adapter. The timeline records:
+
+- Candidate decision changes.
+- Bulk decision changes.
+- Job reassignment.
+- Approval-state changes.
+
+The active job view shows recent history with candidate, action, reason, note, actor, timestamp, and reassignment target where applicable. Server-side immutable audit storage remains a backend responsibility.
 
 Selection data is currently persisted locally behind a replaceable service boundary. Final job-specific allocation, permissions, approval identity, and server-side enforcement belong to the backend milestone.
 
@@ -300,7 +326,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Advanced filters use independent scrolling.
 - Schedule drawer and evaluation workspace use full-width mobile layouts.
 - Interview calendar becomes a compact day agenda instead of a dense seven-column grid.
-- Selection evidence, decision, and approval panels stack vertically.
+- Selection bulk actions wrap into stacked touch controls, and evidence, decision, approval, and history panels stack vertically.
 
 ## 9. Smart SaaS UX
 
@@ -318,6 +344,9 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Interview decisions synchronize back to candidate state.
 - Calendar conflicts are explained rather than shown as opaque warning colors.
 - Selection decisions require capacity-safe, explainable reasons and notes.
+- Bulk selection mutations use the same capacity and approval-reset rules as individual decisions.
+- Reassignment prevents target-job record collisions and records an explicit audit event.
+- Selection history is visible without leaving the active job workflow.
 - Approval is scoped to the selected job and invalidated when that shortlist changes.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
@@ -337,11 +366,12 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Interview scorecard evaluation: `useInterviewScorecard`.
 - Interview decision validation: `useInterviewDecisionForm`.
 - Selection board intelligence: `useSelectionWorkspace`.
+- Selection bulk selection/action state: `useSelectionBulkActions`.
 - Selection decision validation: `useSelectionDecisionForm`.
 - Selection approval form state: `useSelectionApprovalForm`.
 - Candidate persistence: `candidateRepository` service boundary.
 - Interview persistence: `interviewRepository` service boundary.
-- Selection persistence: `selectionRepository` service boundary.
+- Selection persistence: `selectionRepository` service boundary, including selection history.
 - Duplicate matching: pure `candidateMatching` service.
 - Calendar conflict detection: pure `interviewCalendar` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
@@ -349,8 +379,8 @@ Selection data is currently persisted locally behind a replaceable service bound
 ## 11. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Add bulk shortlist/reassignment and advanced selection history.
-3. Add configurable job-fit evidence and suitability score presentation.
-4. Expand interview and selection audit-history views.
+2. Add configurable job-fit evidence and suitability score presentation.
+3. Expand interview history and decision audit views.
+4. Add advanced cross-job candidate allocation.
 5. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
 6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
