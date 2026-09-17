@@ -1,10 +1,31 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { CandidateContext } from './CandidateContextObject';
 import type { Candidate, CandidateAction, CandidateState } from './CandidateContext';
-import type { CandidateStatus } from '../types/candidate';
+import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate';
 import { loadCandidates, saveCandidates } from '../services/candidateRepository';
 
-const initialState: CandidateState = { loadState: 'loading', errorMessage: null, candidates: [], filters: { search: '', status: 'all', profession: 'all' }, selectedCandidateId: null, isAddDrawerOpen: false, rejectionCandidateId: null };
+const defaultSmartFilters: CandidateSmartFilters = {
+  minExperience: null,
+  maxExperience: null,
+  englishLevel: 'all',
+  availability: 'all',
+  overseasExperience: 'all',
+  drivingLicense: 'all',
+  documentReadiness: 'all',
+  skills: [],
+};
+
+const initialState: CandidateState = {
+  loadState: 'loading',
+  errorMessage: null,
+  candidates: [],
+  filters: { search: '', status: 'all', profession: 'all' },
+  smartFilters: defaultSmartFilters,
+  selectedCandidateId: null,
+  compareCandidateIds: [],
+  isAddDrawerOpen: false,
+  rejectionCandidateId: null,
+};
 
 const makeEventId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `event-${Date.now()}`);
 const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -19,7 +40,22 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'SET_SEARCH': return { ...state, filters: { ...state.filters, search: action.value } };
     case 'SET_STATUS_FILTER': return { ...state, filters: { ...state.filters, status: action.value } };
     case 'SET_PROFESSION_FILTER': return { ...state, filters: { ...state.filters, profession: action.value } };
+    case 'SET_SMART_FILTERS': return { ...state, smartFilters: action.filters };
+    case 'TOGGLE_SKILL_FILTER': {
+      const skills = state.smartFilters.skills.includes(action.skill)
+        ? state.smartFilters.skills.filter((skill) => skill !== action.skill)
+        : [...state.smartFilters.skills, action.skill];
+      return { ...state, smartFilters: { ...state.smartFilters, skills } };
+    }
+    case 'CLEAR_SMART_FILTERS': return { ...state, smartFilters: defaultSmartFilters };
     case 'SELECT_CANDIDATE': return { ...state, selectedCandidateId: action.candidateId };
+    case 'TOGGLE_COMPARE_CANDIDATE': {
+      const exists = state.compareCandidateIds.includes(action.candidateId);
+      if (exists) return { ...state, compareCandidateIds: state.compareCandidateIds.filter((id) => id !== action.candidateId) };
+      if (state.compareCandidateIds.length >= 4) return state;
+      return { ...state, compareCandidateIds: [...state.compareCandidateIds, action.candidateId] };
+    }
+    case 'CLEAR_COMPARISON': return { ...state, compareCandidateIds: [] };
     case 'OPEN_ADD_DRAWER': return { ...state, isAddDrawerOpen: true };
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
