@@ -49,7 +49,17 @@ export const interviewReducer = (state: InterviewState, action: InterviewAction)
       return { ...state, interviews: state.interviews.map((interview) => interview.id !== action.interviewId ? interview : { ...interview, practicalTest: interview.practicalTest.map((item) => item.id === action.itemId ? { ...item, note: action.note } : item) }) };
     case 'SET_INTERVIEW_NOTE': return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, notes: action.note } : interview) };
     case 'SET_DECISION':
-      return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, decision: { decision: action.decision, reason: action.reason, note: action.note }, status: 'completed' } : interview) };
+      return {
+        ...state,
+        interviews: state.interviews.map((interview) => {
+          if (interview.id !== action.interviewId) return interview;
+          const changedAt = new Date().toISOString();
+          const decisionHistory = action.decision === interview.decision.decision && action.reason === interview.decision.reason && action.note === interview.decision.note
+            ? (interview.decisionHistory ?? [])
+            : [...(interview.decisionHistory ?? []), { id: `decision-${Date.now()}-${interview.id}`, fromDecision: interview.decision.decision, toDecision: action.decision, reason: action.reason, note: action.note, changedAt }];
+          return { ...interview, decision: { decision: action.decision, reason: action.reason, note: action.note }, status: 'completed', decisionHistory };
+        }),
+      };
     case 'RESCHEDULE_INTERVIEW':
       return {
         ...state,
