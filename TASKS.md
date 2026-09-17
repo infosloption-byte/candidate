@@ -35,7 +35,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Recruiter tags and user-defined labels with quick suggestions.
 - ✅ Candidate tags participate in keyword search.
 - ✅ Job-fit evidence and configurable suitability score presentation.
-- ⏳ Full interview history and decision audit timeline.
+- ✅ Full interview history and decision audit timeline.
 
 ## Phase 3 — Interview workflow UX
 
@@ -65,7 +65,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Batch schedule editing allows date/time/interviewer changes with existing-calendar and intra-batch conflict validation.
 - ✅ Batch workload panel exposes existing, planned, total and utilization metrics per interviewer.
 - ✅ Rebalance and regenerate controls let recruiters iterate on a batch before committing it.
-- ⏳ Advanced drag-and-drop rescheduling and conflict-resolution actions.
+- ✅ Advanced drag-and-drop rescheduling and conflict-resolution actions with conflict-safe alternatives and undo.
 
 ## Phase 4 — Selection and decision UX
 
