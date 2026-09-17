@@ -1,17 +1,16 @@
 import { useEffect } from 'react';
-import { useCandidateContext } from '../context/CandidateContext';
 import { useCandidateForm } from '../hooks/useCandidateForm';
 import type { Candidate, CandidateSource } from '../types/candidate';
 import { Icon } from '../../../shared/components/Icon';
 
 interface AddCandidateDrawerProps {
   open: boolean;
+  professions: string[];
   onClose: () => void;
   onCreate: (candidate: Candidate) => void;
 }
 
-export const AddCandidateDrawer = ({ open, onClose, onCreate }: AddCandidateDrawerProps) => {
-  const { state } = useCandidateContext();
+export const AddCandidateDrawer = ({ open, professions, onClose, onCreate }: AddCandidateDrawerProps) => {
   const form = useCandidateForm(onCreate, onClose);
 
   useEffect(() => {
@@ -20,7 +19,6 @@ export const AddCandidateDrawer = ({ open, onClose, onCreate }: AddCandidateDraw
 
   if (!open) return null;
 
-  const professions = Array.from(new Set(state.candidates.map((candidate) => candidate.profession))).sort();
   const sources: CandidateSource[] = ['Walk-in', 'Referral', 'Agency', 'Existing database'];
 
   return (
@@ -33,7 +31,7 @@ export const AddCandidateDrawer = ({ open, onClose, onCreate }: AddCandidateDraw
             {form.error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">{form.error}</div>}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="sm:col-span-2"><span className="field-label">Full name<span className="text-rose-500"> *</span></span><input value={form.draft.name} onChange={(event) => form.updateField('name', event.target.value)} className="field-input" placeholder="e.g. Kasun Perera" autoFocus /></label>
-              <label><span className="field-label">Profession<span className="text-rose-500"> *</span></span><input list="candidate-professions" value={form.draft.profession} onChange={(event) => form.updateField('profession', event.target.value)} className="field-input" placeholder="Mason" /><datalist id="candidate-professions">{professions.map((profession) => <option key={profession} value={profession} />)}</datalist></label>
+              <label><span className="field-label">Profession<span className="text-rose-500"> *</span></span><input list="candidate-professions" value={form.draft.profession} onChange={(event) => form.updateField('profession', event.target.value)} className="field-input" placeholder="Mason" /><datalist id="candidate-professions">{professions.filter((profession) => profession !== 'all').map((profession) => <option key={profession} value={profession} />)}</datalist></label>
               <label><span className="field-label">Experience (years)<span className="text-rose-500"> *</span></span><input type="number" min="0" max="50" value={form.draft.experienceYears} onChange={(event) => form.updateField('experienceYears', event.target.value)} className="field-input" placeholder="5" /></label>
               <label><span className="field-label">Phone<span className="text-rose-500"> *</span></span><input value={form.draft.phone} onChange={(event) => form.updateField('phone', event.target.value)} className="field-input" placeholder="+94 77..." /></label>
               <label><span className="field-label">Location</span><input value={form.draft.location} onChange={(event) => form.updateField('location', event.target.value)} className="field-input" placeholder="Colombo" /></label>
