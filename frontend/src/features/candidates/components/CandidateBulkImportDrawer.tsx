@@ -54,10 +54,10 @@ export const CandidateBulkImportDrawer = ({ open, existingCandidates, onClose, o
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-          <section aria-labelledby={\`\${titleId}-file\`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <section aria-labelledby={`${titleId}-file`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 id={\`\${titleId}-file\`} className="text-sm font-black text-slate-900">1. Upload source list</h3>
+                <h3 id={`${titleId}-file`} className="text-sm font-black text-slate-900">1. Upload source list</h3>
                 <p className="mt-1 text-xs leading-5 text-slate-500">Common recruitment column names are matched automatically. The original spreadsheet row number stays attached to every preview result.</p>
               </div>
               <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importer.actions.parseFile(file); event.currentTarget.value = ''; }} />
