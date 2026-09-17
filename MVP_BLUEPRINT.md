@@ -198,7 +198,7 @@ The Interview Desk has a dedicated full-width Calendar view alongside the queue.
 - Conflict visualization when active interviews overlap on the same interviewer or room.
 - Conflict indicators with the affected candidate shown as the reason.
 
-The current calendar remains the operational schedule view. Advanced drag-and-drop rescheduling and server-side conflict enforcement remain later milestones.
+The current calendar remains the operational schedule view. Scheduled appointments can be moved by drag-and-drop, with validation, conflict-safe alternatives, explicit reschedule history, and undo. Server-side transactional enforcement remains a backend responsibility.
 
 ### Single scheduling
 
@@ -443,5 +443,4 @@ Selection data is currently persisted locally behind a replaceable service bound
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
 2. Expand interview history and decision audit views.
 3. Add advanced cross-job candidate allocation.
-4. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
-5. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
+4. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
