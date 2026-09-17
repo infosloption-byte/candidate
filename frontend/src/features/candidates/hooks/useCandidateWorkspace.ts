@@ -87,6 +87,7 @@ export const useCandidateWorkspace = () => {
       createCandidate: (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate }),
       moveToScreening: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'screening' }),
       moveToInterview: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' }),
+      moveCandidatesToInterview: (candidateIds: string[]) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status: 'interview' }),
       selectCandidateForJob: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'selected' }),
       moveToReserve: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' }),
       recordInterviewOutcome: (candidateId: string, status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>, interviewDate: string, interviewer: string, profession: string, score: number, reason: RejectionReason | '', note: string) => dispatch({ type: 'RECORD_INTERVIEW_OUTCOME', candidateId, status, interviewDate, interviewer, profession, score, reason, note }),
