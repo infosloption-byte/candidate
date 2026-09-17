@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useInterviewContext } from '../context/useInterviewContext';
 import { buildBulkInterviews, planBulkInterviewSchedule } from '../services/interviewBatchScheduler';
 import type { Candidate } from '../../candidates/types/candidate';
@@ -13,9 +13,9 @@ interface UseInterviewBulkSchedulerProps {
 
 const addDays = (date: Date, days: number): Date => { const next = new Date(date); next.setDate(next.getDate() + days); return next; };
 const isoDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const defaultConfig = (): BulkInterviewScheduleConfig => {
+const defaultConfig = (interviewerIds: string[] = []): BulkInterviewScheduleConfig => {
   const today = new Date();
-  return { type: 'Screening', startDate: isoDate(today), endDate: isoDate(addDays(today, 1)), dayStart: '09:00', dayEnd: '17:00', durationMinutes: 30, breakMinutes: 10, location: 'Interview Centre', interviewerIds: [], includeWeekends: false };
+  return { type: 'Screening', startDate: isoDate(today), endDate: isoDate(addDays(today, 1)), dayStart: '09:00', dayEnd: '17:00', durationMinutes: 30, breakMinutes: 10, location: 'Interview Centre', interviewerIds, includeWeekends: false };
 };
 
 export const useInterviewBulkScheduler = ({ candidates, open, onClose, onScheduled }: UseInterviewBulkSchedulerProps) => {
@@ -29,6 +29,11 @@ export const useInterviewBulkScheduler = ({ candidates, open, onClose, onSchedul
   const [plan, setPlan] = useState<BulkInterviewSchedulePlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pageSize = 40;
+
+  useEffect(() => {
+    if (!open) return;
+    setConfig((current) => ({ ...current, interviewerIds: current.interviewerIds.length > 0 ? current.interviewerIds.filter((id) => state.interviewers.some((person) => person.id === id && person.active)) : state.interviewers.filter((person) => person.active).map((person) => person.id) }));
+  }, [open, state.interviewers]);
 
   const filteredCandidates = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -87,7 +92,7 @@ export const useInterviewBulkScheduler = ({ candidates, open, onClose, onSchedul
     onClose();
   };
 
-  const reset = () => { setSelectedIds([]); setQuery(''); setPage(1); setConfig((current) => ({ ...defaultConfig(), interviewerIds: state.interviewers.filter((person) => person.active).map((person) => person.id), type: current.type as InterviewType })); setPlan(null); setError(null); };
+  const reset = () => { setSelectedIds([]); setQuery(''); setPage(1); setConfig(defaultConfig(state.interviewers.filter((person) => person.active).map((person) => person.id))); setPlan(null); setError(null); };
 
   return {
     eligibleCandidates,
