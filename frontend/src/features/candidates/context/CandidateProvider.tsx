@@ -5,38 +5,12 @@ import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate'
 import { loadCandidates, saveCandidates } from '../services/candidateRepository';
 import { loadCandidateWorkspacePreferences, saveCandidateWorkspacePreferences, type CandidateWorkspacePreferences } from '../services/candidatePreferencesRepository';
 
-const defaultSmartFilters: CandidateSmartFilters = {
-  minExperience: null,
-  maxExperience: null,
-  englishLevel: 'all',
-  availability: 'all',
-  overseasExperience: 'all',
-  drivingLicense: 'all',
-  documentReadiness: 'all',
-  skills: [],
-};
-
-const defaultPreferences: CandidateWorkspacePreferences = {
-  savedFilters: [],
-  comparisonMinimized: false,
-  comparisonHeight: 360,
-};
+const defaultSmartFilters: CandidateSmartFilters = { minExperience: null, maxExperience: null, englishLevel: 'all', availability: 'all', overseasExperience: 'all', drivingLicense: 'all', documentReadiness: 'all', skills: [] };
+const defaultPreferences: CandidateWorkspacePreferences = { savedFilters: [], comparisonMinimized: false, comparisonHeight: 360 };
 
 const initialState: CandidateState = {
-  loadState: 'loading',
-  errorMessage: null,
-  loadAttempt: 0,
-  candidates: [],
-  filters: { search: '', status: 'all', profession: 'all' },
-  smartFilters: defaultSmartFilters,
-  savedFilters: [],
-  activeSavedFilterId: null,
-  selectedCandidateId: null,
-  compareCandidateIds: [],
-  comparisonMinimized: false,
-  comparisonHeight: 360,
-  isAddDrawerOpen: false,
-  rejectionCandidateId: null,
+  loadState: 'loading', errorMessage: null, loadAttempt: 0, candidates: [], filters: { search: '', status: 'all', profession: 'all' }, smartFilters: defaultSmartFilters,
+  savedFilters: [], activeSavedFilterId: null, selectedCandidateId: null, compareCandidateIds: [], comparisonMinimized: false, comparisonHeight: 360, isAddDrawerOpen: false, rejectionCandidateId: null,
 };
 
 const makeEventId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `event-${Date.now()}`);
@@ -48,18 +22,7 @@ const normalizeTag = (tag: string): string => tag.trim().replace(/\s+/g, ' ');
 
 const candidateReducer = (state: CandidateState, action: CandidateAction): CandidateState => {
   switch (action.type) {
-    case 'HYDRATE':
-      return {
-        ...state,
-        loadState: 'success',
-        errorMessage: null,
-        candidates: action.candidates,
-        savedFilters: action.savedFilters,
-        activeSavedFilterId: null,
-        comparisonMinimized: action.comparisonMinimized,
-        comparisonHeight: action.comparisonHeight,
-        selectedCandidateId: action.candidates[0]?.id ?? null,
-      };
+    case 'HYDRATE': return { ...state, loadState: 'success', errorMessage: null, candidates: action.candidates, savedFilters: action.savedFilters, activeSavedFilterId: null, comparisonMinimized: action.comparisonMinimized, comparisonHeight: action.comparisonHeight, selectedCandidateId: action.candidates[0]?.id ?? null };
     case 'LOAD_ERROR': return { ...state, loadState: 'error', errorMessage: action.message };
     case 'RETRY_LOAD': return { ...state, loadState: 'loading', errorMessage: null, loadAttempt: state.loadAttempt + 1 };
     case 'SET_SEARCH': return { ...state, activeSavedFilterId: null, filters: { ...state.filters, search: action.value } };
@@ -67,9 +30,7 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'SET_PROFESSION_FILTER': return { ...state, activeSavedFilterId: null, filters: { ...state.filters, profession: action.value } };
     case 'SET_SMART_FILTERS': return { ...state, activeSavedFilterId: null, smartFilters: action.filters };
     case 'TOGGLE_SKILL_FILTER': {
-      const skills = state.smartFilters.skills.includes(action.skill)
-        ? state.smartFilters.skills.filter((skill) => skill !== action.skill)
-        : [...state.smartFilters.skills, action.skill];
+      const skills = state.smartFilters.skills.includes(action.skill) ? state.smartFilters.skills.filter((skill) => skill !== action.skill) : [...state.smartFilters.skills, action.skill];
       return { ...state, activeSavedFilterId: null, smartFilters: { ...state.smartFilters, skills } };
     }
     case 'CLEAR_SMART_FILTERS': return { ...state, activeSavedFilterId: null, smartFilters: defaultSmartFilters };
@@ -96,11 +57,12 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
       if (!tag) return state;
       return { ...state, candidates: state.candidates.map((candidate) => {
         if (candidate.id !== action.candidateId) return candidate;
-        const exists = candidate.tags.some((item) => item.toLowerCase() === tag.toLowerCase());
-        return exists ? candidate : { ...candidate, tags: [...candidate.tags, tag] };
+        const tags = candidate.tags ?? [];
+        const exists = tags.some((item) => item.toLowerCase() === tag.toLowerCase());
+        return exists ? { ...candidate, tags } : { ...candidate, tags: [...tags, tag] };
       }) };
     }
-    case 'REMOVE_TAG': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, tags: candidate.tags.filter((tag) => tag.toLowerCase() !== action.tag.toLowerCase()) } : candidate) };
+    case 'REMOVE_TAG': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, tags: (candidate.tags ?? []).filter((tag) => tag.toLowerCase() !== action.tag.toLowerCase()) } : candidate) };
     case 'OPEN_ADD_DRAWER': return { ...state, isAddDrawerOpen: true };
     case 'CLOSE_ADD_DRAWER': return { ...state, isAddDrawerOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [action.candidate, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
@@ -120,22 +82,10 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
     const hydrate = async () => {
       try {
         const loadedCandidates = await loadCandidates();
-        const candidates = loadedCandidates.map((candidate) => ({ ...candidate, tags: Array.isArray(candidate.tags) ? candidate.tags : [] }));
+        const candidates = loadedCandidates.map((candidate) => ({ ...candidate, tags: candidate.tags ?? [] }));
         let preferences: CandidateWorkspacePreferences = defaultPreferences;
-        try {
-          preferences = await loadCandidateWorkspacePreferences();
-        } catch {
-          preferences = defaultPreferences;
-        }
-        if (!cancelled) {
-          dispatch({
-            type: 'HYDRATE',
-            candidates,
-            savedFilters: preferences.savedFilters,
-            comparisonMinimized: preferences.comparisonMinimized,
-            comparisonHeight: preferences.comparisonHeight,
-          });
-        }
+        try { preferences = await loadCandidateWorkspacePreferences(); } catch { preferences = defaultPreferences; }
+        if (!cancelled) dispatch({ type: 'HYDRATE', candidates, savedFilters: preferences.savedFilters, comparisonMinimized: preferences.comparisonMinimized, comparisonHeight: preferences.comparisonHeight });
       } catch {
         if (!cancelled) dispatch({ type: 'LOAD_ERROR', message: 'Candidate data could not be loaded. Retry to restore the local workspace.' });
       }
@@ -147,11 +97,7 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     if (state.loadState !== 'success') return;
     void saveCandidates(state.candidates).catch(() => undefined);
-    void saveCandidateWorkspacePreferences({
-      savedFilters: state.savedFilters,
-      comparisonMinimized: state.comparisonMinimized,
-      comparisonHeight: state.comparisonHeight,
-    }).catch(() => undefined);
+    void saveCandidateWorkspacePreferences({ savedFilters: state.savedFilters, comparisonMinimized: state.comparisonMinimized, comparisonHeight: state.comparisonHeight }).catch(() => undefined);
   }, [state.candidates, state.loadState, state.savedFilters, state.comparisonMinimized, state.comparisonHeight]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
