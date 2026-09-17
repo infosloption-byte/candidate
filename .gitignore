@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# Vite / build output
+frontend/dist/
+backend/dist/
+**/dist/
+
+# local environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# local tooling
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# TypeScript build cache
+*.tsbuildinfo
