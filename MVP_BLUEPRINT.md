@@ -15,7 +15,7 @@ candidate/
 └── README.md
 ```
 
-The product is being built frontend-first. Local browser persistence is a prototype adapter behind candidate and interview service boundaries; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
+The product is being built frontend-first. Local browser persistence is a prototype adapter behind candidate, interview, and selection service boundaries; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
 
 ## 2. MVP navigation
 
@@ -44,8 +44,12 @@ Interviews ★
   └─ Final decision
 Jobs
   └─ Manpower demand / requirement cards
-Selection
-  └─ Shortlist comparison + select/reserve
+Selection ★
+  ├─ Job-specific openings / requirements
+  ├─ Recommended / Selected / Reserve / Rejected
+  ├─ Candidate evidence workspace
+  ├─ Selection decision
+  └─ Management approval
 Reports
   └─ Pipeline + rejection reason insights
 Settings
@@ -225,7 +229,46 @@ Practical tasks are generated from the trade and interview type. Screening and C
 
 Final decision is available only after the scorecard is complete and every required practical task has a recorded result. Rejections require both a reason and written decision note. The final result is synchronized back to the candidate profile with the interview date, interviewer, score and decision evidence.
 
-## 7. Responsive shell
+## 7. Selection and decision UX
+
+### Job requirement
+
+The Selection Board is job-specific. A requirement exposes:
+
+- Project and location.
+- Client.
+- Profession.
+- Open positions.
+- Minimum experience.
+- Required skills.
+
+### Candidate board
+
+Candidates with relevant interview evidence are shown under:
+
+`Recommended → Selected → Reserve → Rejected`
+
+The board uses the same candidate evidence model already established. Each candidate shows interview score, experience fit, required-skill coverage, documents, readiness, tags, and interview observations.
+
+### Selection decision
+
+The recruiter records one of:
+
+`Keep recommended / Select / Reserve / Reject`
+
+Every decision requires a reason and written note. The system prevents selecting above the job's open-position capacity. Existing selected candidates may remain selected when the job is full.
+
+### Management approval
+
+Each job has its own approval state:
+
+`Draft → Pending approval → Approved / Returned`
+
+Changing any decision after approval automatically returns that job to Draft so management cannot accidentally approve an outdated shortlist.
+
+Selection data is currently persisted locally behind a replaceable service boundary. Final job-specific allocation, permissions, approval identity, and server-side enforcement belong to the backend milestone.
+
+## 8. Responsive shell
 
 ### Desktop
 
@@ -234,6 +277,7 @@ Final decision is available only after the scorecard is complete and every requi
 - Sticky top bar.
 - Independent main-content scrolling.
 - Candidate and interview queues use split workspaces.
+- Selection uses a split evidence/decision workspace.
 - Comparison and scheduling drawers remain available without leaving the workspace.
 - Interview calendar uses the full main content width for week planning.
 
@@ -241,23 +285,24 @@ Final decision is available only after the scorecard is complete and every requi
 
 - Same workspace principles with fluid widths.
 - Dense controls wrap rather than overflow.
-- Candidate and interview profile content uses responsive grids.
-- Smart filters and interview controls remain usable with touch input.
+- Candidate, interview, and selection profile content uses responsive grids.
+- Smart filters and interview/selection controls remain usable with touch input.
 
 ### Mobile
 
 - Sidebar becomes a slide-over navigation panel.
 - Mobile navigation always opens expanded.
-- Candidate and interview queues become a single-panel flow.
-- Selecting an item opens its detail workspace with a back action.
+- Candidate, interview, and selection queues become single-panel flows.
+- Selecting an item opens its detail workspace with a back action where appropriate.
 - Fixed action bars respect device safe areas.
 - Tap targets and controls use touch-friendly spacing.
 - Candidate comparison becomes a scrollable, height-limited bottom tray with minimize and quick resize controls.
 - Advanced filters use independent scrolling.
 - Schedule drawer and evaluation workspace use full-width mobile layouts.
 - Interview calendar becomes a compact day agenda instead of a dense seven-column grid.
+- Selection evidence, decision, and approval panels stack vertically.
 
-## 8. Smart SaaS UX
+## 9. Smart SaaS UX
 
 - `/` focuses global search; `Ctrl+K` focuses candidate search.
 - Search covers names, reference IDs, professions, locations, phone/passport values, skills, countries, and tags.
@@ -272,14 +317,17 @@ Final decision is available only after the scorecard is complete and every requi
 - Required practical tasks block incomplete final decisions.
 - Interview decisions synchronize back to candidate state.
 - Calendar conflicts are explained rather than shown as opaque warning colors.
+- Selection decisions require capacity-safe, explainable reasons and notes.
+- Approval is scoped to the selected job and invalidated when that shortlist changes.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
 
-## 9. State architecture
+## 10. State architecture
 
 - App shell state: `AppProvider` + `useReducer`.
 - Candidate domain state: `CandidateProvider` + `useReducer`.
 - Interview domain state: `InterviewProvider` + `useReducer`.
+- Selection domain state: `SelectionProvider` + `useReducer`.
 - Candidate filtering, saved searches, duplicate review, tags, and comparison actions: `useCandidateWorkspace` + reducer actions.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
@@ -288,17 +336,21 @@ Final decision is available only after the scorecard is complete and every requi
 - Interview scheduling: `useInterviewForm`.
 - Interview scorecard evaluation: `useInterviewScorecard`.
 - Interview decision validation: `useInterviewDecisionForm`.
+- Selection board intelligence: `useSelectionWorkspace`.
+- Selection decision validation: `useSelectionDecisionForm`.
+- Selection approval form state: `useSelectionApprovalForm`.
 - Candidate persistence: `candidateRepository` service boundary.
 - Interview persistence: `interviewRepository` service boundary.
+- Selection persistence: `selectionRepository` service boundary.
 - Duplicate matching: pure `candidateMatching` service.
 - Calendar conflict detection: pure `interviewCalendar` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
-## 10. Next frontend milestones
+## 11. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Build the Selection Board using the existing candidate comparison model.
-3. Add job-fit evidence and configurable suitability score presentation.
-4. Expand interview history and decision audit views.
+2. Add bulk shortlist/reassignment and advanced selection history.
+3. Add configurable job-fit evidence and suitability score presentation.
+4. Expand interview and selection audit-history views.
 5. Add advanced drag-and-drop interview rescheduling and conflict-resolution actions.
 6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
