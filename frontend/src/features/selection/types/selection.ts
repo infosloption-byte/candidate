@@ -26,6 +26,11 @@ export interface SelectionRecord {
   decidedBy: string;
 }
 
+export interface SelectionApproval {
+  status: ApprovalStatus;
+  note: string;
+}
+
 export interface SelectionState {
   loadState: 'loading' | 'error' | 'success';
   errorMessage: string | null;
@@ -35,19 +40,18 @@ export interface SelectionState {
   activeJobId: string | null;
   activeTab: SelectionTab;
   selectedCandidateId: string | null;
-  approvalStatus: ApprovalStatus;
-  approvalNote: string;
+  approvalByJob: Record<string, SelectionApproval>;
 }
 
 export type SelectionAction =
-  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; approvalStatus: ApprovalStatus; approvalNote: string }
+  | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; approvalByJob: Record<string, SelectionApproval> }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SET_JOB'; jobId: string }
   | { type: 'SET_TAB'; tab: SelectionTab }
   | { type: 'SELECT_CANDIDATE'; candidateId: string | null }
   | { type: 'SAVE_DECISION'; record: SelectionRecord }
-  | { type: 'SET_APPROVAL'; status: ApprovalStatus; note: string };
+  | { type: 'SET_APPROVAL'; jobId: string; status: ApprovalStatus; note: string };
 
 export interface SelectionContextValue {
   state: SelectionState;
