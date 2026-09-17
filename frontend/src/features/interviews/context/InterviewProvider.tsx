@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { InterviewContext } from './InterviewContextObject';
-import { loadInterviews, saveInterviews } from '../services/interviewRepository';
+import { loadInterviews, loadInterviewers, saveInterviews } from '../services/interviewRepository';
 import type { InterviewAction, InterviewState } from '../types/interview';
 
 const initialState: InterviewState = {
@@ -8,6 +8,7 @@ const initialState: InterviewState = {
   errorMessage: null,
   loadAttempt: 0,
   interviews: [],
+  interviewers: [],
   selectedInterviewId: null,
   isScheduleDrawerOpen: false,
 };
@@ -20,6 +21,7 @@ const interviewReducer = (state: InterviewState, action: InterviewAction): Inter
         loadState: 'success',
         errorMessage: null,
         interviews: action.interviews,
+        interviewers: action.interviewers,
         selectedInterviewId: state.selectedInterviewId ?? action.interviews[0]?.id ?? null,
       };
     case 'LOAD_ERROR':
@@ -105,8 +107,8 @@ export const InterviewProvider = ({ children }: PropsWithChildren) => {
     let cancelled = false;
     const hydrate = async () => {
       try {
-        const interviews = await loadInterviews();
-        if (!cancelled) dispatch({ type: 'HYDRATE', interviews });
+        const [interviews, interviewers] = await Promise.all([loadInterviews(), loadInterviewers()]);
+        if (!cancelled) dispatch({ type: 'HYDRATE', interviews, interviewers });
       } catch {
         if (!cancelled) dispatch({ type: 'LOAD_ERROR', message: 'Interview data could not be loaded. Retry to restore the interview workspace.' });
       }
