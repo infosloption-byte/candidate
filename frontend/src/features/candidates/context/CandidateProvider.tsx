@@ -18,6 +18,7 @@ const defaultSmartFilters: CandidateSmartFilters = {
 const initialState: CandidateState = {
   loadState: 'loading',
   errorMessage: null,
+  loadAttempt: 0,
   candidates: [],
   filters: { search: '', status: 'all', profession: 'all' },
   smartFilters: defaultSmartFilters,
@@ -37,6 +38,7 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
   switch (action.type) {
     case 'HYDRATE': return { ...state, loadState: 'success', errorMessage: null, candidates: action.candidates, selectedCandidateId: action.candidates[0]?.id ?? null };
     case 'LOAD_ERROR': return { ...state, loadState: 'error', errorMessage: action.message };
+    case 'RETRY_LOAD': return { ...state, loadState: 'loading', errorMessage: null, loadAttempt: state.loadAttempt + 1 };
     case 'SET_SEARCH': return { ...state, filters: { ...state.filters, search: action.value } };
     case 'SET_STATUS_FILTER': return { ...state, filters: { ...state.filters, status: action.value } };
     case 'SET_PROFESSION_FILTER': return { ...state, filters: { ...state.filters, profession: action.value } };
@@ -82,7 +84,7 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, []);
+  }, [state.loadAttempt]);
 
   useEffect(() => {
     if (state.loadState !== 'success') return;
