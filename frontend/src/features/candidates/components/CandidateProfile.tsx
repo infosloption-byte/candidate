@@ -17,6 +17,7 @@ interface CandidateProfileProps {
   onSelect: (id: string) => void;
   onReserve: (id: string) => void;
   onReject: (id: string) => void;
+  onOpenOnboarding: (id: string) => void;
 }
 
 const statusCopy: Record<CandidateStatus, { title: string; text: string }> = {
@@ -31,7 +32,7 @@ const statusCopy: Record<CandidateStatus, { title: string; text: string }> = {
 const documentLabel = (state: DocumentState) => state === 'verified' ? 'Verified' : state === 'needs-review' ? 'Needs review' : 'Missing';
 const documentStyle = (state: DocumentState) => state === 'verified' ? 'bg-emerald-50 text-emerald-700' : state === 'needs-review' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700';
 
-export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, onBack, onOpenDuplicate, onAddTag, onRemoveTag, onScreen, onInterview, onSelect, onReserve, onReject }: CandidateProfileProps) => {
+export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, onBack, onOpenDuplicate, onAddTag, onRemoveTag, onScreen, onInterview, onSelect, onReserve, onReject, onOpenOnboarding }: CandidateProfileProps) => {
   if (!candidate) return <section className="hidden min-h-full place-items-center bg-slate-50 p-8 xl:grid"><div className="max-w-sm text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="users" size={25}/></div><h2 className="mt-4 text-base font-bold text-slate-800">Select a candidate</h2><p className="mt-1 text-sm leading-6 text-slate-500">Choose someone from the directory to review their profile and workflow.</p></div></section>;
 
   const initials = candidate.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
@@ -51,7 +52,7 @@ export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, o
           <button type="button" aria-label="More candidate actions" className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><Icon name="more" size={18}/></button>
         </div>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-800">{copy.title}</p><p className="mt-0.5 text-xs leading-5 text-slate-500">{copy.text}</p></div><div className="flex items-center gap-2"><div className="grid size-11 place-items-center rounded-xl bg-white font-black text-slate-900 shadow-sm">{candidate.fitScore ? `${candidate.fitScore}%` : '—'}</div><div><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Job fit</p><p className="text-xs font-bold text-slate-700">Based on current profile</p></div></div></div></div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onOpenOnboarding(candidate.id)} title="Open candidate onboarding workspace" className="rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-xs font-bold text-cyan-800 hover:bg-cyan-100">Onboarding</button>
           {canScreen && <button type="button" onClick={() => onScreen(candidate.id)} className="rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800">Start screening</button>}
           {canInterview && <button type="button" onClick={() => onInterview(candidate.id)} className="rounded-xl bg-cyan-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-cyan-700">Schedule interview</button>}
           {canDecide && <><button type="button" onClick={() => onSelect(candidate.id)} className="rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700">Select</button><button type="button" onClick={() => onReserve(candidate.id)} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Reserve</button><button type="button" onClick={() => onReject(candidate.id)} className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100">Reject</button></>}
