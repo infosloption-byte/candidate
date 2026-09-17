@@ -5,16 +5,16 @@ import { AddCandidateDrawer } from './AddCandidateDrawer';
 import { RejectCandidateDialog } from './RejectCandidateDialog';
 import { useCandidateWorkspace } from '../hooks/useCandidateWorkspace';
 import { Icon } from '../../../shared/components/Icon';
-import { useCandidateContext } from '../context/CandidateContext';
-import type { Candidate, CandidateStatus } from '../types/candidate';
 
 export const CandidatePage = () => {
-  const { state, dispatch } = useCandidateContext();
-  const { visibleCandidates, selectedCandidate, professions, actions } = useCandidateWorkspace();
-  const selectedForRejection = state.candidates.find((candidate) => candidate.id === state.rejectionCandidateId);
-
-  const updateStatus = (candidateId: string, status: Exclude<CandidateStatus, 'rejected'>) => dispatch({ type: 'UPDATE_STATUS', candidateId, status });
-  const createCandidate = (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate });
+  const {
+    state,
+    visibleCandidates,
+    selectedCandidate,
+    professions,
+    rejectionCandidate,
+    actions,
+  } = useCandidateWorkspace();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -31,10 +31,10 @@ export const CandidatePage = () => {
             {visibleCandidates.length === 0 ? <div className="p-6 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Icon name="search" /></div><h2 className="mt-4 text-sm font-semibold text-slate-800">No candidates found</h2><p className="mt-1 text-xs leading-5 text-slate-500">Try a different search or clear one of the filters.</p></div> : visibleCandidates.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} selected={candidate.id === selectedCandidate?.id} onSelect={actions.selectCandidate} />)}
           </div>
         </section>
-        <CandidateProfile candidate={selectedCandidate} onScreen={(id) => updateStatus(id, 'screening')} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection} />
+        <CandidateProfile candidate={selectedCandidate} onScreen={actions.moveToScreening} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection} />
       </main>
-      <AddCandidateDrawer open={state.isAddDrawerOpen} onClose={actions.closeAddCandidate} onCreate={createCandidate} />
-      <RejectCandidateDialog open={Boolean(selectedForRejection)} candidateName={selectedForRejection?.name ?? 'this candidate'} onClose={actions.closeRejection} onReject={(reason, note) => { if (selectedForRejection) dispatch({ type: 'REJECT_CANDIDATE', candidateId: selectedForRejection.id, reason, note }); }} />
+      <AddCandidateDrawer open={state.isAddDrawerOpen} onClose={actions.closeAddCandidate} onCreate={actions.createCandidate} />
+      <RejectCandidateDialog open={Boolean(rejectionCandidate)} candidateName={rejectionCandidate?.name ?? 'this candidate'} onClose={actions.closeRejection} onReject={actions.rejectCandidate} />
     </div>
   );
 };
