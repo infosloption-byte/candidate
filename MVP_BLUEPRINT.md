@@ -15,7 +15,7 @@ candidate/
 └── README.md
 ```
 
-The product is being built frontend-first. Local browser persistence is a prototype adapter behind a candidate service boundary; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
+The product is being built frontend-first. Local browser persistence is a prototype adapter behind candidate service boundaries; it can later be replaced by native `fetch` API services without rewriting the screen workflow.
 
 ## 2. MVP navigation
 
@@ -24,10 +24,12 @@ Dashboard
   └─ Recruitment overview + daily actions
 Candidates ★
   ├─ Search / smart filters
+  ├─ Saved searches
   ├─ Responsive candidate directory
   ├─ Candidate profile workspace
+  ├─ Recruiter tags
   ├─ Add candidate: Essentials → Trade → Readiness
-  ├─ Duplicate review
+  ├─ Creation-time duplicate review
   └─ Compare up to 4 candidates
 Interviews
   └─ Today queue + interviewer assignments
@@ -57,7 +59,7 @@ Interview
   └── Reject → mandatory reason + decision note
 ```
 
-The profile changes its guidance and primary actions by state. Previous interview evidence, documents, fit information, duplicate signals, and the candidate journey remain visible on the same workspace.
+The profile changes its guidance and primary actions by state. Previous interview evidence, documents, fit information, duplicate signals, recruiter tags, and the candidate journey remain visible on the same workspace.
 
 ## 4. Candidate creation UX
 
@@ -70,6 +72,7 @@ The form is intentionally progressive instead of a single long ERP form.
 - Passport number
 - Age
 - Current location
+- Inline duplicate signals appear as identifying fields are entered.
 
 ### Step 2 — Trade
 
@@ -87,7 +90,7 @@ The form is intentionally progressive instead of a single long ERP form.
 - Location readiness
 - Candidate source
 
-Creating a candidate starts them in `New` state and sends them directly into the candidate workspace.
+Creating a candidate starts them in `New` state and sends them directly into the candidate workspace. High-confidence duplicate matches require explicit recruiter acknowledgement before creation.
 
 ## 5. Candidate intelligence UX
 
@@ -102,8 +105,13 @@ The directory combines one fast keyword search with optional structured criteria
 - Driving licence.
 - Document readiness.
 - Multi-skill matching where every selected skill must be present.
+- Recruiter-defined tags are searchable through the same keyword field.
 
-The advanced panel stays closed by default so routine recruiters are not presented with a wall of filters. Active filters are counted and clearable in one action.
+The advanced panel stays closed by default so routine recruiters are not presented with a wall of filters. Active filters are counted and clearable in one action. On small screens the panel scrolls independently so it does not push the candidate list off-screen.
+
+### Saved searches
+
+Recruiters can save the current combined keyword/filter state with a short name and reuse it later. Applying a saved search restores the exact top-level and smart filter criteria. Saved search preferences are persisted locally in a dedicated workspace-preferences adapter.
 
 ### Duplicate detection
 
@@ -114,9 +122,11 @@ Duplicate detection is explainable rather than opaque. The current frontend chec
 - Full-name match.
 - Same profession and near-identical age as supporting signals.
 
-A high-confidence match is shown separately from a possible match, and the recruiter can open the matched profile without losing the current workspace.
+A high-confidence match is shown separately from a possible match, and the recruiter can open the matched profile without losing the current workspace. High-confidence matches during candidate creation require acknowledgement before saving. Final uniqueness policy and server-side enforcement remain backend responsibilities.
 
-This is intentionally a UX/rule prototype. Final duplicate policy and server-side uniqueness rules will be enforced in the backend/database milestone.
+### Recruiter tags
+
+Recruiters can add lightweight, user-defined labels such as `High potential`, `Re-contact`, `Urgent documents`, or any custom tag. Tags are editable directly from the candidate profile and participate in keyword search and comparison.
 
 ### Comparison
 
@@ -126,12 +136,21 @@ Recruiters can select up to four candidates directly from the directory. A respo
 - Profession.
 - Experience.
 - Key skills.
+- Recruiter tags.
 - Overseas experience.
 - English.
 - Availability.
 - Driving licence.
 - Document readiness.
 - Last interview result.
+
+The tray supports:
+
+- Minimize / restore without clearing selected candidates.
+- Drag-to-resize on pointer-capable screens.
+- Quick decrease/increase height controls for touch devices.
+- Persisted comparison height and minimized preference.
+- Internal scrolling for dense comparison data.
 
 The tray is height-limited on small screens so it never blocks the entire workspace.
 
@@ -161,17 +180,21 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 - Selecting a candidate opens their profile with a back action.
 - Fixed action bars respect device safe areas.
 - Tap targets and controls use touch-friendly spacing.
-- Comparison becomes a scrollable, height-limited bottom tray.
+- Comparison becomes a scrollable, height-limited bottom tray with minimize and quick resize controls.
+- Advanced filters use independent scrolling.
 
 ## 7. Smart SaaS UX
 
 - `/` focuses global search; `Ctrl+K` focuses candidate search.
-- Search covers names, reference IDs, professions, locations, phone/passport values, skills, and countries.
+- Search covers names, reference IDs, professions, locations, phone/passport values, skills, countries, and tags.
 - Loading uses skeleton content.
-- Loading failure shows a retry action.
+- Loading failure shows a retry action without requiring a full page reload.
 - Empty filtered results explain what to do next and offer filter reset.
 - Rejection requires an explainable reason and note.
 - Candidate status changes append to the visible journey.
+- Saved searches restore complete filter state.
+- Duplicate warnings explain the matched fields before creation.
+- Comparison selection survives minimize/restore until candidates are removed or cleared.
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
 
@@ -179,18 +202,22 @@ The tray is height-limited on small screens so it never blocks the entire worksp
 
 - App shell state: `AppProvider` + `useReducer`.
 - Candidate domain state: `CandidateProvider` + `useReducer`.
-- Candidate filtering, duplicate review, and comparison actions: `useCandidateWorkspace` + reducer actions.
+- Candidate filtering, saved searches, duplicate review, tags, and comparison actions: `useCandidateWorkspace` + reducer actions.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
+- Recruiter tag input state: `useCandidateTags`.
+- Saved search naming/validation: `useSavedFilterForm`.
+- Comparison resizing: `useComparisonResize`.
 - Candidate persistence: `candidateRepository` service boundary.
+- Workspace preferences persistence: `candidatePreferencesRepository` service boundary.
 - Duplicate matching: pure `candidateMatching` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
 ## 9. Next frontend milestones
 
-1. Finish reusable async state primitives and accessibility/focus management.
-2. Add saved filters/search presets and recruiter-defined candidate tags.
-3. Improve duplicate review with creation-time warnings and a dedicated resolution action.
-4. Build the interview scheduling and scorecard experience.
-5. Build the selection board around the comparison model already established.
+1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
+2. Build interview scheduling and the interview queue.
+3. Build profession-specific interview scorecards and practical-test UX.
+4. Build the selection board using the comparison model already established.
+5. Add job-fit evidence and configurable suitability score presentation.
 6. Once frontend workflows stabilize, implement the Node/Fastify + MySQL backend to the proven domain contracts.
