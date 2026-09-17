@@ -44,7 +44,7 @@ export interface Candidate {
   experienceYears: number;
   secondarySkills: string[];
   overseasCountries: string[];
-  tags: string[];
+  tags?: string[];
   englishLevel: EnglishLevel;
   locationReady: boolean;
   drivingLicense: boolean;
