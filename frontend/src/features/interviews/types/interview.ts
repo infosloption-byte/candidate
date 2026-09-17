@@ -14,22 +14,9 @@ export interface InterviewDecision { decision: Decision; reason: string; note: s
 export interface Interview { id: string; reference: string; candidateId: string; candidateName: string; profession: string; type: InterviewType; status: InterviewStatus; date: string; time: string; durationMinutes: number; location: string; interviewers: Interviewer[]; notes: string; scorecard: InterviewScorecard; practicalTest: PracticalTestItem[]; decision: InterviewDecision; createdAt: string; }
 export interface InterviewDraft { candidateId: string; type: InterviewType; date: string; time: string; durationMinutes: string; location: string; interviewerIds: string[]; }
 
-export interface BulkInterviewScheduleConfig {
-  type: InterviewType;
-  startDate: string;
-  endDate: string;
-  dayStart: string;
-  dayEnd: string;
-  durationMinutes: number;
-  breakMinutes: number;
-  location: string;
-  sharedLocation: boolean;
-  interviewerIds: string[];
-  includeWeekends: boolean;
-}
-
+export interface BulkInterviewScheduleConfig { type: InterviewType; startDate: string; endDate: string; dayStart: string; dayEnd: string; durationMinutes: number; breakMinutes: number; location: string; sharedLocation: boolean; interviewerIds: string[]; includeWeekends: boolean; }
 export interface BulkInterviewScheduleIssue { candidateId: string; candidateName: string; reason: string; }
-export interface BulkInterviewScheduleSlot { candidateId: string; candidateName: string; isoDate: string; date: string; time: string; interviewer: Interviewer; conflicts: string[]; }
+export interface BulkInterviewScheduleSlot { candidateId: string; candidateName: string; profession: string; isoDate: string; date: string; time: string; interviewer: Interviewer; location: string; conflicts: string[]; }
 export interface BulkInterviewInterviewerLoad { interviewerId: string; interviewerName: string; existingCount: number; plannedCount: number; totalCount: number; utilizationPercent: number; }
 export interface BulkInterviewSchedulePlan { slots: BulkInterviewScheduleSlot[]; unscheduled: BulkInterviewScheduleIssue[]; capacity: number; requested: number; interviewerLoads: BulkInterviewInterviewerLoad[]; }
 export interface BulkInterviewScheduleEdit { candidateId: string; isoDate: string; time: string; interviewerId: string; }
