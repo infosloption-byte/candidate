@@ -1,6 +1,7 @@
 import { Icon } from '../../../shared/components/Icon';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { CandidateDuplicatePanel } from './CandidateDuplicatePanel';
+import { CandidateTagEditor } from './CandidateTagEditor';
 import type { Candidate, CandidateDuplicateMatch, CandidateStatus, DocumentState } from '../types/candidate';
 
 interface CandidateProfileProps {
@@ -9,6 +10,8 @@ interface CandidateProfileProps {
   duplicateMatches: CandidateDuplicateMatch[];
   onBack?: () => void;
   onOpenDuplicate: (candidateId: string) => void;
+  onAddTag: (candidateId: string, tag: string) => void;
+  onRemoveTag: (candidateId: string, tag: string) => void;
   onScreen: (id: string) => void;
   onInterview: (id: string) => void;
   onSelect: (id: string) => void;
@@ -28,7 +31,7 @@ const statusCopy: Record<CandidateStatus, { title: string; text: string }> = {
 const documentLabel = (state: DocumentState) => state === 'verified' ? 'Verified' : state === 'needs-review' ? 'Needs review' : 'Missing';
 const documentStyle = (state: DocumentState) => state === 'verified' ? 'bg-emerald-50 text-emerald-700' : state === 'needs-review' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700';
 
-export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, onBack, onOpenDuplicate, onScreen, onInterview, onSelect, onReserve, onReject }: CandidateProfileProps) => {
+export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, onBack, onOpenDuplicate, onAddTag, onRemoveTag, onScreen, onInterview, onSelect, onReserve, onReject }: CandidateProfileProps) => {
   if (!candidate) return <section className="hidden min-h-full place-items-center bg-slate-50 p-8 xl:grid"><div className="max-w-sm text-center"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm"><Icon name="users" size={25}/></div><h2 className="mt-4 text-base font-bold text-slate-800">Select a candidate</h2><p className="mt-1 text-sm leading-6 text-slate-500">Choose someone from the directory to review their profile and workflow.</p></div></section>;
 
   const initials = candidate.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
@@ -66,7 +69,7 @@ export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, o
         </div></section>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><h2 className="text-sm font-black text-slate-900">Professional profile</h2><div className="mt-4 space-y-3 text-xs"><div className="flex justify-between gap-4"><span className="text-slate-400">Primary profession</span><span className="font-bold text-slate-800">{candidate.profession}</span></div><div className="flex justify-between gap-4"><span className="text-slate-400">Original profession</span><span className="font-bold text-slate-800">{candidate.originalProfession}</span></div><div className="flex justify-between gap-4"><span className="text-slate-400">Overseas experience</span><span className="font-bold text-slate-800">{candidate.overseasCountries.length ? candidate.overseasCountries.join(', ') : 'None recorded'}</span></div><div><span className="text-slate-400">Secondary skills</span><div className="mt-2 flex flex-wrap gap-1.5">{candidate.secondarySkills.length ? candidate.secondarySkills.map((skill) => <span key={skill} className="rounded-lg bg-cyan-50 px-2.5 py-1.5 font-semibold text-cyan-700">{skill}</span>) : <span className="text-slate-500">No secondary skills recorded</span>}</div></div></div></section>
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><h2 className="text-sm font-black text-slate-900">Professional profile</h2><div className="mt-4 space-y-3 text-xs"><div className="flex justify-between gap-4"><span className="text-slate-400">Primary profession</span><span className="font-bold text-slate-800">{candidate.profession}</span></div><div className="flex justify-between gap-4"><span className="text-slate-400">Original profession</span><span className="font-bold text-slate-800">{candidate.originalProfession}</span></div><div className="flex justify-between gap-4"><span className="text-slate-400">Overseas experience</span><span className="font-bold text-slate-800">{candidate.overseasCountries.length ? candidate.overseasCountries.join(', ') : 'None recorded'}</span></div><div><span className="text-slate-400">Secondary skills</span><div className="mt-2 flex flex-wrap gap-1.5">{candidate.secondarySkills.length ? candidate.secondarySkills.map((skill) => <span key={skill} className="rounded-lg bg-cyan-50 px-2.5 py-1.5 font-semibold text-cyan-700">{skill}</span>) : <span className="text-slate-500">No secondary skills recorded</span>}</div></div><CandidateTagEditor candidateId={candidate.id} tags={candidate.tags} onAdd={onAddTag} onRemove={onRemoveTag}/></div></section>
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><h2 className="text-sm font-black text-slate-900">Documents</h2><div className="mt-4 space-y-2">{([['Passport', candidate.documents.passport], ['CV', candidate.documents.cv], ['Trade certificate', candidate.documents.tradeCertificate]] as const).map(([label, status]) => <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><div className="flex items-center gap-2"><Icon name="file" size={15} className="text-slate-400"/><span className="text-xs font-semibold text-slate-700">{label}</span></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${documentStyle(status)}`}>{documentLabel(status)}</span></div>)}</div><p className="mt-3 text-[11px] leading-5 text-slate-400">Documents become uploadable and verifiable after the backend milestone.</p></section>
         </div>
 
