@@ -31,6 +31,8 @@ Candidates ★
   ├─ Add candidate: Essentials → Trade → Readiness
   ├─ Creation-time duplicate review
   └─ Compare up to 4 candidates
+  ├─ Candidate onboarding workspace
+  └─ Bulk candidate import (CSV frontend MVP)
 Interviews ★
   ├─ Interview queue
   ├─ Queue / Calendar view switch
@@ -85,7 +87,64 @@ Interview
 
 The profile changes its guidance and primary actions by state. Previous interview evidence, documents, fit information, duplicate signals, recruiter tags, and the candidate journey remain visible on the same workspace.
 
-## 4. Candidate creation UX
+## 4. Candidate acquisition & onboarding UX
+
+Candidate acquisition is intentionally split into two layers:
+
+`Manual Add / Bulk Import → Candidate Record → Candidate Onboarding → Recruiter Review → Screening → Interview → Selection`
+
+### Manual candidate intake
+
+The recruiter can create one candidate using the existing progressive `Essentials → Trade → Readiness` form. Every manually created candidate starts in recruitment status `New` and onboarding status `Not started`.
+
+### Bulk candidate intake
+
+Recruiters and system administrators have a `Bulk import` action from the Candidates workspace. The frontend MVP accepts CSV files and provides:
+
+- Downloadable import template.
+- Automatic mapping for common candidate headers.
+- Required-field validation for name, phone, profession and experience years.
+- Row-level validation messages with original CSV row numbers.
+- Duplicate matching against the existing candidate pool using the same candidate-matching service used by manual creation.
+- High-confidence duplicate protection: skipped by default and explicitly overridable in the preview.
+- Possible-duplicate warnings that remain importable for recruiter review.
+- Atomic reducer commit of all approved rows.
+- Imported records use source `Bulk import`, recruitment status `New`, and onboarding status `Not started`.
+
+The frontend does not claim to provide server authorization or real file persistence. Backend authentication and role enforcement must restrict this capability to the configured recruiter and system-administrator roles.
+
+### Candidate onboarding lifecycle
+
+Each candidate has a separate onboarding lifecycle from recruitment status:
+
+`Not started → Invited → In progress → Submitted → Needs changes ↔ Submitted → Completed`
+
+The onboarding workspace shows the candidate's completion percentage, current stage, recruiter review note, document state and recent onboarding activity.
+
+The candidate-facing onboarding form will collect and verify:
+
+- Identity and contact information.
+- Trade, experience and secondary skills.
+- Readiness, availability, destination and licence information.
+- Passport, CV and trade certificate documents.
+- Consent/declarations and final review before submission.
+
+The current frontend milestone provides the recruiter-side handoff and review-state workflow. Authenticated candidate form entry, invitation delivery, file uploads and server-side verification remain backend-dependent.
+
+### Recruiter onboarding actions
+
+From the onboarding workspace, recruiters can:
+
+- Send/mark an onboarding invitation.
+- Mark onboarding as started.
+- Review a submitted profile.
+- Request changes with a written note.
+- Mark a corrected submission as verified/completed.
+- Open the bulk import workflow without leaving the onboarding context.
+
+Onboarding transitions are recorded in the candidate journey so recruiters can see acquisition, onboarding and later recruitment actions in one timeline.
+
+## 5. Candidate creation UX
 
 The form is intentionally progressive instead of a single long ERP form.
 
@@ -116,7 +175,7 @@ The form is intentionally progressive instead of a single long ERP form.
 
 Creating a candidate starts them in `New` state and sends them directly into the candidate workspace. High-confidence duplicate matches require explicit recruiter acknowledgement before creation.
 
-## 5. Candidate intelligence UX
+## 6. Candidate intelligence UX
 
 ### Smart search
 
@@ -178,7 +237,7 @@ The tray supports:
 
 The tray is height-limited on small screens so it never blocks the entire workspace.
 
-## 6. Interview workflow UX
+## 7. Interview workflow UX
 
 ### Queue
 
@@ -280,7 +339,7 @@ The interview workspace now exposes the selected candidate's interview history i
 
 Batch creation uses one interview-domain reducer action. Candidate status changes to `Interview` are also applied with one candidate-domain bulk action rather than hundreds of separate dispatches. This is the frontend prototype boundary; persistence becomes server-transactional in the backend milestone.
 
-## 7. Selection and decision UX
+## 8. Selection and decision UX
 
 ### Job requirement
 
@@ -350,7 +409,7 @@ The active job view shows recent history with candidate, action, reason, note, a
 
 Selection data is currently persisted locally behind a replaceable service boundary. Final job-specific allocation, permissions, approval identity, and server-side enforcement belong to the backend milestone.
 
-## 8. Responsive shell
+## 9. Responsive shell
 
 ### Desktop
 
@@ -387,7 +446,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Batch planner stacks candidate selection above scheduling controls, preserves cross-page selection, exposes workload balancing, and keeps commit controls in a safe-area-aware footer.
 - Selection bulk actions wrap into stacked touch controls, and evidence, decision, approval, and history panels stack vertically.
 
-## 9. Smart SaaS UX
+## 10. Smart SaaS UX
 
 - `/` focuses global search; `Ctrl+K` focuses candidate search.
 - Search covers names, reference IDs, professions, locations, phone/passport values, skills, countries, and tags.
@@ -416,7 +475,7 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Thin modern scrollbars are used for long panels.
 - Reduced-motion preferences are respected.
 
-## 10. State architecture
+## 11. State architecture
 
 - App shell state: `AppProvider` + `useReducer`.
 - Candidate domain state: `CandidateProvider` + `useReducer`.
@@ -445,8 +504,10 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Interview scheduling timezone cues: `interviewTimezone` service.
 - UI components remain presentational; business rules and mutations stay in hooks/provider/service layers.
 
-## 11. Next frontend milestones
+## 12. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Add advanced cross-job candidate allocation.
-4. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
+2. Complete authenticated candidate self-service onboarding UI once backend identity/invitation contracts are available.
+3. Extend bulk CSV intake to XLSX and server-side import processing.
+4. Add advanced cross-job candidate allocation.
+5. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
