@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Icon } from '../../../shared/components/Icon';
+import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import { useCandidateForm } from '../hooks/useCandidateForm';
 import type { Candidate, CandidateSource } from '../types/candidate';
 
@@ -10,6 +11,8 @@ const steps = [{ id: 1, label: 'Essentials' }, { id: 2, label: 'Trade' }, { id: 
 
 export const AddCandidateDrawer = ({ open, professions, onClose, onCreate }: AddCandidateDrawerProps) => {
   const form = useCandidateForm(onCreate, onClose);
+  const drawerRef = useFocusTrap({ enabled: open, onEscape: onClose });
+
   useEffect(() => { if (!open) form.reset(); }, [open, form.reset]);
   if (!open) return null;
 
@@ -17,7 +20,7 @@ export const AddCandidateDrawer = ({ open, professions, onClose, onCreate }: Add
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="candidate-drawer-title">
       <button type="button" className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" aria-label="Close candidate form" onClick={onClose} />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col bg-white shadow-2xl sm:rounded-l-3xl">
+      <aside ref={drawerRef} tabIndex={-1} className="absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col bg-white shadow-2xl sm:rounded-l-3xl">
         <header className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-700">New candidate</p><h2 id="candidate-drawer-title" className="mt-1 text-xl font-black tracking-tight text-slate-950">Add someone to the talent pool</h2><p className="mt-1 max-w-md text-xs leading-5 text-slate-500">Start with essentials, then capture trade evidence and readiness without filling one giant form.</p></div><button type="button" onClick={onClose} aria-label="Close" className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"><Icon name="x" size={18}/></button></div>
           <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Candidate form progress">{steps.map((step) => <li key={step.id} className={`rounded-xl px-3 py-2 ${form.step === step.id ? 'bg-slate-900 text-white' : form.step > step.id ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-50 text-slate-400'}`}><div className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-white/15 text-[10px] font-black">{form.step > step.id ? '✓' : step.id}</span><span className="text-[10px] font-bold sm:text-xs">{step.label}</span></div></li>)}</ol>
         </header>
