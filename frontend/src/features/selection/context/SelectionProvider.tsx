@@ -47,7 +47,7 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
       return {
         ...state,
         records: nextRecords,
-        approvalByJob: action.record.decision === 'selected' && jobApproval?.status === 'approved'
+        approvalByJob: jobApproval?.status === 'approved'
           ? { ...state.approvalByJob, [action.record.jobId]: { status: 'draft', note: '' } }
           : state.approvalByJob,
       };
