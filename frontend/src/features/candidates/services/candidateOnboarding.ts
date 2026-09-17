@@ -64,12 +64,12 @@ export const buildOnboardingUpdate = (
       reviewerNote: reviewerNote.trim() || previous?.reviewerNote,
     },
     journeyEvent: {
-      id: \`onboarding-\${Date.now()}-\${candidate.id}\`,
+      id: `onboarding-${Date.now()}-${candidate.id}`,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      title: \`Onboarding — \${onboardingStatusLabel(status)}\`,
+      title: `Onboarding — ${onboardingStatusLabel(status)}`,
       detail: status === 'needs-changes' && reviewerNote.trim()
         ? reviewerNote.trim()
-        : \`Candidate onboarding moved to \${onboardingStatusLabel(status).toLowerCase()}.\`,
+        : `Candidate onboarding moved to ${onboardingStatusLabel(status).toLowerCase()}.`,
       tone: onboardingStatusTone(status),
     },
   };
@@ -78,5 +78,5 @@ export const buildOnboardingUpdate = (
 export const getOnboardingCompletionLabel = (candidate: Candidate): string => {
   const onboarding = candidate.onboarding;
   if (!onboarding) return 'Not tracked';
-  return \`\${Math.round(Math.max(0, Math.min(100, onboarding.completionPercent)))}%\`;
+  return `${Math.round(Math.max(0, Math.min(100, onboarding.completionPercent)))}%`;
 };
