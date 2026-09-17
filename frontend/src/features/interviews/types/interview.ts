@@ -75,12 +75,13 @@ export interface InterviewState {
   errorMessage: string | null;
   loadAttempt: number;
   interviews: Interview[];
+  interviewers: Interviewer[];
   selectedInterviewId: string | null;
   isScheduleDrawerOpen: boolean;
 }
 
 export type InterviewAction =
-  | { type: 'HYDRATE'; interviews: Interview[] }
+  | { type: 'HYDRATE'; interviews: Interview[]; interviewers: Interviewer[] }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SELECT_INTERVIEW'; interviewId: string }
