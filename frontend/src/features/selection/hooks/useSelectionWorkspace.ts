@@ -65,11 +65,12 @@ const compareRows = (left: SelectionCandidateRow, right: SelectionCandidateRow):
   if (decisionRank[leftDecision] !== decisionRank[rightDecision]) return decisionRank[leftDecision] - decisionRank[rightDecision];
   return (right.interviewScore ?? 0) - (left.interviewScore ?? 0) || right.candidate.fitScore - left.candidate.fitScore;
 };
-const historyActionLabel: Record<SelectionHistoryAction, string> = { decision_changed: 'Decision change', reassigned: 'Reassigned', approval_changed: 'Approval change' };
+const historyActionLabel: Record<SelectionHistoryAction, string> = { decision_changed: 'Decision change', reassigned: 'Reassigned', approval_changed: 'Approval change', allocated: 'Allocated' };
 const decisionLabel = (decision: SelectionDecision | null | undefined): string => decision ? decision.charAt(0).toUpperCase() + decision.slice(1) : 'No previous decision';
 const historySummary = (entry: SelectionHistoryEntry, relatedJob: SelectionJob | undefined): string => {
   if (entry.action === 'reassigned') return `${decisionLabel(entry.fromDecision)} → Recommended${relatedJob ? ` in ${relatedJob.title}` : ''}`;
   if (entry.action === 'approval_changed') return entry.reason;
+  if (entry.action === 'allocated') return 'Allocated to this job';
   return `${decisionLabel(entry.fromDecision)} → ${decisionLabel(entry.toDecision)}`;
 };
 
