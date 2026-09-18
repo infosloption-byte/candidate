@@ -14,3 +14,7 @@ const adapter = new PrismaMariaDb({
 });
 
 export const prisma = new PrismaClient({ adapter });
+
+export const closePrisma = async (): Promise<void> => {
+  await prisma.$disconnect();
+};
