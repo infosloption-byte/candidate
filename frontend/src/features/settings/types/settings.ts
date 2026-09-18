@@ -20,7 +20,7 @@ export interface SettingsUser {
   id: string;
   name: string;
   email: string;
-  role: 'system-admin' | 'recruiter' | 'interviewer';
+  role: 'system-admin' | 'recruiter' | 'interviewer' | 'manager';
   active: boolean;
 }
 
