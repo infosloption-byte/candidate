@@ -164,7 +164,7 @@ describe('bulk interview planning', () => {
       {
         candidateId: candidateB.id,
         isoDate: targetSlot?.isoDate ?? bulkConfig.startDate,
-        time: targetSlot?.time ?? '09:00',
+        time: plan.slots.find((slot) => slot.candidateId === candidateA.id)?.time ?? '09:00',
         interviewerId: masonInterviewer.id,
       },
       [],
