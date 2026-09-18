@@ -23,7 +23,18 @@ export interface CandidateOperationalProfileDraft {
   sourceCampaign: string;
 }
 
-export const useCandidateOperationalProfile = (candidate: Candidate | null) => {
+export interface CandidateOperationalProfileController {
+  open: boolean;
+  draft: CandidateOperationalProfileDraft;
+  actions: {
+    open: () => void;
+    close: () => void;
+    update: <K extends keyof CandidateOperationalProfileDraft>(key: K, value: CandidateOperationalProfileDraft[K]) => void;
+    save: () => void;
+  };
+}
+
+export const useCandidateOperationalProfile = (candidate: Candidate | null): CandidateOperationalProfileController => {
   const { actions: candidateActions } = useCandidateWorkspace();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CandidateOperationalProfileDraft>(() => ({
