@@ -88,6 +88,7 @@ export const useJobsWorkspace = () => {
     return true;
   };
 
+  const retryLoad = () => dispatch({ type: 'RETRY_LOAD' });
   const closeJob = (jobId: string) => dispatch({ type: 'CLOSE_JOB', jobId });
 
   return {
@@ -107,6 +108,7 @@ export const useJobsWorkspace = () => {
       closeEditor: () => setEditorOpen(false),
       save,
       closeJob,
+      retryLoad,
     },
   };
 };
