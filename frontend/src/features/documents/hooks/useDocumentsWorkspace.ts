@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
 import { documentLabel, loadDocuments, saveDocuments } from '../services/documentRepository';
+import type { Candidate } from '../../candidates/types/candidate';
 import type { CandidateDocument, DocumentType } from '../types/documents';
 
 const nowLabel = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -58,37 +59,31 @@ export const useDocumentsWorkspace = () => {
 
   const upload = (type: DocumentType, file: File) => {
     if (!selectedCandidateId) return;
-    setDocuments((current) => {
-      const next = current.map((document) => document.candidateId === selectedCandidateId && document.type === type
-        ? { ...document, fileName: file.name, sizeLabel: Math.max(1, Math.round(file.size / 1024)) + ' KB', status: 'needs-review' as const, uploadedAt: nowLabel(), reviewerNote: 'Uploaded and awaiting verification.' }
-        : document,
-      );
-      syncCandidateDocumentState(selectedCandidateId, next);
-      return next;
-    });
+    const next = documents.map((document) => document.candidateId === selectedCandidateId && document.type === type
+      ? { ...document, fileName: file.name, sizeLabel: Math.max(1, Math.round(file.size / 1024)) + ' KB', status: 'needs-review' as const, uploadedAt: nowLabel(), reviewerNote: 'Uploaded and awaiting verification.' }
+      : document);
+    setDocuments(next);
+    syncCandidateDocumentState(selectedCandidateId, next);
   };
 
   const verify = (documentId: string) => {
-    let candidateId = '';
-    setDocuments((current) => {
-      const next = current.map((document) => {
-        if (document.id !== documentId) return document;
-        candidateId = document.candidateId;
-        return { ...document, status: 'verified' as const, reviewedAt: nowLabel(), reviewerNote: 'Verified by recruiter.' };
-      });
-      if (candidateId) syncCandidateDocumentState(candidateId, next);
-      return next;
-    });
+    const target = documents.find((document) => document.id === documentId);
+    if (!target) return;
+    const next = documents.map((document) => document.id === documentId
+      ? { ...document, status: 'verified' as const, reviewedAt: nowLabel(), reviewerNote: 'Verified by recruiter.' }
+      : document);
+    setDocuments(next);
+    syncCandidateDocumentState(target.candidateId, next);
   };
 
   const requestChanges = (documentId: string, note: string) => {
-    let candidateId = '';
-    setDocuments((current) => current.map((document) => {
-      if (document.id !== documentId) return document;
-      candidateId = document.candidateId;
-      return { ...document, status: 'needs-review', reviewedAt: nowLabel(), reviewerNote: note.trim() || 'Please upload a clearer document.' };
-    }));
-    if (candidateId) window.setTimeout(() => updateCandidateDocumentState(candidateId), 0);
+    const target = documents.find((document) => document.id === documentId);
+    if (!target) return;
+    const next = documents.map((document) => document.id === documentId
+      ? { ...document, status: 'needs-review' as const, reviewedAt: nowLabel(), reviewerNote: note.trim() || 'Please upload a clearer or correct document.' }
+      : document);
+    setDocuments(next);
+    syncCandidateDocumentState(target.candidateId, next);
   };
 
   return {
