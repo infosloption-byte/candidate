@@ -10,7 +10,10 @@ const nav: Array<{ view: AppView; label: string; icon: IconName }> = [
   { view: 'interviews', label: 'Interviews', icon: 'calendar' },
   { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
   { view: 'selection', label: 'Selection', icon: 'target' },
+  { view: 'allocation', label: 'Allocation', icon: 'target' },
+  { view: 'documents', label: 'Documents', icon: 'file' },
   { view: 'reports', label: 'Reports', icon: 'chart' },
+  { view: 'notifications', label: 'Notifications', icon: 'bell' },
   { view: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -19,9 +22,9 @@ export const Sidebar = ({ onNavigate, forceExpanded = false }: SidebarProps) => 
   const isCollapsed = forceExpanded ? false : state.sidebarCollapsed;
   const groups: Array<{ label: string; items: typeof nav }> = [
     { label: 'Workspace', items: nav.slice(0, 3) },
-    { label: 'Manage', items: nav.slice(3, 5) },
-    { label: 'Insights', items: nav.slice(5, 6) },
-    { label: 'System', items: nav.slice(6) },
+    { label: 'Manage', items: nav.slice(3, 7) },
+    { label: 'Insights', items: nav.slice(7, 9) },
+    { label: 'System', items: nav.slice(9) },
   ];
 
   return <aside className="flex h-full w-full flex-col bg-slate-950 text-white" aria-label="Primary navigation">
