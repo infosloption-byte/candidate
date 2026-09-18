@@ -1,5 +1,6 @@
 import type { Candidate } from '../../candidates/types/candidate';
 import type { Interview } from '../../interviews/types/interview';
+import type { SelectionJob, SelectionRecord, SelectionApproval } from '../../selection/types/selection';
 import type { DashboardPipelineItem, DashboardSnapshot } from '../types/dashboard';
 
 const statusLabels: Record<Candidate['status'], string> = {
@@ -39,9 +40,20 @@ const buildPipeline = (candidates: Candidate[]): DashboardPipelineItem[] => {
   });
 };
 
+const formatToday = (value: Date): string =>
+  value.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
 export const buildDashboardSnapshot = (
   candidates: Candidate[],
   interviews: Interview[],
+  selectionJobs: SelectionJob[],
+  selectionRecords: SelectionRecord[],
+  approvalByJob: Record<string, SelectionApproval>,
   now = new Date(),
 ): DashboardSnapshot => {
   const todayInterviews = interviews
@@ -55,6 +67,10 @@ export const buildDashboardSnapshot = (
     ['invited', 'in-progress', 'submitted', 'needs-changes'].includes(candidate.onboarding?.status ?? ''),
   ).length;
 
+  const onboardingNeedsChanges = candidates.filter(
+    (candidate) => candidate.onboarding?.status === 'needs-changes',
+  ).length;
+
   const documentsAttention = candidates.filter((candidate) =>
     Object.values(candidate.documents).some((status) => status !== 'verified'),
   ).length;
@@ -64,20 +80,26 @@ export const buildDashboardSnapshot = (
     && (interview.status === 'evaluation' || interview.status === 'in-progress'),
   ).length;
 
+  const selected = selectionRecords.filter((record) => record.decision === 'selected').length;
+  const openings = selectionJobs.reduce((sum, job) => sum + job.openings, 0);
+  const approvalsPending = Object.values(approvalByJob).filter((approval) => approval.status === 'pending').length;
+
   return {
+    todayLabel: formatToday(now),
     totals: {
       candidates: candidates.length,
       availableNow: candidates.filter((candidate) => candidate.availability === 'Available now').length,
       interviewsToday: todayInterviews.length,
       selected: candidates.filter((candidate) => candidate.status === 'selected').length,
       onboardingActive,
+      onboardingNeedsChanges,
       documentsAttention,
     },
     pipeline: buildPipeline(candidates),
     actions: [
       {
         id: 'onboarding',
-        title: 'Onboarding needs attention',
+        title: 'Onboarding follow-up',
         description: 'Candidates waiting for completion or recruiter review.',
         count: onboardingActive,
         target: 'candidates',
@@ -91,10 +113,17 @@ export const buildDashboardSnapshot = (
       },
       {
         id: 'interviews',
-        title: 'Interviews needing a decision',
+        title: 'Interview decisions',
         description: 'Evaluation-stage interviews without a final decision.',
         count: needsDecision,
         target: 'interviews',
+      },
+      {
+        id: 'approval',
+        title: 'Selection approvals',
+        description: 'Jobs currently waiting for management approval.',
+        count: approvalsPending,
+        target: 'selection',
       },
     ],
     interviewLoad: {
@@ -102,6 +131,12 @@ export const buildDashboardSnapshot = (
       evaluation: interviews.filter((interview) => interview.status === 'evaluation' || interview.status === 'in-progress').length,
       completed: interviews.filter((interview) => interview.status === 'completed').length,
       needsDecision,
+    },
+    selection: {
+      openings,
+      selected,
+      remaining: Math.max(openings - selected, 0),
+      approvalsPending,
     },
     recentCandidates: [...candidates].sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 5),
     todayInterviews,
