@@ -7,6 +7,9 @@ import { CandidateComparisonPanel } from './CandidateComparisonPanel';
 import { AddCandidateDrawer } from './AddCandidateDrawer';
 import { CandidateBulkImportDrawer } from './CandidateBulkImportDrawer';
 import { CandidateOnboardingPage } from './CandidateOnboardingPage';
+import { CandidateInvitationCenter } from './CandidateInvitationCenter';
+import { useCandidateOperationalProfile } from '../hooks/useCandidateOperationalProfile';
+import { usePermissions } from '../../auth/hooks/usePermissions';
 import { Icon } from '../../../shared/components/Icon';
 import { RejectCandidateDialog } from './RejectCandidateDialog';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -20,9 +23,16 @@ const availabilities: Availability[] = ['Available now', 'Within 2 weeks', 'With
 
 export const CandidatePage = () => {
   const { state, visibleCandidates, selectedCandidate, rejectionCandidate, compareCandidates, duplicateMatches, professions, skillOptions, smartFilterCount, metrics, actions } = useCandidateWorkspace();
+  const { can } = usePermissions();
+  const canManageCandidates = can('candidate.manage');
+  const canImportCandidates = can('candidate.import');
+  const canInviteCandidates = can('candidate.invite');
+  const canDecide = can('selection.decide');
+  const canSchedule = can('interview.schedule');
+  const operationalProfile = useCandidateOperationalProfile(selectedCandidate);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [smartFiltersOpen, setSmartFiltersOpen] = useState(false);
-  const [workspaceView, setWorkspaceView] = useState<'directory' | 'onboarding'>('directory');
+  const [workspaceView, setWorkspaceView] = useState<'directory' | 'onboarding' | 'invitations'>('directory');
 
   if (state.loadState === 'loading') return <LoadingState label="Loading candidates" rows={5} />;
   if (state.loadState === 'error') return <ErrorState title="We could not load candidates" message={state.errorMessage ?? 'Candidate data is temporarily unavailable.'} onRetry={actions.retryLoad} />;
@@ -40,9 +50,10 @@ export const CandidatePage = () => {
             <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">Acquire candidate records, onboard them into the talent pool, and keep recruitment decisions attached to one profile.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setWorkspaceView('onboarding')} title="Open candidate onboarding workspace" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'onboarding' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="users" size={15} /> Onboarding</button>
-            <button type="button" onClick={actions.openBulkImport} title="Bulk import candidates from a CSV" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Icon name="file" size={15} /> Bulk import</button>
-            <button type="button" onClick={actions.openAddCandidate} title="Create one candidate record manually" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Icon name="plus" size={15} /> Add candidate</button>
+            {canInviteCandidates && <button type="button" onClick={() => setWorkspaceView('onboarding')} title="Open candidate onboarding workspace" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'onboarding' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="users" size={15} /> Onboarding</button>}
+            {canInviteCandidates && <button type="button" onClick={() => setWorkspaceView('invitations')} title="Open candidate invitation center" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'invitations' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="bell" size={15} /> Invitations</button>}
+            {canImportCandidates && <button type="button" onClick={actions.openBulkImport} title="Bulk import candidates from a CSV" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Icon name="file" size={15} /> Bulk import</button>}
+            {canManageCandidates && <button type="button" onClick={actions.openAddCandidate} title="Create one candidate record manually" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Icon name="plus" size={15} /> Add candidate</button>}
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -53,20 +64,21 @@ export const CandidatePage = () => {
         </div>
         <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3" role="tablist" aria-label="Candidate workspace views">
           <button type="button" role="tab" aria-selected={workspaceView === 'directory'} onClick={() => setWorkspaceView('directory')} title="Open candidate directory" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'directory' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Directory</button>
-          <button type="button" role="tab" aria-selected={workspaceView === 'onboarding'} onClick={() => setWorkspaceView('onboarding')} title="Track candidate onboarding and review" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'onboarding' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Onboarding</button>
+          {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'onboarding'} onClick={() => setWorkspaceView('onboarding')} title="Track candidate onboarding and review" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'onboarding' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Onboarding</button>}
+          {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'invitations'} onClick={() => setWorkspaceView('invitations')} title="Track candidate invitations" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'invitations' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Invitations</button>}
         </div>
       </header>
 
-      {workspaceView === 'onboarding' ? <CandidateOnboardingPage /> : <div className="grid min-h-0 flex-1 xl:grid-cols-[380px_minmax(0,1fr)]">
+      {workspaceView === 'onboarding' ? <CandidateOnboardingPage /> : workspaceView === 'invitations' ? <CandidateInvitationCenter onOpenOnboarding={(id) => { actions.selectCandidate(id); setWorkspaceView('onboarding'); }} /> : <div className="grid min-h-0 flex-1 xl:grid-cols-[380px_minmax(0,1fr)]">
         <section className={`${mobileDetailOpen ? 'hidden xl:flex' : 'flex'} min-h-0 flex-col border-b border-slate-200 bg-white xl:border-b-0 xl:border-r`} aria-label="Candidate directory">
           <CandidateFilters search={state.filters.search} status={state.filters.status} profession={state.filters.profession} professions={professions} resultCount={visibleCandidates.length} smartFilterCount={smartFilterCount} smartFilters={state.smartFilters} smartFiltersOpen={smartFiltersOpen} onSearchChange={actions.setSearch} onStatusChange={actions.setStatus} onProfessionChange={actions.setProfession} onOpenSmartFilters={() => setSmartFiltersOpen((current) => !current)} />
           {smartFiltersOpen && <CandidateSmartFiltersPanel filters={state.smartFilters} topLevelFilters={state.filters} englishLevels={englishLevels} availabilities={availabilities} skillOptions={skillOptions} savedFilters={state.savedFilters} activeSavedFilterId={state.activeSavedFilterId} onChange={actions.setSmartFilters} onToggleSkill={actions.toggleSkillFilter} onClear={actions.clearSmartFilters} onClearAll={actions.clearAllFilters} onSaveFilter={actions.saveCurrentFilter} onApplySavedFilter={actions.applySavedFilter} onDeleteSavedFilter={actions.deleteSavedFilter}/>} 
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-            {visibleCandidates.length === 0 ? <EmptyState title={noCandidatesAtAll ? 'Your candidate pool is empty' : 'No candidates found'} message={noCandidatesAtAll ? 'Start with one candidate. You can add more details later as the recruitment workflow progresses.' : 'No candidate matches all of the current criteria.'} icon={noCandidatesAtAll ? 'users' : 'search'} actionLabel={noCandidatesAtAll ? 'Add candidate' : 'Clear filters'} onAction={noCandidatesAtAll ? actions.openAddCandidate : actions.clearAllFilters} /> : visibleCandidates.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} selected={candidate.id === selectedCandidate?.id} compareSelected={state.compareCandidateIds.includes(candidate.id)} compareDisabled={state.compareCandidateIds.length >= 4} onSelect={(id) => { actions.selectCandidate(id); setMobileDetailOpen(true); }} onToggleCompare={actions.toggleCompareCandidate}/>) }
+            {visibleCandidates.length === 0 ? <EmptyState title={noCandidatesAtAll ? 'Your candidate pool is empty' : 'No candidates found'} message={noCandidatesAtAll ? 'Start with one candidate. You can add more details later as the recruitment workflow progresses.' : 'No candidate matches all of the current criteria.'} icon={noCandidatesAtAll ? 'users' : 'search'} actionLabel={noCandidatesAtAll && canManageCandidates ? 'Add candidate' : 'Clear filters'} onAction={noCandidatesAtAll && canManageCandidates ? actions.openAddCandidate : actions.clearAllFilters} /> : visibleCandidates.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} selected={candidate.id === selectedCandidate?.id} compareSelected={state.compareCandidateIds.includes(candidate.id)} compareDisabled={state.compareCandidateIds.length >= 4} onSelect={(id) => { actions.selectCandidate(id); setMobileDetailOpen(true); }} onToggleCompare={actions.toggleCompareCandidate}/>) }
           </div>
         </section>
         <div className={`${mobileDetailOpen ? 'block' : 'hidden xl:block'} min-w-0`}>
-          <CandidateProfile candidate={selectedCandidate} allCandidates={state.candidates} duplicateMatches={duplicateMatches} onBack={() => setMobileDetailOpen(false)} onOpenDuplicate={(id) => { actions.closeAddCandidate(); actions.selectCandidate(id); setMobileDetailOpen(true); }} onOpenOnboarding={(id) => { actions.selectCandidate(id); setWorkspaceView('onboarding'); }} onAddTag={actions.addTag} onRemoveTag={actions.removeTag} onScreen={actions.moveToScreening} onInterview={actions.moveToInterview} onSelect={actions.selectCandidateForJob} onReserve={actions.moveToReserve} onReject={actions.openRejection}/>
+          <CandidateProfile candidate={selectedCandidate} allCandidates={state.candidates} duplicateMatches={duplicateMatches} onBack={() => setMobileDetailOpen(false)} onOpenDuplicate={(id) => { actions.closeAddCandidate(); actions.selectCandidate(id); setMobileDetailOpen(true); }} onOpenOnboarding={canInviteCandidates ? (id) => { actions.selectCandidate(id); setWorkspaceView('onboarding'); } : undefined} onAddTag={canManageCandidates ? actions.addTag : () => undefined} onRemoveTag={canManageCandidates ? actions.removeTag : () => undefined} onScreen={canManageCandidates ? actions.moveToScreening : undefined} onInterview={canSchedule ? actions.moveToInterview : undefined} onSelect={canDecide ? actions.selectCandidateForJob : undefined} onReserve={canDecide ? actions.moveToReserve : undefined} onReject={canDecide ? actions.openRejection : undefined} operationalProfile={operationalProfile}/>
         </div>
       </div>}
 
