@@ -185,6 +185,7 @@ model User {
   approvals            SelectionApproval[]     @relation("ApprovalActor")
   notifications        Notification[]
   auditEvents          AuditEvent[]
+  sessions             Session[]
   tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, role, active])
@@ -215,7 +216,7 @@ model Candidate {
   phone                          String                     @db.VarChar(60)
   phoneNormalized                String                     @db.VarChar(60)
   passportNumber                 String?                    @db.VarChar(80)
-  passportNumberNormalized       String?                    @unique @db.VarChar(80)
+  passportNumberNormalized       String?                    @db.VarChar(80)
   age                            Int?
   location                       String                     @db.VarChar(160)
   profession                     String                     @db.VarChar(120)
