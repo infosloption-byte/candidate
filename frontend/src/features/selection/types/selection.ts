@@ -3,7 +3,7 @@ import type { Dispatch } from 'react';
 export type SelectionTab = 'recommended' | 'selected' | 'reserve' | 'rejected';
 export type ApprovalStatus = 'draft' | 'pending' | 'approved' | 'returned';
 export type SelectionDecision = 'recommended' | 'selected' | 'reserve' | 'rejected';
-export type SelectionHistoryAction = 'decision_changed' | 'reassigned' | 'approval_changed';
+export type SelectionHistoryAction = 'decision_changed' | 'reassigned' | 'approval_changed' | 'allocated';
 
 export interface SelectionJob {
   id: string;
@@ -15,6 +15,10 @@ export interface SelectionJob {
   requiredExperience: number;
   requiredSkills: string[];
   client: string;
+  status?: 'draft' | 'open' | 'paused' | 'filled' | 'closed';
+  startDate?: string;
+  deadline?: string;
+  preferredSkills?: string[];
 }
 
 export interface SelectionRecord {
@@ -82,6 +86,10 @@ export type SelectionAction =
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SET_JOB'; jobId: string }
+  | { type: 'CREATE_JOB'; job: SelectionJob }
+  | { type: 'UPDATE_JOB'; job: SelectionJob }
+  | { type: 'CLOSE_JOB'; jobId: string }
+  | { type: 'ALLOCATE_CANDIDATES'; candidateIds: string[]; jobId: string; reason: string; note: string; occurredAt: string; occurredBy: string }
   | { type: 'SET_TAB'; tab: SelectionTab }
   | { type: 'SELECT_CANDIDATE'; candidateId: string | null }
   | { type: 'SAVE_DECISION'; record: SelectionRecord }
