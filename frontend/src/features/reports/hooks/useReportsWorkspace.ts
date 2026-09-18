@@ -5,8 +5,8 @@ import { buildReportSnapshot, reportToCsv } from '../services/reportMetrics';
 import type { ReportFilters, ReportRange } from '../types/reports';
 
 export const useReportsWorkspace = () => {
-  const { state: candidateState } = useCandidateWorkspace();
-  const { state: interviewState } = useInterviewWorkspace();
+  const { state: candidateState, actions: candidateActions } = useCandidateWorkspace();
+  const { state: interviewState, actions: interviewActions } = useInterviewWorkspace();
   const [filters, setFilters] = useState<ReportFilters>({ range: '30d', profession: 'all' });
 
   const professions = useMemo(
@@ -18,6 +18,11 @@ export const useReportsWorkspace = () => {
     () => buildReportSnapshot(candidateState.candidates, interviewState.interviews, filters),
     [candidateState.candidates, interviewState.interviews, filters],
   );
+
+  const retry = () => {
+    if (candidateState.loadState === 'error') candidateActions.retryLoad();
+    if (interviewState.loadState === 'error') interviewActions.retryLoad();
+  };
 
   const downloadCsv = () => {
     const blob = new Blob([reportToCsv(snapshot)], { type: 'text/csv;charset=utf-8;' });
@@ -39,6 +44,7 @@ export const useReportsWorkspace = () => {
       setRange: (range: ReportRange) => setFilters((current) => ({ ...current, range })),
       setProfession: (profession: string) => setFilters((current) => ({ ...current, profession: profession as ReportFilters['profession'] })),
       downloadCsv,
+      retry,
     },
   };
 };
