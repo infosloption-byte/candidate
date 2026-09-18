@@ -1,11 +1,19 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import { env } from "./config/env.js";
+import { closePrisma } from "./lib/prisma.js";
+import authPlugin from "./plugins/auth.js";
+import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { candidateRoutes } from "./routes/candidates.js";
+import { registerErrorHandler } from "./errors/errorHandler.js";
 
 export const buildApp = (): FastifyInstance => {
   const app = Fastify({
+    bodyLimit: 2 * 1024 * 1024,
     logger: {
       level: env.nodeEnv === "development" ? "info" : "warn",
     },
@@ -13,22 +21,26 @@ export const buildApp = (): FastifyInstance => {
   });
 
   void app.register(helmet);
+  void app.register(cookie);
   void app.register(cors, {
     origin: env.corsOrigin,
     credentials: true,
   });
+  void app.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: "1 minute",
+  });
+  void app.register(authPlugin);
 
   void app.register(healthRoutes, { prefix: "/api/v1" });
+  void app.register(authRoutes, { prefix: "/api/v1" });
+  void app.register(candidateRoutes, { prefix: "/api/v1" });
 
-  app.setErrorHandler((error, request, reply) => {
-    request.log.error({ err: error }, "Unhandled request error");
-    return reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500).send({
-      error: {
-        code: error.code ?? "INTERNAL_SERVER_ERROR",
-        message: env.nodeEnv === "production" ? "An unexpected server error occurred." : error.message,
-        requestId: request.id,
-      },
-    });
+  registerErrorHandler(app);
+
+  app.addHook("onClose", async () => {
+    await closePrisma();
   });
 
   return app;
