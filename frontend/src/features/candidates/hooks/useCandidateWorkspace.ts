@@ -64,6 +64,8 @@ export const useCandidateWorkspace = () => {
       createCandidate: (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate }),
       bulkImportCandidates: (candidates: Candidate[]) => dispatch({ type: 'BULK_ADD_CANDIDATES', candidates }),
       updateOnboarding: (candidateId: string, onboarding: Candidate['onboarding'], journeyEvent: Candidate['journey'][number]) => { if (onboarding) dispatch({ type: 'UPDATE_ONBOARDING', candidateId, onboarding, journeyEvent }); },
+      updateProfile: (candidateId: string, changes: Partial<Candidate>, journeyEvent: Candidate['journey'][number]) => dispatch({ type: 'UPDATE_PROFILE', candidateId, changes, journeyEvent }),
+      updateDocuments: (candidateId: string, documents: Candidate['documents'], journeyEvent: Candidate['journey'][number]) => dispatch({ type: 'UPDATE_DOCUMENTS', candidateId, documents, journeyEvent }),
       moveToScreening: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'screening' }),
       moveToInterview: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' }),
       moveCandidatesToInterview: (candidateIds: string[]) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status: 'interview' }),
