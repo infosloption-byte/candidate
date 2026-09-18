@@ -1,6 +1,7 @@
 import type { AppView } from '../context/AppContextTypes';
 import { useAppShell } from '../hooks/useAppShell';
 import { Icon, type IconName } from '../../shared/components/Icon';
+import { usePermissions } from '../../features/auth/hooks/usePermissions';
 
 interface SidebarProps { onNavigate?: () => void; forceExpanded?: boolean; }
 
