@@ -10,6 +10,9 @@ import { CandidateOnboardingPage } from './CandidateOnboardingPage';
 import { CandidateInvitationCenter } from './CandidateInvitationCenter';
 import { useCandidateOperationalProfile } from '../hooks/useCandidateOperationalProfile';
 import { usePermissions } from '../../auth/hooks/usePermissions';
+import { CandidateInvitationCenter } from './CandidateInvitationCenter';
+import { useCandidateOperationalProfile } from '../hooks/useCandidateOperationalProfile';
+import { usePermissions } from '../../auth/hooks/usePermissions';
 import { Icon } from '../../../shared/components/Icon';
 import { RejectCandidateDialog } from './RejectCandidateDialog';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -23,6 +26,13 @@ const availabilities: Availability[] = ['Available now', 'Within 2 weeks', 'With
 
 export const CandidatePage = () => {
   const { state, visibleCandidates, selectedCandidate, rejectionCandidate, compareCandidates, duplicateMatches, professions, skillOptions, smartFilterCount, metrics, actions } = useCandidateWorkspace();
+  const { can } = usePermissions();
+  const canManageCandidates = can('candidate.manage');
+  const canImportCandidates = can('candidate.import');
+  const canInviteCandidates = can('candidate.invite');
+  const canDecide = can('selection.decide');
+  const canSchedule = can('interview.schedule');
+  const operationalProfile = useCandidateOperationalProfile(selectedCandidate);
   const { can } = usePermissions();
   const canManageCandidates = can('candidate.manage');
   const canImportCandidates = can('candidate.import');
@@ -50,7 +60,7 @@ export const CandidatePage = () => {
             <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">Acquire candidate records, onboard them into the talent pool, and keep recruitment decisions attached to one profile.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {canInviteCandidates && <button type="button" onClick={() => setWorkspaceView('onboarding')} title="Open candidate onboarding workspace" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'onboarding' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="users" size={15} /> Onboarding</button>}
+            {canInviteCandidates && {canInviteCandidates && <button type="button" onClick={() => setWorkspaceView('onboarding')} title="Open candidate onboarding workspace" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'onboarding' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="users" size={15} /> Onboarding</button>}
             {canInviteCandidates && <button type="button" onClick={() => setWorkspaceView('invitations')} title="Open candidate invitation center" className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-bold ${workspaceView === 'invitations' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}><Icon name="bell" size={15} /> Invitations</button>}
             {canImportCandidates && <button type="button" onClick={actions.openBulkImport} title="Bulk import candidates from a CSV" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"><Icon name="file" size={15} /> Bulk import</button>}
             {canManageCandidates && <button type="button" onClick={actions.openAddCandidate} title="Create one candidate record manually" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Icon name="plus" size={15} /> Add candidate</button>}
@@ -64,7 +74,8 @@ export const CandidatePage = () => {
         </div>
         <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3" role="tablist" aria-label="Candidate workspace views">
           <button type="button" role="tab" aria-selected={workspaceView === 'directory'} onClick={() => setWorkspaceView('directory')} title="Open candidate directory" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'directory' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Directory</button>
-          {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'onboarding'} onClick={() => setWorkspaceView('onboarding')} title="Track candidate onboarding and review" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'onboarding' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Onboarding</button>}
+          {canInviteCandidates && {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'onboarding'} onClick={() => setWorkspaceView('onboarding')} title="Track candidate onboarding and review" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'onboarding' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Onboarding</button>}
+          {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'invitations'} onClick={() => setWorkspaceView('invitations')} title="Track candidate invitations" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'invitations' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Invitations</button>}}
           {canInviteCandidates && <button type="button" role="tab" aria-selected={workspaceView === 'invitations'} onClick={() => setWorkspaceView('invitations')} title="Track candidate invitations" className={`rounded-lg px-3 py-2 text-xs font-bold ${workspaceView === 'invitations' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>Invitations</button>}
         </div>
       </header>
