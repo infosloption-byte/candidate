@@ -20,6 +20,8 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Add shared focus trapping with Escape handling for mobile navigation, candidate drawer, and rejection dialog.
 - ✅ Respect reduced-motion preferences and safe-area interactions.
 - 🧪 Complete accessibility QA with keyboard navigation and real-device mobile interaction checks.
+- ✅ Add automated frontend workflow coverage for candidate intelligence, onboarding, jobs, interviews and allocation rules.
+- ✅ Add frontend CI verification for automated tests and production build.
 
 ## Phase 2 — Candidate intelligence UX
 
