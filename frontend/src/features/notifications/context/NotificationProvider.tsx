@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { NotificationContext } from './NotificationContextObject';
 import { loadNotifications, saveNotifications } from '../services/notificationRepository';
-import type { NotificationAction, NotificationState } from '../types/notifications';
+import type { NotificationAction, NotificationState } from '../types/notificationState';
 
 const initialState: NotificationState = { notifications: [] };
 
