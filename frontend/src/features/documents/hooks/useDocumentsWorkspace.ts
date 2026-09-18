@@ -38,10 +38,11 @@ export const useDocumentsWorkspace = () => {
     [documents, selectedCandidateId],
   );
 
-  const updateCandidateDocumentState = (candidateId: string) => {
-    const next = documents.filter((document) => document.candidateId === candidateId);
-    const source = next.reduce((result, document) => ({ ...result, [document.type]: document.status }), {} as typeof selectedCandidate extends null ? never : NonNullable<typeof selectedCandidate>['documents']);
-    const candidateDocuments = {
+  const syncCandidateDocumentState = (candidateId: string, nextDocuments: CandidateDocument[]) => {
+    const source = nextDocuments
+      .filter((document) => document.candidateId === candidateId)
+      .reduce((result, document) => ({ ...result, [document.type]: document.status }), {} as Record<DocumentType, CandidateDocument['status']>);
+    const candidateDocuments: Candidate['documents'] = {
       passport: source.passport ?? 'missing',
       cv: source.cv ?? 'missing',
       tradeCertificate: source.tradeCertificate ?? 'missing',
@@ -57,26 +58,27 @@ export const useDocumentsWorkspace = () => {
 
   const upload = (type: DocumentType, file: File) => {
     if (!selectedCandidateId) return;
-    setDocuments((current) => current.map((document) => document.candidateId === selectedCandidateId && document.type === type
-      ? { ...document, fileName: file.name, sizeLabel: Math.max(1, Math.round(file.size / 1024)) + ' KB', status: 'needs-review', uploadedAt: nowLabel(), reviewerNote: 'Uploaded and awaiting verification.' }
-      : document,
-    ));
-    window.setTimeout(() => {
-      setDocuments((current) => {
-        const next = current.map((document) => document.candidateId === selectedCandidateId && document.type === type ? document : document);
-        return next;
-      });
-    }, 0);
+    setDocuments((current) => {
+      const next = current.map((document) => document.candidateId === selectedCandidateId && document.type === type
+        ? { ...document, fileName: file.name, sizeLabel: Math.max(1, Math.round(file.size / 1024)) + ' KB', status: 'needs-review' as const, uploadedAt: nowLabel(), reviewerNote: 'Uploaded and awaiting verification.' }
+        : document,
+      );
+      syncCandidateDocumentState(selectedCandidateId, next);
+      return next;
+    });
   };
 
   const verify = (documentId: string) => {
     let candidateId = '';
-    setDocuments((current) => current.map((document) => {
-      if (document.id !== documentId) return document;
-      candidateId = document.candidateId;
-      return { ...document, status: 'verified', reviewedAt: nowLabel(), reviewerNote: 'Verified by recruiter.' };
-    }));
-    if (candidateId) window.setTimeout(() => updateCandidateDocumentState(candidateId), 0);
+    setDocuments((current) => {
+      const next = current.map((document) => {
+        if (document.id !== documentId) return document;
+        candidateId = document.candidateId;
+        return { ...document, status: 'verified' as const, reviewedAt: nowLabel(), reviewerNote: 'Verified by recruiter.' };
+      });
+      if (candidateId) syncCandidateDocumentState(candidateId, next);
+      return next;
+    });
   };
 
   const requestChanges = (documentId: string, note: string) => {
