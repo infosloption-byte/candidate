@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { AuthContext } from './AuthContextObject';
-import type { AuthAction, AuthState } from '../types/auth';
+import type { AuthState } from '../types/auth';
+import type { AuthAction } from '../types/authState';
 import { defaultAuthState } from '../types/authState';
 
 const STORAGE_KEY = 'buildhire.auth';
