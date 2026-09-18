@@ -60,7 +60,10 @@ const normalizeWeights = (value: SelectionScoringWeights): SelectionScoringWeigh
   return normalized;
 };
 
-export const loadSelectionJobs = async (): Promise<SelectionJob[]> => parseArray(window.localStorage.getItem(JOBS_KEY), selectionJobSeed);
+const normalizeJob = (job: SelectionJob): SelectionJob => ({ ...job, status: job.status ?? 'open', preferredSkills: job.preferredSkills ?? [] });
+
+export const loadSelectionJobs = async (): Promise<SelectionJob[]> => parseArray(window.localStorage.getItem(JOBS_KEY), selectionJobSeed).map(normalizeJob);
+export const saveSelectionJobs = async (jobs: SelectionJob[]): Promise<void> => { window.localStorage.setItem(JOBS_KEY, JSON.stringify(jobs)); };
 export const loadSelectionRecords = async (): Promise<SelectionRecord[]> => parseArray(window.localStorage.getItem(RECORDS_KEY), recordSeed);
 export const loadSelectionHistory = async (): Promise<SelectionHistoryEntry[]> => parseHistory(window.localStorage.getItem(HISTORY_KEY));
 export const loadSelectionScoring = async (): Promise<Record<string, SelectionScoringWeights>> => {
