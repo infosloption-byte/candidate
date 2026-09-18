@@ -1,4 +1,4 @@
-export type AppView = 'dashboard' | 'candidates' | 'interviews' | 'jobs' | 'selection' | 'reports' | 'settings';
+export type AppView = 'dashboard' | 'candidates' | 'interviews' | 'jobs' | 'selection' | 'allocation' | 'documents' | 'reports' | 'notifications' | 'settings' | 'candidate-portal';
 export interface AppState { activeView: AppView; sidebarCollapsed: boolean; mobileNavOpen: boolean; }
 export type AppAction =
   | { type: 'SET_VIEW'; view: AppView }
