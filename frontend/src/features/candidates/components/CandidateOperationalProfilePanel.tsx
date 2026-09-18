@@ -1,6 +1,6 @@
 import { usePermissions } from '../../auth/hooks/usePermissions';
 import type { Candidate } from '../types/candidate';
-import type { CandidateOperationalProfileController } from '../hooks/useCandidateOperationalProfile';
+import type { CandidateOperationalProfileController, CandidateOperationalProfileDraft } from '../hooks/useCandidateOperationalProfile';
 
 interface CandidateOperationalProfilePanelProps {
   candidate: Candidate;
@@ -45,7 +45,7 @@ export const CandidateOperationalProfilePanel = ({ candidate, controller }: Cand
           ['emergencyName','Emergency contact name','text'],['emergencyPhone','Emergency contact phone','tel'],
           ['emergencyRelationship','Emergency relationship','text'],['recruiterOwnerName','Recruiter owner','text'],
           ['sourceCampaign','Source campaign / referral','text']
-        ].map(([key,label,type]) => <label key={key} className="field-label">{label}<input value={controller.draft[key as keyof typeof controller.draft]} onChange={(event) => controller.actions.update(key as keyof typeof controller.draft, event.target.value)} type={type} className="field-input"/></label>)}
+        ].map(([key,label,type]) => <label key={key} className="field-label">{label}<input value={controller.draft[key as keyof typeof controller.draft]} onChange={(event) => controller.actions.update(key as keyof typeof controller.draft, event.target.value as CandidateOperationalProfileDraft[typeof key])} type={type} className="field-input"/></label>)}
         <label className="field-label">Visa / work-permit status<select value={controller.draft.visaStatus} onChange={(event) => controller.actions.update('visaStatus', event.target.value as typeof controller.draft.visaStatus)} className="field-input"><option>Not started</option><option>Pending</option><option>Approved</option><option>Expired</option><option>Not required</option></select></label>
         <label className="field-label">Preferred destination countries<input value={controller.draft.preferredDestinationCountries} onChange={(event) => controller.actions.update('preferredDestinationCountries', event.target.value)} className="field-input" placeholder="UAE, Qatar, Oman"/></label>
         <label className="field-label sm:col-span-2">Trade certificate details<textarea value={controller.draft.tradeCertificateDetails} onChange={(event) => controller.actions.update('tradeCertificateDetails', event.target.value)} className="field-input min-h-20"/></label>
