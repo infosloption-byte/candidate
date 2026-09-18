@@ -1,7 +1,7 @@
 import { Icon } from '../../../shared/components/Icon';
 import { useAppContext } from '../../../app/hooks/useAppContext';
 import { useSettingsWorkspace } from '../hooks/useSettingsWorkspace';
-import { usePermissions } from '../../features/auth/hooks/usePermissions';
+import { usePermissions } from '../../auth/hooks/usePermissions';
 
 const tabs = [
   ['recruitment', 'Professions & skills'],
