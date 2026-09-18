@@ -43,7 +43,7 @@ export const CandidateBulkImportDrawer = ({ open, existingCandidates, onClose, o
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-700">Candidate acquisition</p>
               <h2 id={titleId} className="mt-1 text-xl font-black tracking-tight text-slate-950">Bulk import candidates</h2>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">Recruiters and system administrators can upload a CSV, review validation and duplicate signals, and import clean records together.</p>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">Recruiters and system administrators can upload CSV or XLSX files, review validation and duplicate signals, and import clean records together.</p>
             </div>
             <button type="button" onClick={onClose} aria-label="Close" title="Close" className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"><Icon name="x" size={18} /></button>
           </div>
@@ -60,8 +60,8 @@ export const CandidateBulkImportDrawer = ({ open, existingCandidates, onClose, o
                 <h3 id={`${titleId}-file`} className="text-sm font-black text-slate-900">1. Upload source list</h3>
                 <p className="mt-1 text-xs leading-5 text-slate-500">Common recruitment column names are matched automatically. The original spreadsheet row number stays attached to every preview result.</p>
               </div>
-              <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importer.actions.parseFile(file); event.currentTarget.value = ''; }} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importer.parsing} title="Choose a CSV candidate list" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Icon name="file" size={15} />{importer.parsing ? 'Reading…' : importer.fileName ? 'Replace CSV' : 'Choose CSV file'}</button>
+              <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importer.actions.parseFile(file); event.currentTarget.value = ''; }} />
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importer.parsing} title="Choose a CSV or XLSX candidate list" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Icon name="file" size={15} />{importer.parsing ? 'Reading…' : importer.fileName ? 'Replace file' : 'Choose CSV / XLSX'}</button>
             </div>
             {importer.fileName && <p className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">{importer.fileName}</p>}
           </section>
