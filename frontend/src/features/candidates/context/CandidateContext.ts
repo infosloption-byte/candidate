@@ -49,6 +49,8 @@ export type CandidateAction =
   | { type: 'ADD_CANDIDATE'; candidate: Candidate }
   | { type: 'BULK_ADD_CANDIDATES'; candidates: Candidate[] }
   | { type: 'UPDATE_ONBOARDING'; candidateId: string; onboarding: CandidateOnboarding; journeyEvent: CandidateJourneyEvent }
+  | { type: 'UPDATE_PROFILE'; candidateId: string; changes: Partial<Candidate>; journeyEvent: CandidateJourneyEvent }
+  | { type: 'UPDATE_DOCUMENTS'; candidateId: string; documents: Candidate['documents']; journeyEvent: CandidateJourneyEvent }
   | { type: 'UPDATE_STATUS'; candidateId: string; status: CandidateStatus }
   | { type: 'BULK_UPDATE_STATUS'; candidateIds: string[]; status: CandidateStatus }
   | { type: 'RECORD_INTERVIEW_OUTCOME'; candidateId: string; status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>; interviewDate: string; interviewer: string; profession: string; score: number; reason: RejectionReason | ''; note: string }
