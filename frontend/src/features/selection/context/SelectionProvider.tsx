@@ -101,7 +101,7 @@ export const SelectionProvider = ({ children }: PropsWithChildren) => {
     void hydrate();
     return () => { cancelled = true; };
   }, [state.loadAttempt]);
-  useEffect(() => { if (state.loadState !== 'success') return; void saveSelectionJobs(state.jobs).catch(() => undefined); void saveSelectionRecords(state.records).catch(() => undefined); void saveSelectionHistory(state.history).catch(() => undefined); void saveSelectionApproval(state.approvalByJob).catch(() => undefined); void saveSelectionScoring(state.scoringByJob).catch(() => undefined); }, [state.records, state.history, state.approvalByJob, state.scoringByJob, state.loadState]);
+  useEffect(() => { if (state.loadState !== 'success') return; void saveSelectionJobs(state.jobs).catch(() => undefined); void saveSelectionRecords(state.records).catch(() => undefined); void saveSelectionHistory(state.history).catch(() => undefined); void saveSelectionApproval(state.approvalByJob).catch(() => undefined); void saveSelectionScoring(state.scoringByJob).catch(() => undefined); }, [state.jobs, state.records, state.history, state.approvalByJob, state.scoringByJob, state.loadState]);
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
 };
