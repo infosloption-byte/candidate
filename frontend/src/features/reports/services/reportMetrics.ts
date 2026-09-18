@@ -41,8 +41,20 @@ const toBuckets = (entries: Array<[string, number]>): ReportBucket[] => {
 const candidateDocumentReady = (candidate: Candidate): boolean =>
   Object.values(candidate.documents).every((status) => status === 'verified');
 
-const currentInterviewScore = (candidate: Candidate): number =>
-  typeof candidate.lastInterview?.score === 'number' ? candidate.lastInterview.score : 0;
+const interviewScorePercent = (interview: Interview, candidate: Candidate | undefined): number => {
+  const scoredCriteria = interview.scorecard.criteria.filter(
+    (criterion) => typeof criterion.score === 'number' && criterion.score >= 1,
+  );
+  if (scoredCriteria.length > 0) {
+    const weightedTotal = scoredCriteria.reduce(
+      (sum, criterion) => sum + (criterion.score as number) * criterion.weight,
+      0,
+    );
+    const weightTotal = scoredCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
+    if (weightTotal > 0) return Math.round((weightedTotal / (weightTotal * 5)) * 100);
+  }
+  return typeof candidate?.lastInterview?.score === 'number' ? candidate.lastInterview.score : 0;
+};
 
 export const buildReportSnapshot = (
   candidates: Candidate[],
@@ -71,9 +83,11 @@ export const buildReportSnapshot = (
     const groupForward = groupInterviews.filter((interview) =>
       interview.decision.decision === 'selected' || interview.decision.decision === 'reserve',
     );
-    const scoreValues = groupCandidates
-      .filter((candidate) => groupInterviews.some((interview) => interview.candidateId === candidate.id))
-      .map(currentInterviewScore)
+    const scoreValues = groupInterviews
+      .map((interview) => interviewScorePercent(
+        interview,
+        groupCandidates.find((candidate) => candidate.id === interview.candidateId),
+      ))
       .filter((score) => score > 0);
 
     return {
