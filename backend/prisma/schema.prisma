@@ -1,0 +1,446 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  RECRUITER
+  INTERVIEWER
+  MANAGER
+  CANDIDATE
+}
+
+enum CandidateStatus {
+  NEW
+  SCREENING
+  INTERVIEW
+  SELECTED
+  RESERVE
+  REJECTED
+}
+
+enum CandidateSource {
+  WALK_IN
+  REFERRAL
+  AGENCY
+  EXISTING_DATABASE
+  BULK_IMPORT
+}
+
+enum EnglishLevel {
+  NOT_ASSESSED
+  BASIC
+  WORKING
+  GOOD
+  STRONG
+}
+
+enum Availability {
+  AVAILABLE_NOW
+  WITHIN_2_WEEKS
+  WITHIN_1_MONTH
+  NOT_AVAILABLE
+}
+
+enum CandidateOnboardingStatus {
+  NOT_STARTED
+  INVITED
+  IN_PROGRESS
+  SUBMITTED
+  NEEDS_CHANGES
+  COMPLETED
+}
+
+enum VisaStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  EXPIRED
+  NOT_REQUIRED
+}
+
+enum CandidatePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum DocumentType {
+  PASSPORT
+  CV
+  TRADE_CERTIFICATE
+  VISA
+  OTHER
+}
+
+enum DocumentState {
+  VERIFIED
+  NEEDS_REVIEW
+  MISSING
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  FILLED
+  CLOSED
+}
+
+enum InterviewType {
+  SCREENING
+  TECHNICAL
+  PRACTICAL
+  CLIENT
+  FINAL
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  IN_PROGRESS
+  EVALUATION
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum InterviewDecision {
+  PENDING
+  SELECTED
+  RESERVE
+  REJECTED
+}
+
+enum SelectionDecision {
+  RECOMMENDED
+  SELECTED
+  RESERVE
+  REJECTED
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  RETURNED
+}
+
+enum JourneyTone {
+  NEUTRAL
+  POSITIVE
+  WARNING
+  NEGATIVE
+}
+
+model User {
+  id                   String                  @id @default(uuid()) @db.VarChar(36)
+  name                 String                  @db.VarChar(160)
+  email                String                  @unique @db.VarChar(255)
+  passwordHash         String                  @db.VarChar(255)
+  role                 UserRole
+  active               Boolean                 @default(true)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  ownedCandidates      Candidate[]             @relation("RecruiterOwner")
+  uploadedDocuments    CandidateDocument[]     @relation("DocumentUploader")
+  verifiedDocuments    CandidateDocument[]     @relation("DocumentVerifier")
+  createdInterviews    Interview[]             @relation("InterviewCreator")
+  interviewAssignments InterviewerAssignment[]
+  decisions            SelectionRecord[]       @relation("SelectionDecider")
+  approvals            SelectionApproval[]     @relation("ApprovalActor")
+  notifications        Notification[]
+  auditEvents          AuditEvent[]
+
+  @@index([role, active])
+}
+
+model Candidate {
+  id                             String                     @id @default(uuid()) @db.VarChar(36)
+  reference                      String                     @unique @db.VarChar(32)
+  name                           String                     @db.VarChar(160)
+  phone                          String                     @db.VarChar(60)
+  phoneNormalized                String                     @db.VarChar(60)
+  passportNumber                 String?                    @db.VarChar(80)
+  passportNumberNormalized       String?                    @unique @db.VarChar(80)
+  age                            Int?
+  location                       String                     @db.VarChar(160)
+  profession                     String                     @db.VarChar(120)
+  originalProfession             String                     @db.VarChar(120)
+  experienceYears                Int
+  secondarySkills                Json
+  overseasCountries              Json
+  tags                           Json
+  englishLevel                   EnglishLevel
+  locationReady                  Boolean                    @default(false)
+  drivingLicense                 Boolean                    @default(false)
+  availability                   Availability
+  source                         CandidateSource
+  status                         CandidateStatus             @default(NEW)
+  onboardingStatus               CandidateOnboardingStatus  @default(NOT_STARTED)
+  nationality                    String?                    @db.VarChar(100)
+  dateOfBirth                    DateTime?
+  passportExpiry                 DateTime?
+  visaStatus                     VisaStatus?
+  preferredDestinationCountries  Json
+  expectedSalary                 String?                    @db.VarChar(80)
+  salaryCurrency                 String?                    @db.VarChar(12)
+  noticePeriod                   String?                    @db.VarChar(80)
+  yearsInCurrentTrade            Int?
+  tradeCertificateDetails        String?                    @db.Text
+  drivingLicenseCategories       Json
+  preferredInterviewLanguage     String?                    @db.VarChar(80)
+  emergencyName                  String?                    @db.VarChar(160)
+  emergencyPhone                 String?                    @db.VarChar(60)
+  emergencyRelationship          String?                    @db.VarChar(80)
+  recruiterOwnerId               String?                    @db.VarChar(36)
+  priority                       CandidatePriority          @default(NORMAL)
+  sourceCampaign                 String?                    @db.VarChar(160)
+  fitScore                       Int                        @default(0)
+  rejectionReason                String?                    @db.VarChar(120)
+  rejectionNote                  String?                    @db.Text
+  createdAt                      DateTime                   @default(now())
+  updatedAt                      DateTime                   @updatedAt
+
+  recruiterOwner                User?                       @relation("RecruiterOwner", fields: [recruiterOwnerId], references: [id], onDelete: SetNull)
+  documents                     CandidateDocument[]
+  interviews                    Interview[]
+  journey                       CandidateJourneyEvent[]
+  selections                    SelectionRecord[]
+  notifications                 Notification[]
+
+  @@index([status, profession])
+  @@index([phoneNormalized])
+  @@index([recruiterOwnerId])
+}
+
+model CandidateJourneyEvent {
+  id          String       @id @default(uuid()) @db.VarChar(36)
+  candidateId String       @db.VarChar(36)
+  title       String       @db.VarChar(160)
+  detail      String       @db.Text
+  tone        JourneyTone
+  occurredAt  DateTime     @default(now())
+  candidate   Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, occurredAt])
+}
+
+model CandidateDocument {
+  id             String        @id @default(uuid()) @db.VarChar(36)
+  candidateId    String        @db.VarChar(36)
+  type           DocumentType
+  state          DocumentState @default(NEEDS_REVIEW)
+  fileName       String?       @db.VarChar(255)
+  storageKey     String?       @unique @db.VarChar(500)
+  mimeType       String?       @db.VarChar(120)
+  sizeBytes      BigInt?
+  version        Int           @default(1)
+  expiresAt      DateTime?
+  uploadedById   String?       @db.VarChar(36)
+  verifiedById   String?       @db.VarChar(36)
+  verifiedAt     DateTime?
+  reviewNote     String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  candidate      Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  uploadedBy     User?         @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  verifiedBy     User?         @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, type, version])
+  @@index([state, expiresAt])
+}
+
+model Job {
+  id                  String             @id @default(uuid()) @db.VarChar(36)
+  title               String             @db.VarChar(160)
+  project             String             @db.VarChar(160)
+  location            String             @db.VarChar(160)
+  openings            Int
+  profession          String             @db.VarChar(120)
+  requiredExperience  Int
+  requiredSkills      Json
+  preferredSkills     Json
+  client              String             @db.VarChar(160)
+  status              JobStatus          @default(DRAFT)
+  startDate           DateTime?
+  deadline            DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  selections          SelectionRecord[]
+  approval            SelectionApproval?
+
+  @@index([status, profession])
+  @@index([deadline])
+}
+
+model Interview {
+  id              String                     @id @default(uuid()) @db.VarChar(36)
+  reference       String                     @unique @db.VarChar(32)
+  candidateId     String                     @db.VarChar(36)
+  type            InterviewType
+  status          InterviewStatus             @default(SCHEDULED)
+  startsAt        DateTime
+  durationMinutes Int
+  location        String                     @db.VarChar(255)
+  notes           String                     @db.Text
+  decision        InterviewDecision           @default(PENDING)
+  decisionReason  String?                    @db.VarChar(160)
+  decisionNote    String?                    @db.Text
+  createdById     String                     @db.VarChar(36)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  candidate       Candidate                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdBy       User                       @relation("InterviewCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  interviewers    InterviewerAssignment[]
+  scorecard       InterviewScorecard?
+  practicalItems  PracticalTestItem[]
+  reschedules     InterviewReschedule[]
+  decisionHistory InterviewDecisionHistory[]
+
+  @@index([candidateId, startsAt])
+  @@index([status, startsAt])
+}
+
+model InterviewerAssignment {
+  interviewId String                 @db.VarChar(36)
+  userId      String                 @db.VarChar(36)
+  assignedAt  DateTime               @default(now())
+  interview   Interview              @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([interviewId, userId])
+  @@index([userId, assignedAt])
+}
+
+model InterviewScorecard {
+  id           String                  @id @default(uuid()) @db.VarChar(36)
+  interviewId  String                  @unique @db.VarChar(36)
+  templateId   String                  @db.VarChar(100)
+  interview    Interview               @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  criteria     InterviewScoreCriterion[]
+
+  @@index([templateId])
+}
+
+model InterviewScoreCriterion {
+  id          String              @id @default(uuid()) @db.VarChar(36)
+  scorecardId String              @db.VarChar(36)
+  label       String              @db.VarChar(160)
+  weight      Int
+  score       Int?
+  note        String?             @db.Text
+  scorecard   InterviewScorecard  @relation(fields: [scorecardId], references: [id], onDelete: Cascade)
+
+  @@index([scorecardId])
+}
+
+model PracticalTestItem {
+  id          String        @id @default(uuid()) @db.VarChar(36)
+  interviewId String        @db.VarChar(36)
+  label       String        @db.VarChar(200)
+  required    Boolean
+  result      String        @db.VarChar(40)
+  note        String?       @db.Text
+  interview   Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
+}
+
+model InterviewReschedule {
+  id                   String    @id @default(uuid()) @db.VarChar(36)
+  interviewId          String    @db.VarChar(36)
+  fromStartsAt         DateTime
+  fromDurationMinutes  Int
+  fromInterviewerIds   Json
+  toStartsAt           DateTime
+  toInterviewerIds     Json
+  reason               String?   @db.Text
+  undoneAt             DateTime?
+  changedAt            DateTime  @default(now())
+  interview            Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId, changedAt])
+}
+
+model InterviewDecisionHistory {
+  id             String            @id @default(uuid()) @db.VarChar(36)
+  interviewId    String            @db.VarChar(36)
+  fromDecision   InterviewDecision
+  toDecision     InterviewDecision
+  reason         String            @db.VarChar(160)
+  note           String            @db.Text
+  changedAt      DateTime          @default(now())
+  interview      Interview         @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId, changedAt])
+}
+
+model SelectionRecord {
+  id          String            @id @default(uuid()) @db.VarChar(36)
+  candidateId String            @db.VarChar(36)
+  jobId       String            @db.VarChar(36)
+  decision    SelectionDecision
+  reason      String            @db.VarChar(160)
+  note        String            @db.Text
+  decidedAt   DateTime          @default(now())
+  decidedById String            @db.VarChar(36)
+
+  candidate   Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  decidedBy   User              @relation("SelectionDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@unique([candidateId, jobId])
+  @@index([jobId, decision])
+}
+
+model SelectionApproval {
+  id          String         @id @default(uuid()) @db.VarChar(36)
+  jobId       String         @unique @db.VarChar(36)
+  status      ApprovalStatus @default(DRAFT)
+  note        String         @db.Text
+  changedAt   DateTime       @default(now())
+  changedById String         @db.VarChar(36)
+
+  job         Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  changedBy   User           @relation("ApprovalActor", fields: [changedById], references: [id], onDelete: Restrict)
+}
+
+model Notification {
+  id          String     @id @default(uuid()) @db.VarChar(36)
+  userId      String     @db.VarChar(36)
+  candidateId String?    @db.VarChar(36)
+  type        String     @db.VarChar(80)
+  title       String     @db.VarChar(200)
+  message     String     @db.Text
+  readAt      DateTime?
+  createdAt   DateTime   @default(now())
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  actorUserId String?  @db.VarChar(36)
+  entityType  String   @db.VarChar(80)
+  entityId    String   @db.VarChar(36)
+  action      String   @db.VarChar(120)
+  metadata    Json
+  occurredAt  DateTime @default(now())
+
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([actorUserId, occurredAt])
+}
