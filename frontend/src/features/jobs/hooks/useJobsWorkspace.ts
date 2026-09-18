@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSelectionContext } from '../../selection/context/useSelectionContext';
 import type { SelectionJob } from '../../selection/types/selection';
 import type { JobDraft } from '../types/job';
+import { validateJobDraft } from '../services/jobValidation';
 
 const blankDraft: JobDraft = {
   title: '',
@@ -79,8 +80,8 @@ export const useJobsWorkspace = () => {
   };
 
   const save = () => {
+    if (validateJobDraft(draft).length > 0) return false;
     const job = toJob(draft, editingId ?? 'job-' + Date.now());
-    if (!job.title || !job.project || !job.location || !job.client || !job.profession) return false;
     dispatch({ type: editingId ? 'UPDATE_JOB' : 'CREATE_JOB', job } as const);
     setEditorOpen(false);
     setEditingId(null);
