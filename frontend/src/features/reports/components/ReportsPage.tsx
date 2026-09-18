@@ -81,3 +81,4 @@ export const ReportsPage = () => {
       <BarList title="Rejection reasons" description="Structured rejection reasons recorded for candidates in the reporting cohort." items={snapshot.rejectionBreakdown} />
     </div>
   </section>;
+};
