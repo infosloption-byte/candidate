@@ -1,14 +1,17 @@
 import { Icon } from '../../../shared/components/Icon';
 import { useAllocationWorkspace } from '../hooks/useAllocationWorkspace';
+import { usePermissions } from '../../auth/hooks/usePermissions';
 
 export const AllocationPage = () => {
   const { state, rows, selectedRows, targetJob, targetJobId, selectedIds, reason, note, actions } = useAllocationWorkspace();
+  const { can } = usePermissions();
+  const canManage = can('allocation.manage');
 
   if (state.jobs.length === 0) return <section className="mx-auto max-w-3xl p-6"><div className="rounded-3xl border border-slate-200 bg-white p-8 text-center"><Icon name="briefcase" size={30} className="mx-auto text-slate-400"/><h1 className="mt-4 text-xl font-black">Create a job before allocating candidates</h1><p className="mt-2 text-sm text-slate-500">Allocation compares candidates against job requirements.</p></div></section>;
 
   return <section className="mx-auto max-w-7xl p-4 sm:p-6">
     <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700">Candidate allocation</p><h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-4xl">Match candidates to the right open job.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review requirement fit across open jobs, select candidates and create a recommended record in the target job without losing previous history.</p></div><div className="rounded-2xl bg-slate-950 px-4 py-3 text-white"><p className="text-[10px] uppercase tracking-wider text-slate-400">Selected for allocation</p><p className="mt-1 text-2xl font-black">{selectedRows.length}</p></div></div>
-      <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-[1fr_1fr]"><label className="field-label">Target job<select value={targetJobId} onChange={(e)=>{actions.setTargetJobId(e.target.value);actions.setReason('Allocated from cross-job allocation review');actions.setNote('');setTimeout(()=>undefined,0)}} className="field-input"><option value="">Choose job</option>{state.jobs.filter((job)=>(job.status??'open')!=='closed').map((job)=><option key={job.id} value={job.id}>{job.title} · {job.openings} openings</option>)}</select></label><div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><strong className="text-slate-900">{targetJob?.profession}</strong> · {targetJob?.requiredExperience}+ years · {targetJob?.requiredSkills.join(', ')||'No mandatory skills'}</div></div>
+      <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-[1fr_1fr]"><label className="field-label">Target job<select value={targetJobId} onChange={(e)=>{if(!canManage)return;actions.setTargetJobId(e.target.value);actions.setReason('Allocated from cross-job allocation review');actions.setNote('');setTimeout(()=>undefined,0)}} className="field-input"><option value="">Choose job</option>{state.jobs.filter((job)=>(job.status??'open')!=='closed').map((job)=><option key={job.id} value={job.id}>{job.title} · {job.openings} openings</option>)}</select></label><div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><strong className="text-slate-900">{targetJob?.profession}</strong> · {targetJob?.requiredExperience}+ years · {targetJob?.requiredSkills.join(', ')||'No mandatory skills'}</div></div>
     </header>
 
     <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_320px]">
@@ -19,9 +22,9 @@ export const AllocationPage = () => {
 
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4">
         <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Allocation plan</p><h2 className="mt-1 text-lg font-black text-slate-950">{targetJob?.title}</h2><p className="mt-1 text-xs text-slate-500">{targetJob?.openings} openings · {targetJob?.location}</p>
-        <div className="mt-5 space-y-3"><label className="field-label">Allocation reason<textarea value={reason} onChange={(e)=>actions.setReason(e.target.value)} rows={2} className="field-input"/></label><label className="field-label">Recruiter note<textarea value={note} onChange={(e)=>actions.setNote(e.target.value)} rows={3} placeholder="Optional context for the receiving shortlist" className="field-input"/></label></div>
+        <div className="mt-5 space-y-3"><label className="field-label">Allocation reason<textarea value={reason} onChange={(e)=>canManage&&actions.setReason(e.target.value)} rows={2} className="field-input"/></label><label className="field-label">Recruiter note<textarea value={note} onChange={(e)=>canManage&&actions.setNote(e.target.value)} rows={3} placeholder="Optional context for the receiving shortlist" className="field-input"/></label></div>
         <div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs"><div className="flex justify-between"><span className="text-slate-500">Selected</span><strong>{selectedRows.length}</strong></div><div className="mt-1 flex justify-between"><span className="text-slate-500">Target openings</span><strong>{targetJob?.openings??0}</strong></div></div>
-        <button type="button" disabled={!targetJob || selectedRows.length===0 || selectedRows.length > (targetJob?.openings??0)} onClick={actions.commit} title="Create recommended allocations for selected candidates" className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white disabled:opacity-40">Allocate {selectedRows.length} candidate{selectedRows.length===1?'':'s'}</button>
+        <button type="button" disabled={!canManage || !targetJob || selectedRows.length===0 || selectedRows.length > (targetJob?.openings??0)} onClick={actions.commit} title={canManage ? "Create recommended allocations for selected candidates" : "Allocation is restricted for this role"} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white disabled:opacity-40">Allocate {selectedRows.length} candidate{selectedRows.length===1?'':'s'}</button>
       </aside>
     </div>
   </section>;
