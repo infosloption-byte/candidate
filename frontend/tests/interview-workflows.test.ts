@@ -95,7 +95,7 @@ describe('single interview scheduling', () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.reasons.some((reason) => reason.includes('Interviewer busy'))).toBe(true);
+    expect(result.reasons.some((reason) => reason.includes('Interviewer overlap'))).toBe(true);
   });
 });
 
