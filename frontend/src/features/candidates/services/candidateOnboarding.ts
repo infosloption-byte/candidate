@@ -62,6 +62,7 @@ export const buildOnboardingUpdate = (
       submittedAt: status === 'submitted' || status === 'completed' ? (previous?.submittedAt ?? now) : previous?.submittedAt,
       reviewedAt: status === 'completed' ? now : previous?.reviewedAt,
       reviewerNote: reviewerNote.trim() || previous?.reviewerNote,
+      invitation: previous?.invitation,
     },
     journeyEvent: {
       id: `onboarding-${Date.now()}-${candidate.id}`,
