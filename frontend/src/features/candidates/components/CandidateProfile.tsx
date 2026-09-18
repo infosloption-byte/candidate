@@ -3,7 +3,7 @@ import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { CandidateDuplicatePanel } from './CandidateDuplicatePanel';
 import { CandidateTagEditor } from './CandidateTagEditor';
 import { CandidateOperationalProfilePanel } from './CandidateOperationalProfilePanel';
-import type { useCandidateOperationalProfile } from '../hooks/useCandidateOperationalProfile';
+import type { CandidateOperationalProfileController } from '../hooks/useCandidateOperationalProfile';
 import type { Candidate, CandidateDuplicateMatch, CandidateStatus, DocumentState } from '../types/candidate';
 
 interface CandidateProfileProps {
@@ -20,7 +20,7 @@ interface CandidateProfileProps {
   onReserve?: (id: string) => void;
   onReject?: (id: string) => void;
   onOpenOnboarding?: (id: string) => void;
-  operationalProfile: ReturnType<typeof useCandidateOperationalProfile>;
+  operationalProfile: CandidateOperationalProfileController;
 }
 
 const statusCopy: Record<CandidateStatus, { title: string; text: string }> = {
@@ -55,7 +55,7 @@ export const CandidateProfile = ({ candidate, allCandidates, duplicateMatches, o
           <button type="button" aria-label="More candidate actions" className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-slate-100"><Icon name="more" size={18}/></button>
         </div>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-800">{copy.title}</p><p className="mt-0.5 text-xs leading-5 text-slate-500">{copy.text}</p></div><div className="flex items-center gap-2"><div className="grid size-11 place-items-center rounded-xl bg-white font-black text-slate-900 shadow-sm">{candidate.fitScore ? `${candidate.fitScore}%` : '—'}</div><div><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Job fit</p><p className="text-xs font-bold text-slate-700">Based on current profile</p></div></div></div></div>
-        <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onOpenOnboarding(candidate.id)} title="Open candidate onboarding workspace" className="rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-xs font-bold text-cyan-800 hover:bg-cyan-100">Onboarding</button>}
+        <div className="mt-3 flex flex-wrap gap-2">{onOpenOnboarding && <button type="button" onClick={() => onOpenOnboarding(candidate.id)} title="Open candidate onboarding workspace" className="rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-xs font-bold text-cyan-800 hover:bg-cyan-100">Onboarding</button>}
           {canScreen && onScreen && <button type="button" onClick={() => onScreen(candidate.id)} className="rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-slate-800">Start screening</button>}
           {canInterview && onInterview && <button type="button" onClick={() => onInterview(candidate.id)} className="rounded-xl bg-cyan-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-cyan-700">Schedule interview</button>}
           {canDecide && onSelect && onReserve && onReject && <><button type="button" onClick={() => onSelect(candidate.id)} className="rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700">Select</button><button type="button" onClick={() => onReserve(candidate.id)} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Reserve</button><button type="button" onClick={() => onReject(candidate.id)} className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100">Reject</button></>}
