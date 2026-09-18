@@ -3,7 +3,7 @@ import { useAppContext } from '../../../app/hooks/useAppContext';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import { useRef } from 'react';
 import { useJobsWorkspace } from '../hooks/useJobsWorkspace';
-import { usePermissions } from '../../features/auth/hooks/usePermissions';
+import { usePermissions } from '../../auth/hooks/usePermissions';
 
 const statusTone: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-600',
