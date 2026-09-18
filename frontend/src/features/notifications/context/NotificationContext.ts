@@ -1,5 +1,6 @@
 import type { Dispatch } from 'react';
-import type { NotificationAction, NotificationState } from '../types/notifications';
+import type { NotificationState } from '../types/notificationState';
+import type { NotificationAction } from '../types/notificationState';
 
 export interface NotificationContextValue {
   state: NotificationState;
