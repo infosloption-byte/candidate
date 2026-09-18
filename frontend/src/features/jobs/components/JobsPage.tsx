@@ -1,5 +1,7 @@
 import { Icon } from '../../../shared/components/Icon';
 import { useAppContext } from '../../../app/hooks/useAppContext';
+import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
+import { useRef } from 'react';
 import { useJobsWorkspace } from '../hooks/useJobsWorkspace';
 
 const statusTone: Record<string, string> = {
@@ -13,9 +15,11 @@ const statusTone: Record<string, string> = {
 export const JobsPage = () => {
   const { dispatch } = useAppContext();
   const { state, visibleJobs, search, status, editorOpen, editingId, draft, actions } = useJobsWorkspace();
+  const editorRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({ enabled: editorOpen, onEscape: actions.closeEditor, containerRef: editorRef });
 
   if (state.loadState === 'loading') return <section className="mx-auto max-w-7xl p-6"><div className="animate-pulse space-y-4"><div className="h-32 rounded-3xl bg-slate-200"/><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[1,2,3].map((n)=><div key={n} className="h-56 rounded-2xl bg-slate-200"/>)}</div></div></section>;
-  if (state.loadState === 'error') return <section className="mx-auto max-w-3xl p-6"><div className="rounded-3xl border border-rose-200 bg-white p-8 text-center"><Icon name="alert" size={28} className="mx-auto text-rose-600"/><h1 className="mt-4 text-xl font-black text-slate-950">Jobs could not load</h1><p className="mt-2 text-sm text-slate-500">{state.errorMessage}</p><button type="button" onClick={actions.openCreate} title="Create a job requirement" className="mt-5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">Create job</button></div></section>;
+  if (state.loadState === 'error') return <section className="mx-auto max-w-3xl p-6"><div className="rounded-3xl border border-rose-200 bg-white p-8 text-center"><Icon name="alert" size={28} className="mx-auto text-rose-600"/><h1 className="mt-4 text-xl font-black text-slate-950">Jobs could not load</h1><p className="mt-2 text-sm text-slate-500">{state.errorMessage}</p><div className="mt-5 flex justify-center gap-2"><button type="button" onClick={actions.retryLoad} title="Retry loading jobs" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700"><Icon name="refresh" size={15}/>Retry</button><button type="button" onClick={actions.openCreate} title="Create a job requirement" className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">Create job</button></div></div></section>;
 
   return <section className="mx-auto max-w-7xl p-4 sm:p-6">
     <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
@@ -34,7 +38,7 @@ export const JobsPage = () => {
       })}
     </div>
 
-    {editorOpen && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-2 sm:items-center sm:justify-center sm:p-6"><div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7" role="dialog" aria-modal="true" aria-labelledby="job-editor-title"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Job requirement</p><h2 id="job-editor-title" className="mt-1 text-xl font-black text-slate-950">{editingId ? 'Edit job' : 'Create job'}</h2></div><button type="button" onClick={actions.closeEditor} title="Close job editor" aria-label="Close job editor" className="grid size-9 place-items-center rounded-xl border border-slate-200"><Icon name="x" size={17}/></button></div>
+    {editorOpen && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-2 sm:items-center sm:justify-center sm:p-6"><div ref={editorRef} tabIndex={-1} className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7" role="dialog" aria-modal="true" aria-labelledby="job-editor-title"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Job requirement</p><h2 id="job-editor-title" className="mt-1 text-xl font-black text-slate-950">{editingId ? 'Edit job' : 'Create job'}</h2></div><button type="button" onClick={actions.closeEditor} title="Close job editor" aria-label="Close job editor" className="grid size-9 place-items-center rounded-xl border border-slate-200"><Icon name="x" size={17}/></button></div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {([['title','Job title'],['project','Project'],['client','Client'],['location','Location'],['profession','Profession'],['openings','Openings'],['requiredExperience','Minimum experience'] ] as const).map(([key,label])=><label key={key} className="text-xs font-bold text-slate-600">{label}<input value={draft[key]} onChange={(event)=>actions.setDraft({[key]:event.target.value})} type={key==='openings'||key==='requiredExperience'?'number':'text'} className="field-input" min={key==='openings'?'1':'0'}/></label>)}
         <label className="text-xs font-bold text-slate-600">Required skills<input value={draft.requiredSkills} onChange={(event)=>actions.setDraft({requiredSkills:event.target.value})} placeholder="Tile, Putty" className="field-input"/></label>
