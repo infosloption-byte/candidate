@@ -182,3 +182,15 @@ The candidate profile previously crashed on `candidate.journey.map(...)` when an
 ## Accessibility foundation
 
 The async state primitives and focus-management utilities are now shared building blocks. Runtime accessibility QA remains marked for real keyboard and device validation rather than being inferred from source inspection alone.
+
+
+## Frontend authentication, role permissions, invitations, operational profile and document control
+
+Completed frontend expansion:
+- ✅ Real authentication UX preview: login, role selection, forgot/reset password, change password, session expiry and logout.
+- ✅ Five frontend roles: System Admin, Recruiter, Interviewer, Manager / Approver, Candidate.
+- ✅ Central role/permission map with role-aware navigation and action gating.
+- ✅ Candidate invitation center with pending, opened, started, reminder-due, expired and cancelled states plus activity history.
+- ✅ Candidate operational profile fields for nationality, DOB, passport expiry, visa/work permit, destinations, salary, notice period, trade experience/certificates, driving licences, interview language, emergency contact, recruiter owner, priority and source campaign.
+- ✅ Operational document control with preview/download, expiry dates and warnings, version history, upload/reviewer metadata, verification timestamps, missing-document coverage and bulk follow-up.
+- ⏳ Backend authentication, secure authorization, credential recovery, invitation delivery, document storage and server-side audit enforcement remain backend milestones.
