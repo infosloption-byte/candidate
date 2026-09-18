@@ -11,23 +11,28 @@ export interface ReportBucket {
 export interface ReportProfession {
   profession: string;
   candidates: number;
-  interviewed: number;
-  passed: number;
+  interviews: number;
+  forwardDecisions: number;
   selected: number;
   averageScore: number;
 }
 
 export interface ReportSnapshot {
   rangeLabel: string;
+  scopeNote: string;
   totalCandidates: number;
   newCandidates: number;
   availableNow: number;
-  screened: number;
+  progressedCandidates: number;
   interviewed: number;
+  interviewCoverage: number;
   interviewPassRate: number;
   selected: number;
   rejected: number;
   onboardingActive: number;
+  onboardingCompleted: number;
+  onboardingCompletionRate: number;
+  documentsReady: number;
   documentsAttention: number;
   sourceBreakdown: ReportBucket[];
   pipelineBreakdown: ReportBucket[];
