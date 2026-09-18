@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { read, utils } from 'xlsx';
 import { parseCandidateImport, type CandidateImportPreview } from '../services/candidateImport';
 import type { Candidate } from '../types/candidate';
 
@@ -19,7 +20,18 @@ export const useCandidateBulkImport = (
     setParsing(true);
     setError(null);
     try {
-      const text = await file.text();
+      const lowerName = file.name.toLowerCase();
+      let text: string;
+      if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+        const workbook = read(await file.arrayBuffer(), { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) throw new Error('The spreadsheet does not contain a worksheet.');
+        const firstSheet = workbook.Sheets[firstSheetName];
+        if (!firstSheet) throw new Error('The spreadsheet worksheet could not be read.');
+        text = utils.sheet_to_csv(firstSheet);
+      } else {
+        text = await file.text();
+      }
       const parsed = parseCandidateImport(text, existingCandidates);
       if (parsed.headers.length === 0 || parsed.rows.length === 0) {
         setError('The CSV needs a header row and at least one candidate row.');
@@ -30,7 +42,7 @@ export const useCandidateBulkImport = (
       setPreview(parsed);
     } catch {
       setPreview(null);
-      setError('The CSV could not be read. Check the file and try again.');
+      setError('The candidate file could not be read. Check the CSV/XLSX format and try again.');
     } finally {
       setParsing(false);
     }
