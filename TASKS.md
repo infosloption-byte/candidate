@@ -105,9 +105,9 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Phase 5 — Backend and data
 
-- ⏳ Create Node.js + TypeScript backend under `backend/`.
-- ⏳ Define REST API contracts matching frontend domain types.
-- ⏳ Add MySQL database and migration strategy.
+- 🔄 Create Node.js + TypeScript backend under `backend/`.
+- 🔄 Define REST API contracts matching frontend domain types.
+- 🔄 Add MySQL database and migration strategy.
 - ⏳ Add authentication, roles, and permissions, including recruiter/system-admin authorization for candidate import and onboarding administration.
 - ⏳ Add server-side audit trail.
 - ⏳ Add file/document storage abstraction.
