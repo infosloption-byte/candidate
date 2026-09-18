@@ -13,6 +13,8 @@ describe('candidate intelligence and onboarding workflows', () => {
       name: 'Different Name',
       phone: '+94 71 000 0000',
       passportNumber: source.passportNumber,
+      profession: 'Welder',
+      age: 45,
     });
 
     const matches = findDuplicateMatches([source, duplicate], source.id);
