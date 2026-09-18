@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
 import { SelectionContext } from './SelectionContextObject';
-import { loadSelectionApproval, loadSelectionHistory, loadSelectionJobs, loadSelectionRecords, loadSelectionScoring, saveSelectionApproval, saveSelectionHistory, saveSelectionRecords, saveSelectionScoring } from '../services/selectionRepository';
+import { loadSelectionApproval, loadSelectionHistory, loadSelectionJobs, loadSelectionRecords, loadSelectionScoring, saveSelectionApproval, saveSelectionHistory, saveSelectionJobs, saveSelectionRecords, saveSelectionScoring } from '../services/selectionRepository';
 import { defaultSelectionScoringWeights } from '../types/selection';
 import type { ApprovalStatus, SelectionAction, SelectionHistoryEntry, SelectionRecord, SelectionScoringWeights, SelectionState } from '../types/selection';
 
@@ -37,6 +37,44 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
     case 'LOAD_ERROR': return { ...state, loadState: 'error', errorMessage: action.message };
     case 'RETRY_LOAD': return { ...state, loadState: 'loading', errorMessage: null, loadAttempt: state.loadAttempt + 1 };
     case 'SET_JOB': return { ...state, activeJobId: action.jobId, activeTab: 'recommended', selectedCandidateId: null };
+    case 'CREATE_JOB': return { ...state, jobs: [action.job, ...state.jobs], activeJobId: action.job.id };
+    case 'UPDATE_JOB': return { ...state, jobs: state.jobs.map((job) => job.id === action.job.id ? action.job : job) };
+    case 'CLOSE_JOB': return { ...state, jobs: state.jobs.map((job) => job.id === action.jobId ? { ...job, status: 'closed' } : job) };
+    case 'ALLOCATE_CANDIDATES': {
+      if (action.candidateIds.length === 0 || !state.jobs.some((job) => job.id === action.jobId)) return state;
+      const ids = Array.from(new Set(action.candidateIds));
+      const existingByCandidate = new Map(state.records.filter((record) => record.jobId === action.jobId).map((record) => [record.candidateId, record]));
+      const records: SelectionRecord[] = ids.map((candidateId) => {
+        const existing = existingByCandidate.get(candidateId);
+        return {
+          candidateId,
+          jobId: action.jobId,
+          decision: 'recommended',
+          reason: action.reason,
+          note: action.note,
+          decidedAt: action.occurredAt,
+          decidedBy: action.occurredBy,
+          ...(existing ? {} : {}),
+        };
+      });
+      const changedKeys = new Set(records.map(recordKey));
+      const historyEntries: SelectionHistoryEntry[] = ids.map((candidateId) => ({
+        candidateId,
+        jobId: action.jobId,
+        action: 'allocated',
+        fromDecision: existingByCandidate.get(candidateId)?.decision ?? null,
+        toDecision: 'recommended',
+        reason: action.reason,
+        note: action.note,
+        occurredAt: action.occurredAt,
+        occurredBy: action.occurredBy,
+      }));
+      return {
+        ...state,
+        records: [...records, ...state.records.filter((record) => !changedKeys.has(recordKey(record)))],
+        history: [...historyEntries, ...state.history],
+      };
+    }
     case 'SET_TAB': return { ...state, activeTab: action.tab, selectedCandidateId: null };
     case 'SELECT_CANDIDATE': return { ...state, selectedCandidateId: action.candidateId };
     case 'SAVE_DECISION': { const key = recordKey(action.record); const previous = state.records.find((record) => recordKey(record) === key); return { ...state, records: [action.record, ...state.records.filter((record) => recordKey(record) !== key)], history: [decisionHistory(action.record, previous), ...state.history], approvalByJob: resetApprovedJobs(state.approvalByJob, [action.record.jobId]) }; }
@@ -63,7 +101,7 @@ export const SelectionProvider = ({ children }: PropsWithChildren) => {
     void hydrate();
     return () => { cancelled = true; };
   }, [state.loadAttempt]);
-  useEffect(() => { if (state.loadState !== 'success') return; void saveSelectionRecords(state.records).catch(() => undefined); void saveSelectionHistory(state.history).catch(() => undefined); void saveSelectionApproval(state.approvalByJob).catch(() => undefined); void saveSelectionScoring(state.scoringByJob).catch(() => undefined); }, [state.records, state.history, state.approvalByJob, state.scoringByJob, state.loadState]);
+  useEffect(() => { if (state.loadState !== 'success') return; void saveSelectionJobs(state.jobs).catch(() => undefined); void saveSelectionRecords(state.records).catch(() => undefined); void saveSelectionHistory(state.history).catch(() => undefined); void saveSelectionApproval(state.approvalByJob).catch(() => undefined); void saveSelectionScoring(state.scoringByJob).catch(() => undefined); }, [state.records, state.history, state.approvalByJob, state.scoringByJob, state.loadState]);
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
 };
