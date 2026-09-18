@@ -32,7 +32,7 @@ export const DocumentsPage = () => {
     <div className="mt-4 grid gap-4 xl:grid-cols-[300px_1fr]">
       <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <label className="field-label px-2 py-1">Candidate</label>
-        <div className="mt-1 max-h-[62dvh] overflow-y-auto">{candidates.map((candidate) => <button key={candidate.id} type="button" onClick={() => { actions.setSelectedCandidateId(candidate.id); setSelectedDocumentIds([]); setPreviewDocumentId(null); }} title={'Open documents for ' + candidate.name} className={'w-full rounded-xl p-3 text-left ' + (selectedCandidate?.id === candidate.id ? 'bg-slate-950 text-white' : 'hover:bg-slate-50')}><p className="truncate text-xs font-bold">{candidate.name}</p><p className={'mt-1 text-[10px] ' + (selectedCandidate?.id === candidate.id ? 'text-slate-300' : 'text-slate-500')}>{candidate.reference} · {candidate.profession}</p></button>)}</div>
+        <div className="mt-1 max-h-[62dvh] overflow-y-auto">{candidates.map((candidate) => <button key={candidate.id} type="button" onClick={() => { actions.setSelectedCandidateId(candidate.id); setPreviewDocumentId(null); }} title={'Open documents for ' + candidate.name} className={'w-full rounded-xl p-3 text-left ' + (selectedCandidate?.id === candidate.id ? 'bg-slate-950 text-white' : 'hover:bg-slate-50')}><p className="truncate text-xs font-bold">{candidate.name}</p><p className={'mt-1 text-[10px] ' + (selectedCandidate?.id === candidate.id ? 'text-slate-300' : 'text-slate-500')}>{candidate.reference} · {candidate.profession}</p></button>)}</div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
