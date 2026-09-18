@@ -7,7 +7,7 @@ Frontend-first SaaS application for managing construction recruitment, candidate
 ```text
 candidate/
 ├── frontend/          # React 19 + TypeScript + Tailwind CSS MVP
-├── backend/           # Future Node.js API + MySQL application
+├── backend/           # Node.js + Fastify + Prisma + MySQL API
 ├── docs/              # Product and UX documentation
 ├── TASKS.md           # Living implementation tracker
 └── README.md
@@ -15,7 +15,20 @@ candidate/
 
 ## Current milestone
 
-The MVP is intentionally frontend-first. The current target is to prove the daily recruitment workflow with a highly responsive UX before designing the API or MySQL schema.
+The frontend MVP is now at the backend handoff point. Browser verification remains for real keyboard/device accessibility, while application development proceeds against the stabilized frontend domain contracts.
+
+### Backend
+
+- Node.js 20+ runtime
+- Fastify 5 REST API
+- TypeScript strict mode
+- Prisma ORM 7
+- MySQL / MariaDB
+- Environment-based configuration
+- Helmet security headers
+- API namespace: /api/v1
+
+The backend foundation includes typed environment configuration, the initial recruitment data model, and process/database health endpoints.
 
 ### Frontend
 
