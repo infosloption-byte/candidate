@@ -138,8 +138,37 @@ enum JourneyTone {
   NEGATIVE
 }
 
+model Tenant {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  name        String    @db.VarChar(160)
+  slug        String    @unique @db.VarChar(80)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  users       User[]
+  sessions    Session[]
+  candidates  Candidate[]
+  jobs        Job[]
+  interviews  Interview[]
+  documents   CandidateDocument[]
+  journey     CandidateJourneyEvent[]
+  assignments InterviewerAssignment[]
+  scorecards  InterviewScorecard[]
+  criteria    InterviewScoreCriterion[]
+  practicalItems PracticalTestItem[]
+  reschedules InterviewReschedule[]
+  decisionHistory InterviewDecisionHistory[]
+  selections  SelectionRecord[]
+  approvals   SelectionApproval[]
+  notifications Notification[]
+  auditEvents AuditEvent[]
+
+  @@index([active])
+}
+
 model User {
   id                   String                  @id @default(uuid()) @db.VarChar(36)
+  tenantId             String                  @db.VarChar(36)
   name                 String                  @db.VarChar(160)
   email                String                  @unique @db.VarChar(255)
   passwordHash         String                  @db.VarChar(255)
@@ -156,13 +185,32 @@ model User {
   approvals            SelectionApproval[]     @relation("ApprovalActor")
   notifications        Notification[]
   auditEvents          AuditEvent[]
+  tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([role, active])
+  @@index([tenantId, role, active])
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  tenantId   String    @db.VarChar(36)
+  userId     String    @db.VarChar(36)
+  jti        String    @unique @db.VarChar(64)
+  csrfHash   String    @db.VarChar(128)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime?
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, expiresAt])
+  @@index([tenantId, revokedAt, expiresAt])
 }
 
 model Candidate {
+  tenantId             String                  @db.VarChar(36)
   id                             String                     @id @default(uuid()) @db.VarChar(36)
-  reference                      String                     @unique @db.VarChar(32)
+  reference                      String                     @db.VarChar(32)
   name                           String                     @db.VarChar(160)
   phone                          String                     @db.VarChar(60)
   phoneNormalized                String                     @db.VarChar(60)
@@ -214,24 +262,30 @@ model Candidate {
   selections                    SelectionRecord[]
   notifications                 Notification[]
 
-  @@index([status, profession])
-  @@index([phoneNormalized])
-  @@index([recruiterOwnerId])
+  tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, reference])
+  @@unique([tenantId, passportNumberNormalized])
+  @@index([tenantId, status, profession])
+  @@index([tenantId, phoneNormalized])
+  @@index([tenantId, recruiterOwnerId])
 }
 
 model CandidateJourneyEvent {
+  tenantId             String                  @db.VarChar(36)
   id          String       @id @default(uuid()) @db.VarChar(36)
   candidateId String       @db.VarChar(36)
   title       String       @db.VarChar(160)
   detail      String       @db.Text
   tone        JourneyTone
   occurredAt  DateTime     @default(now())
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   candidate   Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
-  @@index([candidateId, occurredAt])
+  @@index([tenantId, candidateId, occurredAt])
 }
 
 model CandidateDocument {
+  tenantId             String                  @db.VarChar(36)
   id             String        @id @default(uuid()) @db.VarChar(36)
   candidateId    String        @db.VarChar(36)
   type           DocumentType
@@ -249,15 +303,17 @@ model CandidateDocument {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   candidate      Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   uploadedBy     User?         @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   verifiedBy     User?         @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
 
-  @@index([candidateId, type, version])
-  @@index([state, expiresAt])
+  @@index([tenantId, candidateId, type, version])
+  @@index([tenantId, state, expiresAt])
 }
 
 model Job {
+  tenantId             String                  @db.VarChar(36)
   id                  String             @id @default(uuid()) @db.VarChar(36)
   title               String             @db.VarChar(160)
   project             String             @db.VarChar(160)
@@ -274,16 +330,18 @@ model Job {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   selections          SelectionRecord[]
   approval            SelectionApproval?
 
-  @@index([status, profession])
-  @@index([deadline])
+  @@index([tenantId, status, profession])
+  @@index([tenantId, deadline])
 }
 
 model Interview {
+  tenantId             String                  @db.VarChar(36)
   id              String                     @id @default(uuid()) @db.VarChar(36)
-  reference       String                     @unique @db.VarChar(32)
+  reference       String                     @db.VarChar(32)
   candidateId     String                     @db.VarChar(36)
   type            InterviewType
   status          InterviewStatus             @default(SCHEDULED)
@@ -298,6 +356,7 @@ model Interview {
   createdAt       DateTime                   @default(now())
   updatedAt       DateTime                   @updatedAt
 
+  tenant          Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   candidate       Candidate                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   createdBy       User                       @relation("InterviewCreator", fields: [createdById], references: [id], onDelete: Restrict)
   interviewers    InterviewerAssignment[]
@@ -306,14 +365,17 @@ model Interview {
   reschedules     InterviewReschedule[]
   decisionHistory InterviewDecisionHistory[]
 
-  @@index([candidateId, startsAt])
-  @@index([status, startsAt])
+  @@unique([tenantId, reference])
+  @@index([tenantId, candidateId, startsAt])
+  @@index([tenantId, status, startsAt])
 }
 
 model InterviewerAssignment {
+  tenantId             String                  @db.VarChar(36)
   interviewId String                 @db.VarChar(36)
   userId      String                 @db.VarChar(36)
   assignedAt  DateTime               @default(now())
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   interview   Interview              @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -322,40 +384,47 @@ model InterviewerAssignment {
 }
 
 model InterviewScorecard {
+  tenantId             String                  @db.VarChar(36)
   id           String                  @id @default(uuid()) @db.VarChar(36)
   interviewId  String                  @unique @db.VarChar(36)
   templateId   String                  @db.VarChar(100)
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   interview    Interview               @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   criteria     InterviewScoreCriterion[]
 
-  @@index([templateId])
+  @@index([tenantId, templateId])
 }
 
 model InterviewScoreCriterion {
+  tenantId             String                  @db.VarChar(36)
   id          String              @id @default(uuid()) @db.VarChar(36)
   scorecardId String              @db.VarChar(36)
   label       String              @db.VarChar(160)
   weight      Int
   score       Int?
   note        String?             @db.Text
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   scorecard   InterviewScorecard  @relation(fields: [scorecardId], references: [id], onDelete: Cascade)
 
-  @@index([scorecardId])
+  @@index([tenantId, scorecardId])
 }
 
 model PracticalTestItem {
+  tenantId             String                  @db.VarChar(36)
   id          String        @id @default(uuid()) @db.VarChar(36)
   interviewId String        @db.VarChar(36)
   label       String        @db.VarChar(200)
   required    Boolean
   result      String        @db.VarChar(40)
   note        String?       @db.Text
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   interview   Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
-  @@index([interviewId])
+  @@index([tenantId, interviewId])
 }
 
 model InterviewReschedule {
+  tenantId             String                  @db.VarChar(36)
   id                   String    @id @default(uuid()) @db.VarChar(36)
   interviewId          String    @db.VarChar(36)
   fromStartsAt         DateTime
@@ -366,12 +435,14 @@ model InterviewReschedule {
   reason               String?   @db.Text
   undoneAt             DateTime?
   changedAt            DateTime  @default(now())
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   interview            Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
-  @@index([interviewId, changedAt])
+  @@index([tenantId, interviewId, changedAt])
 }
 
 model InterviewDecisionHistory {
+  tenantId             String                  @db.VarChar(36)
   id             String            @id @default(uuid()) @db.VarChar(36)
   interviewId    String            @db.VarChar(36)
   fromDecision   InterviewDecision
@@ -379,12 +450,14 @@ model InterviewDecisionHistory {
   reason         String            @db.VarChar(160)
   note           String            @db.Text
   changedAt      DateTime          @default(now())
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   interview      Interview         @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
-  @@index([interviewId, changedAt])
+  @@index([tenantId, interviewId, changedAt])
 }
 
 model SelectionRecord {
+  tenantId             String                  @db.VarChar(36)
   id          String            @id @default(uuid()) @db.VarChar(36)
   candidateId String            @db.VarChar(36)
   jobId       String            @db.VarChar(36)
@@ -394,15 +467,17 @@ model SelectionRecord {
   decidedAt   DateTime          @default(now())
   decidedById String            @db.VarChar(36)
 
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   candidate   Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   decidedBy   User              @relation("SelectionDecider", fields: [decidedById], references: [id], onDelete: Restrict)
 
-  @@unique([candidateId, jobId])
-  @@index([jobId, decision])
+  @@unique([tenantId, candidateId, jobId])
+  @@index([tenantId, jobId, decision])
 }
 
 model SelectionApproval {
+  tenantId             String          @db.VarChar(36)
   id          String         @id @default(uuid()) @db.VarChar(36)
   jobId       String         @unique @db.VarChar(36)
   status      ApprovalStatus @default(DRAFT)
@@ -415,6 +490,7 @@ model SelectionApproval {
 }
 
 model Notification {
+  tenantId             String                  @db.VarChar(36)
   id          String     @id @default(uuid()) @db.VarChar(36)
   userId      String     @db.VarChar(36)
   candidateId String?    @db.VarChar(36)
@@ -424,13 +500,15 @@ model Notification {
   readAt      DateTime?
   createdAt   DateTime   @default(now())
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  candidate   Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate   Candidate?  @relation(fields: [candidateId], references: [id], onDelete: SetNull)
 
-  @@index([userId, readAt, createdAt])
+  @@index([tenantId, userId, readAt, createdAt])
 }
 
 model AuditEvent {
+  tenantId             String                  @db.VarChar(36)
   id          String   @id @default(uuid()) @db.VarChar(36)
   actorUserId String?  @db.VarChar(36)
   entityType  String   @db.VarChar(80)
@@ -439,8 +517,9 @@ model AuditEvent {
   metadata    Json
   occurredAt  DateTime @default(now())
 
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
-  @@index([entityType, entityId, occurredAt])
-  @@index([actorUserId, occurredAt])
+  @@index([tenantId, entityType, entityId, occurredAt])
+  @@index([tenantId, actorUserId, occurredAt])
 }
