@@ -66,6 +66,9 @@ export const DocumentsPage = () => {
                 {canManage && document.status !== 'missing' && document.status !== 'verified' && <button type="button" onClick={() => actions.requestChanges(document.id, 'Please upload a clearer or current document.')} title="Request a replacement document" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">Request changes</button>}
               </div>
             </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+  {canManage ? <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600">Expiry <input type="date" value={document.expiresAt ?? ''} onChange={(event) => actions.setExpiry(document.id, event.target.value)} title="Set or change document expiry date" className="rounded-md border border-slate-200 px-2 py-1 text-[10px]" /></label> : document.expiresAt && <span className="text-[10px] font-semibold text-slate-500">Expiry: {document.expiresAt}</span>}
+</div>
             {document.reviewerNote && <p className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-[11px] leading-5 text-slate-600"><strong>Review note:</strong> {document.reviewerNote}</p>}
             {document.versions.length > 0 && <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2"><summary className="cursor-pointer text-[10px] font-bold text-slate-600">Version history ({document.versions.length})</summary><div className="mt-2 space-y-2">{document.versions.slice().reverse().map((version) => <div key={version.version} className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-2 text-[10px] text-slate-500"><span><strong className="text-slate-700">v{version.version}</strong> · {version.fileName}</span><span>{version.uploadedAt} · {version.uploadedBy}</span></div>)}</div></details>}
           </article>)}
