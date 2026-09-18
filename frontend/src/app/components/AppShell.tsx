@@ -18,7 +18,15 @@ export const AppShell = ({ children, searchValue, onSearch }: AppShellProps) => 
       ? 'Find the right people without losing interview context.'
       : state.activeView === 'reports'
         ? 'Operational recruitment analytics and exports.'
-        : 'Construction recruitment workspace';
+        : state.activeView === 'jobs'
+          ? 'Manpower requirements, vacancies and client demand.'
+          : state.activeView === 'settings'
+            ? 'Reference data, users and workspace controls.'
+            : state.activeView === 'documents'
+              ? 'Candidate files and verification workflow.'
+              : state.activeView === 'allocation'
+                ? 'Cross-job candidate matching and allocation.'
+                : 'Construction recruitment workspace';
 
   return <div className="flex h-dvh overflow-hidden bg-slate-100">
     <aside className={`hidden shrink-0 border-r border-slate-900/10 transition-[width] duration-200 lg:block ${state.sidebarCollapsed ? 'w-[72px]' : 'w-[248px]'}`}><Sidebar /></aside>
