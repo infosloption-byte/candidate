@@ -12,13 +12,12 @@ export const registerErrorHandler = (app: FastifyInstance): void => {
         code: "INVALID_VALUE",
         message: item.message ?? "Invalid value.",
       }));
-      const response = new AppError(400, "INVALID_INPUT", "One or more request fields are invalid.", details);
-      return reply.code(response.statusCode).send({
+      return reply.code(400).send({
         success: false,
         error: {
-          code: response.errorCode,
-          message: response.message,
-          details: response.details,
+          code: "INVALID_INPUT",
+          message: "One or more request fields are invalid.",
+          details,
         },
       });
     }
