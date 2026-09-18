@@ -557,3 +557,10 @@ The frontend now includes a standalone candidate portal preview with candidate a
 3. Move candidate documents and CSV/XLSX import processing to server-side persistence.
 4. Add production notification delivery and secure invitation/reminder workflows.
 5. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
+
+
+### Authentication and operational recruitment controls
+
+The frontend MVP now includes an explicit authentication/session experience and role-aware UI permission model for System Admin, Recruiter, Interviewer, Manager / Approver and Candidate. Login, password recovery/reset/change-password, logout and session-expiry states are represented in the frontend; secure identity, token/session handling and server-side authorization remain backend responsibilities.
+
+Candidate operations now include a recruiter-facing invitation center with pending/opened/started/reminder/expired/cancelled states and candidate journey activity, plus an operational candidate profile covering deployment and overseas-recruitment fields. Document control includes preview/download, expiry monitoring, version history, uploader/verifier metadata, review notes and bulk follow-up. These are frontend service-boundary implementations until backend storage, delivery and immutable audit services are connected.
