@@ -5,6 +5,9 @@ import type {
   CandidateSource,
   CandidateStatus,
   CandidateOnboardingStatus,
+  CandidateInvitationStatus,
+  VisaStatus,
+  CandidatePriority,
   DocumentState,
   EnglishLevel,
   RejectionReason,
@@ -33,6 +36,9 @@ const asEnglishLevel = (value: unknown): EnglishLevel => ['Basic', 'Working', 'G
 const asAvailability = (value: unknown): Availability => ['Available now', 'Within 2 weeks', 'Within 1 month', 'Not available'].includes(value as string) ? value as Availability : 'Available now';
 const asDocumentState = (value: unknown, fallback: DocumentState = 'missing'): DocumentState => ['verified', 'needs-review', 'missing', 'pending'].includes(value as string) ? (value === 'pending' ? 'needs-review' : value as DocumentState) : fallback;
 const asOnboardingStatus = (value: unknown): CandidateOnboardingStatus => ['not-started', 'invited', 'in-progress', 'submitted', 'needs-changes', 'completed'].includes(value as string) ? value as CandidateOnboardingStatus : 'not-started';
+const asInvitationStatus = (value: unknown): CandidateInvitationStatus => ['pending', 'opened', 'started', 'expired', 'cancelled'].includes(value as string) ? value as CandidateInvitationStatus : 'pending';
+const asVisaStatus = (value: unknown): VisaStatus => ['Not started', 'Pending', 'Approved', 'Expired', 'Not required'].includes(value as string) ? value as VisaStatus : 'Not started';
+const asPriority = (value: unknown): CandidatePriority => ['low', 'normal', 'high', 'urgent'].includes(value as string) ? value as CandidatePriority : 'normal';
 const normalizeOnboarding = (record: CandidateRecord): Candidate['onboarding'] => {
   if (!isRecord(record.onboarding)) return { status: 'completed', completionPercent: 100, lastActivityAt: asString(record.createdAt) || undefined, reviewerNote: 'Legacy candidate record; onboarding tracking was introduced after this record was created.' };
   return {
@@ -43,6 +49,17 @@ const normalizeOnboarding = (record: CandidateRecord): Candidate['onboarding'] =
     submittedAt: asString(record.onboarding.submittedAt) || undefined,
     reviewedAt: asString(record.onboarding.reviewedAt) || undefined,
     reviewerNote: asString(record.onboarding.reviewerNote) || undefined,
+    invitation: isRecord(record.onboarding.invitation) ? {
+      status: asInvitationStatus(record.onboarding.invitation.status),
+      sentAt: asString(record.onboarding.invitation.sentAt),
+      lastSentAt: asString(record.onboarding.invitation.lastSentAt),
+      expiresAt: asString(record.onboarding.invitation.expiresAt),
+      openedAt: asString(record.onboarding.invitation.openedAt) || undefined,
+      startedAt: asString(record.onboarding.invitation.startedAt) || undefined,
+      reminderDueAt: asString(record.onboarding.invitation.reminderDueAt) || undefined,
+      cancelledAt: asString(record.onboarding.invitation.cancelledAt) || undefined,
+      sendCount: asNumber(record.onboarding.invitation.sendCount, 1),
+    } : undefined,
   };
 };
 
@@ -129,12 +146,30 @@ const normalizeCandidate = (value: unknown, index: number): Candidate => {
       passport: asDocumentState(documents.passport),
       cv: asDocumentState(documents.cv),
       tradeCertificate: asDocumentState(documents.tradeCertificate, asDocumentState(documents.certificate, 'missing')),
+      visa: asDocumentState(documents.visa, 'missing'),
     },
     lastInterview: normalizeLastInterview(record),
     rejectionReason: asRejectionReason(record.rejectionReason),
     rejectionNote: asString(record.rejectionNote) || undefined,
     journey: normalizeJourney(record),
     createdAt: asString(record.createdAt, new Date().toISOString()),
+    nationality: asString(record.nationality) || undefined,
+    dateOfBirth: asString(record.dateOfBirth) || undefined,
+    passportExpiry: asString(record.passportExpiry) || undefined,
+    visaStatus: asVisaStatus(record.visaStatus),
+    preferredDestinationCountries: asStringArray(record.preferredDestinationCountries),
+    expectedSalary: asString(record.expectedSalary) || undefined,
+    salaryCurrency: asString(record.salaryCurrency) || undefined,
+    noticePeriod: asString(record.noticePeriod) || undefined,
+    yearsInCurrentTrade: asNumber(record.yearsInCurrentTrade, experienceYears),
+    tradeCertificateDetails: asString(record.tradeCertificateDetails) || undefined,
+    drivingLicenseCategories: asStringArray(record.drivingLicenseCategories),
+    preferredInterviewLanguage: asString(record.preferredInterviewLanguage) || undefined,
+    emergencyContact: isRecord(record.emergencyContact) ? { name: asString(record.emergencyContact.name), phone: asString(record.emergencyContact.phone), relationship: asString(record.emergencyContact.relationship) } : undefined,
+    recruiterOwnerId: asString(record.recruiterOwnerId) || undefined,
+    recruiterOwnerName: asString(record.recruiterOwnerName) || undefined,
+    priority: asPriority(record.priority),
+    sourceCampaign: asString(record.sourceCampaign) || undefined,
   };
 };
 
