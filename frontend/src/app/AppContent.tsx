@@ -12,9 +12,6 @@ import { DocumentsPage } from '../features/documents/components/DocumentsPage';
 import { NotificationsPage } from '../features/notifications/components/NotificationsPage';
 import { SettingsPage } from '../features/settings/components/SettingsPage';
 import { useCandidateWorkspace } from '../features/candidates/hooks/useCandidateWorkspace';
-import type { AppView } from './context/AppContextTypes';
-
-
 export const AppContent = () => {
   const { state: appState } = useAppContext();
   const { state: candidateState, actions } = useCandidateWorkspace();
