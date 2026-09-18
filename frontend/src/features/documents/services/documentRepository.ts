@@ -28,7 +28,7 @@ const seedForCandidate = (candidate: Candidate): CandidateDocument[] =>
     type,
     fileName: candidate.documents[type] === 'missing' ? '' : labelFor[type].replaceAll(' ', '_').toLowerCase() + '.pdf',
     sizeLabel: candidate.documents[type] === 'missing' ? '' : 'Stored',
-    status: candidate.documents[type],
+    status: candidate.documents[type] ?? 'missing',
     uploadedAt: candidate.documents[type] === 'missing' ? undefined : candidate.createdAt,
     uploadedBy: candidate.documents[type] === 'missing' ? undefined : 'Imported record',
     reviewedAt: candidate.documents[type] === 'verified' ? candidate.createdAt : undefined,
@@ -43,12 +43,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const asString = (value: unknown): string => typeof value === 'string' ? value : '';
 const asNumber = (value: unknown, fallback = 1): number => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 const asStatus = (value: unknown): CandidateDocument['status'] => value === 'verified' || value === 'needs-review' ? value : 'missing';
+const isDocumentType = (value: unknown): value is DocumentType => typeof value === 'string' && value in labelFor;
 
 const normalizeStoredDocument = (value: unknown): CandidateDocument | null => {
   if (!isRecord(value)) return null;
   const candidateId = asString(value.candidateId);
   const type = value.type;
-  if (!candidateId || !(type in labelFor)) return null;
+  if (!candidateId || !isDocumentType(type)) return null;
   const version = Math.max(1, Math.floor(asNumber(value.version)));
   const versions = Array.isArray(value.versions) ? value.versions.filter(isRecord).map((item) => ({
     version: Math.max(1, Math.floor(asNumber(item.version))),
@@ -60,7 +61,7 @@ const normalizeStoredDocument = (value: unknown): CandidateDocument | null => {
   return {
     id: asString(value.id) || candidateId + '-' + String(type),
     candidateId,
-    type: type as DocumentType,
+    type,
     fileName: asString(value.fileName),
     sizeLabel: asString(value.sizeLabel),
     status: asStatus(value.status),
