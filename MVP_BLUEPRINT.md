@@ -511,8 +511,15 @@ Selection data is currently persisted locally behind a replaceable service bound
 - Selection domain state: `SelectionProvider` + `useReducer`.
 - Candidate filtering, saved searches, duplicate review, tags, comparison, and bulk status actions: `useCandidateWorkspace` + reducer actions.
 - Candidate onboarding state transitions: `useCandidateOnboarding` + candidate reducer actions.
-- Candidate bulk intake parsing, validation, header mapping and duplicate preview: `candidateImport` pure service + `useCandidateBulkImport`.
+- Candidate bulk intake parsing, validation, header mapping, duplicate preview and CSV/XLSX conversion: `candidateImport` pure service + `useCandidateBulkImport`.
 - Candidate onboarding and import workspace presentation: `CandidateOnboardingPage` + `CandidateBulkImportDrawer`.
+- Candidate self-service portal: `CandidatePortalPage` + `CandidatePortalLogin` + `useCandidatePortal`.
+- Candidate documents: `useDocumentsWorkspace` + `DocumentsPage` backed by a local document adapter.
+- Jobs: `useJobsWorkspace` + `JobsPage`, sharing job state with Selection through the selection domain.
+- Cross-job allocation: `useAllocationWorkspace` + `AllocationPage` with an atomic selection-domain allocation action.
+- Notifications: `NotificationProvider` + `useNotifications` + `NotificationsPage`.
+- Authentication: `AuthProvider` + `useAuth` with recruiter/candidate session boundaries for the frontend preview.
+- Settings: `useSettingsWorkspace` + `SettingsPage` with local reference-data and user controls.
 - Candidate creation: `useCandidateForm`.
 - Rejection validation: `useRejectionForm`.
 - Interview queue and workflow actions: `useInterviewWorkspace`.
