@@ -17,6 +17,11 @@ const focusableSelector = [
 
 export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onEscape, restoreFocusRef }: UseFocusTrapOptions): RefObject<T | null> => {
   const containerRef = useRef<T | null>(null);
+  const onEscapeRef = useRef(onEscape);
+
+  useEffect(() => {
+    onEscapeRef.current = onEscape;
+  }, [onEscape]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -32,7 +37,7 @@ export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onE
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onEscape?.();
+        onEscapeRef.current?.();
         return;
       }
 
@@ -66,7 +71,7 @@ export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onE
       const restoreTarget = restoreFocusRef?.current ?? previousFocus;
       restoreTarget?.focus();
     };
-  }, [enabled, onEscape, restoreFocusRef]);
+  }, [enabled, restoreFocusRef]);
 
   return containerRef;
 };
