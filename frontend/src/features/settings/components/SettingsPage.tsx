@@ -1,6 +1,7 @@
 import { Icon } from '../../../shared/components/Icon';
 import { useAppContext } from '../../../app/hooks/useAppContext';
 import { useSettingsWorkspace } from '../hooks/useSettingsWorkspace';
+import { usePermissions } from '../../features/auth/hooks/usePermissions';
 
 const tabs = [
   ['recruitment', 'Professions & skills'],
@@ -12,6 +13,8 @@ const tabs = [
 export const SettingsPage = () => {
   const { dispatch } = useAppContext();
   const { state, tab, inputs, activeProfessions, actions } = useSettingsWorkspace();
+  const { can } = usePermissions();
+  if (!can('settings.manage')) return <section className="mx-auto max-w-3xl p-6"><div className="rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center"><h1 className="text-xl font-black text-amber-950">Settings access is restricted</h1><p className="mt-2 text-sm leading-6 text-amber-900">Only System Admin can manage professions, interview templates and user permissions.</p></div></section>;
 
   return <section className="mx-auto max-w-7xl p-4 sm:p-6">
     <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
