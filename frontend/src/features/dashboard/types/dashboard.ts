@@ -13,16 +13,18 @@ export interface DashboardAction {
   title: string;
   description: string;
   count: number;
-  target: 'candidates' | 'interviews' | 'selection' | 'reports';
+  target: 'candidates' | 'interviews' | 'selection';
 }
 
 export interface DashboardSnapshot {
+  todayLabel: string;
   totals: {
     candidates: number;
     availableNow: number;
     interviewsToday: number;
     selected: number;
     onboardingActive: number;
+    onboardingNeedsChanges: number;
     documentsAttention: number;
   };
   pipeline: DashboardPipelineItem[];
@@ -32,6 +34,12 @@ export interface DashboardSnapshot {
     evaluation: number;
     completed: number;
     needsDecision: number;
+  };
+  selection: {
+    openings: number;
+    selected: number;
+    remaining: number;
+    approvalsPending: number;
   };
   recentCandidates: Candidate[];
   todayInterviews: Interview[];
