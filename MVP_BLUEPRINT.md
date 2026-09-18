@@ -55,8 +55,12 @@ Interviews ★
   ├─ Practical test
   ├─ Final decision
   └─ Interview history / decision audit timeline
-Jobs
-  └─ Manpower demand / requirement cards
+Jobs ★
+  ├─ Job requirement workspace
+  ├─ Vacancy / openings tracking
+  ├─ Required + preferred skills
+  ├─ Status / deadline management
+  └─ Selection / allocation handoffs
 Selection ★
   ├─ Job-specific openings / requirements
   ├─ Recommended / Selected / Reserve / Rejected
@@ -67,6 +71,11 @@ Selection ★
   ├─ Selection decision
   ├─ Management approval
   └─ Selection history / audit timeline
+Allocation ★
+  ├─ Cross-job candidate matching
+  ├─ Target-job requirement review
+  ├─ Capacity-safe candidate selection
+  └─ Allocation history
 Reports ★
   ├─ Date-range and trade filters
   ├─ Recruitment pipeline and candidate source
@@ -74,6 +83,14 @@ Reports ★
   ├─ Interview outcomes and rejection reasons
   ├─ Trade/profession performance
   └─ CSV export
+Documents ★
+  ├─ Candidate file upload / replacement
+  ├─ Verification / needs-review workflow
+  └─ Readiness synchronization
+Notifications ★
+  ├─ Unread activity center
+  ├─ Mark read / mark all read
+  └─ Notification cleanup
 Settings
   ├─ Professions & skills
   ├─ Interview scorecards
@@ -522,10 +539,14 @@ Selection data is currently persisted locally behind a replaceable service bound
 
 The dashboard and reports surfaces are now implemented as frontend workspaces over the existing candidate and interview domain state. The dashboard is optimized for daily recruiter action, while Reports supports operational analysis by date range and profession plus CSV export. Both remain local-data adapters until backend API contracts replace the browser persistence layer.
 
-## 13. Next frontend milestones
+## 13. Candidate portal and operations support UX
+
+The frontend now includes a standalone candidate portal preview with candidate authentication state, multi-step onboarding, profile editing, consent and document upload. Recruiter operations also include Jobs, Documents, Notifications and Allocation workspaces. These features use browser persistence and explicit service boundaries; secure identity, delivery, server-side file storage and authorization remain backend responsibilities.
+
+## 14. Next frontend milestones
 
 1. Complete runtime accessibility QA on keyboard navigation and real mobile devices.
-2. Complete authenticated candidate self-service onboarding UI once backend identity/invitation contracts are available.
-3. Extend bulk CSV intake to XLSX and server-side import processing.
-4. Add advanced cross-job candidate allocation.
+2. Connect the finished frontend workspaces to backend identity/API contracts.
+3. Move candidate documents and CSV/XLSX import processing to server-side persistence.
+4. Add production notification delivery and secure invitation/reminder workflows.
 5. Add backend Node/Fastify + MySQL implementation against the stabilized frontend contracts.
