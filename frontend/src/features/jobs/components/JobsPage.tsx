@@ -15,8 +15,7 @@ const statusTone: Record<string, string> = {
 export const JobsPage = () => {
   const { dispatch } = useAppContext();
   const { state, visibleJobs, search, status, editorOpen, editingId, draft, actions } = useJobsWorkspace();
-  const editorRef = useRef<HTMLDivElement>(null);
-  useFocusTrap({ enabled: editorOpen, onEscape: actions.closeEditor, containerRef: editorRef });
+  const editorRef = useFocusTrap<HTMLDivElement>({ enabled: editorOpen, onEscape: actions.closeEditor });
 
   if (state.loadState === 'loading') return <section className="mx-auto max-w-7xl p-6"><div className="animate-pulse space-y-4"><div className="h-32 rounded-3xl bg-slate-200"/><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[1,2,3].map((n)=><div key={n} className="h-56 rounded-2xl bg-slate-200"/>)}</div></div></section>;
   if (state.loadState === 'error') return <section className="mx-auto max-w-3xl p-6"><div className="rounded-3xl border border-rose-200 bg-white p-8 text-center"><Icon name="alert" size={28} className="mx-auto text-rose-600"/><h1 className="mt-4 text-xl font-black text-slate-950">Jobs could not load</h1><p className="mt-2 text-sm text-slate-500">{state.errorMessage}</p><div className="mt-5 flex justify-center gap-2"><button type="button" onClick={actions.retryLoad} title="Retry loading jobs" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700"><Icon name="refresh" size={15}/>Retry</button><button type="button" onClick={actions.openCreate} title="Create a job requirement" className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white">Create job</button></div></div></section>;
