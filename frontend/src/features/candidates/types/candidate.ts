@@ -8,11 +8,18 @@ export type BooleanFilter = 'all' | 'yes' | 'no';
 export type DocumentReadinessFilter = 'all' | 'ready' | 'attention';
 export type DuplicateConfidence = 'high' | 'possible';
 export type CandidateOnboardingStatus = 'not-started' | 'invited' | 'in-progress' | 'submitted' | 'needs-changes' | 'completed';
+export type CandidateInvitationStatus = 'pending' | 'opened' | 'started' | 'expired' | 'cancelled';
+export type VisaStatus = 'Not started' | 'Pending' | 'Approved' | 'Expired' | 'Not required';
+export type CandidatePriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface CandidateEmergencyContact { name: string; phone: string; relationship: string; }
+export interface CandidateInvitation { status: CandidateInvitationStatus; sentAt: string; lastSentAt: string; expiresAt: string; openedAt?: string; startedAt?: string; reminderDueAt?: string; cancelledAt?: string; sendCount: number; }
 
 export interface CandidateDocumentSummary {
   passport: DocumentState;
   cv: DocumentState;
   tradeCertificate: DocumentState;
+  visa?: DocumentState;
 }
 
 export interface CandidateInterviewSummary {
@@ -40,6 +47,7 @@ export interface CandidateOnboarding {
   submittedAt?: string;
   reviewedAt?: string;
   reviewerNote?: string;
+  invitation?: CandidateInvitation;
 }
 
 export interface Candidate {
@@ -63,6 +71,23 @@ export interface Candidate {
   source: CandidateSource;
   status: CandidateStatus;
   onboarding?: CandidateOnboarding;
+  nationality?: string;
+  dateOfBirth?: string;
+  passportExpiry?: string;
+  visaStatus?: VisaStatus;
+  preferredDestinationCountries?: string[];
+  expectedSalary?: string;
+  salaryCurrency?: string;
+  noticePeriod?: string;
+  yearsInCurrentTrade?: number;
+  tradeCertificateDetails?: string;
+  drivingLicenseCategories?: string[];
+  preferredInterviewLanguage?: string;
+  emergencyContact?: CandidateEmergencyContact;
+  recruiterOwnerId?: string;
+  recruiterOwnerName?: string;
+  priority?: CandidatePriority;
+  sourceCampaign?: string;
   fitScore: number;
   documents: CandidateDocumentSummary;
   lastInterview?: CandidateInterviewSummary;
