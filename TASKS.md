@@ -40,8 +40,9 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Recruiter/system-admin frontend bulk candidate CSV intake with automatic header mapping, validation preview, duplicate protection, import template and atomic local commit.
 - ✅ Recruiter dashboard workspace with live candidate/interview metrics, pipeline visibility, action center, today's interview view, onboarding/document readiness, selection capacity/approval signals, retry handling and responsive navigation actions.
 - ✅ Recruitment reports workspace with date/trade filters, explicit candidate-vs-interview date scope, pipeline/source/onboarding/interview/rejection breakdowns, readiness metrics, profession performance table, retry handling and CSV export.
-- ⏳ Candidate self-service onboarding portal for authenticated candidate access, profile editing, consent and document upload.
-- ⏳ Invitation delivery, reminder/escalation workflows and candidate-facing authentication.
+- ✅ Frontend candidate self-service onboarding portal with candidate session UI, profile editing, consent, document upload and submission flow.
+- ✅ Frontend candidate authentication preview with candidate account/access-code sign-in and sign-out state.
+- ⏳ Production invitation delivery, reminder/escalation workflows, secure invitation tokens and backend authentication.
 
 ## Phase 3 — Interview workflow UX
 
@@ -89,7 +90,16 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 - ✅ Bulk decisions and reassignment use atomic reducer actions and preserve decision reasons/notes.
 - ✅ Selection history records decision changes, reassignment events, and approval changes.
 - ✅ Selection history is persisted locally and displayed as an audit-ready timeline per job.
-- ⏳ Advanced cross-job candidate allocation.
+- ✅ Cross-job candidate allocation workspace with requirement matching, multi-select, target-job capacity protection and allocation history.
+
+## Phase 4A — Operations administration and support UX
+
+- ✅ Jobs management workspace with job requirement creation/editing, vacancy counts, status, deadline, required/preferred skills, selection and allocation handoffs.
+- ✅ Settings workspace with professions/skills, interview template activation, user/role controls and frontend accessibility QA checklist.
+- ✅ Candidate document workspace with upload, verification, replacement request and candidate readiness synchronization.
+- ✅ Notifications center with unread state, mark-read, mark-all-read and clear-read actions.
+- ✅ Candidate portal preview is available as a standalone user experience without recruiter navigation.
+- ✅ Frontend authentication/session boundary supports recruiter and candidate session states; production credential security remains backend responsibility.
 
 ## Phase 5 — Backend and data
 
@@ -102,7 +112,8 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 ## Phase 6 — Data migration and release
 
-- ⏳ Extend the frontend CSV importer to XLSX import and server-side validation/processing.
+- ✅ Extend the frontend bulk candidate importer to CSV + XLSX preview and mapping.
+- ⏳ Add server-side validation, processing, import jobs and persistence for CSV/XLSX data.
 - ⏳ Map historical interview data to candidate/interview records.
 - ⏳ Add server-side duplicate/quality review and import job controls before persistence.
 - ⏳ End-to-end testing with real recruitment workflows.
