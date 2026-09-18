@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCandidateWorkspace } from '../../candidates/hooks/useCandidateWorkspace';
 import { documentLabel, loadDocuments, saveDocuments } from '../services/documentRepository';
 import type { Candidate } from '../../candidates/types/candidate';
@@ -13,6 +13,7 @@ export const useDocumentsWorkspace = () => {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(candidateState.candidates[0]?.id ?? null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const previewUrlsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (candidateState.candidates.length === 0) return;
@@ -42,8 +43,12 @@ export const useDocumentsWorkspace = () => {
   useEffect(() => saveDocuments(documents), [documents]);
 
   useEffect(() => {
-    return () => Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url));
+    previewUrlsRef.current = previewUrls;
   }, [previewUrls]);
+
+  useEffect(() => {
+    return () => Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   const selectedCandidate = useMemo(
     () => candidateState.candidates.find((candidate) => candidate.id === selectedCandidateId) ?? null,
@@ -139,6 +144,14 @@ export const useDocumentsWorkspace = () => {
     setSelectedDocumentIds([]);
   };
 
+  const setExpiry = (documentId: string, expiresAt: string) => {
+    const target = documents.find((document) => document.id === documentId);
+    if (!target) return;
+    const next = documents.map((document) => document.id === documentId ? { ...document, expiresAt: expiresAt || undefined } : document);
+    setDocuments(next);
+    syncCandidateDocumentState(target.candidateId, next);
+  };
+
   const preview = (documentId: string) => previewUrls[documentId] ?? null;
 
   const download = (documentId: string) => {
@@ -179,6 +192,7 @@ export const useDocumentsWorkspace = () => {
       bulkRequestChanges,
       preview,
       download,
+      setExpiry,
       isExpiryWarning,
       isExpired,
     },
