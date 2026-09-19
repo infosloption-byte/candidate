@@ -498,17 +498,28 @@ const main = async (): Promise<void> => {
       select: { id: true },
     });
 
-    await prisma.interviewScoreCriterion.createMany({
-      data: interview.criteria.map(([id, label, weight]) => ({
-        id: `${interview.id}-${id}`,
-        tenantId: tenant.id,
-        scorecardId: scorecard.id,
-        label,
-        weight,
-        score: null,
-        note: null,
-      })),
-    });
+    for (const [id, label, weight] of interview.criteria) {
+      await prisma.interviewScoreCriterion.upsert({
+        where: { id: `${interview.id}-${id}` },
+        update: {
+          tenantId: tenant.id,
+          scorecardId: scorecard.id,
+          label,
+          weight,
+          score: null,
+          note: null,
+        },
+        create: {
+          id: `${interview.id}-${id}`,
+          tenantId: tenant.id,
+          scorecardId: scorecard.id,
+          label,
+          weight,
+          score: null,
+          note: null,
+        },
+      });
+    }
 
     await prisma.practicalTestItem.createMany({
       data: interview.practical.map(([id, label, required, result]) => ({
