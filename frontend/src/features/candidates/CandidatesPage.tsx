@@ -41,6 +41,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
+  const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
 
@@ -253,6 +254,54 @@ export const CandidatesPage = ({ role }: Props) => {
     }
   };
 
+  const saveManagedProfile = async () => {
+    if (!candidate) return;
+    const experienceYears = Number(profileForm.experienceYears);
+    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
+      setError('Experience years must be a whole number between 0 and 60.');
+      return;
+    }
+    if (profileForm.name.trim().length < 2) {
+      setError('Full name must be at least 2 characters.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const updated = developmentMode
+        ? {
+            ...candidate,
+            name: profileForm.name.trim(),
+            email: profileForm.email.trim() || null,
+            phone: profileForm.phone.trim() || null,
+            profession: profileForm.profession.trim() || null,
+            experienceYears,
+            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+          }
+        : await apiFetch<Candidate>('/candidates/' + candidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: profileForm.name.trim(),
+              email: profileForm.email.trim() || null,
+              phone: profileForm.phone.trim() || null,
+              profession: profileForm.profession.trim() || null,
+              experienceYears,
+              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            }),
+          });
+
+      setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
+      setEditingCandidateProfile(false);
+      setSuccessTitle('Candidate profile updated');
+      setSuccess('"' + updated.name + '" profile details were saved.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the candidate profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const updateStatus = async () => {
     if (!candidate || !statusDraft || statusDraft === candidate.status) return;
     setSaving(true);
@@ -388,14 +437,32 @@ export const CandidatesPage = ({ role }: Props) => {
             <Card>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p><h2 className="mt-1 text-xl font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p></div>
-                <div className="flex items-center gap-2"><StatusPill value={candidate.status} /><Button size="sm" variant="secondary" onClick={() => setSelectedCandidateId('')}>Close</Button></div>
+                <div className="flex flex-wrap items-center gap-2"><StatusPill value={candidate.status} /><Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setError(''); }}>{editingCandidateProfile ? 'Close edit' : 'Edit profile'}</Button><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); }}>Close</Button></div>
               </div>
 
+              {editingCandidateProfile ? (
+                <div className="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
+                  <h3 className="text-sm font-black text-slate-950">Edit candidate profile</h3>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
+                    <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
+                    <FormField label="Phone"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
+                    <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
+                    <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
+                    <FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
+                    <Button disabled={saving} onClick={() => void saveManagedProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button>
+                  </div>
+                </div>
+              ) : (
               <div className="mt-5 grid gap-4 lg:grid-cols-3">
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p><p className="mt-1 text-xs text-slate-500">{candidate.phone ?? 'No phone'}</p></div>
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><p className="mt-2"><StatusPill value={candidate.onboardingStatus} /></p></div>
               </div>
+              )}
 
               <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
