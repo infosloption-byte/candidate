@@ -1,6 +1,7 @@
 name: Backend CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -18,7 +19,7 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       DATABASE_URL: mysql://candidate_erp:password@127.0.0.1:3306/construction_candidate_erp
       RUN_DB_TESTS: "1"
@@ -47,8 +48,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Generate Prisma Client
         run: npm run prisma:generate
       - name: Validate Prisma schema
