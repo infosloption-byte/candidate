@@ -116,6 +116,16 @@ export interface CandidateStatusHistory {
   createdAt: string;
 }
 
+export interface CandidateAuditEvent {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  summary: string;
+  createdAt: string;
+  actor: { id: string; name: string; role: UserRole } | null;
+}
+
 export interface CandidateHistoryInterview {
   id: string;
   type: InterviewType;
