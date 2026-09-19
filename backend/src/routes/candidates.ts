@@ -188,7 +188,8 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       rows.forEach((row, index) => {
         const email = row.email?.trim().toLowerCase() || null;
         const skills = (row.skills ?? '').split(/[;|]/).map((skill) => skill.trim()).filter(Boolean);
-        const experienceYears = row.experienceYears?.trim() ? Number(row.experienceYears) : null;
+        const experienceRaw = row.experienceYears?.trim() || row.experience?.trim() || '';
+        const experienceYears = experienceRaw ? Number(experienceRaw) : null;
         const input: CandidateInput = {
           name: row.name, email, phone: row.phone || null, profession: row.profession || null, experienceYears, skills,
         };
