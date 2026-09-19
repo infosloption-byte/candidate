@@ -5,6 +5,7 @@ import {
   listInterviews,
   recordDecision,
   rescheduleInterview,
+  undoReschedule,
   updateInterviewStatus,
   updateScore,
   updateCriterionNote,
@@ -163,5 +164,16 @@ export const updateInterviewNoteController = async (
   return {
     success: true,
     data: await updateInterviewNote(request.auth, request.params.id, request.body.note),
+  };
+};
+
+
+export const undoRescheduleController = async (
+  request: FastifyRequest<{ Params: { id: string; historyId: string } }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await undoReschedule(request.auth, request.params.id, request.params.historyId),
   };
 };
