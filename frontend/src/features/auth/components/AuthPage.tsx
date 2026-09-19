@@ -12,7 +12,7 @@ interface AuthPageProps {
 const staffRoles: AuthRole[] = ['system-admin', 'recruiter', 'interviewer', 'manager'];
 
 export const AuthPage = ({ candidates }: AuthPageProps) => {
-  const { state, dispatch } = useAuth();
+  const { state, dispatch, login } = useAuth();
   const [role, setRole] = useState<AuthRole>('recruiter');
   const [candidateId, setCandidateId] = useState(candidates[0]?.id ?? '');
   const [email, setEmail] = useState('recruiter@buildhire.demo');
@@ -27,7 +27,7 @@ export const AuthPage = ({ candidates }: AuthPageProps) => {
     [candidates],
   );
 
-  const signIn = () => {
+  const signIn = async () => {
     if (role === 'candidate') {
       const candidate = candidates.find((item) => item.id === candidateId);
       if (!candidate) return setError('Choose a candidate account.');
@@ -51,11 +51,12 @@ export const AuthPage = ({ candidates }: AuthPageProps) => {
       return;
     }
 
-    dispatch({
-      type: 'LOGIN',
-      user: { id: 'demo-' + role, name: roleLabel(role), email: email.trim(), role },
-    });
-    setError('');
+    try {
+      await login(email, password);
+      setError('');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Sign in failed. Please try again.');
+    }
   };
 
   const submitResetRequest = () => {
