@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
+import { useAuth } from '../../auth/hooks/useAuth';
 import { SelectionContext } from './SelectionContextObject';
-import { loadSelectionApproval, loadSelectionHistory, loadSelectionJobs, loadSelectionRecords, loadSelectionScoring, saveSelectionApproval, saveSelectionHistory, saveSelectionJobs, saveSelectionRecords, saveSelectionScoring } from '../services/selectionRepository';
+import { loadSelectionWorkspace } from '../services/selectionRepository';
 import { defaultSelectionScoringWeights } from '../types/selection';
 import type { ApprovalStatus, SelectionAction, SelectionHistoryEntry, SelectionRecord, SelectionScoringWeights, SelectionState } from '../types/selection';
 
@@ -34,6 +35,7 @@ const normalizeScoring = (weights: SelectionScoringWeights): SelectionScoringWei
 const reducer = (state: SelectionState, action: SelectionAction): SelectionState => {
   switch (action.type) {
     case 'HYDRATE': return { ...state, loadState: 'success', errorMessage: null, jobs: action.jobs, records: action.records, history: action.history, scoringByJob: action.scoringByJob, approvalByJob: action.approvalByJob, activeJobId: state.activeJobId ?? action.jobs[0]?.id ?? null, selectedCandidateId: null };
+    case 'REFRESH_REMOTE': return { ...state, loadState: 'success', errorMessage: null, jobs: action.jobs, records: action.records, history: action.history, scoringByJob: action.scoringByJob, approvalByJob: action.approvalByJob, activeJobId: state.activeJobId ?? action.jobs[0]?.id ?? null };
     case 'LOAD_ERROR': return { ...state, loadState: 'error', errorMessage: action.message };
     case 'RETRY_LOAD': return { ...state, loadState: 'loading', errorMessage: null, loadAttempt: state.loadAttempt + 1 };
     case 'SET_JOB': return { ...state, activeJobId: action.jobId, activeTab: 'recommended', selectedCandidateId: null };
@@ -87,21 +89,22 @@ const reducer = (state: SelectionState, action: SelectionAction): SelectionState
 };
 
 export const SelectionProvider = ({ children }: PropsWithChildren) => {
+  const { state: authState } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   useEffect(() => {
     let cancelled = false;
     const hydrate = async () => {
+      if (!authState.authenticated || authState.user.role === 'candidate') return;
       try {
-        const [jobs, records, history, approvalByJob, scoringByJob] = await Promise.all([loadSelectionJobs(), loadSelectionRecords(), loadSelectionHistory(), loadSelectionApproval(), loadSelectionScoring()]);
-        const normalizedApproval = Object.fromEntries(Object.entries(approvalByJob).map(([jobId, approval]) => [jobId, { status: isApprovalStatus(approval.status) ? approval.status : 'draft', note: approval.note }]));
-        const normalizedScoring = Object.fromEntries(jobs.map((job) => [job.id, normalizeScoring(scoringByJob[job.id] ?? defaultSelectionScoringWeights)]));
-        if (!cancelled) dispatch({ type: 'HYDRATE', jobs, records, history, approvalByJob: normalizedApproval, scoringByJob: normalizedScoring });
+        const workspace = await loadSelectionWorkspace();
+        const normalizedApproval = Object.fromEntries(Object.entries(workspace.approvalByJob).map(([jobId, approval]) => [jobId, { status: isApprovalStatus(approval.status) ? approval.status : 'draft', note: approval.note }]));
+        const normalizedScoring = Object.fromEntries(workspace.jobs.map((job) => [job.id, normalizeScoring(workspace.scoringByJob[job.id] ?? defaultSelectionScoringWeights)]));
+        if (!cancelled) dispatch({ type: 'HYDRATE', jobs: workspace.jobs, records: workspace.records, history: workspace.history, approvalByJob: normalizedApproval, scoringByJob: normalizedScoring });
       } catch { if (!cancelled) dispatch({ type: 'LOAD_ERROR', message: 'Selection data could not be loaded. Retry to restore the selection board.' }); }
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [state.loadAttempt]);
-  useEffect(() => { if (state.loadState !== 'success') return; void saveSelectionJobs(state.jobs).catch(() => undefined); void saveSelectionRecords(state.records).catch(() => undefined); void saveSelectionHistory(state.history).catch(() => undefined); void saveSelectionApproval(state.approvalByJob).catch(() => undefined); void saveSelectionScoring(state.scoringByJob).catch(() => undefined); }, [state.jobs, state.records, state.history, state.approvalByJob, state.scoringByJob, state.loadState]);
+  }, [authState.authenticated, authState.user.role, state.loadAttempt]);
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
 };
