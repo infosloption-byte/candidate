@@ -27,6 +27,15 @@ export interface User {
   active: boolean;
 }
 
+export interface CandidateDocument {
+  id: string;
+  candidateId: string;
+  originalName: string;
+  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
+  sizeBytes: number;
+  createdAt: string;
+}
+
 export interface Candidate {
   id: string;
   agencyId: string;

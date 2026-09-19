@@ -14,6 +14,7 @@ import { operationalRoutes } from './routes/operational.js';
 
 export const buildApp = (): FastifyInstance => {
   const app = Fastify({
+    bodyLimit: 8 * 1024 * 1024,
     logger: {
       level: env.nodeEnv === 'development' ? 'info' : 'warn',
     },

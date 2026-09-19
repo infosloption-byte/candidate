@@ -92,7 +92,7 @@ model User {
   role         UserRole
   active       Boolean    @default(true)
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  updatedAt   DateTime   @updatedAt
 
   agency        Agency?                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   candidate     Candidate?              @relation("CandidateAccount", fields: [candidateId], references: [id], onDelete: SetNull)
@@ -123,7 +123,7 @@ model Candidate {
   reference        String           @db.VarChar(32)
   name             String           @db.VarChar(160)
   email            String?          @db.VarChar(191)
-  phone            String?          @db.VarChar(60)
+  phone            String?           @db.VarChar(60)
   profession       String?          @db.VarChar(120)
   experienceYears  Int?
   skills           Json
@@ -135,10 +135,25 @@ model Candidate {
   agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   account      User?           @relation("CandidateAccount")
   applications JobApplication[]
+  documents    CandidateDocument[]
 
   @@unique([agencyId, reference])
   @@index([agencyId, name])
   @@index([agencyId, profession])
+}
+
+model CandidateDocument {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  candidateId  String   @db.VarChar(36)
+  originalName String   @db.VarChar(180)
+  mimeType     String   @db.VarChar(80)
+  sizeBytes    Int
+  storageKey   String   @unique @db.VarChar(120)
+  createdAt    DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
 }
 
 model Job {
@@ -155,8 +170,6 @@ model Job {
 
   agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   applications JobApplication[]
-
-  @@index([agencyId, status, publishedAt])
 }
 
 model JobApplication {

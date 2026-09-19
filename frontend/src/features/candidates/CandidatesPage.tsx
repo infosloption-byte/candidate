@@ -11,6 +11,7 @@ import { DataTable } from '../../shared/components/DataTable';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Candidate, UserRole } from '../../domain/types';
+import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
 interface CandidatesPageProps { role: UserRole; }
 
@@ -323,6 +324,11 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
             </div>
           </div>
 
+          <CandidateDocumentsPanel
+            candidateId={selectedCandidate.id}
+            apiEnabled={!developmentMode}
+          />
+
           {selectedCandidate.onboardingStatus === 'SUBMITTED' && (
             <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4">
               <div>
@@ -392,6 +398,9 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
                 <div><p className="field-label">Skills</p><p className="mt-1 text-sm text-slate-700">{candidate.skills.join(', ') || '—'}</p></div>
               </div>
               <Button className="mt-6" onClick={() => void submitOwnProfile()}>Submit profile</Button>
+              <div className="mt-6">
+                <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
+              </div>
             </Card>
           </div>
         ) : (

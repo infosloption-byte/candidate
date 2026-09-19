@@ -112,7 +112,7 @@ Status: **completed**
 - Add agency review of submitted onboarding.
 - Add bulk onboarding via CSV first.
 - Add validation and duplicate handling only at the level required to import safely.
-- Keep documents optional and deferred until core profile/application flow is proven.
+- Add optional candidate documents after the core profile/application flow is stable, using a replaceable storage contract.
 
 ## Phase 5 — Applications
 

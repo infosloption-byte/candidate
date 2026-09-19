@@ -101,7 +101,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Add minimal audit events for important workflow mutations.
 - ✅ Add basic notifications for core workflow events, without restoring the legacy notification center.
 - ✅ Add candidate/job/application/interview search where needed.
-- ⏳ Add document upload only after the core onboarding flow is stable and a storage contract is selected.
+- ✅ Add optional candidate document upload with a small filesystem storage contract (PDF/JPEG/PNG, max 5 MB).
 
 ## Phase 9 — QA and release
 

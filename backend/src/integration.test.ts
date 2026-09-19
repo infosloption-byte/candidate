@@ -36,6 +36,7 @@ let interviewerBId = '';
 let candidateUserId = '';
 let jobAId = '';
 let jobBId = '';
+let candidateId = '';
 let interviewId = '';
 
 const cookieFrom = (response: { headers: Record<string, string | string[] | undefined> }): string => {
@@ -132,6 +133,7 @@ before(async () => {
   candidateUserId = setup.candidateUser.id;
   jobAId = setup.jobA.id;
   jobBId = setup.jobB.id;
+  candidateId = setup.candidateUser.candidateId ?? '';
 });
 
 after(async () => {
@@ -239,6 +241,54 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   assert.ok(app);
 
   const candidateCookie = await login(emails.interviewee);
+
+  const documentContent = Buffer.from('BuildHire document integration test').toString('base64');
+  const documentUpload = await app.inject({
+    method: 'POST',
+    url: '/api/v1/candidates/' + candidateId + '/documents',
+    headers: { cookie: candidateCookie },
+    payload: {
+      fileName: 'qa-profile.pdf',
+      mimeType: 'application/pdf',
+      contentBase64: documentContent,
+    },
+  });
+  assert.equal(documentUpload.statusCode, 201);
+  const uploadedDocument = json<{ data: { id: string } }>(documentUpload);
+
+  const agencyCookie = await login(emails.agencyA);
+  const agencyDocuments = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId + '/documents',
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(agencyDocuments.statusCode, 200);
+  const agencyDocumentsBody = json<{ data: Array<{ id: string }> }>(agencyDocuments);
+  assert.ok(agencyDocumentsBody.data.some((document) => document.id === uploadedDocument.data.id));
+
+  const otherAgencyCookie = await login(emails.agencyB);
+  const isolatedDocuments = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId + '/documents',
+    headers: { cookie: otherAgencyCookie },
+  });
+  assert.equal(isolatedDocuments.statusCode, 403);
+
+  const documentDownload = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId + '/documents/' + uploadedDocument.data.id,
+    headers: { cookie: candidateCookie },
+  });
+  assert.equal(documentDownload.statusCode, 200);
+  assert.equal(documentDownload.body, 'BuildHire document integration test');
+
+  const documentDelete = await app.inject({
+    method: 'DELETE',
+    url: '/api/v1/candidates/' + candidateId + '/documents/' + uploadedDocument.data.id,
+    headers: { cookie: candidateCookie },
+  });
+  assert.equal(documentDelete.statusCode, 204);
+
   const applicationResponse = await app.inject({
     method: 'POST',
     url: '/api/v1/jobs/' + jobAId + '/applications',

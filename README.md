@@ -45,6 +45,7 @@ The rebuilt system now has the core database model and protected API workflow fo
 - single or panel interview assignment
 - interviewer/candidate schedule conflict checks
 - panel evaluation and application decision
+- optional candidate document upload with agency-isolated access
 
 The frontend is connected to these APIs for authentication, jobs, candidates, applications, interviews, and evaluations. When the backend is unavailable in local development, the frontend falls back to its development-role fixture mode so UI work can continue without a database.
 
@@ -94,4 +95,4 @@ Open the frontend without an active session, choose **Create a candidate account
 - Candidate onboarding and recruitment status are separate concepts.
 - Bulk onboarding is an import operation, not a separate candidate domain.
 
-The full rebuild sequence is maintained in [docs/BUILD_PLAN.md](./docs/BUILD_PLAN.md), and the detailed task tracker is [TASKS.md](./TASKS.md).
+The full rebuild sequence is maintained in [docs/BUILD_PLAN.md](./docs/BUILD_PLAN.md), the detailed task tracker is [TASKS.md](./TASKS.md), and release checks are documented in [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md).

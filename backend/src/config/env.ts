@@ -12,4 +12,5 @@ export const env = {
   port,
   corsOrigin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:5173',
   databaseUrl: process.env.DATABASE_URL?.trim() || '',
+  documentStorageDir: process.env.DOCUMENT_STORAGE_DIR?.trim() || '',
 };
