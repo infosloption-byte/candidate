@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import type { Prisma } from '../generated/prisma/client.js';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
@@ -67,22 +68,16 @@ const isTerminalCandidateStatus = (status: string): boolean =>
   ['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(status);
 
 const addCandidateStatusHistory = async (
-  tx: Parameters<Parameters<ReturnType<typeof getPrisma>['$transaction']>[0]>[0],
+  tx: Prisma.TransactionClient,
   candidateId: string,
-  fromStatus: string,
-  toStatus: string,
+  fromStatus: 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED' | 'INACTIVE',
+  toStatus: 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED' | 'INACTIVE',
   reason: string,
   changedById: string,
 ): Promise<void> => {
   if (fromStatus === toStatus) return;
   await tx.candidateStatusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: fromStatus as never,
-      toStatus: toStatus as never,
-      reason,
-      changedById,
-    },
+    data: { candidateId, fromStatus, toStatus, reason, changedById },
   });
 };
 
