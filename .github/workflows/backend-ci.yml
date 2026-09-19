@@ -17,9 +17,17 @@ on:
       - "docs/BUILD_PLAN.md"
       - ".github/workflows/backend-ci.yml"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     env:
       DATABASE_URL: mysql://candidate_erp:password@127.0.0.1:3306/construction_candidate_erp
       RUN_DB_TESTS: "1"

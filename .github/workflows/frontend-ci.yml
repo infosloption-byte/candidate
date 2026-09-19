@@ -17,9 +17,17 @@ on:
       - 'docs/BUILD_PLAN.md'
       - '.github/workflows/frontend-ci.yml'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
