@@ -193,3 +193,6 @@ export const loadCandidates = async (): Promise<Candidate[]> => {
 
   return payload.data.items;
 };
+
+
+export const getDemoCandidates = (): Candidate[] => seedCandidates;
