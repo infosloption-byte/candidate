@@ -729,7 +729,7 @@ export const CandidatesPage = ({ role }: Props) => {
                     {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+            <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
               <button
                 type="button"
                 aria-label="Close candidate details"
@@ -742,31 +742,31 @@ export const CandidatesPage = ({ role }: Props) => {
                 aria-modal="true"
                 aria-labelledby="candidate-details-title"
                 tabIndex={-1}
-                className="relative z-10 my-auto w-full max-w-5xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
+                className="relative z-10 flex h-[100dvh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:border sm:border-slate-200"
               >
-                <header className="border-b border-slate-200 px-4 py-5 sm:px-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p>
                         <StatusPill value={candidate.status} />
                         <StatusPill value={candidate.onboardingStatus} />
                       </div>
-                      <h2 id="candidate-details-title" className="mt-2 text-2xl font-black tracking-tight text-slate-950">{candidate.name}</h2>
-                      <p className="mt-1 text-sm text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
+                      <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
+                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
                         <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
                       )}
                       <Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
                         {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Close</Button>
+                      <Button size="sm" variant="secondary" className="px-3" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="sm:hidden text-base leading-none" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
                     </div>
                   </div>
 
-                  <nav className="mt-5 flex gap-1 overflow-x-auto" aria-label="Candidate profile sections">
+                  <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 sm:mt-5" aria-label="Candidate profile sections">
                     {([
                       ['overview', 'Overview'],
                       ['documents', 'Documents'],
@@ -776,7 +776,7 @@ export const CandidatesPage = ({ role }: Props) => {
                         key={tab}
                         type="button"
                         onClick={() => setActiveDetailTab(tab)}
-                        className={`rounded-xl px-4 py-2 text-xs font-bold transition ${activeDetailTab === tab ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 ${activeDetailTab === tab ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
                         aria-current={activeDetailTab === tab ? 'page' : undefined}
                       >
                         {textLabel}
@@ -785,7 +785,7 @@ export const CandidatesPage = ({ role }: Props) => {
                   </nav>
                 </header>
 
-                <div className="px-4 py-5 sm:px-6">
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6 sm:pb-8">
                   {editingCandidateProfile && activeDetailTab === 'overview' ? (
                     <div>
                       <div className="flex items-center justify-between gap-3">
@@ -794,7 +794,7 @@ export const CandidatesPage = ({ role }: Props) => {
                           <p className="mt-1 text-xs text-slate-500">Update the candidate's contact, identity, location, work status, profession, experience, and skills.</p>
                         </div>
                       </div>
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div className="mt-4 grid gap-4 sm:mt-5 md:grid-cols-2">
                         <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
                         <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
                         <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
@@ -818,7 +818,7 @@ export const CandidatesPage = ({ role }: Props) => {
                     <>
                       {activeDetailTab === 'overview' && (
                         <div className="space-y-7">
-                          <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
                             <div><p className="field-label">Contact</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
                             <div><p className="field-label">Email</p><p className="mt-1 text-sm font-semibold break-words text-slate-800">{candidate.email ?? 'No email'}</p></div>
                             <div><p className="field-label">Country</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.country ?? 'Not set'}</p></div>
@@ -830,7 +830,7 @@ export const CandidatesPage = ({ role }: Props) => {
                             <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
                           </div>
 
-                          <section className="border-t border-slate-200 pt-6">
+                          <section className="border-t border-slate-200 pt-5 sm:pt-6">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                               <div>
                                 <h3 className="text-sm font-black text-slate-950">Lifecycle status</h3>
@@ -839,7 +839,7 @@ export const CandidatesPage = ({ role }: Props) => {
                               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                                 <div>
                                   <label className="field-label">Status</label>
-                                  <select className="field-input mt-1 sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
+                                  <select className="field-input mt-1 w-full sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
                                     {statusOptions.filter((status) => {
                                       const hasCompletedInterview = history.interviews.some((interview) => interview.status === 'COMPLETED');
                                       return !finalStatusOptions.includes(status) || hasCompletedInterview || status === candidate.status;
@@ -848,14 +848,14 @@ export const CandidatesPage = ({ role }: Props) => {
                                 </div>
                                 <div>
                                   <label className="field-label">Reason</label>
-                                  <input className="field-input mt-1 sm:min-w-56" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" />
+                                  <input className="field-input mt-1 w-full sm:min-w-56" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" />
                                 </div>
-                                <Button disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save</Button>
+                                <Button className="w-full sm:w-auto" disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save</Button>
                               </div>
                             </div>
                           </section>
 
-                          <section className="border-t border-slate-200 pt-6">
+                          <section className="border-t border-slate-200 pt-5 sm:pt-6">
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <h3 className="text-sm font-black text-slate-950">Interview history</h3>
@@ -863,7 +863,7 @@ export const CandidatesPage = ({ role }: Props) => {
                               </div>
                               {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
                             </div>
-                            <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100 sm:mt-4">
                               {!loadingHistory && history.interviews.length === 0 && <p className="py-6 text-xs text-slate-400">No interview history yet.</p>}
                               {history.interviews.map((item) => {
                                 const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
@@ -891,7 +891,7 @@ export const CandidatesPage = ({ role }: Props) => {
                         <div>
                           <h3 className="text-sm font-black text-slate-950">Candidate documents</h3>
                           <p className="mt-1 text-xs text-slate-500">Manage documents attached to this candidate profile.</p>
-                          <div className="mt-5">
+                          <div className="mt-4 sm:mt-5">
                             <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
                           </div>
                         </div>
@@ -907,7 +907,7 @@ export const CandidatesPage = ({ role }: Props) => {
                             {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
                           </div>
 
-                          <div className="mt-5">
+                          <div className="mt-4 sm:mt-5">
                             <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Status history</h4>
                             <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
                               {history.statusHistory.length ? history.statusHistory.map((item) => (
@@ -923,7 +923,7 @@ export const CandidatesPage = ({ role }: Props) => {
                             </div>
                           </div>
 
-                          <div className="mt-7">
+                          <div className="mt-6 sm:mt-7">
                             <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Activity log</h4>
                             <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
                               {history.auditEvents.length ? history.auditEvents.map((event) => (
