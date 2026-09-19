@@ -62,14 +62,14 @@ const buildWhere = (filters: CandidateListFilters): Prisma.CandidateWhereInput =
     const query = filters.search.trim();
     and.push({
       OR: [
-        { name: { contains: query, mode: "insensitive" } },
-        { reference: { contains: query, mode: "insensitive" } },
-        { profession: { contains: query, mode: "insensitive" } },
-        { originalProfession: { contains: query, mode: "insensitive" } },
-        { location: { contains: query, mode: "insensitive" } },
-        { phone: { contains: query, mode: "insensitive" } },
-        { passportNumber: { contains: query, mode: "insensitive" } },
-        { sourceCampaign: { contains: query, mode: "insensitive" } },
+        { name: { contains: query } },
+        { reference: { contains: query } },
+        { profession: { contains: query } },
+        { originalProfession: { contains: query } },
+        { location: { contains: query } },
+        { phone: { contains: query } },
+        { passportNumber: { contains: query } },
+        { sourceCampaign: { contains: query } },
       ],
     });
   }
@@ -85,7 +85,7 @@ const buildWhere = (filters: CandidateListFilters): Prisma.CandidateWhereInput =
   if (filters.overseasExperience === "no") and.push({ overseasCountries: { equals: [] } });
   if (filters.overseasExperience === "yes") and.push({ NOT: { overseasCountries: { equals: [] } } });
   if (filters.skills && filters.skills.length > 0) {
-    and.push({ secondarySkills: { array_contains: filters.skills as Prisma.JsonArray } });
+    and.push({ secondarySkills: { array_contains: filters.skills } });
   }
 
   return { AND: and };
@@ -125,7 +125,7 @@ export const findDuplicateCandidates = async (
       OR: [
         ...(normalizedPhone ? [{ phoneNormalized: normalizedPhone }] : []),
         ...(normalizedPassport ? [{ passportNumberNormalized: normalizedPassport }] : []),
-        ...(normalizedName ? [{ name: { equals: normalizedName, mode: "insensitive" } }] : []),
+        ...(normalizedName ? [{ name: { equals: normalizedName } }] : []),
       ],
     },
     select: {
@@ -155,15 +155,11 @@ export const updateCandidate = async (
   id: string,
   data: Prisma.CandidateUpdateInput,
 ): Promise<void> => {
-  await tx.candidate.update({
-    where: { id },
+  const result = await tx.candidate.updateMany({
+    where: { id, tenantId },
     data,
   });
-  const candidate = await tx.candidate.findFirst({
-    where: { id, tenantId },
-    select: { id: true },
-  });
-  if (!candidate) {
+  if (result.count !== 1) {
     throw new Error("Candidate tenant mismatch.");
   }
 };
