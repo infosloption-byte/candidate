@@ -12,6 +12,7 @@ import { candidateRoutes } from "./routes/candidates.js";
 import { interviewRoutes } from "./routes/interviews.js";
 import { jobRoutes } from "./routes/jobs.js";
 import { selectionRoutes } from "./routes/selection.js";
+import { onboardingRoutes } from "./routes/onboarding.js";
 import { registerErrorHandler } from "./errors/errorHandler.js";
 
 export const buildApp = (): FastifyInstance => {
@@ -42,6 +43,7 @@ export const buildApp = (): FastifyInstance => {
   void app.register(interviewRoutes, { prefix: "/api/v1" });
   void app.register(jobRoutes, { prefix: "/api/v1" });
   void app.register(selectionRoutes, { prefix: "/api/v1" });
+  void app.register(onboardingRoutes, { prefix: "/api/v1" });
 
   registerErrorHandler(app);
 
