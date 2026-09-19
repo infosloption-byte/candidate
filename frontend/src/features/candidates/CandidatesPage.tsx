@@ -583,7 +583,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-3" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
   ];
 
   return (
@@ -767,7 +767,7 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className={`grid gap-3 p-4 lg:items-end ${role === 'ADMIN' ? 'lg:grid-cols-[minmax(280px,1fr)_220px_200px_48px]' : 'lg:grid-cols-[minmax(280px,1fr)_200px_48px]'}`}>
+            <div className={`grid gap-3 p-4 md:items-end ${role === 'ADMIN' ? 'md:grid-cols-[minmax(180px,1fr)_minmax(150px,0.75fr)_minmax(140px,0.7fr)_minmax(165px,0.8fr)_40px]' : 'md:grid-cols-[minmax(180px,1fr)_minmax(150px,0.75fr)_minmax(165px,0.8fr)_40px]'}`}>
               <div className="min-w-0">
                 <label className="field-label">Search candidates</label>
                 <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, passport, contact, location or skill…" />
@@ -788,12 +788,38 @@ export const CandidatesPage = ({ role }: Props) => {
                   {statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
                 </select>
               </div>
-              <div className="flex items-end justify-start lg:justify-end">
+              <div className="min-w-0">
+                <label className="field-label">Sort</label>
+                <div className="mt-1 flex min-w-0 gap-1.5">
+                  <label className="sr-only" htmlFor="candidate-sort">Sort candidates</label>
+                  <select id="candidate-sort" className="field-input min-w-0 flex-1 py-2" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+                    <option value="name">Name</option>
+                    <option value="profession">Profession</option>
+                    <option value="experience">Experience</option>
+                    <option value="passport">Passport</option>
+                    <option value="status">Status</option>
+                  </select>
+                  <button
+                    type="button"
+                    title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
+                    aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
+                    className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                    onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                      {sortDirection === 'asc'
+                        ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-end md:justify-end">
                 <button
                   type="button"
                   title={showAdvancedFilters ? 'Hide filters' : 'More filters'}
                   aria-label={showAdvancedFilters ? 'Hide filters' : 'More filters'}
-                  className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                  className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                   onClick={() => setShowAdvancedFilters((value) => !value)}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -855,55 +881,31 @@ export const CandidatesPage = ({ role }: Props) => {
               </div>
             )}
 
-            <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
               <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
-              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                <label className="sr-only" htmlFor="candidate-sort">Sort candidates</label>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sort by</span>
-                <select id="candidate-sort" className="field-input w-full py-2 text-xs sm:w-40" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
-                  <option value="name">Name</option>
-                  <option value="profession">Profession</option>
-                  <option value="experience">Experience</option>
-                  <option value="passport">Passport</option>
-                  <option value="status">Status</option>
-                </select>
+              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
                 <button
                   type="button"
-                  title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
-                  aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
-                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+                  title="Clear filters"
+                  aria-label="Clear filters"
+                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                  onClick={() => {
+                    setSearch('');
+                    setStatusFilter('');
+                    setCountryFilter('');
+                    setProfessionFilter('');
+                    setAvailabilityFilter('');
+                    setVisaStatusFilter('');
+                    setLocationFilter('');
+                    setPassportFilter('');
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-                    {sortDirection === 'asc'
-                      ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M3 6h18M6 12h12M10 18h4" />
+                    <path d="M7 6l1-2h8l1 2" />
                   </svg>
                 </button>
-                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
-                  <button
-                    type="button"
-                    title="Clear filters"
-                    aria-label="Clear filters"
-                    className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    onClick={() => {
-                      setSearch('');
-                      setStatusFilter('');
-                      setCountryFilter('');
-                      setProfessionFilter('');
-                      setAvailabilityFilter('');
-                      setVisaStatusFilter('');
-                      setLocationFilter('');
-                      setPassportFilter('');
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path d="M3 6h18M6 12h12M10 18h4" />
-                      <path d="M7 6l1-2h8l1 2" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
