@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSelectionContext } from '../context/useSelectionContext';
 import type { SelectionCandidateRow } from './useSelectionWorkspace';
-import type { SelectionDecision, SelectionJob, SelectionRecord } from '../types/selection';
+import type { SelectionDecision, SelectionJob } from '../types/selection';
+import { fetchSelectionWorkspace, reassignSelectionCandidatesApi, saveSelectionDecisionsBulkApi } from '../services/selectionApi';
 
 type BulkDecision = Extract<SelectionDecision, 'selected' | 'reserve' | 'rejected'>;
 
@@ -54,7 +55,19 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
     setError(null);
   };
 
-  const applyDecision = (decision: BulkDecision): string[] => {
+  const refreshRemote = async () => {
+    const workspace = await fetchSelectionWorkspace();
+    dispatch({
+      type: 'REFRESH_REMOTE',
+      jobs: workspace.jobs,
+      records: workspace.records,
+      history: workspace.history,
+      approvalByJob: workspace.approvalByJob,
+      scoringByJob: workspace.scoringByJob,
+    });
+  };
+
+  const applyDecision = async (decision: BulkDecision): Promise<string[]> => {
     if (!job) {
       setError('Selection data is still loading.');
       return [];
@@ -77,26 +90,22 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
       }
     }
 
-    const now = timestamp();
-    const records: SelectionRecord[] = selectedRows.map((row) => ({
-      candidateId: row.candidate.id,
-      jobId: job.id,
-      decision,
-      reason: cleanReason,
-      note: cleanNote,
-      decidedAt: now,
-      decidedBy: 'Current recruiter',
-    }));
     const affectedIds = selectedRows.map((row) => row.candidate.id);
-    dispatch({ type: 'BULK_SAVE_DECISIONS', records });
-    setSelectedIds([]);
-    setReason('');
-    setNote('');
-    setError(null);
-    return affectedIds;
+    try {
+      await saveSelectionDecisionsBulkApi(job.id, affectedIds, decision, cleanReason, cleanNote);
+      await refreshRemote();
+      setSelectedIds([]);
+      setReason('');
+      setNote('');
+      setError(null);
+      return affectedIds;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The bulk decision could not be saved.');
+      return [];
+    }
   };
 
-  const reassign = (): string[] => {
+  const reassign = async (): Promise<string[]> => {
     if (!job) {
       setError('Selection data is still loading.');
       return [];
@@ -122,12 +131,25 @@ export const useSelectionBulkActions = ({ job, rows }: UseSelectionBulkActionsPr
     }
 
     const affectedIds = selectedRows.map((row) => row.candidate.id);
-    dispatch({ type: 'REASSIGN_CANDIDATES', candidateIds: affectedIds, fromJobId: job.id, toJobId: targetJob.id, reason: cleanReason, note: cleanNote, occurredAt: timestamp(), occurredBy: 'Current recruiter' });
-    setSelectedIds([]);
-    setReason('');
-    setNote('');
-    setError(null);
-    return affectedIds;
+    try {
+      const workspace = await reassignSelectionCandidatesApi(job.id, affectedIds, targetJob.id, cleanReason, cleanNote);
+      dispatch({
+        type: 'REFRESH_REMOTE',
+        jobs: workspace.jobs,
+        records: workspace.records,
+        history: workspace.history,
+        approvalByJob: workspace.approvalByJob,
+        scoringByJob: workspace.scoringByJob,
+      });
+      setSelectedIds([]);
+      setReason('');
+      setNote('');
+      setError(null);
+      return affectedIds;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The candidates could not be reassigned.');
+      return [];
+    }
   };
 
   return {
