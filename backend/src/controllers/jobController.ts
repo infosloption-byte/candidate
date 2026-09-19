@@ -2,8 +2,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { AppError } from "../errors/AppError.js";
 import { closeJobRecord, createJobRecord, getJob, listJobs, updateJobRecord, type JobInput } from "../services/jobService.js";
 
-interface Params { id: string; }
-interface ListQuery {
+export interface Params { id: string; }
+export interface ListQuery {
   search?: string;
   status?: "draft" | "open" | "paused" | "filled" | "closed";
   page?: number;
