@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { hashPassword, requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
+import { recordAuditEvent } from '../lib/audit.js';
 
 type AgencyStatus = 'ACTIVE' | 'INACTIVE';
 type AgencyUserRole = 'AGENCY' | 'INTERVIEWER';
@@ -82,6 +83,14 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const agency = await getPrisma().agency.create({ data: { name, slug } });
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: agency.id,
+        action: 'AGENCY_CREATED',
+        entityType: 'Agency',
+        entityId: agency.id,
+        summary: 'Created agency "' + agency.name + '".',
+      });
       return reply.code(201).send({ success: true, data: agency });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
@@ -115,6 +124,14 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const agency = await getPrisma().agency.update({ where: { id: request.params.id }, data });
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: agency.id,
+        action: 'AGENCY_UPDATED',
+        entityType: 'Agency',
+        entityId: agency.id,
+        summary: 'Updated agency "' + agency.name + '".',
+      });
       return reply.send({ success: true, data: agency });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
@@ -133,6 +150,15 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     const agency = await getPrisma().agency.update({
       where: { id: request.params.id },
       data: { status: 'INACTIVE' },
+    });
+
+    await recordAuditEvent({
+      actorId: request.authUser!.id,
+      agencyId: agency.id,
+      action: 'AGENCY_DEACTIVATED',
+      entityType: 'Agency',
+      entityId: agency.id,
+      summary: 'Deactivated agency "' + agency.name + '".',
     });
 
     return reply.send({ success: true, data: agency });
@@ -185,6 +211,14 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
           select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
         });
 
+        await recordAuditEvent({
+          actorId: request.authUser!.id,
+          agencyId: agency.id,
+          action: 'AGENCY_USER_CREATED',
+          entityType: 'User',
+          entityId: user.id,
+          summary: 'Created ' + user.role.toLowerCase() + ' user "' + user.name + '".',
+        });
         return reply.code(201).send({ success: true, data: user });
       } catch (error) {
         if ((error as { code?: string }).code === 'P2002') {
@@ -226,6 +260,14 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: request.params.agencyId,
+        action: 'AGENCY_USER_UPDATED',
+        entityType: 'User',
+        entityId: updatedUser.id,
+        summary: 'Updated agency user "' + updatedUser.name + '".',
+      });
       return reply.send({ success: true, data: updatedUser });
     },
   );

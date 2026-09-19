@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { createNotifications, notifyCandidateAccount } from '../lib/notifications.js';
 
 interface InterviewParams {
   id: string;
@@ -192,6 +194,26 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return interview;
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: application.job.agencyId,
+        action: 'INTERVIEW_SCHEDULED',
+        entityType: 'Interview',
+        entityId: result.id,
+        summary: 'Scheduled ' + result.type + ' interview for "' + result.application.candidate.name + '".',
+      });
+      await createNotifications(
+        result.panel.map((participant) => ({
+          userId: participant.userId,
+          type: 'INTERVIEW_SCHEDULED',
+          title: 'Interview scheduled',
+          message: 'Your panel interview for "' + result.application.candidate.name + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
+        })),
+      );
+      await notifyCandidateAccount(
+        result.application.candidate.id,
+        { type: 'INTERVIEW_SCHEDULED', title: 'Interview scheduled', message: 'Your ' + result.type.toLowerCase() + ' interview is scheduled for ' + result.scheduledAt.toISOString() + '.' },
+      );
       return reply.code(201).send({ success: true, data: result });
     },
   );
@@ -269,6 +291,26 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         });
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId,
+        action: 'INTERVIEW_UPDATED',
+        entityType: 'Interview',
+        entityId: result.id,
+        summary: 'Updated interview for "' + result.application.candidate.name + '".',
+      });
+      await createNotifications(
+        result.panel.map((participant) => ({
+          userId: participant.userId,
+          type: 'INTERVIEW_UPDATED',
+          title: 'Interview updated',
+          message: 'Your panel interview for "' + result.application.candidate.name + '" has been updated.',
+        })),
+      );
+      await notifyCandidateAccount(
+        result.application.candidate.id,
+        { type: 'INTERVIEW_UPDATED', title: 'Interview updated', message: 'Your interview schedule has been updated.' },
+      );
       return reply.send({ success: true, data: result });
     },
   );

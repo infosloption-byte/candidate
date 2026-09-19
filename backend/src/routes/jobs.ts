@@ -3,6 +3,8 @@ import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput } from '../domain/jobValidation.js';
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { notifyAgencyUsers } from '../lib/notifications.js';
 
 interface JobParams {
   id: string;
@@ -103,6 +105,21 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         include: { agency: { select: { id: true, name: true, slug: true } } },
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: agency.id,
+        action: 'JOB_CREATED',
+        entityType: 'Job',
+        entityId: job.id,
+        summary: 'Created job "' + job.title + '".',
+      });
+      if (job.status === 'PUBLISHED') {
+        await notifyAgencyUsers(
+          agency.id,
+          { type: 'JOB_PUBLISHED', title: 'New job published', message: '"' + job.title + '" is now open for applications.' },
+          ['AGENCY'],
+        );
+      }
       return reply.code(201).send({ success: true, data: job });
     },
   );
@@ -155,6 +172,21 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         include: { agency: { select: { id: true, name: true, slug: true } } },
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: existing.agencyId,
+        action: 'JOB_UPDATED',
+        entityType: 'Job',
+        entityId: job.id,
+        summary: 'Updated job "' + job.title + '".',
+      });
+      if (request.body.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
+        await notifyAgencyUsers(
+          existing.agencyId,
+          { type: 'JOB_PUBLISHED', title: 'Job published', message: '"' + job.title + '" is now open for applications.' },
+          ['AGENCY'],
+        );
+      }
       return reply.send({ success: true, data: job });
     },
   );
@@ -179,6 +211,14 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         include: { agency: { select: { id: true, name: true, slug: true } } },
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: existing.agencyId,
+        action: 'JOB_CLOSED',
+        entityType: 'Job',
+        entityId: job.id,
+        summary: 'Closed job "' + job.title + '".',
+      });
       return reply.send({ success: true, data: job });
     },
   );

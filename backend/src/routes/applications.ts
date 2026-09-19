@@ -3,6 +3,8 @@ import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateApplicationStatus } from '../domain/applicationValidation.js';
 import type { ApplicationStatus } from '../generated/prisma/enums.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { notifyAgencyUsers, notifyCandidateAccount } from '../lib/notifications.js';
 
 interface ApplicationParams {
   id: string;
@@ -107,6 +109,19 @@ export const applicationRoutes: FastifyPluginAsync = async (app) => {
           include: applicationInclude,
         });
 
+        await recordAuditEvent({
+          actorId: user.id,
+          agencyId: job.agencyId,
+          action: 'APPLICATION_CREATED',
+          entityType: 'JobApplication',
+          entityId: application.id,
+          summary: 'New application received for "' + application.job.title + '" from "' + application.candidate.name + '".',
+        });
+        await notifyAgencyUsers(
+          job.agencyId,
+          { type: 'APPLICATION_RECEIVED', title: 'New application', message: application.candidate.name + ' applied for "' + application.job.title + '".' },
+          ['AGENCY'],
+        );
         return reply.code(201).send({ success: true, data: application });
       } catch (error) {
         if ((error as { code?: string }).code === 'P2002') {
@@ -159,6 +174,20 @@ export const applicationRoutes: FastifyPluginAsync = async (app) => {
         include: applicationInclude,
       });
 
+      if (request.body.status !== undefined) {
+        await recordAuditEvent({
+          actorId: user.id,
+          agencyId: application.job.agencyId,
+          action: 'APPLICATION_STATUS_CHANGED',
+          entityType: 'JobApplication',
+          entityId: application.id,
+          summary: 'Changed application status to ' + request.body.status + '.',
+        });
+        await notifyCandidateAccount(
+          application.candidateId,
+          { type: 'APPLICATION_STATUS_CHANGED', title: 'Application updated', message: 'Your application status is now ' + request.body.status.toLowerCase().replace('_', ' ') + '.' },
+        );
+      }
       return reply.send({ success: true, data: updated });
     },
   );

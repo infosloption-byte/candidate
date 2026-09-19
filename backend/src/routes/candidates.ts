@@ -4,6 +4,8 @@ import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateCandidateInput, type CandidateInput } from '../domain/candidateValidation.js';
 import { csvRowsToObjects } from '../domain/csv.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { notifyAgencyUsers } from '../lib/notifications.js';
 
 interface CandidateParams {
   id: string;
@@ -110,6 +112,14 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         select: candidateSelect,
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: agency.id,
+        action: 'CANDIDATE_CREATED',
+        entityType: 'Candidate',
+        entityId: candidate.id,
+        summary: 'Added candidate "' + candidate.name + '".',
+      });
       return reply.code(201).send({ success: true, data: candidate });
     },
   );
@@ -237,6 +247,14 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return created;
       });
 
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: agency.id,
+        action: 'CANDIDATES_IMPORTED',
+        entityType: 'CandidateImport',
+        entityId: agency.id,
+        summary: 'Imported ' + imported.length + ' candidates from CSV.',
+      });
       return reply.code(201).send({ success: true, data: { importedCount: imported.length, candidates: imported } });
     },
   );
@@ -289,6 +307,19 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return candidate;
       });
 
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: agency.id,
+        action: 'CANDIDATE_SELF_SUBMITTED',
+        entityType: 'Candidate',
+        entityId: result.id,
+        summary: 'Candidate "' + result.name + '" submitted a self-onboarding profile.',
+      });
+      await notifyAgencyUsers(
+        agency.id,
+        { type: 'CANDIDATE_SUBMITTED', title: 'Candidate profile submitted', message: '"' + result.name + '" submitted a profile for review.' },
+        ['AGENCY'],
+      );
       return reply.code(201).send({ success: true, data: result });
     },
   );
@@ -344,6 +375,14 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         select: candidateSelect,
       });
 
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: candidate.agencyId,
+        action: 'CANDIDATE_UPDATED',
+        entityType: 'Candidate',
+        entityId: candidate.id,
+        summary: 'Updated candidate "' + candidate.name + '".',
+      });
       return reply.send({ success: true, data: candidate });
     },
   );

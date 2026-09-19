@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { notifyAgencyUsers, notifyCandidateAccount } from '../lib/notifications.js';
 import { resolveApplicationStatus, validateEvaluationInput, type EvaluationInput } from '../domain/evaluationValidation.js';
 
 interface InterviewParams {
@@ -137,6 +139,25 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
           return { evaluation, evaluations, applicationStatus };
         });
 
+        await recordAuditEvent({
+          actorId: user.id,
+          agencyId: interview.application.job.agencyId,
+          action: 'EVALUATION_SUBMITTED',
+          entityType: 'InterviewEvaluation',
+          entityId: result.evaluation.id,
+          summary: 'Submitted interview evaluation for interview ' + interview.id + '.',
+        });
+        if (result.evaluations.length === interview.panel.length) {
+          await notifyCandidateAccount(
+            interview.application.candidateId,
+            { type: 'INTERVIEW_DECISION', title: 'Interview decision recorded', message: 'Your interview has been completed and the application status is now ' + result.applicationStatus.toLowerCase() + '.' },
+          );
+          await notifyAgencyUsers(
+            interview.application.job.agencyId,
+            { type: 'INTERVIEW_DECISION', title: 'Interview decision recorded', message: 'Interview completed with final application status: ' + result.applicationStatus.toLowerCase() + '.' },
+            ['AGENCY'],
+          );
+        }
         return reply.code(201).send({
           success: true,
           data: {

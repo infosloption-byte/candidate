@@ -10,6 +10,8 @@ import {
   verifyPassword,
 } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
+import { recordAuditEvent } from '../lib/audit.js';
+import { notifyAgencyUsers } from '../lib/notifications.js';
 
 interface LoginBody {
   email?: string;
@@ -142,6 +144,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
 
       await createSession(result.user.id, reply);
+
+      await recordAuditEvent({
+        actorId: result.user.id,
+        agencyId,
+        action: 'INTERVIEWEE_REGISTERED',
+        entityType: 'User',
+        entityId: result.user.id,
+        summary: 'Interviewee "' + result.user.name + '" registered and submitted a candidate profile.',
+      });
+      await notifyAgencyUsers(
+        agencyId,
+        { type: 'CANDIDATE_SUBMITTED', title: 'Candidate profile submitted', message: result.user.name + ' completed self-registration and submitted a profile.' },
+        ['AGENCY'],
+      );
 
       return reply.code(201).send({ success: true, data: { user: result.user } });
     } catch (error) {
