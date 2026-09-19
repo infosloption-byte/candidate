@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../shared/services/apiClient';
+import { apiRequest } from '../../../shared/services/apiClient';
 import type {
   Availability,
   Candidate,
@@ -173,26 +173,8 @@ const normalizeCandidate = (value: unknown, index: number): Candidate => {
 };
 
 export const loadCandidates = async (): Promise<Candidate[]> => {
-  const response = await fetch(`${API_BASE_URL}/candidates?page=1&pageSize=100`, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error("Candidate data could not be loaded from the backend.");
-  }
-
-  const payload = await response.json() as {
-    success: boolean;
-    data?: { items: Candidate[] };
-  };
-
-  if (!payload.success || !payload.data) {
-    throw new Error("The backend returned an invalid candidate response.");
-  }
-
-  return payload.data.items;
+  const response = await apiRequest<{ items: Candidate[] }>("/candidates?page=1&pageSize=100");
+  return response.items;
 };
-
 
 export const getDemoCandidates = (): Candidate[] => seedCandidates;
