@@ -335,13 +335,39 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   const interview = json<{ data: { id: string } }>(interviewResponse);
   interviewId = interview.data.id;
 
+  const rescheduledAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const rescheduleResponse = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/interviews/' + interview.data.id,
+    headers: { cookie: agencyCookie },
+    payload: {
+      scheduledAt: rescheduledAt,
+      durationMins: 60,
+      location: 'QA Rescheduled Room',
+      interviewerIds: [interviewerId],
+    },
+  });
+  assert.equal(rescheduleResponse.statusCode, 200);
+  const rescheduledBody = json<{ data: { scheduledAt: string; durationMins: number; location: string | null } }>(rescheduleResponse);
+  assert.equal(rescheduledBody.data.scheduledAt, rescheduledAt);
+  assert.equal(rescheduledBody.data.durationMins, 60);
+  assert.equal(rescheduledBody.data.location, 'QA Rescheduled Room');
+
+  const pastRescheduleResponse = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/interviews/' + interview.data.id,
+    headers: { cookie: agencyCookie },
+    payload: { scheduledAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
+  });
+  assert.equal(pastRescheduleResponse.statusCode, 400);
+
   const conflictResponse = await app.inject({
     method: 'POST',
     url: '/api/v1/applications/' + application.data.id + '/interviews',
     headers: { cookie: agencyCookie },
     payload: {
       type: 'FINAL',
-      scheduledAt,
+      scheduledAt: rescheduledAt,
       durationMins: 30,
       location: 'QA Room 2',
       interviewerIds: [interviewerId],
@@ -385,6 +411,14 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   const evaluationBody = json<{ data: { interviewCompleted: boolean; applicationStatus: string } }>(evaluationResponse);
   assert.equal(evaluationBody.data.interviewCompleted, true);
   assert.equal(evaluationBody.data.applicationStatus, 'SELECTED');
+
+  const completedInterviewUpdate = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/interviews/' + interview.data.id,
+    headers: { cookie: agencyCookie },
+    payload: { scheduledAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() },
+  });
+  assert.equal(completedInterviewUpdate.statusCode, 409);
 
   const agencyNotifications = await app.inject({
     method: 'GET',
