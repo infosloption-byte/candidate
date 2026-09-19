@@ -55,14 +55,23 @@ const roleLabels: Record<UserRole, string> = {
 
 export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleCollapse }: SidebarProps) => (
   <aside className="flex h-full w-full flex-col bg-slate-950 text-white" aria-label="Primary navigation">
-    <div className="flex min-h-[72px] items-center gap-3 border-b border-white/10 px-4">
+    <div className={`flex min-h-[72px] items-center border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
       <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-400 font-black text-[15px] text-slate-950 shadow-lg shadow-cyan-950/20">B</div>
       {!collapsed && (
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-extrabold tracking-tight">BuildHire</p>
           <p className="mt-0.5 truncate text-[10px] font-medium text-slate-400">{roleLabels[role]}</p>
         </div>
       )}
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={`hidden size-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-white/[0.06] hover:text-white lg:grid ${collapsed ? 'absolute right-1.5 top-4' : ''}`}
+      >
+        <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={16} />
+      </button>
     </div>
 
     <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-5" aria-label="Workspace">
@@ -103,22 +112,13 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
 
     <div className="border-t border-white/10 px-3 py-3">
       {!collapsed && (
-        <div className="mb-2 rounded-xl border border-white/7 bg-white/[0.03] px-3 py-2.5">
+        <div className="rounded-xl border border-white/7 bg-white/[0.03] px-3 py-2.5">
           <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Workspace</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-slate-300">
             {role === 'ADMIN' ? 'System administration' : role === 'AGENCY' ? 'Recruitment operations' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
           </p>
         </div>
       )}
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="hidden min-h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-slate-400 transition hover:bg-white/[0.06] hover:text-white lg:flex"
-      >
-        <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={16} />
-        {!collapsed && 'Collapse sidebar'}
-      </button>
     </div>
   </aside>
 );
