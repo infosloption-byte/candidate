@@ -20,10 +20,12 @@ import {
   updatePracticalNoteController,
   updatePracticalResultController,
   updateScoreController,
+  type ListQuery,
+  type CreateBody,
 } from "../controllers/interviewController.js";
 
 export const interviewRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/interviews", {
+  app.get<{ Querystring: ListQuery }>("/interviews", {
     onRequest: [app.authenticate, app.authorize("interview.view")],
     schema: { querystring: listInterviewsQuerySchema },
   }, listInterviewsController);
@@ -32,7 +34,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     onRequest: [app.authenticate, app.authorize("interview.view")],
   }, listInterviewersController);
 
-  app.post("/interviews", {
+  app.post<{ Body: CreateBody }>("/interviews", {
     onRequest: [app.authenticate, app.authorize("interview.schedule")],
     schema: { body: createInterviewBodySchema },
   }, createInterviewController);
