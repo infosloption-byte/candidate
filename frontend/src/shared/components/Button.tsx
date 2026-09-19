@@ -29,7 +29,7 @@ export const Button = ({
 }: ButtonProps) => (
   <button
     type={type}
-    className={`inline-flex items-center justify-center gap-2 rounded-xl font-bold transition disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+    className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl font-bold touch-manipulation transition disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
     {...props}
   />
 );
