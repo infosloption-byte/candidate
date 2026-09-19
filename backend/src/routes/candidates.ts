@@ -106,8 +106,8 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           profession: request.body.profession?.trim() || null,
           experienceYears: request.body.experienceYears ?? null,
           skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
-          onboardingStatus: request.body.onboardingStatus ?? 'NOT_STARTED',
-          source: request.body.source === 'SELF_ONBOARDED' || request.body.source === 'BULK_IMPORTED' ? request.body.source : 'AGENCY_ADDED',
+          onboardingStatus: 'NOT_STARTED',
+          source: 'AGENCY_ADDED',
         },
         select: candidateSelect,
       });
