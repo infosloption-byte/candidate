@@ -13,21 +13,34 @@ import type { Job, UserRole } from '../../domain/types';
 
 interface JobsPageProps { role: UserRole; }
 
+interface ApplicationSummary {
+  id: string;
+  jobId: string;
+}
+
 export const JobsPage = ({ role }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(!developmentMode);
+  const [applying, setApplying] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
   const [form, setForm] = useState({ title: '', description: '', location: '', openings: '1' });
-  const candidateId = user?.candidateId ?? state.users.find((item) => item.role === 'INTERVIEWEE')?.candidateId;
 
   useEffect(() => {
     if (developmentMode) {
       setJobs(state.jobs);
+      if (role === 'INTERVIEWEE') {
+        setAppliedJobIds(new Set(
+          state.applications
+            .filter((application) => application.candidateId === user?.candidateId || application.candidateId === 'candidate-1')
+            .map((application) => application.jobId),
+        ));
+      }
       setLoading(false);
       return;
     }
@@ -36,9 +49,16 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     setLoading(true);
     setError('');
 
-    apiFetch<Job[]>('/jobs')
-      .then((result) => {
-        if (!cancelled) setJobs(result);
+    const jobsRequest = apiFetch<Job[]>('/jobs');
+    const applicationsRequest = role === 'INTERVIEWEE'
+      ? apiFetch<ApplicationSummary[]>('/applications')
+      : Promise.resolve([]);
+
+    Promise.all([jobsRequest, applicationsRequest])
+      .then(([jobResult, applicationResult]) => {
+        if (cancelled) return;
+        setJobs(jobResult);
+        setAppliedJobIds(new Set(applicationResult.map((application) => application.jobId)));
       })
       .catch((requestError: unknown) => {
         if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load jobs.');
@@ -50,7 +70,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     return () => {
       cancelled = true;
     };
-  }, [developmentMode, state.jobs, user?.id]);
+  }, [developmentMode, role, state.applications, state.jobs, user?.candidateId, user?.id]);
 
   const createJob = async () => {
     if (!form.title.trim()) {
@@ -129,6 +149,49 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     }
   };
 
+  const applyToJob = async (job: Job) => {
+    if (appliedJobIds.has(job.id) || !user?.candidateId) {
+      if (!user?.candidateId && !developmentMode) {
+        setError('Your account is not linked to a candidate profile.');
+      }
+      return;
+    }
+
+    setApplying(job.id);
+    setError('');
+
+    try {
+      await apiFetch('/jobs/' + job.id + '/applications', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+
+      setAppliedJobIds((current) => new Set(current).add(job.id));
+      setSuccessTitle('Application submitted');
+      setSuccess('Your application for "' + job.title + '" has been submitted.');
+    } catch (requestError: unknown) {
+      if (developmentMode) {
+        dispatch({
+          type: 'APPLY_TO_JOB',
+          application: {
+            id: 'app-' + Date.now(),
+            jobId: job.id,
+            candidateId: user?.candidateId ?? 'candidate-1',
+            status: 'APPLIED',
+            appliedAt: new Date().toISOString(),
+          },
+        });
+        setAppliedJobIds((current) => new Set(current).add(job.id));
+        setSuccessTitle('Application submitted');
+        setSuccess('Your application for "' + job.title + '" has been submitted.');
+      } else {
+        setError(requestError instanceof Error ? requestError.message : 'Unable to submit the application.');
+      }
+    } finally {
+      setApplying(null);
+    }
+  };
+
   const visibleJobs = jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
 
   return (
@@ -145,7 +208,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
       />
 
       {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest job advertisements." />}
-      {error && <StateMessage kind="error" title="Could not load jobs" description={error} />}
+      {error && <StateMessage kind="error" title="Job action failed" description={error} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
 
       {showForm && (
@@ -184,9 +247,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
       {!loading && visibleJobs.length > 0 && (
         <div className="grid gap-4">
           {visibleJobs.map((job) => {
-            const alreadyApplied = candidateId
-              ? state.applications.some((application) => application.jobId === job.id && application.candidateId === candidateId)
-              : false;
+            const alreadyApplied = appliedJobIds.has(job.id);
 
             return (
               <Card key={job.id}>
@@ -199,8 +260,8 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                     <p className="mt-2 text-sm text-slate-500">{job.description ?? 'No description provided.'}</p>
                   </div>
                   {role === 'INTERVIEWEE' ? (
-                    <Button disabled>
-                      {alreadyApplied ? 'Applied' : 'Applications next'}
+                    <Button disabled={alreadyApplied || applying === job.id} onClick={() => void applyToJob(job)}>
+                      {alreadyApplied ? 'Applied' : applying === job.id ? 'Applying…' : 'Apply'}
                     </Button>
                   ) : (
                     <Button variant="secondary" onClick={() => void setStatus(job)}>
