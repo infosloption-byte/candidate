@@ -689,27 +689,19 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
-                  {role === 'ADMIN' || role === 'AGENCY' ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
-                      {interview.status === 'SCHEDULED' && (
-                        <>
-                          <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
-                          <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                          <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
-                      <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
-                    </div>
-                  )}
-                  {(role === 'INTERVIEWER' || role === 'INTERVIEWEE') && interview.status !== 'SCHEDULED' && (
+                  <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
-                  )}
+                    {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                      <>
+                        <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
+                        <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                      </>
+                    )}
+                    {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
+                      <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                    )}
+                  </div>
                 </div>
 
                 {interview.panel && interview.panel.length > 0 && (
