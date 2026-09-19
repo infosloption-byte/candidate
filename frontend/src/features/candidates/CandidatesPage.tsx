@@ -33,6 +33,8 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(emptyForm);
+  const [search, setSearch] = useState('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState('');
 
   useEffect(() => {
     if (developmentMode) {
@@ -183,6 +185,26 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
     }
   };
 
+  const filteredCandidates = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return candidates;
+
+    return candidates.filter((item) => [
+      item.name,
+      item.reference,
+      item.email ?? '',
+      item.phone ?? '',
+      item.profession ?? '',
+      item.skills.join(' '),
+      item.onboardingStatus,
+      item.source,
+    ].some((value) => value.toLowerCase().includes(query)));
+  }, [candidates, search]);
+
+  const selectedCandidate = selectedCandidateId
+    ? candidates.find((item) => item.id === selectedCandidateId)
+    : undefined;
+
   const columns = [
     {
       key: 'candidate',
@@ -212,10 +234,19 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
     {
       key: 'onboarding',
       header: 'Onboarding',
+      render: (item: Candidate) => <StatusPill value={item.onboardingStatus} />,
+    },
+    {
+      key: 'actions',
+      header: 'Review',
       render: (item: Candidate) => (
-        <button type="button" onClick={() => void updateOnboarding(item)}>
-          <StatusPill value={item.onboardingStatus} />
-        </button>
+        <Button
+          variant="secondary"
+          className="px-3 py-1.5"
+          onClick={() => setSelectedCandidateId(item.id)}
+        >
+          Review
+        </Button>
       ),
     },
   ];
@@ -236,6 +267,83 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
       {loading && <StateMessage kind="loading" title="Loading candidates" description="Fetching the latest candidate records." />}
       {error && <StateMessage kind="error" title="Candidate action failed" description={error} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
+
+      {role !== 'INTERVIEWEE' && (
+        <Card>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="field-label">Candidate search</p>
+              <p className="mt-1 text-xs text-slate-400">Search name, reference, contact, profession, skills, source, or onboarding status.</p>
+            </div>
+            <input
+              className="field-input w-full sm:max-w-sm"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search candidates…"
+              aria-label="Search candidates"
+            />
+          </div>
+          {search && (
+            <p className="mt-3 text-xs font-semibold text-slate-500">
+              Showing {filteredCandidates.length} of {candidates.length} candidates.
+            </p>
+          )}
+        </Card>
+      )}
+
+      {selectedCandidate && role !== 'INTERVIEWEE' && (
+        <Card>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">Candidate review</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">{selectedCandidate.name}</h2>
+              <p className="mt-1 text-sm text-slate-500">{selectedCandidate.reference} · {selectedCandidate.profession ?? 'Profession not set'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <StatusPill value={selectedCandidate.onboardingStatus} />
+              <Button variant="secondary" onClick={() => setSelectedCandidateId('')}>Close</Button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div><p className="field-label">Email</p><p className="mt-1 text-sm text-slate-700">{selectedCandidate.email ?? '—'}</p></div>
+            <div><p className="field-label">Phone</p><p className="mt-1 text-sm text-slate-700">{selectedCandidate.phone ?? '—'}</p></div>
+            <div><p className="field-label">Experience</p><p className="mt-1 text-sm text-slate-700">{selectedCandidate.experienceYears ?? 0} years</p></div>
+            <div><p className="field-label">Source</p><p className="mt-1 text-sm text-slate-700">{selectedCandidate.source.replace('_', ' ').toLowerCase()}</p></div>
+          </div>
+
+          <div className="mt-5">
+            <p className="field-label">Skills</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedCandidate.skills.length === 0
+                ? <span className="text-sm text-slate-400">No skills listed.</span>
+                : selectedCandidate.skills.map((skill) => (
+                  <span key={skill} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{skill}</span>
+                ))}
+            </div>
+          </div>
+
+          {selectedCandidate.onboardingStatus === 'SUBMITTED' && (
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4">
+              <div>
+                <p className="text-sm font-bold text-amber-950">Profile submitted for review</p>
+                <p className="mt-1 text-xs text-amber-800">Review the candidate details above, then mark the onboarding as completed.</p>
+              </div>
+              <Button onClick={() => void updateOnboarding(selectedCandidate)}>Mark completed</Button>
+            </div>
+          )}
+
+          {selectedCandidate.onboardingStatus === 'COMPLETED' && (
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 p-4">
+              <div>
+                <p className="text-sm font-bold text-emerald-950">Profile review completed</p>
+                <p className="mt-1 text-xs text-emerald-800">The candidate profile is ready for the recruitment workflow.</p>
+              </div>
+              <Button variant="secondary" onClick={() => void updateOnboarding(selectedCandidate)}>Reopen review</Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {showForm && (
         <Card>
@@ -293,7 +401,7 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
         !loading && (
           <DataTable
             columns={columns}
-            rows={candidates}
+            rows={filteredCandidates}
             getRowKey={(item) => item.id}
             emptyMessage="No candidates have been onboarded yet."
           />
