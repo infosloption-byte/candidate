@@ -52,6 +52,7 @@ export type InterviewAction =
   | { type: 'CLOSE_SCHEDULE_DRAWER' }
   | { type: 'CREATE_INTERVIEW'; interview: Interview }
   | { type: 'CREATE_INTERVIEWS'; interviews: Interview[] }
+  | { type: 'REPLACE_INTERVIEW'; interview: Interview }
   | { type: 'UPDATE_STATUS'; interviewId: string; status: InterviewStatus }
   | { type: 'SET_SCORE'; interviewId: string; criterionId: string; score: number | null }
   | { type: 'SET_CRITERION_NOTE'; interviewId: string; criterionId: string; note: string }
