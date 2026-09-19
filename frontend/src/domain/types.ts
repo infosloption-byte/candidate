@@ -43,6 +43,13 @@ export interface Candidate {
   name: string;
   email: string | null;
   phone: string | null;
+  alternatePhone: string | null;
+  country: string | null;
+  passportNumber: string | null;
+  passportExpiry: string | null;
+  currentLocation: string | null;
+  availability: string | null;
+  visaStatus: string | null;
   profession: string | null;
   experienceYears: number | null;
   skills: string[];
