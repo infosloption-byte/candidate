@@ -7,11 +7,17 @@ export const registerErrorHandler = (app: FastifyInstance): void => {
   app.setErrorHandler((error, request, reply) => {
     if ((error as FastifyError).validation) {
       const validation = (error as FastifyError).validation ?? [];
-      const details: AppErrorDetail[] = validation.map((item) => ({
-        field: item.instancePath || item.params?.missingProperty,
-        code: "INVALID_VALUE",
-        message: item.message ?? "Invalid value.",
-      }));
+      const details: AppErrorDetail[] = validation.map((item) => {
+        const instancePath = typeof item.instancePath === "string" ? item.instancePath : undefined;
+        const missingProperty = typeof item.params?.missingProperty === "string"
+          ? item.params.missingProperty
+          : undefined;
+        return {
+          field: instancePath || missingProperty,
+          code: "INVALID_VALUE",
+          message: item.message ?? "Invalid value.",
+        };
+      });
       return reply.code(400).send({
         success: false,
         error: {
