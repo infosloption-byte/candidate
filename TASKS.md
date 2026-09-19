@@ -2,139 +2,99 @@
 
 Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 
-## Reset baseline
+## Product foundation
 
-- ✅ Remove legacy frontend business logic, feature modules, providers, repositories, and tests.
-- ✅ Preserve the existing BuildHire frontend theme and responsive shell.
-- ✅ Remove legacy backend controllers, services, repositories, auth implementation, feature routes, and tests.
-- ✅ Remove all old Prisma migrations and seed data.
-- ✅ Replace the old Prisma schema with the minimal core-domain model.
-- ✅ Reduce frontend dependencies to the React + Tailwind + Vite foundation.
-- ✅ Reduce backend dependencies to the Fastify + Prisma/MySQL foundation.
-- ✅ Replace legacy documentation with the new rebuild plan.
-- ✅ Keep a minimal backend health endpoint as the development baseline.
+- ✅ Reset legacy recruitment modules to the four-role BuildHire foundation.
+- ✅ Preserve the existing BuildHire visual theme and responsive shell.
+- ✅ Implement Admin / Agency / Interviewer / Interviewee role boundaries.
+- ✅ Implement session authentication, password hashing, session expiry, and inactive-agency protection.
 
-## Phase 1 — Frontend foundation
+## Agency and Admin operations
 
-- ✅ Build role-aware shell for Admin, Agency, Interviewer, and Interviewee.
-- ✅ Create core frontend types and fixture data: Agency, User, Candidate, Job, JobApplication, Interview, InterviewParticipant, InterviewEvaluation.
-- ✅ Create first-pass pages for Dashboard, Jobs, Candidates, Applications, Interviews, Agencies & Users, and Settings using the preserved theme.
-- ✅ Build reusable table/list/detail/form primitives using the preserved theme.
-- ✅ Add loading, empty, error, and success states.
-- ✅ Add frontend smoke tests for the new shell and core navigation.
-- ✅ Keep business data isolated in a simple domain/fixtures boundary for the frontend-first phase.
+- ✅ Admin agency CRUD and activation/deactivation.
+- ✅ Agency user management for Agency and Interviewer accounts.
+- ✅ Admin cross-agency operations for candidate, job, interview, and criteria management.
+- ✅ Agency isolation for agency users.
+- ✅ Admin agency workspace selector in operational screens.
 
-## Phase 2 — Authentication and agencies
+## Candidate pool
 
-- ✅ Implement login and session handling.
-- ✅ Implement Admin agency CRUD.
-- ✅ Implement Agency user management.
-- ✅ Implement role-based access: Admin / Agency / Interviewer / Interviewee.
-- ✅ Implement agency-scoped authorization.
-- ✅ Implement Interviewer user onboarding.
-- ✅ Implement Interviewee account registration and candidate account linkage.
-- ✅ Add secure password handling and session expiry.
-- 🔄 Backend authentication/integration test coverage added; green CI verification remains.
-- ✅ Add reproducible development database seed for Admin, Agency, and Interviewer accounts.
+- ✅ Candidate creation places candidates directly in the candidate pool.
+- ✅ Candidate self-onboarding creates a linked candidate in the pool.
+- ✅ Bulk CSV onboarding creates candidates in the pool.
+- ✅ Candidate profile editing.
+- ✅ Candidate onboarding state tracking.
+- ✅ Candidate lifecycle status.
+- ✅ Candidate status-change history.
+- ✅ Candidate activity/audit history.
+- ✅ Candidate interview history with score summaries.
+- ✅ Candidate document upload and agency-isolated access.
 
-## Phase 3 — Jobs
+## Jobs / positions
 
-- ✅ Build Job API and persistence.
-- ✅ Build agency job list API.
-- ✅ Build create/edit job form.
-- ✅ Implement publish / close.
-- ✅ Build published job API view.
-- ✅ Add job validation.
-- ✅ Add job API validation tests.
-- ✅ Restrict job mutations to Admin/Agency roles.
-- ✅ Connect the frontend Jobs screen to authenticated Job API sessions.
+- ✅ Job create/edit/publish/close.
+- ✅ Jobs remain independent of candidate lifecycle.
+- ✅ Jobs can be attached as optional context to interviews.
+- ✅ Admin can manage jobs on behalf of an agency.
 
-## Phase 4 — Candidates and onboarding
+## Interviews
 
-- ✅ Build Candidate API and persistence.
-- ✅ Build agency-created candidate onboarding API.
-- ✅ Build candidate self-onboarding API and account linkage.
-- ✅ Build onboarding progress/submission states at API level.
-- ✅ Build frontend candidate list/form against Candidate API.
-- ✅ Build agency review of submitted candidate profiles in the production UI.
-- ✅ Build bulk candidate onboarding via CSV.
-- ✅ Add row validation and duplicate protection for bulk import.
-- 🔄 Candidate authorization, onboarding, and bulk-import integration coverage added; green CI verification remains.
+- ✅ Interview is linked directly to Candidate.
+- ✅ Optional Job/position context on Interview.
+- ✅ Single interviewer assignment.
+- ✅ Multi-interviewer panel assignment.
+- ✅ Schedule conflict validation for candidate and interviewers.
+- ✅ Reschedule and cancellation.
+- ✅ No-show handling.
+- ✅ Interviewer “My Interviews” experience.
+- ✅ Admin and Agency interview assignment.
+- ✅ Admin can schedule interviews on behalf of any active agency.
 
-## Phase 5 — Applications
+## Interview criteria and evaluation
 
-- ✅ Build JobApplication API and persistence.
-- ✅ Allow candidates to apply to published jobs.
-- ✅ Prevent duplicate job applications.
-- ✅ Build agency application queue API.
-- ✅ Implement application status workflow.
-- ✅ Connect application state contract to candidate/job records.
-- ✅ Add application workflow validation tests.
-- ✅ Connect frontend Applications screen to authenticated Application API.
-- ✅ Connect published-job Apply action to Application API.
+- ✅ Agency-configurable interview criteria.
+- ✅ Criterion maximum points.
+- ✅ Activate/deactivate criteria without deleting history.
+- ✅ One evaluation per panel interviewer per interview.
+- ✅ Per-criterion scoring.
+- ✅ Total and percentage score summary.
+- ✅ All-panel-evaluated → interview completed transition.
+- ✅ Completed interview → candidate INTERVIEW_COMPLETED transition.
+- ✅ Final candidate status recorded after a completed interview.
+- ✅ Final status reason stored in candidate history.
 
-## Phase 6 — Interviews
+## Removed from the product
 
-- ✅ Build Interview API and persistence against JobApplication.
-- ✅ Schedule single interview.
-- ✅ Assign one interviewer.
-- ✅ Assign multiple interviewers as a panel.
-- ✅ Add basic schedule-conflict validation.
-- ✅ Add reschedule and cancellation API.
-- ✅ Build interview list/calendar UI against Interview API.
-- ✅ Add interviewer My Interviews view against Interview API.
-- ✅ Add agency reschedule control for scheduled interviews.
-- 🔄 Interview scheduling, panel, conflict, and evaluation-access integration coverage added; green CI verification remains.
+- ✅ JobApplication entity and application module removed from active code.
+- ✅ Candidate “Apply” workflow removed.
+- ✅ Application status pipeline removed.
+- ✅ Recommendation-based final decision logic removed.
+- ✅ Rating-only evaluation removed in favor of criterion scoring.
 
-## Phase 7 — Evaluations
+## QA and release
 
-- ✅ Build InterviewEvaluation API and persistence.
-- ✅ Allow each panel interviewer to submit one evaluation.
-- ✅ Store rating, recommendation, and comments.
-- ✅ Show evaluation summary API.
-- ✅ Map completed panel recommendations to application status.
-- ✅ Connect interviewer evaluation form to Evaluation API.
-- 🔄 Evaluation authorization and final-decision workflow coverage added; green CI verification remains.
-
-## Phase 8 — Operational polish
-
-- ✅ Add simple live API-backed dashboards by role.
-- ✅ Add minimal audit events for important workflow mutations.
-- ✅ Add basic notifications for core workflow events, without restoring the legacy notification center.
-- ✅ Add candidate/job/application/interview search where needed.
-- ✅ Add optional candidate document upload with a small filesystem storage contract (PDF/JPEG/PNG, max 5 MB).
-
-## Phase 9 — QA and release
-
-- ✅ Complete pre-release frontend/backend audit: route registration, role scope, workflow transitions, session lifecycle, validation limits, document access, API configuration, and mobile interaction hardening.
-- 🔄 Frontend production build — GitHub Actions currently fails before exposing runner steps; source-level verification still needs a functioning runner/local build.
-- 🔄 Backend TypeScript build — same CI environment limitation.
-- 🔄 Prisma schema validation — same CI environment limitation.
-- 🔄 Prisma migration recreation — clean migration is committed and included in CI, but green execution is not yet verified.
-- 🔄 Role authorization tests — coverage committed, CI execution not yet verifiable.
-- 🔄 Agency isolation tests — coverage committed, CI execution not yet verifiable.
-- 🔄 Self-onboarding end-to-end test — coverage committed, CI execution not yet verifiable.
-- 🔄 Agency onboarding and bulk import tests — coverage committed, CI execution not yet verifiable.
-- 🔄 Job publish/application end-to-end test — coverage committed, CI execution not yet verifiable.
-- 🔄 Interview panel scheduling end-to-end test — coverage committed, CI execution not yet verifiable.
-- 🔄 Interview evaluation end-to-end test — coverage committed, CI execution not yet verifiable.
+- ✅ Pre-release route, authorization, validation, workflow, document, and responsive source audit completed.
+- 🔄 Frontend production build — local verification pending.
+- 🔄 Backend TypeScript build — local verification pending.
+- 🔄 Prisma schema validation — local verification pending.
+- 🔄 Fresh Prisma migration recreation — local verification pending.
+- 🔄 Authentication/role/agency isolation integration tests — local verification pending.
+- 🔄 Candidate onboarding/bulk-import integration tests — local verification pending.
+- 🔄 Candidate interview assignment/reschedule/conflict integration tests — local verification pending.
+- 🔄 Criteria scoring/final status integration tests — local verification pending.
 - ⏳ Responsive browser QA.
-- ✅ Deployment, backup, and monitoring checklist documented in `docs/RELEASE_CHECKLIST.md`.
+- ✅ Deployment, backup, and monitoring checklist documented.
 
-### Current CI verification note
-
-The latest GitHub Actions runs have been completing as failures within roughly three seconds with no job steps/logs exposed by the available GitHub tooling. That prevents a truthful claim that the builds/tests pass; code changes above are committed, but release verification remains open until the runner/environment produces real execution results.
-
-## Not planned in the rebuild baseline
+## Not planned
 
 - Selection board / selection approvals.
 - Allocation / reassignment system.
 - Manager / approver role.
 - Recruiter role as a separate user role.
 - Weighted candidate suitability engine.
-- Complex interview scorecards and practical-test engine.
-- Advanced candidate comparison and smart-search intelligence.
-- Batch scheduling optimizer and interviewer workload balancing engine.
-- Notification center and escalation framework.
+- Complex practical-test engine.
+- Candidate comparison intelligence.
+- Batch scheduling optimizer.
+- Notification center/escalation framework.
 - Advanced document versioning and verification.
 - Reporting/analytics suite.
