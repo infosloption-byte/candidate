@@ -63,7 +63,6 @@ export const CandidatesPage = ({ role }: Props) => {
         setCandidates(candidateResult);
         if (role === 'ADMIN') {
           setAgencies(agencyResult);
-          setAgencyId((current) => current || agencyResult.find((item) => item.status === 'ACTIVE')?.id || '');
         }
       })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidates.'); })
@@ -334,7 +333,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: 'Actions', render: (item: Candidate) => <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => setSelectedCandidateId(item.id)}>View</Button>{role !== 'INTERVIEWEE' && <Button size="sm" variant="secondary" onClick={() => void updateOnboarding(item)}>{item.onboardingStatus === 'SUBMITTED' ? 'Complete' : 'Review onboarding'}</Button>}</div> },
+    { key: 'actions', header: 'Actions', render: (item: Candidate) => <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>View</Button>{role !== 'INTERVIEWEE' && <Button size="sm" variant="secondary" onClick={() => void updateOnboarding(item)}>{item.onboardingStatus === 'SUBMITTED' ? 'Complete' : 'Review onboarding'}</Button>}</div> },
   ];
 
   return (
