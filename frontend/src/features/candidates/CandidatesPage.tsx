@@ -87,7 +87,6 @@ export const CandidatesPage = ({ role }: Props) => {
   const [visaStatusFilter, setVisaStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
-  const [passportSearch, setPassportSearch] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -296,7 +295,6 @@ export const CandidatesPage = ({ role }: Props) => {
       const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
       const matchesLocation = !locationFilter || item.currentLocation === locationFilter;
       const matchesPassport = passportMatches(item);
-      const matchesPassportSearch = !passportSearch || (item.passportNumber ?? '').toLowerCase().includes(passportSearch.trim().toLowerCase());
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
@@ -315,9 +313,9 @@ export const CandidatesPage = ({ role }: Props) => {
         item.status,
         item.onboardingStatus,
       ].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesPassportSearch && matchesAgency && matchesQuery;
+      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesAgency && matchesQuery;
     });
-  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, passportSearch, professionFilter, role, search, statusFilter, visaStatusFilter]);
+  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
 
   const sortedCandidates = useMemo(() => {
     const sorted = [...filteredCandidates];
@@ -769,13 +767,13 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-end">
-              <div className="w-full lg:max-w-xl lg:flex-1">
+            <div className="grid gap-3 p-4 lg:grid-cols-[minmax(280px,1fr)_220px_200px_48px] lg:items-end">
+              <div className="min-w-0">
                 <label className="field-label">Search candidates</label>
-                <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, contact, passport, location or skill…" />
+                <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, passport, contact, location or skill…" />
               </div>
               {role === 'ADMIN' && (
-                <div className="w-full lg:w-56">
+                <div className="min-w-0">
                   <label className="field-label">Agency</label>
                   <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
                     <option value="">All agencies</option>
@@ -783,34 +781,27 @@ export const CandidatesPage = ({ role }: Props) => {
                   </select>
                 </div>
               )}
-              <div className="w-full lg:max-w-xs">
-                <label className="field-label">Passport</label>
-                <input className="field-input mt-1 w-full" value={passportSearch} onChange={(event) => setPassportSearch(event.target.value)} placeholder="Passport number…" />
-              </div>
-              <div className="w-full lg:w-48">
+              <div className="min-w-0">
                 <label className="field-label">Status</label>
                 <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="">All statuses</option>
                   {statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
                 </select>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="secondary" onClick={() => setShowAdvancedFilters((value) => !value)}>
-                  {showAdvancedFilters ? 'Hide filters' : 'More filters'}
-                </Button>
-                <input
-                  ref={bulkFileRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void importCandidates(file);
-                  }}
-                />
+              <div className="flex items-end justify-start lg:justify-end">
+                <button
+                  type="button"
+                  title={showAdvancedFilters ? 'Hide filters' : 'More filters'}
+                  aria-label={showAdvancedFilters ? 'Hide filters' : 'More filters'}
+                  className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                  onClick={() => setShowAdvancedFilters((value) => !value)}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M4 6h16M7 12h10M10 18h4" />
+                  </svg>
+                </button>
               </div>
             </div>
-
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -850,10 +841,6 @@ export const CandidatesPage = ({ role }: Props) => {
                     </select>
                   </div>
                   <div>
-                    <label className="field-label">Passport number</label>
-                    <input className="field-input mt-1 w-full" value={passportSearch} onChange={(event) => setPassportSearch(event.target.value)} placeholder="Search passport number…" />
-                  </div>
-                  <div>
                     <label className="field-label">Passport expiry</label>
                     <select className="field-input mt-1 w-full" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}>
                       <option value="">Any passport status</option>
@@ -870,9 +857,10 @@ export const CandidatesPage = ({ role }: Props) => {
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="candidate-sort">Sort</label>
-                <select id="candidate-sort" className="field-input py-2 text-xs" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                <label className="sr-only" htmlFor="candidate-sort">Sort candidates</label>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sort by</span>
+                <select id="candidate-sort" className="field-input w-full py-2 text-xs sm:w-40" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
                   <option value="name">Name</option>
                   <option value="profession">Profession</option>
                   <option value="experience">Experience</option>
@@ -881,25 +869,39 @@ export const CandidatesPage = ({ role }: Props) => {
                 </select>
                 <button
                   type="button"
-                  title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                  title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
                   aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
                   className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
                 >
-                  {sortDirection === 'asc' ? '↑' : '↓'}
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                    {sortDirection === 'asc'
+                      ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                  </svg>
                 </button>
-                {(search || passportSearch || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    setSearch('');
-                    setPassportSearch('');
-                    setStatusFilter('');
-                    setCountryFilter('');
-                    setProfessionFilter('');
-                    setAvailabilityFilter('');
-                    setVisaStatusFilter('');
-                    setLocationFilter('');
-                    setPassportFilter('');
-                  }}>Clear filters</Button>
+                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                  <button
+                    type="button"
+                    title="Clear filters"
+                    aria-label="Clear filters"
+                    className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      setSearch('');
+                      setStatusFilter('');
+                      setCountryFilter('');
+                      setProfessionFilter('');
+                      setAvailabilityFilter('');
+                      setVisaStatusFilter('');
+                      setLocationFilter('');
+                      setPassportFilter('');
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M3 6h18M6 12h12M10 18h4" />
+                      <path d="M7 6l1-2h8l1 2" />
+                    </svg>
+                  </button>
                 )}
               </div>
             </div>
