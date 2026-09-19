@@ -406,30 +406,33 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const prisma = getPrisma();
-      const candidate = await prisma.$transaction(async (tx) => {
-        const updated = await tx.candidate.update({ where: { id: existing.id }, data, select: candidateSelect });
+      let candidate: Awaited<ReturnType<typeof prisma.candidate.update>>;
+      try {
+        candidate = await prisma.$transaction(async (tx) => {
+          const updated = await tx.candidate.update({ where: { id: existing.id }, data, select: candidateSelect });
 
-        if (linkedAccount && (data.name !== undefined || data.email !== undefined)) {
-          await tx.user.update({
-            where: { id: linkedAccount.id },
-            data: {
-              ...(data.name !== undefined ? { name: data.name as string } : {}),
-              ...(data.email !== undefined ? { email: data.email as string } : {}),
-            },
-          });
-        }
+          if (linkedAccount && (data.name !== undefined || data.email !== undefined)) {
+            await tx.user.update({
+              where: { id: linkedAccount.id },
+              data: {
+                ...(data.name !== undefined ? { name: data.name as string } : {}),
+                ...(data.email !== undefined ? { email: data.email as string } : {}),
+              },
+            });
+          }
 
-        if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
-          await tx.candidateStatusHistory.create({
-            data: {
-              candidateId: existing.id,
-              fromStatus: existing.status,
-              toStatus: request.body.status,
-              reason: request.body.statusReason?.trim() || null,
-              changedById: user.id,
-            },
-          });
-        }
+          if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
+            await tx.candidateStatusHistory.create({
+              data: {
+                candidateId: existing.id,
+                fromStatus: existing.status,
+                toStatus: request.body.status,
+                reason: request.body.statusReason?.trim() || null,
+                changedById: user.id,
+              },
+            });
+          }
+
           return updated;
         });
       } catch (error) {
