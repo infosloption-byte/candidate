@@ -189,3 +189,4 @@ export const TopBar = ({
       </div>
     </header>
   );
+};
