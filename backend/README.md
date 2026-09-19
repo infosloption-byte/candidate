@@ -1,19 +1,21 @@
-# Backend
+# BuildHire Backend
 
-Reserved for the Node.js + TypeScript API and MySQL persistence layer.
+The backend has been reset to a clean foundation.
 
-The backend is intentionally not implemented in this milestone. Frontend workflows and domain contracts are being validated first so the API can be designed around proven user flows rather than the old spreadsheet structure.
+## Stack
 
-Planned stack:
-
-- Node.js
+- Node.js 20+
 - TypeScript strict mode
 - Fastify
-- Prisma
-- MySQL
-- Secure authentication and role-based authorization
-- File/document storage abstraction
+- Prisma 7
+- MySQL / MariaDB
 
-Target domain modules:
+## Current state
 
-`auth`, `candidates`, `jobs`, `interviews`, `evaluations`, `selection`, `documents`, `reports`, `audit`
+Only the Fastify application foundation and health endpoint are implemented. The previous authentication, candidate services, interview services, selection system, allocation logic, notifications, reports, document workflow, and legacy controllers/repositories have been removed.
+
+The new Prisma schema contains only the entities required for the rebuilt core workflow:
+
+`Agency`, `User`, `Candidate`, `Job`, `JobApplication`, `Interview`, `InterviewParticipant`, `InterviewEvaluation`.
+
+Database migrations and domain persistence services will be rebuilt in the next implementation phases.

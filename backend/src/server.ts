@@ -1,5 +1,5 @@
-import { buildApp } from "./app.js";
-import { env } from "./config/env.js";
+import { buildApp } from './app.js';
+import { env } from './config/env.js';
 
 const start = async (): Promise<void> => {
   const app = buildApp();
@@ -10,7 +10,7 @@ const start = async (): Promise<void> => {
       port: env.port,
     });
   } catch (error) {
-    app.log.error({ err: error }, "Backend server failed to start");
+    app.log.error({ err: error }, 'Backend server failed to start');
     process.exit(1);
   }
 };

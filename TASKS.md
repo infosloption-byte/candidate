@@ -1,202 +1,127 @@
-# Construction Candidate ERP — Task Tracker
+# BuildHire — Rebuild Task Tracker
 
-Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
+Legend: ✅ completed · 🔄 in progress · ⏳ planned
+
+## Reset baseline
+
+- ✅ Remove legacy frontend business logic, feature modules, providers, repositories, and tests.
+- ✅ Preserve the existing BuildHire frontend theme and responsive shell.
+- ✅ Remove legacy backend controllers, services, repositories, auth implementation, feature routes, and tests.
+- ✅ Remove all old Prisma migrations and seed data.
+- ✅ Replace the old Prisma schema with the minimal core-domain model.
+- ✅ Reduce frontend dependencies to the React + Tailwind + Vite foundation.
+- ✅ Reduce backend dependencies to the Fastify + Prisma/MySQL foundation.
+- ✅ Replace legacy documentation with the new rebuild plan.
+- ✅ Keep a minimal backend health endpoint as the development baseline.
 
 ## Phase 1 — Frontend foundation
 
-- ✅ Create React 19 + TypeScript strict frontend MVP.
-- ✅ Establish feature-based source structure.
-- ✅ Introduce Context + `useReducer` candidate domain state.
-- ✅ Create initial navigation, dashboard, candidates, interviews, jobs, selection, reports, and settings surfaces.
-- ✅ Add candidate workflow and structured rejection capture.
-- ✅ Move the application into a clear `frontend/` + `backend/` repository structure.
-- ✅ Make shell navigation, content scrolling, and candidate workspace responsive across desktop/tablet/mobile.
-- ✅ Refine candidate profile states and the multi-step add-candidate experience.
-- ✅ Add candidate storage migration/normalization so legacy browser data cannot crash the current profile UI.
-- ✅ Align candidate TypeScript contracts with migration/default states.
-- ✅ Add BuildHire favicon and remove the browser favicon 404.
-- ✅ Add reusable loading, error/retry, and empty state components for async candidate flows.
-- ✅ Add retryable candidate hydration without a full page reload.
-- ✅ Add shared focus trapping with Escape handling for mobile navigation, candidate drawer, and rejection dialog.
-- ✅ Respect reduced-motion preferences and safe-area interactions.
-- 🧪 Complete accessibility QA with keyboard navigation and real-device mobile interaction checks.
-- ✅ Add automated frontend workflow coverage for candidate intelligence, onboarding, jobs, interviews and allocation rules.
-- ✅ Add frontend CI verification for automated tests and production build.
+- ⏳ Build role-aware shell for Admin, Agency, Interviewer, and Interviewee.
+- ⏳ Create core frontend types and fixtures: Agency, User, Candidate, Job, JobApplication, Interview, InterviewParticipant, InterviewEvaluation.
+- ⏳ Build reusable table/list/detail/form primitives using the preserved theme.
+- ⏳ Add loading, empty, error, and success states.
+- ⏳ Add frontend smoke tests for the new shell and core navigation.
+- ⏳ Keep business logic behind simple feature hooks/state boundaries.
 
-## Phase 2 — Candidate intelligence UX
+## Phase 2 — Authentication and agencies
 
-- ✅ Advanced candidate search with keyword, status, profession, experience, English, availability, overseas, driving, document readiness, and multi-skill filters.
-- ✅ Saved filters and reusable search presets with local persistence.
-- ✅ Candidate skills, experience, country history, availability, and readiness views are available in smart filtering/comparison.
-- ✅ Explainable duplicate detection based on passport, phone, name, profession, and age signals.
-- ✅ Creation-time duplicate warning with high-confidence acknowledgement before save.
-- ✅ Responsive candidate comparison workspace supporting up to four candidates.
-- ✅ Candidate comparison minimize/restore controls.
-- ✅ Candidate comparison height controls with drag resize and increase/decrease actions.
-- ✅ Comparison height/minimized preferences persist locally.
-- ✅ Recruiter tags and user-defined labels with quick suggestions.
-- ✅ Candidate tags participate in keyword search.
-- ✅ Job-fit evidence and configurable suitability score presentation.
-- ✅ Full interview history and decision audit timeline.
-- ✅ Candidate onboarding workspace with recruiter handoff, progress tracking, submitted/review/needs-changes/completed states, and onboarding activity in the candidate journey.
-- ✅ Recruiter/system-admin frontend bulk candidate CSV intake with automatic header mapping, validation preview, duplicate protection, import template and atomic local commit.
-- ✅ Recruiter dashboard workspace with live candidate/interview metrics, pipeline visibility, action center, today's interview view, onboarding/document readiness, selection capacity/approval signals, retry handling and responsive navigation actions.
-- ✅ Recruitment reports workspace with date/trade filters, explicit candidate-vs-interview date scope, pipeline/source/onboarding/interview/rejection breakdowns, readiness metrics, profession performance table, retry handling and CSV export.
-- ✅ Frontend candidate self-service onboarding portal with candidate session UI, profile editing, consent, document upload and submission flow.
-- ✅ Frontend candidate authentication preview with candidate account/access-code sign-in and sign-out state.
-- ⏳ Production invitation delivery, reminder/escalation workflows, secure invitation tokens and backend authentication.
+- ⏳ Implement login and session handling.
+- ⏳ Implement Admin agency CRUD.
+- ⏳ Implement Agency user management.
+- ⏳ Implement role-based access: Admin / Agency / Interviewer / Interviewee.
+- ⏳ Implement agency-scoped authorization.
+- ⏳ Implement Interviewer user onboarding.
+- ⏳ Implement Interviewee account linkage.
+- ⏳ Add secure password handling and session expiry.
+- ⏳ Add backend authentication tests.
 
-## Phase 3 — Interview workflow UX
+## Phase 3 — Jobs
 
-- ✅ Interview queue with status, search, attention and completion filters.
-- ✅ Interview scheduling drawer with candidate, type, date, time, duration, location and interviewer assignment.
-- ✅ Day/week calendar view with responsive mobile agenda.
-- ✅ Calendar date navigation, Today, day/week toggle and direct date jump.
-- ✅ Interview conflict visualization for overlapping active interviewer assignments and rooms.
-- ✅ Calendar interview detail sheet with keyboard focus management and Escape handling.
-- ✅ Interviewer profiles and panel assignment for the MVP.
-- ✅ Profession-aware evaluation scorecards with weighted criteria and 1–5 scoring.
-- ✅ Mandatory failure/decision reasons and structured interviewer notes.
-- ✅ Profession-aware practical test workflow with required and optional tasks.
-- ✅ Interview result review and final decision workflow with Select / Reserve / Reject.
-- ✅ Interview decisions synchronize back to the candidate profile with result, score, reason and note.
-- ✅ Multi-candidate interview selection with search, select-all-filtered, paging and persistent cross-page selection.
-- ✅ Bulk interview scheduling planner for large candidate groups across a configurable date window.
-- ✅ Scheduler capacity model across multiple interviewers with specialty-aware assignment.
-- ✅ Existing active interview detection prevents duplicate interview scheduling.
-- ✅ Existing interviewer conflicts are surfaced through the generated plan instead of silently overwriting appointments.
-- ✅ Parallel interviewer capacity supported when a location is not a shared resource.
-- ✅ Shared-location resource mode prevents double-booking a single interview room/centre.
-- ✅ Bulk schedule preview shows requested, capacity, planned and unscheduled candidates before commit.
-- ✅ Large batches are created with one atomic interview reducer action, then candidate statuses are updated atomically.
-- ✅ Responsive bulk planner uses paged candidate rendering and touch-safe controls for 200–300 candidate workflows.
-- ✅ Interviewer load balancing accounts for existing workload and planned batch workload before choosing slots.
-- ✅ Batch schedule editing allows date/time/interviewer changes with existing-calendar and intra-batch conflict validation.
-- ✅ Batch workload panel exposes existing, planned, total and utilization metrics per interviewer.
-- ✅ Rebalance and regenerate controls let recruiters iterate on a batch before committing it.
-- ✅ Advanced drag-and-drop rescheduling and conflict-resolution actions with conflict-safe alternatives and undo.
+- ⏳ Build Job API and persistence.
+- ⏳ Build agency job list.
+- ⏳ Build create/edit job form.
+- ⏳ Implement publish / close.
+- ⏳ Build published job view.
+- ⏳ Add job validation.
+- ⏳ Add job API tests.
 
-## Phase 4 — Selection and decision UX
+## Phase 4 — Candidates and onboarding
 
-- ✅ Selection board using the candidate comparison/evidence model.
-- ✅ Job-specific selection requirements with openings, profession, minimum experience and required skills.
-- ✅ Recommended / Selected / Reserve / Rejected board views.
-- ✅ Explainable selection evidence for experience, skills, documents, readiness and interview results.
-- ✅ Capacity protection prevents selecting more candidates than the job openings allow.
-- ✅ Selection decision form requires a reason and written decision note.
-- ✅ Job-scoped management approval workflow: Draft → Pending → Approved / Returned.
-- ✅ Any change to an approved shortlist automatically returns that job to Draft for re-review.
-- ✅ Selection decisions persist locally behind a replaceable service boundary.
-- ✅ Bulk shortlist actions with multi-candidate Select / Reserve / Reject decisions.
-- ✅ Bulk reassignment to another job with target-job conflict protection.
-- ✅ Bulk decisions and reassignment use atomic reducer actions and preserve decision reasons/notes.
-- ✅ Selection history records decision changes, reassignment events, and approval changes.
-- ✅ Selection history is persisted locally and displayed as an audit-ready timeline per job.
-- ✅ Cross-job candidate allocation workspace with requirement matching, multi-select, target-job capacity protection and allocation history.
+- ⏳ Build Candidate API and persistence.
+- ⏳ Build agency-created candidate onboarding.
+- ⏳ Build candidate self-onboarding.
+- ⏳ Build onboarding progress/submission states.
+- ⏳ Build agency review of submitted candidate profiles.
+- ⏳ Build bulk candidate onboarding via CSV.
+- ⏳ Add row validation and duplicate protection for bulk import.
+- ⏳ Add candidate onboarding tests.
 
-## Phase 4A — Operations administration and support UX
+## Phase 5 — Applications
 
-- ✅ Jobs management workspace with job requirement creation/editing, vacancy counts, status, deadline, required/preferred skills, selection and allocation handoffs.
-- ✅ Settings workspace with professions/skills, interview template activation, user/role controls and frontend accessibility QA checklist.
-- ✅ Candidate document workspace with upload, verification, replacement request and candidate readiness synchronization.
-- ✅ Notifications center with unread state, mark-read, mark-all-read and clear-read actions.
-- ✅ Candidate portal preview is available as a standalone user experience without recruiter navigation.
-- ✅ Frontend authentication/session boundary supports recruiter and candidate session states; production credential security remains backend responsibility.
+- ⏳ Build JobApplication API and persistence.
+- ⏳ Allow candidates to apply to published jobs.
+- ⏳ Prevent duplicate job applications.
+- ⏳ Build agency application queue.
+- ⏳ Implement application status workflow.
+- ⏳ Connect application state to candidate/job detail views.
+- ⏳ Add application workflow tests.
 
-## Phase 5 — Backend and data
+## Phase 6 — Interviews
 
-- ✅ Create Node.js + TypeScript backend under `backend/`.
-- ✅ Add Fastify health endpoints, standardized API responses, backend CI and strict server error handling.
-- 🧪 Backend local verification baseline confirmed: Prisma Client generation, Prisma schema validation, backend tests (2 passing), TypeScript production build, database reset/migration application, and repeated idempotent development seeding all pass locally. The generated migration must still be committed to `main` before migration reproducibility is considered repository-complete.
-- 🔄 Add tenant-scoped authentication/session infrastructure and RBAC enforcement.
-- 🔄 Add tenant-scoped Candidate REST API matching the existing frontend Candidate contract.
-- ✅ Define REST API contracts matching frontend domain types.
-- 🔄 Add MySQL database and migration strategy.
-- 🔄 Add authentication, roles, and permissions, including recruiter/system-admin authorization for candidate import and onboarding administration.
-- 🔄 Add server-side audit trail.
-- ⏳ Add file/document storage abstraction.
+- ⏳ Build Interview API and persistence against JobApplication.
+- ⏳ Schedule single interview.
+- ⏳ Assign one interviewer.
+- ⏳ Assign multiple interviewers as a panel.
+- ⏳ Add basic schedule-conflict validation.
+- ⏳ Add reschedule and cancellation.
+- ⏳ Build interview list/calendar.
+- ⏳ Add interviewer My Interviews view.
+- ⏳ Add interview scheduling tests.
 
-## Phase 6 — Data migration and release
+## Phase 7 — Evaluations
 
-- ✅ Extend the frontend bulk candidate importer to CSV + XLSX preview and mapping.
-- ⏳ Add server-side validation, processing, import jobs and persistence for CSV/XLSX data.
-- ⏳ Map historical interview data to candidate/interview records.
-- ⏳ Add server-side duplicate/quality review and import job controls before persistence.
-- ⏳ End-to-end testing with real recruitment workflows.
-- ⏳ Production deployment and backup/monitoring plan.
+- ⏳ Build InterviewEvaluation API and persistence.
+- ⏳ Allow each panel interviewer to submit one evaluation.
+- ⏳ Store rating, recommendation, and comments.
+- ⏳ Show evaluation summary.
+- ⏳ Map evaluation result to application status.
+- ⏳ Add evaluation authorization tests.
+- ⏳ Add evaluation workflow tests.
 
-## Current UX definition
+## Phase 8 — Operational polish
 
-Primary daily candidate flow:
+- ⏳ Add simple dashboards by role.
+- ⏳ Add minimal audit events for important mutations.
+- ⏳ Add basic notifications only for core workflow events.
+- ⏳ Add candidate/job/application/interview search where actually needed.
+- ⏳ Add document upload only after the core onboarding flow is stable.
 
-`Find candidate → Filter / search → Open profile → Review evidence → Compare or start screening / schedule interview → interview evaluation → Select / Reserve / Reject → preserve reason and timeline`
+## Phase 9 — QA and release
 
-Interview workflow:
+- ⏳ Frontend production build passes.
+- ⏳ Backend TypeScript build passes.
+- ⏳ Prisma schema validation passes.
+- ⏳ Prisma migration can recreate an empty database.
+- ⏳ Role authorization tests pass.
+- ⏳ Agency isolation tests pass.
+- ⏳ Self-onboarding end-to-end test passes.
+- ⏳ Agency onboarding and bulk import tests pass.
+- ⏳ Job publish/application end-to-end test passes.
+- ⏳ Interview panel scheduling end-to-end test passes.
+- ⏳ Interview evaluation end-to-end test passes.
+- ⏳ Responsive browser QA passes.
+- ⏳ Deployment, backup, and monitoring checklist complete.
 
-`Queue → Schedule one or Batch schedule → Select candidate group → Configure window / duration / breaks / location mode → Select interviewer pool → Balance interviewer workload → Build capacity-safe plan → Edit or rebalance planned slots → Review planned + unscheduled candidates → Commit batch → Candidate statuses updated → Day/Week calendar`
+## Not planned in the rebuild baseline
 
-Large interview campaign flow:
-
-`Search / filter → Select all matching candidates → Work across pages without losing selection → Set multi-day capacity → Balance existing + planned interviewer load → Conflict / duplicate check → Preview → Edit individual slots when needed → Schedule batch → Review calendar workload`
-
-Selection workflow:
-
-`Choose job requirement → Review recommended candidates → Multi-select / bulk action or open evidence → Select / Reserve / Reject / Reassign → Build shortlist → Submit for management approval → Approve / Return → review history`
-
-Candidate creation flow:
-
-`Essentials → Trade → Readiness → duplicate review if needed → Create → New state`
-
-Candidate acquisition and onboarding flow:
-
-`Manual add / CSV bulk import → duplicate + validation review → Candidate created in New / Onboarding not started → Send onboarding invitation → Candidate completes identity, trade, readiness and documents → Candidate submits → Recruiter reviews → Request changes or Verify → Screening → Interview → Selection`
-
-Bulk import rules:
-
-- Recruiter and system-administrator UI entry is available in the frontend MVP; backend role enforcement remains a backend milestone.
-- CSV import is preview-first: validation errors block rows, high-confidence duplicates are skipped by default, possible duplicates are flagged for review.
-- Imported candidates retain source=`Bulk import`, start in `New` recruitment status and `Not started` onboarding.
-- The importer provides a downloadable template and preserves source row numbers for operational cleanup.
-
-Candidate profile states:
-
-`New → Screening → Interview → Selected / Reserve / Rejected`
-
-Rejection is always accompanied by a structured reason and written decision note.
-
-Candidate intelligence flow:
-
-`Search → Smart filters / saved search → Review matches → Detect possible duplicates → Select up to 4 → Compare → Minimize or resize comparison`
-
-Interview scheduling flow:
-
-`Queue / Calendar → Batch schedule when volume is high → Select date window → Allocate and balance interviewer capacity → Preview conflicts / overflow → Edit / rebalance if needed → Commit → Day/Week calendar`
-
-Responsive rules:
-
-- Desktop: persistent sidebar with collapse-to-rail, sticky top bar, independently scrolling main content.
-- Tablet: compact sidebar behavior with flexible content widths.
-- Mobile: slide-over navigation, single-column candidate/interview/selection flows, large tap targets, safe-area-aware action bars, height-limited comparison tray with minimize and quick resize controls, compact day-agenda interview calendar, and stacked selection evidence/decision panels.
-- Large-batch scheduling: candidate results are paged so a 200–300 candidate selection does not render one giant DOM list; selection state survives page changes and search-filtered select-all.
-- Bulk scheduling: configuration and candidate selection remain in one planner surface, while schedule generation happens before persistence so recruiters can adjust the window rather than cleaning up hundreds of conflicts afterward.
-- Batch editing: planned slots can be edited one candidate at a time inside the same planner, with date/time/interviewer validation against both existing appointments and other planned slots.
-
-## Current bugfix note
-
-The candidate profile previously crashed on `candidate.journey.map(...)` when an older `buildhire.candidates` localStorage payload from the previous MVP schema was loaded. The candidate repository now treats storage as untrusted input, normalizes legacy `timeline` data and missing arrays, and returns a complete `Candidate` shape before the data reaches the React view.
-
-## Accessibility foundation
-
-The async state primitives and focus-management utilities are now shared building blocks. Runtime accessibility QA remains marked for real keyboard and device validation rather than being inferred from source inspection alone.
-
-
-## Frontend authentication, role permissions, invitations, operational profile and document control
-
-Completed frontend expansion:
-- ✅ Real authentication UX preview: login, role selection, forgot/reset password, change password, session expiry and logout.
-- ✅ Five frontend roles: System Admin, Recruiter, Interviewer, Manager / Approver, Candidate.
-- ✅ Central role/permission map with role-aware navigation and action gating.
-- ✅ Candidate invitation center with pending, opened, started, reminder-due, expired and cancelled states plus activity history.
-- ✅ Candidate operational profile fields for nationality, DOB, passport expiry, visa/work permit, destinations, salary, notice period, trade experience/certificates, driving licences, interview language, emergency contact, recruiter owner, priority and source campaign.
-- ✅ Operational document control with preview/download, expiry dates and warnings, version history, upload/reviewer metadata, verification timestamps, missing-document coverage and bulk follow-up.
-- ⏳ Backend authentication, secure authorization, credential recovery, invitation delivery, document storage and server-side audit enforcement remain backend milestones.
+- Selection board / selection approvals.
+- Allocation / reassignment system.
+- Manager / approver role.
+- Recruiter role as a separate user role.
+- Weighted candidate suitability engine.
+- Complex interview scorecards and practical-test engine.
+- Advanced candidate comparison and smart-search intelligence.
+- Batch scheduling optimizer and interviewer workload balancing engine.
+- Notification center and escalation framework.
+- Advanced document versioning and verification.
+- Reporting/analytics suite.

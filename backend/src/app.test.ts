@@ -1,38 +1,20 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { buildApp } from './app.js';
 
-process.env.NODE_ENV = "test";
-process.env.PORT = "4000";
-process.env.HOST = "127.0.0.1";
-process.env.CORS_ORIGIN = "http://localhost:5173";
-process.env.DATABASE_URL = "mysql://candidate_erp:password@127.0.0.1:3306/construction_candidate_erp";
-process.env.JWT_SECRET = "local-development-secret-change-this-to-a-random-32-byte-value";
-
-const { buildApp } = await import("./app.js");
-
-test("GET /api/v1/health returns service health", async () => {
+test('health endpoint responds from a clean backend foundation', async () => {
   const app = buildApp();
 
   try {
     const response = await app.inject({
-      method: "GET",
-      url: "/api/v1/health",
+      method: 'GET',
+      url: '/api/v1/health',
     });
 
-    const body = response.json() as {
-      success: boolean;
-      data?: {
-        status: string;
-        service: string;
-        timestamp: string;
-      };
-    };
-
     assert.equal(response.statusCode, 200);
+    const body = response.json() as { success: boolean; data: { status: string } };
     assert.equal(body.success, true);
-    assert.equal(body.data?.status, "ok");
-    assert.equal(body.data?.service, "candidate-erp-backend");
-    assert.match(body.data?.timestamp ?? "", /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(body.data.status, 'ok');
   } finally {
     await app.close();
   }

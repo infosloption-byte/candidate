@@ -8,624 +8,205 @@ datasource db {
 }
 
 enum UserRole {
-  SYSTEM_ADMIN
-  RECRUITER
-  INTERVIEWER
-  MANAGER
-  CANDIDATE
-}
-
-enum CandidateStatus {
-  NEW
-  SCREENING
-  INTERVIEW
-  SELECTED
-  RESERVE
-  REJECTED
-}
-
-enum CandidateSource {
-  WALK_IN
-  REFERRAL
+  ADMIN
   AGENCY
-  EXISTING_DATABASE
-  BULK_IMPORT
+  INTERVIEWER
+  INTERVIEWEE
 }
 
-enum EnglishLevel {
-  NOT_ASSESSED
-  BASIC
-  WORKING
-  GOOD
-  STRONG
+enum AgencyStatus {
+  ACTIVE
+  INACTIVE
 }
 
-enum Availability {
-  AVAILABLE_NOW
-  WITHIN_2_WEEKS
-  WITHIN_1_MONTH
-  NOT_AVAILABLE
-}
-
-enum CandidateOnboardingStatus {
+enum OnboardingStatus {
   NOT_STARTED
-  INVITED
   IN_PROGRESS
   SUBMITTED
-  NEEDS_CHANGES
   COMPLETED
 }
 
-enum VisaStatus {
-  NOT_STARTED
-  PENDING
-  APPROVED
-  EXPIRED
-  NOT_REQUIRED
-}
-
-enum CandidatePriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum DocumentType {
-  PASSPORT
-  CV
-  TRADE_CERTIFICATE
-  VISA
-  OTHER
-}
-
-enum DocumentState {
-  VERIFIED
-  NEEDS_REVIEW
-  MISSING
-}
-
-enum InvitationStatus {
-  PENDING
-  OPENED
-  STARTED
-  EXPIRED
-  CANCELLED
+enum CandidateSource {
+  AGENCY_ADDED
+  SELF_ONBOARDED
+  BULK_IMPORTED
 }
 
 enum JobStatus {
   DRAFT
-  OPEN
-  PAUSED
-  FILLED
+  PUBLISHED
   CLOSED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  SCREENING
+  SHORTLISTED
+  INTERVIEW
+  SELECTED
+  REJECTED
+  WITHDRAWN
 }
 
 enum InterviewType {
   SCREENING
   TECHNICAL
   PRACTICAL
-  CLIENT
   FINAL
 }
 
 enum InterviewStatus {
   SCHEDULED
-  IN_PROGRESS
-  EVALUATION
   COMPLETED
-  NO_SHOW
   CANCELLED
+  NO_SHOW
 }
 
-enum InterviewDecision {
-  PENDING
-  SELECTED
-  RESERVE
-  REJECTED
-}
-
-enum SelectionDecision {
+enum Recommendation {
   RECOMMENDED
-  SELECTED
-  RESERVE
-  REJECTED
+  MAYBE
+  NOT_RECOMMENDED
 }
 
-enum ApprovalStatus {
-  DRAFT
-  PENDING
-  APPROVED
-  RETURNED
-}
+model Agency {
+  id        String       @id @default(uuid()) @db.VarChar(36)
+  name      String       @db.VarChar(160)
+  slug      String       @unique @db.VarChar(100)
+  status    AgencyStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-enum SelectionHistoryAction {
-  DECISION_CHANGED
-  REASSIGNED
-  APPROVAL_CHANGED
-  ALLOCATED
-}
-
-enum JourneyTone {
-  NEUTRAL
-  POSITIVE
-  WARNING
-  NEGATIVE
-}
-
-model Tenant {
-  id          String    @id @default(uuid()) @db.VarChar(36)
-  name        String    @db.VarChar(160)
-  slug        String    @unique @db.VarChar(80)
-  timezone    String    @default("Asia/Colombo") @db.VarChar(80)
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  users       User[]
-  sessions    Session[]
-  candidates  Candidate[]
-  invitations CandidateInvitation[]
-  jobs        Job[]
-  interviews  Interview[]
-  documents   CandidateDocument[]
-  documentVersions CandidateDocumentVersion[]
-  journey     CandidateJourneyEvent[]
-  assignments InterviewerAssignment[]
-  scorecards  InterviewScorecard[]
-  criteria    InterviewScoreCriterion[]
-  practicalItems PracticalTestItem[]
-  reschedules InterviewReschedule[]
-  decisionHistory InterviewDecisionHistory[]
-  selections  SelectionRecord[]
-  approvals   SelectionApproval[]
-  notifications Notification[]
-  auditEvents AuditEvent[]
-  selectionHistory SelectionHistory[] @relation("SelectionHistoryTenant")
-
-  @@index([active])
+  users      User[]
+  jobs       Job[]
+  candidates Candidate[]
 }
 
 model User {
-  id                   String                  @id @default(uuid()) @db.VarChar(36)
-  tenantId             String                  @db.VarChar(36)
-  name                 String                  @db.VarChar(160)
-  title                String?                 @db.VarChar(160)
-  specialties          Json
-  email                String                  @unique @db.VarChar(191)
-  passwordHash         String                  @db.VarChar(255)
-  role                 UserRole
-  active               Boolean                 @default(true)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  ownedCandidates      Candidate[]             @relation("RecruiterOwner")
-  uploadedDocuments    CandidateDocument[]     @relation("DocumentUploader")
-  verifiedDocuments    CandidateDocument[]     @relation("DocumentVerifier")
-  uploadedDocumentVersions CandidateDocumentVersion[] @relation("DocumentVersionUploader")
-  createdInterviews    Interview[]             @relation("InterviewCreator")
-  interviewAssignments InterviewerAssignment[]
-  decisions            SelectionRecord[]       @relation("SelectionDecider")
-  approvals            SelectionApproval[]     @relation("ApprovalActor")
-  selectionHistory     SelectionHistory[] @relation("SelectionHistoryActor")
-  notifications        Notification[]
-  auditEvents          AuditEvent[]
-  sessions             Session[]
-  tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid()) @db.VarChar(36)
+  agencyId     String?    @db.VarChar(36)
+  candidateId  String?    @unique @db.VarChar(36)
+  name         String     @db.VarChar(160)
+  email        String     @unique @db.VarChar(191)
+  passwordHash String     @db.VarChar(255)
+  role         UserRole
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  @@index([tenantId, role, active])
-}
+  agency       Agency?                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  candidate    Candidate?              @relation("CandidateAccount", fields: [candidateId], references: [id], onDelete: SetNull)
+  interviews   InterviewParticipant[]
+  evaluations  InterviewEvaluation[]
 
-model Session {
-  id         String    @id @default(uuid()) @db.VarChar(36)
-  tenantId   String    @db.VarChar(36)
-  userId     String    @db.VarChar(36)
-  jti        String    @unique @db.VarChar(64)
-  csrfHash   String    @db.VarChar(128)
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  lastSeenAt DateTime?
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, userId, expiresAt])
-  @@index([tenantId, revokedAt, expiresAt])
+  @@index([agencyId, role, active])
 }
 
 model Candidate {
-  tenantId             String                  @db.VarChar(36)
-  id                             String                     @id @default(uuid()) @db.VarChar(36)
-  reference                      String                     @db.VarChar(32)
-  name                           String                     @db.VarChar(160)
-  phone                          String                     @db.VarChar(60)
-  phoneNormalized                String                     @db.VarChar(60)
-  passportNumber                 String?                    @db.VarChar(80)
-  passportNumberNormalized       String?                    @db.VarChar(80)
-  age                            Int?
-  location                       String                     @db.VarChar(160)
-  profession                     String                     @db.VarChar(120)
-  originalProfession             String                     @db.VarChar(120)
-  experienceYears                Int
-  secondarySkills                Json
-  overseasCountries              Json
-  tags                           Json
-  englishLevel                   EnglishLevel
-  locationReady                  Boolean                    @default(false)
-  drivingLicense                 Boolean                    @default(false)
-  availability                   Availability
-  source                         CandidateSource
-  status                         CandidateStatus             @default(NEW)
-  onboardingStatus               CandidateOnboardingStatus  @default(NOT_STARTED)
-  onboardingCompletionPercent    Int                       @default(0)
-  onboardingInvitedAt            DateTime?
-  onboardingLastActivityAt       DateTime?
-  onboardingSubmittedAt          DateTime?
-  onboardingReviewedAt           DateTime?
-  onboardingReviewerNote         String?                    @db.Text
-  nationality                    String?                    @db.VarChar(100)
-  dateOfBirth                    DateTime?
-  passportExpiry                 DateTime?
-  visaStatus                     VisaStatus?
-  preferredDestinationCountries  Json
-  expectedSalary                 String?                    @db.VarChar(80)
-  salaryCurrency                 String?                    @db.VarChar(12)
-  noticePeriod                   String?                    @db.VarChar(80)
-  yearsInCurrentTrade            Int?
-  tradeCertificateDetails        String?                    @db.Text
-  drivingLicenseCategories       Json
-  preferredInterviewLanguage     String?                    @db.VarChar(80)
-  emergencyName                  String?                    @db.VarChar(160)
-  emergencyPhone                 String?                    @db.VarChar(60)
-  emergencyRelationship          String?                    @db.VarChar(80)
-  recruiterOwnerId               String?                    @db.VarChar(36)
-  priority                       CandidatePriority          @default(NORMAL)
-  sourceCampaign                 String?                    @db.VarChar(160)
-  fitScore                       Int                        @default(0)
-  rejectionReason                String?                    @db.VarChar(120)
-  rejectionNote                  String?                    @db.Text
-  createdAt                      DateTime                   @default(now())
-  updatedAt                      DateTime                   @updatedAt
+  id               String           @id @default(uuid()) @db.VarChar(36)
+  agencyId         String           @db.VarChar(36)
+  reference        String           @db.VarChar(32)
+  name             String           @db.VarChar(160)
+  email            String?          @db.VarChar(191)
+  phone            String?          @db.VarChar(60)
+  profession       String?          @db.VarChar(120)
+  experienceYears  Int?
+  skills           Json
+  onboardingStatus OnboardingStatus @default(NOT_STARTED)
+  source           CandidateSource  @default(AGENCY_ADDED)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  recruiterOwner                User?                       @relation("RecruiterOwner", fields: [recruiterOwnerId], references: [id], onDelete: SetNull)
-  documents                     CandidateDocument[]
-  interviews                    Interview[]
-  journey                       CandidateJourneyEvent[]
-  selections                    SelectionRecord[]
-  selectionHistory              SelectionHistory[]
-  notifications                 Notification[]
-  invitation                    CandidateInvitation?
+  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  account      User?           @relation("CandidateAccount")
+  applications JobApplication[]
 
-  tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  @@unique([tenantId, reference])
-  @@unique([tenantId, passportNumberNormalized])
-  @@index([tenantId, status, profession])
-  @@index([tenantId, phoneNormalized])
-  @@index([tenantId, recruiterOwnerId])
-}
-
-model CandidateInvitation {
-  id            String           @id @default(uuid()) @db.VarChar(36)
-  tenantId      String           @db.VarChar(36)
-  candidateId   String           @unique @db.VarChar(36)
-  status        InvitationStatus @default(PENDING)
-  tokenHash     String           @unique @db.VarChar(128)
-  sentAt        DateTime
-  lastSentAt    DateTime
-  expiresAt     DateTime
-  openedAt      DateTime?
-  startedAt     DateTime?
-  reminderDueAt DateTime?
-  cancelledAt   DateTime?
-  sendCount     Int              @default(1)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate     Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, status, expiresAt])
-}
-
-model CandidateJourneyEvent {
-  tenantId             String                  @db.VarChar(36)
-  id          String       @id @default(uuid()) @db.VarChar(36)
-  candidateId String       @db.VarChar(36)
-  title       String       @db.VarChar(160)
-  detail      String       @db.Text
-  tone        JourneyTone
-  occurredAt  DateTime     @default(now())
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate   Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, candidateId, occurredAt])
-}
-
-model CandidateDocument {
-  tenantId             String                  @db.VarChar(36)
-  id             String        @id @default(uuid()) @db.VarChar(36)
-  candidateId    String        @db.VarChar(36)
-  type           DocumentType
-  state          DocumentState @default(NEEDS_REVIEW)
-  fileName       String?       @db.VarChar(255)
-  storageKey     String?       @unique @db.VarChar(191)
-  mimeType       String?       @db.VarChar(120)
-  sizeBytes      BigInt?
-  version        Int           @default(1)
-  expiresAt      DateTime?
-  uploadedById   String?       @db.VarChar(36)
-  verifiedById   String?       @db.VarChar(36)
-  verifiedAt     DateTime?
-  reviewNote     String?       @db.Text
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate      Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  versions       CandidateDocumentVersion[]
-  uploadedBy     User?         @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
-  verifiedBy     User?         @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
-
-  @@index([tenantId, candidateId, type, version])
-  @@index([tenantId, state, expiresAt])
-}
-
-model CandidateDocumentVersion {
-  id            String            @id @default(uuid()) @db.VarChar(36)
-  tenantId      String            @db.VarChar(36)
-  documentId    String            @db.VarChar(36)
-  version       Int
-  fileName      String            @db.VarChar(255)
-  storageKey    String            @unique @db.VarChar(191)
-  mimeType      String            @db.VarChar(120)
-  sizeBytes     BigInt
-  uploadedById  String            @db.VarChar(36)
-  uploadedAt    DateTime          @default(now())
-
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  document      CandidateDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  uploadedBy    User               @relation("DocumentVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-
-  @@unique([tenantId, documentId, version])
-  @@index([tenantId, documentId, uploadedAt])
+  @@unique([agencyId, reference])
+  @@index([agencyId, name])
+  @@index([agencyId, profession])
 }
 
 model Job {
-  tenantId             String                  @db.VarChar(36)
-  id                  String             @id @default(uuid()) @db.VarChar(36)
-  title               String             @db.VarChar(160)
-  project             String             @db.VarChar(160)
-  location            String             @db.VarChar(160)
-  openings            Int
-  profession          String             @db.VarChar(120)
-  requiredExperience  Int
-  requiredSkills      Json
-  preferredSkills     Json
-  client              String             @db.VarChar(160)
-  status              JobStatus          @default(DRAFT)
-  startDate           DateTime?
-  deadline            DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  agencyId    String    @db.VarChar(36)
+  title       String    @db.VarChar(160)
+  description String?   @db.Text
+  location    String?   @db.VarChar(160)
+  openings    Int       @default(1)
+  status      JobStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  scoringWeights      Json
-  selections          SelectionRecord[]
-  approval            SelectionApproval?
-  selectionHistoryJob        SelectionHistory[] @relation("SelectionHistoryJob")
-  selectionHistoryRelatedJob SelectionHistory[] @relation("SelectionHistoryRelatedJob")
+  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
 
-  @@index([tenantId, status, profession])
-  @@index([tenantId, deadline])
+  @@index([agencyId, status, publishedAt])
+}
+
+model JobApplication {
+  id          String            @id @default(uuid()) @db.VarChar(36)
+  jobId       String            @db.VarChar(36)
+  candidateId String            @db.VarChar(36)
+  status      ApplicationStatus @default(APPLIED)
+  appliedAt   DateTime          @default(now())
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  interviews  Interview[]
+
+  @@unique([jobId, candidateId])
+  @@index([jobId, status])
+  @@index([candidateId, status])
 }
 
 model Interview {
-  tenantId             String                  @db.VarChar(36)
-  id              String                     @id @default(uuid()) @db.VarChar(36)
-  reference       String                     @db.VarChar(32)
-  candidateId     String                     @db.VarChar(36)
-  type            InterviewType
-  status          InterviewStatus             @default(SCHEDULED)
-  startsAt        DateTime
-  durationMinutes Int
-  location        String                     @db.VarChar(255)
-  timezone        String                     @default("Asia/Colombo") @db.VarChar(80)
-  notes           String                     @db.Text
-  decision        InterviewDecision           @default(PENDING)
-  decisionReason  String?                    @db.VarChar(160)
-  decisionNote    String?                    @db.Text
-  createdById     String                     @db.VarChar(36)
-  createdAt       DateTime                   @default(now())
-  updatedAt       DateTime                   @updatedAt
+  id            String          @id @default(uuid()) @db.VarChar(36)
+  applicationId String          @db.VarChar(36)
+  type          InterviewType
+  status        InterviewStatus @default(SCHEDULED)
+  scheduledAt   DateTime
+  durationMins  Int             @default(30)
+  location      String?         @db.VarChar(160)
+  notes         String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  tenant          Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate       Candidate                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  createdBy       User                       @relation("InterviewCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  interviewers    InterviewerAssignment[]
-  scorecard       InterviewScorecard?
-  practicalItems  PracticalTestItem[]
-  reschedules     InterviewReschedule[]
-  decisionHistory InterviewDecisionHistory[]
+  application JobApplication        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  panel       InterviewParticipant[]
+  evaluations InterviewEvaluation[]
 
-  @@unique([tenantId, reference])
-  @@index([tenantId, candidateId, startsAt])
-  @@index([tenantId, status, startsAt])
+  @@index([applicationId, scheduledAt])
+  @@index([status, scheduledAt])
 }
 
-model InterviewerAssignment {
-  tenantId             String                  @db.VarChar(36)
-  interviewId String                 @db.VarChar(36)
-  userId      String                 @db.VarChar(36)
-  assignedAt  DateTime               @default(now())
-  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  interview   Interview              @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model InterviewParticipant {
+  interviewId String   @db.VarChar(36)
+  userId      String   @db.VarChar(36)
+  assignedAt  DateTime @default(now())
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([interviewId, userId])
   @@index([userId, assignedAt])
 }
 
-model InterviewScorecard {
-  tenantId             String                  @db.VarChar(36)
-  id           String                  @id @default(uuid()) @db.VarChar(36)
-  interviewId  String                  @unique @db.VarChar(36)
-  templateId   String                  @db.VarChar(100)
-  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  interview    Interview               @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-  criteria     InterviewScoreCriterion[]
+model InterviewEvaluation {
+  id             String         @id @default(uuid()) @db.VarChar(36)
+  interviewId    String         @db.VarChar(36)
+  interviewerId  String         @db.VarChar(36)
+  rating         Int
+  recommendation Recommendation
+  comments       String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  @@index([tenantId, templateId])
-}
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
 
-model InterviewScoreCriterion {
-  tenantId             String                  @db.VarChar(36)
-  id          String              @id @default(uuid()) @db.VarChar(36)
-  scorecardId String              @db.VarChar(36)
-  label       String              @db.VarChar(160)
-  weight      Int
-  score       Int?
-  note        String?             @db.Text
-  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  scorecard   InterviewScorecard  @relation(fields: [scorecardId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, scorecardId])
-}
-
-model PracticalTestItem {
-  tenantId             String                  @db.VarChar(36)
-  id          String        @id @default(uuid()) @db.VarChar(36)
-  interviewId String        @db.VarChar(36)
-  label       String        @db.VarChar(200)
-  required    Boolean
-  result      String        @db.VarChar(40)
-  note        String?       @db.Text
-  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  interview   Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, interviewId])
-}
-
-model InterviewReschedule {
-  tenantId             String                  @db.VarChar(36)
-  id                   String    @id @default(uuid()) @db.VarChar(36)
-  interviewId          String    @db.VarChar(36)
-  fromStartsAt         DateTime
-  fromDurationMinutes  Int
-  fromInterviewerIds   Json
-  toStartsAt           DateTime
-  toInterviewerIds     Json
-  reason               String?   @db.Text
-  undoneAt             DateTime?
-  changedAt            DateTime  @default(now())
-  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  interview            Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, interviewId, changedAt])
-}
-
-model InterviewDecisionHistory {
-  tenantId             String                  @db.VarChar(36)
-  id             String            @id @default(uuid()) @db.VarChar(36)
-  interviewId    String            @db.VarChar(36)
-  fromDecision   InterviewDecision
-  toDecision     InterviewDecision
-  reason         String            @db.VarChar(160)
-  note           String            @db.Text
-  changedAt      DateTime          @default(now())
-  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  interview      Interview         @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, interviewId, changedAt])
-}
-
-model SelectionRecord {
-  tenantId             String                  @db.VarChar(36)
-  id          String            @id @default(uuid()) @db.VarChar(36)
-  candidateId String            @db.VarChar(36)
-  jobId       String            @db.VarChar(36)
-  decision    SelectionDecision
-  reason      String            @db.VarChar(160)
-  note        String            @db.Text
-  decidedAt   DateTime          @default(now())
-  decidedById String            @db.VarChar(36)
-
-  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate   Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  decidedBy   User              @relation("SelectionDecider", fields: [decidedById], references: [id], onDelete: Restrict)
-
-  @@unique([tenantId, candidateId, jobId])
-  @@index([tenantId, jobId, decision])
-}
-
-model SelectionApproval {
-  tenantId             String          @db.VarChar(36)
-  id          String         @id @default(uuid()) @db.VarChar(36)
-  jobId       String         @unique @db.VarChar(36)
-  status      ApprovalStatus @default(DRAFT)
-  note        String         @db.Text
-  changedAt   DateTime       @default(now())
-  changedById String         @db.VarChar(36)
-
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  job         Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  changedBy   User           @relation("ApprovalActor", fields: [changedById], references: [id], onDelete: Restrict)
-}
-
-model Notification {
-  tenantId             String                  @db.VarChar(36)
-  id          String     @id @default(uuid()) @db.VarChar(36)
-  userId      String     @db.VarChar(36)
-  candidateId String?    @db.VarChar(36)
-  type        String     @db.VarChar(80)
-  title       String     @db.VarChar(200)
-  message     String     @db.Text
-  readAt      DateTime?
-  createdAt   DateTime   @default(now())
-
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  candidate   Candidate?  @relation(fields: [candidateId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId, userId, readAt, createdAt])
-}
-
-model AuditEvent {
-  tenantId             String                  @db.VarChar(36)
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  actorUserId String?  @db.VarChar(36)
-  entityType  String   @db.VarChar(80)
-  entityId    String   @db.VarChar(36)
-  action      String   @db.VarChar(120)
-  metadata    Json
-  occurredAt  DateTime @default(now())
-
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId, entityType, entityId, occurredAt])
-  @@index([tenantId, actorUserId, occurredAt])
-}
-
-
-model SelectionHistory {
-  id           String                 @id @default(uuid()) @db.VarChar(36)
-  tenantId     String                 @db.VarChar(36)
-  candidateId  String?                @db.VarChar(36)
-  jobId        String                 @db.VarChar(36)
-  relatedJobId String?                @db.VarChar(36)
-  action       SelectionHistoryAction
-  fromDecision SelectionDecision?
-  toDecision   SelectionDecision?
-  reason       String                 @db.VarChar(160)
-  note         String                 @db.Text
-  occurredAt   DateTime               @default(now())
-  occurredById String                 @db.VarChar(36)
-
-  tenant       Tenant                 @relation("SelectionHistoryTenant", fields: [tenantId], references: [id], onDelete: Cascade)
-  candidate    Candidate?             @relation(fields: [candidateId], references: [id], onDelete: SetNull)
-  job          Job                    @relation("SelectionHistoryJob", fields: [jobId], references: [id], onDelete: Cascade)
-  relatedJob   Job?                   @relation("SelectionHistoryRelatedJob", fields: [relatedJobId], references: [id], onDelete: SetNull)
-  occurredBy   User                   @relation("SelectionHistoryActor", fields: [occurredById], references: [id], onDelete: Restrict)
-
-  @@index([tenantId, jobId, occurredAt])
-  @@index([tenantId, candidateId, occurredAt])
+  @@unique([interviewId, interviewerId])
+  @@index([interviewerId, createdAt])
 }

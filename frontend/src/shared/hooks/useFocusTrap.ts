@@ -13,7 +13,7 @@ const focusableSelector = [
   'select:not([disabled])',
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
-].join(',');
+].join(', ');
 
 export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onEscape, restoreFocusRef }: UseFocusTrapOptions): RefObject<T | null> => {
   const containerRef = useRef<T | null>(null);
@@ -40,8 +40,8 @@ export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onE
         onEscapeRef.current?.();
         return;
       }
-
       if (event.key !== 'Tab') return;
+
       const focusable = Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
       if (focusable.length === 0) {
         event.preventDefault();
@@ -68,8 +68,7 @@ export const useFocusTrap = <T extends HTMLElement = HTMLElement>({ enabled, onE
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      const restoreTarget = restoreFocusRef?.current ?? previousFocus;
-      restoreTarget?.focus();
+      (restoreFocusRef?.current ?? previousFocus)?.focus();
     };
   }, [enabled, restoreFocusRef]);
 
