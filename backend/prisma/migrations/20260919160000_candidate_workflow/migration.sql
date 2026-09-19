@@ -74,8 +74,6 @@ ALTER TABLE `InterviewEvaluation`
   DROP COLUMN `rating`,
   DROP COLUMN `recommendation`;
 
-ALTER TABLE `User`
-  ADD CONSTRAINT `User_agencyId_fkey` FOREIGN KEY (`agencyId`) REFERENCES `Agency`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `InterviewCriterion`
   ADD CONSTRAINT `InterviewCriterion_agencyId_fkey`
@@ -95,8 +93,3 @@ ALTER TABLE `CandidateStatusHistory`
 
 DROP TABLE `JobApplication`;
 
-CREATE TABLE `_noop_candidate_workflow_marker` (
-  `id` INTEGER NOT NULL
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-DROP TABLE `_noop_candidate_workflow_marker`;
