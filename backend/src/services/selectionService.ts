@@ -350,7 +350,7 @@ export const setScoringWeights = async (auth: AuthContext, jobId: string, weight
       entityType: "Job",
       entityId: jobId,
       action: "selection.scoring_weights_changed",
-      metadata: normalized,
+      metadata: { ...normalized },
     }, tx);
   });
 
@@ -360,7 +360,7 @@ export const setScoringWeights = async (auth: AuthContext, jobId: string, weight
 const updateJobScoreWeights = async (tx: Prisma.TransactionClient, tenantId: string, jobId: string, weights: SelectionScoringWeights): Promise<void> => {
   const result = await tx.job.updateMany({
     where: { tenantId, id: jobId },
-    data: { scoringWeights: weights },
+    data: { scoringWeights: { ...weights } },
   });
   if (result.count !== 1) throw AppError.notFound("Job not found.");
 };
