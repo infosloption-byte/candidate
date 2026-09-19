@@ -6,7 +6,7 @@ import { AppError } from "../errors/AppError.js";
 import { createOpaqueToken, sha256 } from "../lib/crypto.js";
 import { withTransaction } from "../lib/db.js";
 import { findActiveUserById, findActiveUserWithTenantByEmail } from "../repositories/userRepository.js";
-import { createSession, revokeSession } from "../repositories/sessionRepository.js";
+import { createSession, findActiveSession, revokeSession } from "../repositories/sessionRepository.js";
 import { createAuditEvent } from "../repositories/auditRepository.js";
 import { roleToFrontend } from "../auth/permissions.js";
 import type { AuthContext } from "../types/fastify.js";
