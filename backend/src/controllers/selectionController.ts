@@ -7,11 +7,11 @@ const auth = (request: FastifyRequest) => {
   return request.auth;
 };
 
-interface JobParams { jobId: string; }
-interface DecisionBody { candidateId: string; decision: SelectionDecisionInput; reason: string; note: string; }
-interface BulkBody { candidateIds: string[]; decision: SelectionDecisionInput; reason: string; note: string; }
-interface ApprovalBody { status: ApprovalStatusInput; note: string; }
-interface ReassignBody { candidateIds: string[]; toJobId: string; reason: string; note: string; }
+export interface JobParams { jobId: string; }
+export interface DecisionBody { candidateId: string; decision: SelectionDecisionInput; reason: string; note: string; }
+export interface BulkBody { candidateIds: string[]; decision: SelectionDecisionInput; reason: string; note: string; }
+export interface ApprovalBody { status: ApprovalStatusInput; note: string; }
+export interface ReassignBody { candidateIds: string[]; toJobId: string; reason: string; note: string; }
 
 export const selectionWorkspaceController = async (request: FastifyRequest) => ({
   success: true,
