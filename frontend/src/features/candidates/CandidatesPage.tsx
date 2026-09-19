@@ -44,6 +44,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
+  const candidateDetailsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (developmentMode) {
@@ -74,6 +75,13 @@ export const CandidatesPage = ({ role }: Props) => {
     () => candidates.find((item) => item.id === (selectedCandidateId || user?.candidateId)),
     [candidates, selectedCandidateId, user?.candidateId],
   );
+
+  useEffect(() => {
+    if (!selectedCandidateId) return;
+    window.requestAnimationFrame(() => {
+      candidateDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [selectedCandidateId]);
 
   useEffect(() => {
     if (!candidate || role === 'INTERVIEWEE') return;
@@ -316,8 +324,7 @@ export const CandidatesPage = ({ role }: Props) => {
     finally { setSaving(false); }
   };
 
-  const updateOnboarding = async (item: Candidate) => {
-    const next: OnboardingStatus = item.onboardingStatus === 'SUBMITTED' ? 'COMPLETED' : 'SUBMITTED';
+  const updateOnboarding = async (item: Candidate, next: OnboardingStatus = 'COMPLETED') => {
     try {
       const updated = developmentMode ? { ...item, onboardingStatus: next } : await apiFetch<Candidate>('/candidates/' + item.id, { method: 'PATCH', body: JSON.stringify({ onboardingStatus: next }) });
       if (developmentMode) dispatch({ type: 'SET_ONBOARDING_STATUS', candidateId: item.id, status: next });
@@ -332,7 +339,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: 'Actions', render: (item: Candidate) => <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>View</Button>{role !== 'INTERVIEWEE' && <Button size="sm" variant="secondary" onClick={() => void updateOnboarding(item)}>{item.onboardingStatus === 'SUBMITTED' ? 'Complete' : 'Review onboarding'}</Button>}</div> },
+    { key: 'actions', header: 'Actions', render: (item: Candidate) => <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>View details</Button>{role !== 'INTERVIEWEE' && <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>{'Review onboarding'}</Button>}</div> },
   ];
 
   return (
@@ -432,6 +439,7 @@ export const CandidatesPage = ({ role }: Props) => {
           {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
+            <div ref={candidateDetailsRef}>
             <Card>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p><h2 className="mt-1 text-xl font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p></div>
@@ -458,7 +466,13 @@ export const CandidatesPage = ({ role }: Props) => {
               <div className="mt-5 grid gap-4 lg:grid-cols-3">
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p><p className="mt-1 text-xs text-slate-500">{candidate.phone ?? 'No phone'}</p></div>
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><p className="mt-2"><StatusPill value={candidate.onboardingStatus} /></p></div>
+                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
+              </div>
+              <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div><p className="text-xs font-black text-slate-900">Onboarding review</p><p className="mt-1 text-[11px] text-slate-500">Review the candidate profile before completing onboarding.</p></div>
+                  <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500"><span className="rounded-full bg-white px-3 py-1.5">Profile {candidate.name && candidate.profession ? 'complete' : 'needs review'}</span><span className="rounded-full bg-white px-3 py-1.5">Contact {candidate.email || candidate.phone ? 'available' : 'missing'}</span><span className="rounded-full bg-white px-3 py-1.5">Skills {candidate.skills.length ? candidate.skills.length + ' recorded' : 'missing'}</span></div>
+                </div>
               </div>
               )}
 
@@ -537,6 +551,7 @@ export const CandidatesPage = ({ role }: Props) => {
 
               <div className="mt-5"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
             </Card>
+            </div>
           )}
         </>
       )}
