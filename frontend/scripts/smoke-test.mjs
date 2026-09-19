@@ -36,6 +36,9 @@ for (const view of ['dashboard', 'jobs', 'candidates', 'interviews', 'criteria',
 
 assert.match(candidatesPage, /Bulk candidate onboarding/);
 assert.match(candidatesPage, /View details/);
+assert.match(candidatesPage, /role="dialog"/);
+assert.match(candidatesPage, /useFocusTrap/);
+assert.match(candidatesPage, /Close candidate details/);
 assert.match(candidatesPage, /Review onboarding/);
 assert.match(candidatesPage, /experienceYears/);
 assert.match(settingsPage, /Candidate lifecycle/);
