@@ -178,7 +178,7 @@ export const InterviewsPage = ({ role }: Props) => {
         candidate?.reference ?? '',
         candidate?.profession ?? '',
         candidate?.email ?? '',
-        candidate?.phone ?? '',
+        ('phone' in (candidate ?? {}) ? candidate?.phone ?? '' : ''),
         job?.title ?? '',
         job?.location ?? '',
         interview.type,
