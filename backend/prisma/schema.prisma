@@ -193,11 +193,10 @@ model User {
   interviewAssignments InterviewerAssignment[]
   decisions            SelectionRecord[]       @relation("SelectionDecider")
   approvals            SelectionApproval[]     @relation("ApprovalActor")
-  selectionHistory     SelectionHistory[]     @relation("SelectionHistoryActor")
+  selectionHistory     SelectionHistory[] @relation("SelectionHistoryActor")
   notifications        Notification[]
   auditEvents          AuditEvent[]
   sessions             Session[]
-  selectionHistory     SelectionHistory[]
   tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, role, active])
@@ -347,6 +346,8 @@ model Job {
   scoringWeights      Json
   selections          SelectionRecord[]
   approval            SelectionApproval?
+  selectionHistoryJob        SelectionHistory[] @relation("SelectionHistoryJob")
+  selectionHistoryRelatedJob SelectionHistory[] @relation("SelectionHistoryRelatedJob")
 
   @@index([tenantId, status, profession])
   @@index([tenantId, deadline])
