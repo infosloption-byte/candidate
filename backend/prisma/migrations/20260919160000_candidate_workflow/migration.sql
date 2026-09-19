@@ -14,6 +14,7 @@ JOIN `JobApplication` a ON a.id = i.applicationId
 SET i.candidateId = a.candidateId,
     i.jobId = a.jobId;
 
+
 ALTER TABLE `Interview`
   DROP FOREIGN KEY `Interview_applicationId_fkey`,
   DROP COLUMN `applicationId`,
