@@ -117,7 +117,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - 🔄 Interview panel scheduling end-to-end test — coverage committed, CI execution not yet verifiable.
 - 🔄 Interview evaluation end-to-end test — coverage committed, CI execution not yet verifiable.
 - ⏳ Responsive browser QA.
-- ⏳ Deployment, backup, and monitoring checklist.
+- ✅ Deployment, backup, and monitoring checklist documented in `RELEASE_CHECKLIST.md`.
 
 ### Current CI verification note
 
