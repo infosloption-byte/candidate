@@ -106,10 +106,13 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 ## Phase 5 — Backend and data
 
 - 🔄 Create Node.js + TypeScript backend under `backend/`.
+- ✅ Add Fastify health endpoints, standardized API responses, backend CI and strict server error handling.
+- 🔄 Add tenant-scoped authentication/session infrastructure and RBAC enforcement.
+- 🔄 Add tenant-scoped Candidate REST API matching the existing frontend Candidate contract.
 - 🔄 Define REST API contracts matching frontend domain types.
 - 🔄 Add MySQL database and migration strategy.
-- ⏳ Add authentication, roles, and permissions, including recruiter/system-admin authorization for candidate import and onboarding administration.
-- ⏳ Add server-side audit trail.
+- 🔄 Add authentication, roles, and permissions, including recruiter/system-admin authorization for candidate import and onboarding administration.
+- 🔄 Add server-side audit trail.
 - ⏳ Add file/document storage abstraction.
 
 ## Phase 6 — Data migration and release
