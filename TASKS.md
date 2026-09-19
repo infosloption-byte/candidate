@@ -40,24 +40,26 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 ## Phase 3 — Jobs
 
 - ✅ Build Job API and persistence.
-- 🔄 Build agency job list.
+- ✅ Build agency job list API.
 - 🔄 Build create/edit job form.
 - ✅ Implement publish / close.
-- 🔄 Build published job view.
+- ✅ Build published job API view.
 - ✅ Add job validation.
 - ✅ Add job API validation tests.
 - ✅ Restrict job mutations to Admin/Agency roles.
+- ✅ Connect the frontend Jobs screen to authenticated Job API sessions.
 
 ## Phase 4 — Candidates and onboarding
 
-- ⏳ Build Candidate API and persistence.
-- ⏳ Build agency-created candidate onboarding.
-- ⏳ Build candidate self-onboarding.
-- ⏳ Build onboarding progress/submission states.
-- ⏳ Build agency review of submitted candidate profiles.
+- ✅ Build Candidate API and persistence.
+- ✅ Build agency-created candidate onboarding API.
+- ✅ Build candidate self-onboarding API and account linkage.
+- ✅ Build onboarding progress/submission states at API level.
+- 🔄 Build frontend candidate list/form against Candidate API.
+- ⏳ Build agency review of submitted candidate profiles in the production UI.
 - ⏳ Build bulk candidate onboarding via CSV.
 - ⏳ Add row validation and duplicate protection for bulk import.
-- ⏳ Add candidate onboarding tests.
+- ⏳ Add candidate API integration tests.
 
 ## Phase 5 — Applications
 

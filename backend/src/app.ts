@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import { env } from './config/env.js';
 import { agencyRoutes } from './routes/agencies.js';
 import { authRoutes } from './routes/auth.js';
+import { candidateRoutes } from './routes/candidates.js';
 import { healthRoutes } from './routes/health.js';
 import { jobRoutes } from './routes/jobs.js';
 
@@ -25,6 +26,7 @@ export const buildApp = (): FastifyInstance => {
   void app.register(authRoutes, { prefix: '/api/v1' });
   void app.register(agencyRoutes, { prefix: '/api/v1' });
   void app.register(jobRoutes, { prefix: '/api/v1' });
+  void app.register(candidateRoutes, { prefix: '/api/v1' });
 
   return app;
 };
