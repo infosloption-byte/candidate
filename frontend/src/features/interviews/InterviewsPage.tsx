@@ -151,7 +151,7 @@ export const InterviewsPage = ({ role }: Props) => {
     return base.filter((interview) => {
       const candidate = interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
       const job = interview.job ?? jobs.find((item) => item.id === interview.jobId);
-      const panelNames = interview.panel?.map((item) => item.user.name) ?? [];
+      const panelNames = interview.panel?.map((item) => item.user?.name ?? '') ?? [];
       return [candidate?.name ?? '', candidate?.reference ?? '', candidate?.profession ?? '', job?.title ?? '', job?.location ?? '', interview.type, interview.status, ...panelNames]
         .some((value) => value.toLowerCase().includes(query));
     });
@@ -203,7 +203,7 @@ export const InterviewsPage = ({ role }: Props) => {
     });
     setInterviewers((current) => {
       const known = new Set(current.map((item) => item.id));
-      const missing = (interview.panel ?? []).map((item) => ({ id: item.userId, agencyId, candidateId: null, name: item.user.name, email: item.user.email, role: 'INTERVIEWER' as const, active: item.user.active })).filter((item) => !known.has(item.id));
+      const missing = (interview.panel ?? []).filter((item) => item.user).map((item) => ({ id: item.userId, agencyId, candidateId: null, name: item.user!.name, email: item.user!.email, role: 'INTERVIEWER' as const, active: item.user!.active })).filter((item) => !known.has(item.id));
       return [...current, ...missing];
     });
     setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
@@ -511,7 +511,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
                 {interview.panel && interview.panel.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {interview.panel.map((participant) => <span key={participant.userId} className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-slate-600">{participant.user.name}{participant.user.active ? '' : ' · inactive'}</span>)}
+                    {interview.panel.map((participant) => <span key={participant.userId} className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-slate-600">{participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}</span>)}
                   </div>
                 )}
 
