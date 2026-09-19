@@ -55,7 +55,7 @@ const roleLabels: Record<UserRole, string> = {
 
 export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleCollapse }: SidebarProps) => (
   <aside className="flex h-full w-full flex-col bg-slate-950 text-white" aria-label="Primary navigation">
-    <div className={`flex min-h-[72px] items-center border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
+    <div className={`relative flex min-h-[72px] items-center border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
       <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-400 font-black text-[15px] text-slate-950 shadow-lg shadow-cyan-950/20">B</div>
       {!collapsed && (
         <div className="min-w-0 flex-1">
