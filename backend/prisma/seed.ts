@@ -620,6 +620,15 @@ const main = async (): Promise<void> => {
       data: { id: `${selection.id}-history`, tenantId: tenant.id, candidateId: selection.candidateId, jobId: selection.jobId, action: "DECISION_CHANGED", fromDecision: null, toDecision: selection.decision, reason: selection.reason, note: selection.note, occurredById: recruiter.id },
     });
   }
+  const manager = await prisma.user.findUniqueOrThrow({
+    where: { email: "manager@buildhire.demo" },
+  });
+
+  await prisma.selectionApproval.upsert({
+    where: { jobId: "job-colombo-shuttering" },
+    update: { tenantId: tenant.id, status: "APPROVED", note: "Initial development shortlist approved.", changedById: manager.id },
+    create: { id: "approval-colombo-shuttering", tenantId: tenant.id, jobId: "job-colombo-shuttering", status: "APPROVED", note: "Initial development shortlist approved.", changedById: manager.id },
+  });
   console.log("BuildHire development seed completed.");
   console.log("Staff login password: password");
   console.log("Workspace: buildhire-demo");
