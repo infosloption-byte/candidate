@@ -360,6 +360,7 @@ model CandidateDocument {
 
   tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   candidate      Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  versions       CandidateDocumentVersion[]
   uploadedBy     User?         @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   verifiedBy     User?         @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
 
