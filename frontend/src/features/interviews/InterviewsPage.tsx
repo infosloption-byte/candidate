@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -67,6 +67,11 @@ export const InterviewsPage = ({ role }: Props) => {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
+  const [sortBy, setSortBy] = useState<'date' | 'candidate' | 'status'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
@@ -80,6 +85,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [detailFor, setDetailFor] = useState<string | null>(null);
   const [detail, setDetail] = useState<InterviewDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const scheduleModalRef = useRef<HTMLDivElement | null>(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   useEffect(() => {
     if (developmentMode) {
@@ -163,20 +170,37 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const base = role === 'INTERVIEWER'
-      ? interviews
-      : role === 'INTERVIEWEE'
-        ? interviews
-        : interviews;
-    if (!query) return base;
-    return base.filter((interview) => {
+    const base = interviews.filter((interview) => {
       const candidate = interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
       const job = interview.job ?? jobs.find((item) => item.id === interview.jobId);
       const panelNames = interview.panel?.map((item) => item.user?.name ?? '') ?? [];
-      return [candidate?.name ?? '', candidate?.reference ?? '', candidate?.profession ?? '', job?.title ?? '', job?.location ?? '', interview.type, interview.status, ...panelNames]
-        .some((value) => value.toLowerCase().includes(query));
+      const matchesSearch = !query || [
+        candidate?.name ?? '',
+        candidate?.reference ?? '',
+        candidate?.profession ?? '',
+        candidate?.email ?? '',
+        candidate?.phone ?? '',
+        job?.title ?? '',
+        job?.location ?? '',
+        interview.type,
+        interview.status,
+        ...panelNames,
+      ].some((value) => value.toLowerCase().includes(query));
+      const matchesStatus = !statusFilter || interview.status === statusFilter;
+      const matchesType = !typeFilter || interview.type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [candidates, interviews, jobs, role, search]);
+
+    return [...base].sort((left, right) => {
+      const leftCandidate = left.candidate ?? candidates.find((item) => item.id === left.candidateId);
+      const rightCandidate = right.candidate ?? candidates.find((item) => item.id === right.candidateId);
+      let result = 0;
+      if (sortBy === 'date') result = new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime();
+      if (sortBy === 'candidate') result = (leftCandidate?.name ?? left.candidateId).localeCompare(rightCandidate?.name ?? right.candidateId, undefined, { sensitivity: 'base' });
+      if (sortBy === 'status') result = left.status.localeCompare(right.status, undefined, { sensitivity: 'base' });
+      return sortDirection === 'asc' ? result : -result;
+    });
+  }, [candidates, interviews, jobs, role, search, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
@@ -212,6 +236,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const closeScheduleForm = () => {
     setShowScheduleForm(false);
+    setScheduleModalOpen(false);
     setEditingInterviewId(null);
     setForm(defaultForm);
     setCandidateId('');
@@ -231,6 +256,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setJobId('');
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
+    setScheduleModalOpen(true);
     setEvaluationFor(null);
     setError('');
     setSuccess('');
@@ -256,6 +282,7 @@ export const InterviewsPage = ({ role }: Props) => {
     });
     setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
     setShowScheduleForm(true);
+    setScheduleModalOpen(true);
     setError('');
     setSuccess('');
   };
@@ -494,15 +521,19 @@ export const InterviewsPage = ({ role }: Props) => {
     enabled: interviewDetailModalOpen,
     onEscape: closeInterviewDetails,
   });
+  const scheduleFormTrapRef = useFocusTrap<HTMLDivElement>({
+    enabled: scheduleModalOpen,
+    onEscape: closeScheduleForm,
+  });
 
   useEffect(() => {
-    if (!interviewDetailModalOpen) return;
+    if (!interviewDetailModalOpen && !scheduleModalOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [interviewDetailModalOpen]);
+  }, [interviewDetailModalOpen, scheduleModalOpen]);
 
   const candidateFor = (interview: InterviewRecord) =>
     interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
@@ -519,32 +550,110 @@ export const InterviewsPage = ({ role }: Props) => {
         action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
-      {role === 'ADMIN' && (
-        <Card>
-          <FormField label="Agency workspace" hint="Admin can operate the complete recruitment workflow on behalf of any agency.">
-            <select className="field-input" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
-              <option value="">Select an agency</option>
-              {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-            </select>
-          </FormField>
-        </Card>
-      )}
-
       {error && <StateMessage kind="error" title="Interview action failed" description={error} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
-      {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
-        <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-black text-slate-950">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
-              <p className="mt-1 text-xs text-slate-400">An interview belongs directly to a candidate. A job is optional context.</p>
-            </div>
-            <Button size="sm" variant="secondary" onClick={closeScheduleForm}>Close</Button>
+      {role !== 'INTERVIEWEE' && role !== 'INTERVIEWER' && (
+        <>
+          <input
+            ref={scheduleFormTrapRef}
+            type="hidden"
+            aria-hidden="true"
+          />
+        </>
+      )}
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className={`grid gap-3 p-4 md:items-end ${role === 'ADMIN' ? 'md:grid-cols-[minmax(220px,1fr)_200px_180px_190px_40px]' : 'md:grid-cols-[minmax(220px,1fr)_180px_190px_40px]'}`}>
+          <div className="min-w-0">
+            <label className="field-label">Search interviews</label>
+            <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {editingInterviewId ? (
+          {role === 'ADMIN' && (
+            <div className="min-w-0">
+              <label className="field-label">Agency</label>
+              <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
+                <option value="">All agencies</option>
+                {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="min-w-0">
+            <label className="field-label">Status</label>
+            <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="">All statuses</option>
+              {['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label className="field-label">Sort</label>
+            <div className="mt-1 flex min-w-0 gap-1.5">
+              <select className="field-input min-w-0 flex-1 py-2" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+                <option value="date">Date</option>
+                <option value="candidate">Candidate</option>
+                <option value="status">Status</option>
+              </select>
+              <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                  {sortDirection === 'asc'
+                    ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="flex items-end md:justify-end">
+            <button type="button" title={showAdvancedFilters ? 'Hide filters' : 'More filters'} aria-label={showAdvancedFilters ? 'Hide filters' : 'More filters'} className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`} onClick={() => setShowAdvancedFilters((value) => !value)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+            </button>
+          </div>
+        </div>
+
+        {showAdvancedFilters && (
+          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="field-label">Interview type</label>
+                <select className="field-input mt-1 w-full" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
+                  <option value="">All interview types</option>
+                  <option value="SCREENING">Screening</option>
+                  <option value="TECHNICAL">Technical</option>
+                  <option value="PRACTICAL">Practical</option>
+                  <option value="FINAL">Final</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+          <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
+          {(search || statusFilter || typeFilter) && (
+            <button type="button" title="Clear filters" aria-label="Clear filters" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter(''); }}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M6 12h12M10 18h4" /><path d="M7 6l1-2h8l1 2" /></svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
+          <button type="button" aria-label="Close interview form" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeScheduleForm} />
+          <div ref={scheduleFormTrapRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" tabIndex={-1} className="relative z-10 flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:border sm:border-slate-200">
+            <header className="shrink-0 border-b border-slate-200 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p>
+                  <h2 id="schedule-interview-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Assign candidates, choose the interview setup, then select the panel.</p>
+                </div>
+                <Button size="sm" variant="secondary" className="px-3" onClick={closeScheduleForm}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+              </div>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                        {editingInterviewId ? (
               <>
                 <FormField label="Current candidate">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
@@ -652,18 +761,18 @@ export const InterviewsPage = ({ role }: Props) => {
             <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
             <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
           </div>
-        </Card>
-      )}
 
-      <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="field-label">Interview search</p>
-            <p className="mt-1 text-xs text-slate-400">Search by candidate, job, interviewer, type, or status.</p>
+              </div>
+              <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
+                  <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
+                </div>
+              </div>
+            </div>
           </div>
-          <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search interviews…" />
         </div>
-      </Card>
+      )}
 
       {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
 
@@ -690,7 +799,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
+                    <Button size="sm" variant="secondary" className="px-3" onClick={() => void openInterviewDetails(interview)}>Open</Button>
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
                         <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
