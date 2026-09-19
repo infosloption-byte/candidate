@@ -746,11 +746,6 @@ export const InterviewsPage = ({ role }: Props) => {
               </FormField>
             </div>
           </div>
-          <div className="mt-5 flex justify-end gap-2">
-            <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
-            <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
-          </div>
-
               </div>
               <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
