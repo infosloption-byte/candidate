@@ -20,7 +20,10 @@ export const validateApplicationStatus = (
   next: ApplicationStatus,
 ): string | null => {
   if (!canTransitionApplication(current, next)) {
-    return `Application cannot move from ${current} to ${next}. Final interview decisions must be recorded through the evaluation workflow.`;
+    if (current === 'INTERVIEW' && (next === 'SELECTED' || next === 'REJECTED')) {
+      return 'Final interview decisions must be recorded through the evaluation workflow.';
+    }
+    return `Application cannot move from ${current} to ${next}.`;
   }
 
   return null;
