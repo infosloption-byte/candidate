@@ -14,6 +14,9 @@ import {
   saveDecisionController,
   scoringController,
   selectionWorkspaceController,
+  type JobParams,
+  type ApprovalBody,
+  type ReassignBody,
 } from "../controllers/selectionController.js";
 
 export const selectionRoutes: FastifyPluginAsync = async (app) => {
@@ -26,15 +29,15 @@ export const selectionRoutes: FastifyPluginAsync = async (app) => {
     onRequest: [app.authenticate, app.authorize("selection.decide")],
     schema: { params: selectionJobParamsSchema, body: selectionBulkDecisionBodySchema },
   }, bulkSaveDecisionController);
-  app.post<{ Params: { jobId: string }; Body: { status: "draft" | "pending" | "approved" | "returned"; note: string } }>("/selection/jobs/:jobId/approval", {
+  app.post<{ Params: JobParams; Body: ApprovalBody }>("/selection/jobs/:jobId/approval", {
     onRequest: [app.authenticate, app.authorize("selection.approve")],
     schema: { params: selectionJobParamsSchema, body: selectionApprovalBodySchema },
   }, approvalController);
-  app.put<{ Params: { jobId: string } }>("/selection/jobs/:jobId/scoring", {
+  app.put<{ Params: JobParams; Body: import("../services/selectionService.js").SelectionScoringWeights }>("/selection/jobs/:jobId/scoring", {
     onRequest: [app.authenticate, app.authorize("selection.decide")],
     schema: { params: selectionJobParamsSchema, body: selectionScoringBodySchema },
   }, scoringController);
-  app.post<{ Params: { jobId: string } }>("/selection/jobs/:jobId/reassign", {
+  app.post<{ Params: JobParams; Body: ReassignBody }>("/selection/jobs/:jobId/reassign", {
     onRequest: [app.authenticate, app.authorize("selection.decide")],
     schema: { params: selectionJobParamsSchema, body: selectionReassignBodySchema },
   }, reassignController);
