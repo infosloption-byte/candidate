@@ -140,15 +140,20 @@ export const CandidatesPage = ({ role }: Props) => {
       setEditingCandidateProfile(false);
     },
   });
+  const candidateFormModalOpen = showForm && role !== 'INTERVIEWEE';
+  const candidateFormModalRef = useFocusTrap<HTMLDivElement>({
+    enabled: candidateFormModalOpen,
+    onEscape: () => setShowForm(false),
+  });
 
   useEffect(() => {
-    if (!candidateModalOpen) return;
+    if (!candidateModalOpen && !candidateFormModalOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [candidateModalOpen]);
+  }, [candidateModalOpen, candidateFormModalOpen]);
 
   useEffect(() => {
     if (!candidate || role === 'INTERVIEWEE') return;
@@ -526,26 +531,34 @@ export const CandidatesPage = ({ role }: Props) => {
         eyebrow={role === 'ADMIN' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Candidate profile' : 'Candidate pool'}
         title={role === 'INTERVIEWEE' ? 'My Profile' : 'Candidates'}
         description={role === 'INTERVIEWEE' ? 'Maintain your candidate profile and documents.' : 'Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.'}
-        action={role !== 'INTERVIEWEE' ? <Button onClick={() => { setForm(emptyForm); setShowForm((value) => !value); setError(''); }}>New candidate</Button> : undefined}
+        action={role !== 'INTERVIEWEE' ? (
+          <div className="flex items-center gap-2">
+            <button type="button" title="Download CSV template" aria-label="Download CSV template" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" onClick={downloadCsvTemplate}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
+              </svg>
+            </button>
+            <button type="button" title="Import candidates from CSV" aria-label="Import candidates from CSV" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300" disabled={bulkImporting || !agencyId} onClick={() => bulkFileRef.current?.click()}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M12 21V10m0 0-4 4m4-4 4 4M5 5h9l5 5v9H5z" />
+                <path d="M14 5v5h5" />
+              </svg>
+            </button>
+            <Button onClick={() => { setForm(emptyForm); setShowForm(true); setError(''); }}>New candidate</Button>
+          </div>
+        ) : undefined}
       />
 
-      {role === 'ADMIN' && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center">
-          <span className="text-xs font-bold text-slate-500">Agency</span>
-          <select className="field-input sm:max-w-xs" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
-            <option value="">All agencies</option>
-            {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-          </select>
-        </div>
-      )}
 
       {error && <StateMessage kind="error" title="Candidate action failed" description={error} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
       {loading && <StateMessage kind="loading" title="Loading candidates" description="Fetching the candidate pool." />}
 
-      {showForm && role !== 'INTERVIEWEE' && (
-        <Card>
-          <h2 className="text-sm font-black text-slate-950">Add candidate to pool</h2>
+      {candidateFormModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close new candidate dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setShowForm(false)} />
+          <div ref={candidateFormModalRef} role="dialog" aria-modal="true" aria-labelledby="new-candidate-title" tabIndex={-1} className="relative z-10 my-auto w-full max-w-4xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
+                      <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></FormField>
             <FormField label="Country / nationality"><input className="field-input" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} placeholder="Sri Lanka" /></FormField>
@@ -563,10 +576,12 @@ export const CandidatesPage = ({ role }: Props) => {
             <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
           </div>
           <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
-        </Card>
+
+          </div>
+        </div>
       )}
 
-      {role === 'INTERVIEWEE' ? (
+WEE' ? (
         candidate ? (
           <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
             <Card>
@@ -618,7 +633,6 @@ export const CandidatesPage = ({ role }: Props) => {
                 <Button size="sm" variant="secondary" onClick={() => setShowAdvancedFilters((value) => !value)}>
                   {showAdvancedFilters ? 'Hide filters' : 'More filters'}
                 </Button>
-                <Button size="sm" variant="secondary" onClick={downloadCsvTemplate}>CSV template</Button>
                 <input
                   ref={bulkFileRef}
                   type="file"
@@ -629,15 +643,21 @@ export const CandidatesPage = ({ role }: Props) => {
                     if (file) void importCandidates(file);
                   }}
                 />
-                <Button size="sm" disabled={bulkImporting || !agencyId} onClick={() => bulkFileRef.current?.click()}>
-                  {bulkImporting ? 'Importing…' : 'Import CSV'}
-                </Button>
               </div>
             </div>
 
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  {role === 'ADMIN' && (
+                    <div>
+                      <label className="field-label">Agency</label>
+                      <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
+                        <option value="">All agencies</option>
+                        {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="field-label">Country</label>
                     <select className="field-input mt-1 w-full" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}>
@@ -704,13 +724,6 @@ export const CandidatesPage = ({ role }: Props) => {
               )}
             </div>
           </div>
-
-          {role !== 'INTERVIEWEE' && (
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-200 px-4 py-3">
-              <p className="text-xs text-slate-500">Need to add one candidate manually?</p>
-              <Button size="sm" variant="secondary" onClick={() => { setForm(emptyForm); setShowForm(true); setError(''); }}>Add manually</Button>
-            </div>
-          )}
 
                     {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
