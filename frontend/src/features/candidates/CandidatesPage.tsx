@@ -85,6 +85,8 @@ export const CandidatesPage = ({ role }: Props) => {
   const [professionFilter, setProfessionFilter] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('');
   const [visaStatusFilter, setVisaStatusFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [passportFilter, setPassportFilter] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
@@ -252,7 +254,20 @@ export const CandidatesPage = ({ role }: Props) => {
     professions: [...new Set(candidates.map((item) => item.profession).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
     availabilities: [...new Set(candidates.map((item) => item.availability).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
     visaStatuses: [...new Set(candidates.map((item) => item.visaStatus).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+    locations: [...new Set(candidates.map((item) => item.currentLocation).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
   }), [candidates]);
+
+  const passportMatches = (candidate: Candidate): boolean => {
+    if (!passportFilter) return true;
+    if (!candidate.passportExpiry) return passportFilter === 'missing';
+    const expiry = new Date(candidate.passportExpiry).getTime();
+    const now = Date.now();
+    if (passportFilter === 'expired') return expiry < now;
+    if (passportFilter === '30d') return expiry >= now && expiry <= now + 30 * 86_400_000;
+    if (passportFilter === '90d') return expiry >= now && expiry <= now + 90 * 86_400_000;
+    if (passportFilter === 'valid') return expiry > now + 90 * 86_400_000;
+    return true;
+  };
 
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -262,6 +277,8 @@ export const CandidatesPage = ({ role }: Props) => {
       const matchesProfession = !professionFilter || item.profession === professionFilter;
       const matchesAvailability = !availabilityFilter || item.availability === availabilityFilter;
       const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
+      const matchesLocation = !locationFilter || item.currentLocation === locationFilter;
+      const matchesPassport = passportMatches(item);
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
@@ -270,6 +287,7 @@ export const CandidatesPage = ({ role }: Props) => {
         item.phone ?? '',
         item.alternatePhone ?? '',
         item.passportNumber ?? '',
+        item.passportExpiry ?? '',
         item.country ?? '',
         item.currentLocation ?? '',
         item.profession ?? '',
@@ -279,9 +297,9 @@ export const CandidatesPage = ({ role }: Props) => {
         item.status,
         item.onboardingStatus,
       ].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesAgency && matchesQuery;
+      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesAgency && matchesQuery;
     });
-  }, [agencyId, availabilityFilter, candidates, countryFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
+  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
 
   const createCandidate = async () => {
     if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
@@ -577,17 +595,19 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <Card>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
               <div className="xl:col-span-2"><FormField label="Candidate search"><input className="field-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, passport, contact, location, skills…" /></FormField></div>
               <FormField label="Status"><select className="field-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option>{statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></FormField>
               <FormField label="Country"><select className="field-input" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}><option value="">All countries</option>{filterOptions.countries.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
               <FormField label="Profession"><select className="field-input" value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}><option value="">All professions</option>{filterOptions.professions.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
               <FormField label="Availability"><select className="field-input" value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}><option value="">Any availability</option>{filterOptions.availabilities.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
               <FormField label="Visa / work status"><select className="field-input" value={visaStatusFilter} onChange={(event) => setVisaStatusFilter(event.target.value)}><option value="">Any visa status</option>{filterOptions.visaStatuses.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
+              <FormField label="Current location"><select className="field-input" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}><option value="">All locations</option>{filterOptions.locations.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
+              <FormField label="Passport expiry"><select className="field-input" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}><option value="">Any passport status</option><option value="expired">Expired</option><option value="30d">Expires in 30 days</option><option value="90d">Expires in 90 days</option><option value="valid">Valid beyond 90 days</option><option value="missing">Missing expiry</option></select></FormField>
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-400">{filteredCandidates.length} candidate(s) in this view.</p>
-              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter) && <Button size="sm" variant="ghost" onClick={() => { setSearch(''); setStatusFilter(''); setCountryFilter(''); setProfessionFilter(''); setAvailabilityFilter(''); setVisaStatusFilter(''); }}>Clear filters</Button>}
+              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter) && <Button size="sm" variant="ghost" onClick={() => { setSearch(''); setStatusFilter(''); setCountryFilter(''); setProfessionFilter(''); setAvailabilityFilter(''); setVisaStatusFilter(''); setLocationFilter(''); setPassportFilter(''); }}>Clear filters</Button>}
             </div>
           </Card>
           <Card>
