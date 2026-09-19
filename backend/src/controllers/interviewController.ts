@@ -15,8 +15,8 @@ import {
 } from "../services/interviewService.js";
 import { AppError } from "../errors/AppError.js";
 
-interface Params { id: string; }
-interface ListQuery {
+export interface Params { id: string; }
+export interface ListQuery {
   search?: string;
   status?: "scheduled" | "in-progress" | "evaluation" | "completed" | "no-show" | "cancelled";
   from?: string;
@@ -24,7 +24,7 @@ interface ListQuery {
   page?: number;
   pageSize?: number;
 }
-interface CreateBody {
+export interface CreateBody {
   candidateId: string;
   type: "Screening" | "Technical" | "Practical" | "Client" | "Final";
   date: string;
@@ -35,9 +35,9 @@ interface CreateBody {
   interviewerIds: string[];
   notes?: string;
 }
-interface StatusBody { status: string; }
-interface DecisionBody { decision: "selected" | "reserve" | "rejected"; reason: string; note: string; }
-interface RescheduleBody { date: string; time: string; timezone?: string; interviewerIds: string[]; reason?: string; }
+export interface StatusBody { status: string; }
+export interface DecisionBody { decision: "selected" | "reserve" | "rejected"; reason: string; note: string; }
+export interface RescheduleBody { date: string; time: string; timezone?: string; interviewerIds: string[]; reason?: string; }
 
 const statusToPrisma: Record<NonNullable<ListQuery["status"]>, "SCHEDULED" | "IN_PROGRESS" | "EVALUATION" | "COMPLETED" | "NO_SHOW" | "CANCELLED"> = {
   scheduled: "SCHEDULED",
