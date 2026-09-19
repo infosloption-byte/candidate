@@ -12,8 +12,14 @@ interface SidebarProps {
 
 const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: AppView; label: string; icon: IconName }> }>> = {
   ADMIN: [
-    { label: 'System', items: [
+    { label: 'Operations', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
+      { view: 'candidates', label: 'Candidates', icon: 'users' },
+      { view: 'interviews', label: 'Interviews', icon: 'calendar' },
+      { view: 'criteria', label: 'Interview criteria', icon: 'target' },
+    ]},
+    { label: 'Administration', items: [
       { view: 'agencies', label: 'Agencies & Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
@@ -23,7 +29,8 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
       { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
-      { view: 'applications', label: 'Applications', icon: 'file' },
+      { view: 'interviews', label: 'Interviews', icon: 'calendar' },
+      { view: 'criteria', label: 'Interview criteria', icon: 'target' },
       { view: 'interviews', label: 'Interviews', icon: 'calendar' },
     ]},
     { label: 'Administration', items: [
@@ -38,8 +45,6 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   ],
   INTERVIEWEE: [
     { label: 'My recruitment', items: [
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
-      { view: 'applications', label: 'My Applications', icon: 'file' },
       { view: 'interviews', label: 'My Interviews', icon: 'calendar' },
       { view: 'candidates', label: 'My Profile', icon: 'users' },
     ]},
