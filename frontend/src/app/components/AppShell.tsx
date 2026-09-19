@@ -2,16 +2,19 @@ import { useId, useState, type ReactNode } from 'react';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import type { UserRole } from '../../domain/types';
 
 export type AppView = 'dashboard' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'agencies' | 'settings';
 
 interface AppShellProps {
+  role: UserRole;
   activeView: AppView;
   onNavigate: (view: AppView) => void;
+  onRoleChange: (role: UserRole) => void;
   children: ReactNode;
 }
 
-export const AppShell = ({ activeView, onNavigate, children }: AppShellProps) => {
+export const AppShell = ({ role, activeView, onNavigate, onRoleChange, children }: AppShellProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('buildhire.sidebar-collapsed') === 'true');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const mobileNavTitleId = useId();
@@ -33,16 +36,16 @@ export const AppShell = ({ activeView, onNavigate, children }: AppShellProps) =>
   return (
     <div className="flex h-dvh overflow-hidden bg-slate-100">
       <aside className={`hidden shrink-0 border-r border-slate-900/10 transition-[width] duration-200 lg:block ${sidebarCollapsed ? 'w-[72px]' : 'w-[248px]'}`}>
-        <Sidebar activeView={activeView} onNavigate={navigate} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+        <Sidebar role={role} activeView={activeView} onNavigate={navigate} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
       </aside>
       {mobileNavOpen && <div className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
       <aside ref={mobileNavRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={mobileNavTitleId} className={`fixed inset-y-0 left-0 z-50 w-[280px] transform shadow-2xl transition-transform duration-200 lg:hidden ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <h2 id={mobileNavTitleId} className="sr-only">Mobile navigation</h2>
-        <Sidebar activeView={activeView} onNavigate={navigate} collapsed={false} onToggleCollapse={() => undefined} />
+        <Sidebar role={role} activeView={activeView} onNavigate={navigate} collapsed={false} onToggleCollapse={() => undefined} />
         <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="absolute right-3 top-3 grid size-9 place-items-center rounded-xl bg-white/10 text-white">×</button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar activeView={activeView} onOpenMobileNav={() => setMobileNavOpen(true)} />
+        <TopBar role={role} activeView={activeView} onOpenMobileNav={() => setMobileNavOpen(true)} onRoleChange={onRoleChange} />
         <main className="scrollbar-thin min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
     </div>
