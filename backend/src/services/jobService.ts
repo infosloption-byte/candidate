@@ -36,18 +36,20 @@ const dateOnly = (value: string | null): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const fromStatus = (status: PrismaJobStatus): JobInput["status"] => ({
+const fromStatusMap = {
   DRAFT: "draft",
   OPEN: "open",
   PAUSED: "paused",
   FILLED: "filled",
   CLOSED: "closed",
-}[status]);
+} as const satisfies Record<PrismaJobStatus, JobInput["status"]>;
+
+const fromStatus = (status: PrismaJobStatus): JobInput["status"] => fromStatusMap[status];
 
 const strings = (value: Prisma.JsonValue): string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 
-export const toJobDto = (job: Awaited<ReturnType<typeof findJobById>> & object) => {
+export const toJobDto = (job: Prisma.JobGetPayload<{}> | null) => {
   if (!job) throw AppError.notFound("Job not found.");
   return {
     id: job.id,
