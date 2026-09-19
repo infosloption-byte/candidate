@@ -272,6 +272,16 @@ export const createInterviewRecord = async (auth: AuthContext, input: InterviewI
   await validateWindow(auth, input.candidateId, input.location, input.interviewerIds, startsAt, input.durationMinutes);
 
   await withTransaction(async (tx) => {
+    const candidate = await tx.candidate.findFirst({
+      where: { tenantId: auth.tenantId, id: input.candidateId },
+      select: { id: true, status: true },
+    });
+    if (!candidate) throw AppError.notFound("Candidate not found.");
+
+    if (candidate.status === "REJECTED") {
+      throw AppError.invalidState("Rejected candidates cannot be scheduled for an interview.");
+    }
+
     await createInterview(tx, {
       id: interviewId,
       tenant: { connect: { id: auth.tenantId } },
@@ -323,6 +333,13 @@ export const createInterviewRecord = async (auth: AuthContext, input: InterviewI
           }
         : undefined,
     });
+
+    if (candidate.status !== "INTERVIEW") {
+      await tx.candidate.updateMany({
+        where: { tenantId: auth.tenantId, id: input.candidateId },
+        data: { status: "INTERVIEW" },
+      });
+    }
 
     await createJourneyEvent(tx, {
       id: randomUUID(),
