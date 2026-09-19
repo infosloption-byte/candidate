@@ -275,7 +275,6 @@ model Candidate {
   selections                    SelectionRecord[]
   selectionHistory              SelectionHistory[]
   notifications                 Notification[]
-  selectionHistory              SelectionHistory[]
 
   tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@unique([tenantId, reference])
