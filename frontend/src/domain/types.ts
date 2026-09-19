@@ -1,11 +1,11 @@
 export type UserRole = 'ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
 
 export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
-export type ApplicationStatus = 'APPLIED' | 'SCREENING' | 'SHORTLISTED' | 'INTERVIEW' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN';
 export type OnboardingStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED';
 export type CandidateSource = 'AGENCY_ADDED' | 'SELF_ONBOARDED' | 'BULK_IMPORTED';
+export type CandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED' | 'INACTIVE';
 export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-export type Recommendation = 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED';
+export type InterviewType = 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
 
 export interface Agency {
   id: string;
@@ -48,6 +48,8 @@ export interface Candidate {
   skills: string[];
   onboardingStatus: OnboardingStatus;
   source: CandidateSource;
+  status: CandidateStatus;
+  statusUpdatedAt: string;
 }
 
 export interface Job {
@@ -61,30 +63,67 @@ export interface Job {
   publishedAt: string | null;
 }
 
-export interface JobApplication {
+export interface InterviewCriterion {
   id: string;
-  jobId: string;
-  candidateId: string;
-  status: ApplicationStatus;
-  appliedAt: string;
+  agencyId: string;
+  name: string;
+  description: string | null;
+  maxPoints: number;
+  active: boolean;
 }
 
-export interface Interview {
-  id: string;
-  applicationId: string;
-  type: 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
-  status: InterviewStatus;
-  scheduledAt: string;
-  durationMins: number;
-  location: string | null;
-  panelUserIds: string[];
+export interface InterviewScore {
+  criterionId: string;
+  criterion?: InterviewCriterion;
+  points: number;
 }
 
 export interface InterviewEvaluation {
   id: string;
   interviewId: string;
   interviewerId: string;
-  rating: number;
-  recommendation: Recommendation;
   comments: string | null;
+  scores: InterviewScore[];
+}
+
+export interface Interview {
+  id: string;
+  candidateId: string;
+  jobId: string | null;
+  type: InterviewType;
+  status: InterviewStatus;
+  scheduledAt: string;
+  durationMins: number;
+  location: string | null;
+  panelUserIds: string[];
+  candidate?: Pick<Candidate, 'id' | 'name' | 'reference' | 'profession' | 'email' | 'status'>;
+  job?: Pick<Job, 'id' | 'title' | 'location' | 'status'> | null;
+  panel?: Array<{
+    userId: string;
+    assignedAt: string;
+    user: Pick<User, 'id' | 'name' | 'email' | 'active'>;
+  }>;
+  evaluations?: InterviewEvaluation[];
+}
+
+export interface CandidateStatusHistory {
+  id: string;
+  candidateId: string;
+  fromStatus: CandidateStatus | null;
+  toStatus: CandidateStatus;
+  reason: string | null;
+  changedBy: { id: string; name: string; role: UserRole } | null;
+  createdAt: string;
+}
+
+export interface CandidateHistoryInterview {
+  id: string;
+  type: InterviewType;
+  status: InterviewStatus;
+  scheduledAt: string;
+  durationMins: number;
+  location: string | null;
+  job: { id: string; title: string; location: string | null } | null;
+  panel: Array<{ userId: string; user: { id: string; name: string; email: string; active: boolean } }>;
+  evaluations: InterviewEvaluation[];
 }
