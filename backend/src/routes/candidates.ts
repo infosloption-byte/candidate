@@ -126,7 +126,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be added to an inactive agency.' } });
 
       const prisma = getPrisma();
-      const updateCandidate = () => prisma.$transaction(async (tx) => {
+      const candidate = await prisma.$transaction(async (tx) => {
         const created = await tx.candidate.create({
           data: {
             agencyId: agency.id,
