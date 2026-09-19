@@ -630,6 +630,11 @@ export const InterviewsPage = ({ role }: Props) => {
               <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Interview room / online" />
             </FormField>
             <div className="md:col-span-2">
+              <FormField label="Notes" hint="Optional">
+                <textarea className="field-input min-h-20 resize-y" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Interview instructions or notes…" />
+              </FormField>
+            </div>
+            <div className="md:col-span-2">
               <FormField label="Interviewers" hint="Select one or more active interviewers from the candidate's agency.">
                 <div className="grid gap-2 sm:grid-cols-2">
                   {interviewers.map((interviewer) => (
@@ -684,12 +689,16 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
-                  {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                  {role === 'ADMIN' || role === 'AGENCY' ? (
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
-                      <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
-                      <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                      <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                      {interview.status === 'SCHEDULED' && (
+                        <>
+                          <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
+                          <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                          <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                        </>
+                      )}
                     </div>
                   )}
                   {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
