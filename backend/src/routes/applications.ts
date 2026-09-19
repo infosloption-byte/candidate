@@ -32,6 +32,10 @@ export const applicationRoutes: FastifyPluginAsync = async (app) => {
   app.get('/applications', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
 
+    if (user.role === 'INTERVIEWER') {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access applications through assigned interviews.' } });
+    }
+
     const applications = await getPrisma().jobApplication.findMany({
       where: user.role === 'ADMIN'
         ? undefined
@@ -59,7 +63,7 @@ export const applicationRoutes: FastifyPluginAsync = async (app) => {
     const allowed =
       user.role === 'ADMIN'
       || (user.role === 'INTERVIEWEE' && user.candidateId === application.candidateId)
-      || ((user.role === 'AGENCY' || user.role === 'INTERVIEWER') && user.agencyId === application.job.agencyId);
+      || (user.role === 'AGENCY' && user.agencyId === application.job.agencyId);
 
     if (!allowed) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this application.' } });
