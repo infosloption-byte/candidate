@@ -8,7 +8,7 @@ export interface AuditRecord {
   entityType: string;
   entityId: string;
   action: string;
-  metadata: Prisma.JsonValue;
+  metadata: Prisma.InputJsonValue;
 }
 
 export const createAuditEvent = async (record: AuditRecord, tx?: DbClient): Promise<void> => {
