@@ -28,8 +28,6 @@ ALTER TABLE `Interview`
   ADD CONSTRAINT `Interview_jobId_fkey`
     FOREIGN KEY (`jobId`) REFERENCES `Job`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE `Job` DROP INDEX `Job_agencyId_status_publishedAt_idx`;
-
 ALTER TABLE `Job`
   ADD INDEX `Job_agencyId_status_idx`(`agencyId`, `status`);
 
