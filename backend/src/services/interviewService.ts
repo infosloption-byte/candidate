@@ -483,3 +483,127 @@ const findActiveInterviewerUsers = async (tenantId: string) =>
     where: { tenantId, role: UserRole.INTERVIEWER, active: true },
     orderBy: { name: "asc" },
   });
+
+export const updateScore = async (auth: AuthContext, id: string, criterionId: string, score: number | null) => {
+  const existing = await findInterviewById(auth.tenantId, id);
+  if (!existing || !existing.scorecard) throw AppError.notFound("Interview scorecard not found.");
+
+  const criterion = existing.scorecard.criteria.find((item) => item.id === criterionId);
+  if (!criterion) throw AppError.notFound("Scorecard criterion not found.");
+
+  await withTransaction(async (tx) => {
+    const result = await tx.interviewScoreCriterion.updateMany({
+      where: { id: criterionId, tenantId: auth.tenantId, scorecardId: existing.scorecard?.id },
+      data: { score },
+    });
+    if (result.count !== 1) throw AppError.notFound("Scorecard criterion not found.");
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: id,
+      action: "interview.score_updated",
+      metadata: { criterionId, score },
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, id);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
+
+export const updateCriterionNote = async (auth: AuthContext, id: string, criterionId: string, note: string) => {
+  const existing = await findInterviewById(auth.tenantId, id);
+  if (!existing || !existing.scorecard) throw AppError.notFound("Interview scorecard not found.");
+
+  await withTransaction(async (tx) => {
+    const result = await tx.interviewScoreCriterion.updateMany({
+      where: { id: criterionId, tenantId: auth.tenantId, scorecardId: existing.scorecard?.id },
+      data: { note: note.trim() || null },
+    });
+    if (result.count !== 1) throw AppError.notFound("Scorecard criterion not found.");
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: id,
+      action: "interview.criterion_note_updated",
+      metadata: { criterionId },
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, id);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
+
+export const updatePracticalResult = async (auth: AuthContext, id: string, itemId: string, result: "not-started" | "passed" | "failed" | "pending") => {
+  const existing = await findInterviewById(auth.tenantId, id);
+  if (!existing) throw AppError.notFound("Interview not found.");
+
+  await withTransaction(async (tx) => {
+    const updatedCount = await tx.practicalTestItem.updateMany({
+      where: { id: itemId, tenantId: auth.tenantId, interviewId: id },
+      data: { result },
+    });
+    if (updatedCount.count !== 1) throw AppError.notFound("Practical test item not found.");
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: id,
+      action: "interview.practical_result_updated",
+      metadata: { itemId, result },
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, id);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
+
+export const updatePracticalNote = async (auth: AuthContext, id: string, itemId: string, note: string) => {
+  const existing = await findInterviewById(auth.tenantId, id);
+  if (!existing) throw AppError.notFound("Interview not found.");
+
+  await withTransaction(async (tx) => {
+    const updatedCount = await tx.practicalTestItem.updateMany({
+      where: { id: itemId, tenantId: auth.tenantId, interviewId: id },
+      data: { note: note.trim() || null },
+    });
+    if (updatedCount.count !== 1) throw AppError.notFound("Practical test item not found.");
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: id,
+      action: "interview.practical_note_updated",
+      metadata: { itemId },
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, id);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
+
+export const updateInterviewNote = async (auth: AuthContext, id: string, note: string) => {
+  const existing = await findInterviewById(auth.tenantId, id);
+  if (!existing) throw AppError.notFound("Interview not found.");
+
+  await withTransaction(async (tx) => {
+    await updateInterview(tx, auth.tenantId, id, { notes: note });
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: id,
+      action: "interview.note_updated",
+      metadata: {},
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, id);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
