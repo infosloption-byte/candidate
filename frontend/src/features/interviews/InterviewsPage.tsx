@@ -32,11 +32,25 @@ interface InterviewRecord extends Interview {
   }>;
 }
 
+type Recommendation = 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED';
+
+interface EvaluationDraft {
+  rating: string;
+  recommendation: Recommendation;
+  comments: string;
+}
+
 const defaultForm = {
   scheduledAt: '',
   type: 'TECHNICAL' as Interview['type'],
   durationMins: '45',
   location: '',
+};
+
+const defaultEvaluation: EvaluationDraft = {
+  rating: '4',
+  recommendation: 'RECOMMENDED',
+  comments: '',
 };
 
 export const InterviewsPage = ({ role }: InterviewsPageProps) => {
@@ -49,10 +63,11 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
   const [selectedApplicationId, setSelectedApplicationId] = useState('');
   const [panel, setPanel] = useState<string[]>(developmentMode ? ['user-interviewer-1'] : []);
   const [form, setForm] = useState(defaultForm);
-  const [rating, setRating] = useState('4');
-  const [recommendation, setRecommendation] = useState<'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED'>('RECOMMENDED');
+  const [evaluationDrafts, setEvaluationDrafts] = useState<Record<string, EvaluationDraft>>({});
+  const [submittedEvaluationIds, setSubmittedEvaluationIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
+  const [evaluating, setEvaluating] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -85,6 +100,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         setInterviews(interviewResult);
         setApplications(applicationResult);
         setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
+
         if (role === 'AGENCY') {
           const shortlisted = applicationResult.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
           setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
@@ -103,7 +119,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     return () => {
       cancelled = true;
     };
-  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id]);
+  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id, panel.length]);
 
   const visible = role === 'INTERVIEWER'
     ? developmentMode
@@ -147,7 +163,6 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         dispatch({ type: 'SCHEDULE_INTERVIEW', interview });
         setInterviews((current) => [interview, ...current]);
       } else {
-        if (!selectedApplicationId) return;
         const created = await apiFetch<InterviewRecord>('/applications/' + selectedApplicationId + '/interviews', {
           method: 'POST',
           body: JSON.stringify({
@@ -192,11 +207,63 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     }
   };
 
+  const submitEvaluation = async (interview: InterviewRecord) => {
+    const draft = evaluationDrafts[interview.id] ?? defaultEvaluation;
+
+    setEvaluating(interview.id);
+    setError('');
+
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' });
+        dispatch({
+          type: 'SAVE_EVALUATION',
+          evaluation: {
+            id: 'evaluation-' + Date.now(),
+            interviewId: interview.id,
+            interviewerId: 'user-interviewer-1',
+            rating: Number(draft.rating),
+            recommendation: draft.recommendation,
+            comments: draft.comments.trim() || null,
+          },
+        });
+        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
+      } else {
+        const result = await apiFetch<{
+          evaluation: unknown;
+          interviewCompleted: boolean;
+          applicationStatus: string;
+        }>('/interviews/' + interview.id + '/evaluations', {
+          method: 'POST',
+          body: JSON.stringify({
+            rating: Number(draft.rating),
+            recommendation: draft.recommendation,
+            comments: draft.comments.trim() || null,
+          }),
+        });
+
+        setSubmittedEvaluationIds((current) => new Set(current).add(interview.id));
+
+        if (result.interviewCompleted) {
+          setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
+        }
+      }
+
+      setSuccess('Evaluation submitted.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to submit the evaluation.');
+    } finally {
+      setEvaluating(null);
+    }
+  };
+
   const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
+
   const localCandidate = (interview: InterviewRecord) => {
     const application = localApplication(interview);
     return application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined;
   };
+
   const localJob = (interview: InterviewRecord) => {
     const application = localApplication(interview);
     return application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined;
@@ -284,8 +351,9 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
             const candidate = application?.candidate ?? localCandidate(interview);
             const job = application?.job ?? localJob(interview);
             const panelNames = interview.panel?.map((item) => item.user.name)
-              ?? interview.panelUserIds.map((id) => state.users.find((item) => item.id === id)?.name ?? getUser(id)?.name)
-                .filter(Boolean) as string[];
+              ?? (interview.panelUserIds.map((id) => state.users.find((item) => item.id === id)?.name ?? getUser(id)?.name).filter(Boolean) as string[]);
+            const evaluationDraft = evaluationDrafts[interview.id] ?? defaultEvaluation;
+            const alreadySubmitted = submittedEvaluationIds.has(interview.id);
 
             return (
               <article key={interview.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -316,44 +384,100 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
                 )}
 
                 {role === 'INTERVIEWER' && interview.status === 'SCHEDULED' && (
-                  <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                  <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                     <p className="text-xs font-black text-slate-900">Evaluation</p>
-                    {developmentMode ? (
-                      <>
-                        <div className="mt-3 grid gap-3 md:grid-cols-2">
-                          <FormField label="Rating (1–5)">
-                            <select className="field-input" value={rating} onChange={(event) => setRating(event.target.value)}>
-                              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                            </select>
-                          </FormField>
-                          <FormField label="Recommendation">
-                            <select className="field-input" value={recommendation} onChange={(event) => setRecommendation(event.target.value as typeof recommendation)}>
-                              <option value="RECOMMENDED">Recommended</option>
-                              <option value="MAYBE">Maybe</option>
-                              <option value="NOT_RECOMMENDED">Not recommended</option>
-                            </select>
-                          </FormField>
+                    {alreadySubmitted ? (
+                      <StateMessage kind="success" title="Evaluation submitted" description="Your panel evaluation has already been recorded." />
+                    ) : developmentMode ? (
+                      <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <FormField label="Rating (1–5)">
+                          <select
+                            className="field-input"
+                            value={evaluationDraft.rating}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, rating: event.target.value },
+                            }))}
+                          >
+                            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                          </select>
+                        </FormField>
+                        <FormField label="Recommendation">
+                          <select
+                            className="field-input"
+                            value={evaluationDraft.recommendation}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, recommendation: event.target.value as Recommendation },
+                            }))}
+                          >
+                            <option value="RECOMMENDED">Recommended</option>
+                            <option value="MAYBE">Maybe</option>
+                            <option value="NOT_RECOMMENDED">Not recommended</option>
+                          </select>
+                        </FormField>
+                        <FormField label="Comments">
+                          <input
+                            className="field-input"
+                            value={evaluationDraft.comments}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, comments: event.target.value },
+                            }))}
+                            placeholder="Interview notes"
+                          />
+                        </FormField>
+                        <div className="md:col-span-3">
+                          <Button disabled={evaluating === interview.id} onClick={() => void submitEvaluation(interview)}>
+                            {evaluating === interview.id ? 'Submitting…' : 'Submit evaluation'}
+                          </Button>
                         </div>
-                        <Button className="mt-4" onClick={() => {
-                          const comments = window.prompt('Interview comments (optional):') ?? '';
-                          dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' });
-                          dispatch({
-                            type: 'SAVE_EVALUATION',
-                            evaluation: {
-                              id: 'evaluation-' + Date.now(),
-                              interviewId: interview.id,
-                              interviewerId: 'user-interviewer-1',
-                              rating: Number(rating),
-                              recommendation,
-                              comments: comments || null,
-                            },
-                          });
-                          setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
-                          setSuccess('Evaluation submitted.');
-                        }}>Submit evaluation</Button>
-                      </>
+                      </div>
                     ) : (
-                      <p className="mt-1 text-xs text-slate-500">Evaluation form will connect to the evaluation API in the next slice.</p>
+                      <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <FormField label="Rating (1–5)">
+                          <select
+                            className="field-input"
+                            value={evaluationDraft.rating}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, rating: event.target.value },
+                            }))}
+                          >
+                            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                          </select>
+                        </FormField>
+                        <FormField label="Recommendation">
+                          <select
+                            className="field-input"
+                            value={evaluationDraft.recommendation}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, recommendation: event.target.value as Recommendation },
+                            }))}
+                          >
+                            <option value="RECOMMENDED">Recommended</option>
+                            <option value="MAYBE">Maybe</option>
+                            <option value="NOT_RECOMMENDED">Not recommended</option>
+                          </select>
+                        </FormField>
+                        <FormField label="Comments">
+                          <textarea
+                            className="field-input min-h-20 resize-y"
+                            value={evaluationDraft.comments}
+                            onChange={(event) => setEvaluationDrafts((current) => ({
+                              ...current,
+                              [interview.id]: { ...evaluationDraft, comments: event.target.value },
+                            }))}
+                            placeholder="Interview notes"
+                          />
+                        </FormField>
+                        <div className="md:col-span-3">
+                          <Button disabled={evaluating === interview.id} onClick={() => void submitEvaluation(interview)}>
+                            {evaluating === interview.id ? 'Submitting…' : 'Submit evaluation'}
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
