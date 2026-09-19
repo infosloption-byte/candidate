@@ -108,12 +108,27 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
 
   const session = await getPrisma().session.findUnique({
     where: { tokenHash: hashSessionToken(token) },
-    include: { user: true },
+    include: {
+      user: {
+        include: {
+          agency: { select: { status: true } },
+          candidate: { select: { agency: { select: { status: true } } } },
+        },
+      },
+    },
   });
 
   if (!session) return null;
 
-  if (session.expiresAt.getTime() <= Date.now() || !session.user.active) {
+  const agencyStatus = session.user.agency?.status
+    ?? session.user.candidate?.agency.status
+    ?? (session.user.role === 'ADMIN' ? 'ACTIVE' : null);
+
+  if (
+    session.expiresAt.getTime() <= Date.now()
+    || !session.user.active
+    || (session.user.role !== 'ADMIN' && agencyStatus !== 'ACTIVE')
+  ) {
     await getPrisma().session.deleteMany({ where: { id: session.id } });
     return null;
   }
