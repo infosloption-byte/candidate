@@ -20,7 +20,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
-  const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
+  const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [showForm, setShowForm] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
