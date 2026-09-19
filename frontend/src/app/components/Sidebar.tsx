@@ -48,35 +48,76 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'System administrator',
-  AGENCY: 'Agency',
-  INTERVIEWER: 'Interviewer',
-  INTERVIEWEE: 'Interviewee',
+  AGENCY: 'Agency workspace',
+  INTERVIEWER: 'Interview desk',
+  INTERVIEWEE: 'Candidate portal',
 };
 
 export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleCollapse }: SidebarProps) => (
   <aside className="flex h-full w-full flex-col bg-slate-950 text-white" aria-label="Primary navigation">
-    <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
-      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400 font-black text-slate-950">B</div>
-      {!collapsed && <div className="min-w-0"><p className="truncate text-sm font-bold">BuildHire</p><p className="text-[10px] text-slate-400">{roleLabels[role]}</p></div>}
+    <div className="flex min-h-[72px] items-center gap-3 border-b border-white/10 px-4">
+      <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-400 font-black text-[15px] text-slate-950 shadow-lg shadow-cyan-950/20">B</div>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-extrabold tracking-tight">BuildHire</p>
+          <p className="mt-0.5 truncate text-[10px] font-medium text-slate-400">{roleLabels[role]}</p>
+        </div>
+      )}
     </div>
-    <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-4">
+
+    <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-5" aria-label="Workspace">
       {navByRole[role].map((group) => (
-        <div key={group.label} className="mb-5">
-          {!collapsed && <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>}
+        <div key={group.label} className="mb-6 last:mb-0">
+          {!collapsed && (
+            <p className="px-2.5 pb-2.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
+              {group.label}
+            </p>
+          )}
           <div className="space-y-1">
             {group.items.map((item) => {
               const active = activeView === item.view;
-              return <button key={item.view} type="button" aria-current={active ? 'page' : undefined} onClick={() => onNavigate(item.view)} title={item.label} className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/20' : 'text-slate-300 hover:bg-white/7 hover:text-white'}`}>
-                <Icon name={item.icon} size={18} />{!collapsed && <span className="truncate">{item.label}</span>}
-              </button>;
+              return (
+                <button
+                  key={item.view}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => onNavigate(item.view)}
+                  title={item.label}
+                  className={[
+                    'group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition',
+                    collapsed ? 'justify-center' : '',
+                    active
+                      ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/20'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
+                  ].join(' ')}
+                >
+                  <Icon name={item.icon} size={18} strokeWidth={active ? 2 : 1.8} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </button>
+              );
             })}
           </div>
         </div>
       ))}
     </nav>
-    <div className="border-t border-white/10 p-2">
-      <button type="button" onClick={onToggleCollapse} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className="hidden w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/7 hover:text-white lg:flex">
-        <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={16} />{!collapsed && 'Collapse sidebar'}
+
+    <div className="border-t border-white/10 px-3 py-3">
+      {!collapsed && (
+        <div className="mb-2 rounded-xl border border-white/7 bg-white/[0.03] px-3 py-2.5">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Workspace</p>
+          <p className="mt-1 truncate text-[11px] font-semibold text-slate-300">
+            {role === 'ADMIN' ? 'System administration' : role === 'AGENCY' ? 'Recruitment operations' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
+          </p>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="hidden min-h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-slate-400 transition hover:bg-white/[0.06] hover:text-white lg:flex"
+      >
+        <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={16} />
+        {!collapsed && 'Collapse sidebar'}
       </button>
     </div>
   </aside>
