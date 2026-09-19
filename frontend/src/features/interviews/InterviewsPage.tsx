@@ -33,7 +33,7 @@ const toDateTimeLocal = (value: string): string => {
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
-interface InterviewDetail extends Interview {
+interface InterviewDetail extends Omit<Interview, 'evaluations'> {
   notes?: string | null;
   evaluations?: Array<{
     id: string;
