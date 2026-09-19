@@ -5,6 +5,7 @@ import { useSelectionSuitability } from './useSelectionSuitability';
 import type { Candidate } from '../../candidates/types/candidate';
 import { defaultSelectionScoringWeights } from '../types/selection';
 import type { SelectionApproval, SelectionDecision, SelectionHistoryAction, SelectionHistoryEntry, SelectionJob, SelectionRecord, SelectionScoringWeights, SelectionTab } from '../types/selection';
+import { fetchSelectionWorkspace, saveSelectionDecisionApi, setSelectionApprovalApi, setSelectionScoringApi } from '../services/selectionApi';
 
 export interface SelectionCandidateRow {
   candidate: Candidate;
@@ -102,14 +103,40 @@ export const useSelectionWorkspace = () => {
     const readyToSelect = rows.filter((row) => row.experienceMeets && row.skillMatchPercent >= 50 && row.candidate.locationReady).length;
     return { total: rows.length, recommended, selected, reserve, rejected, remaining: Math.max(activeJob.openings - selected, 0), readyToSelect, approvalReady: selected > 0 && selected <= activeJob.openings };
   }, [activeJob, rows]);
+  const refreshRemote = async () => {
+    const workspace = await fetchSelectionWorkspace();
+    dispatch({
+      type: 'REFRESH_REMOTE',
+      jobs: workspace.jobs,
+      records: workspace.records,
+      history: workspace.history,
+      approvalByJob: workspace.approvalByJob,
+      scoringByJob: workspace.scoringByJob,
+    });
+  };
+
   const actions = {
     setJob: (jobId: string) => dispatch({ type: 'SET_JOB', jobId }),
     setTab: (tab: SelectionTab) => dispatch({ type: 'SET_TAB', tab }),
     selectCandidate: (candidateId: string | null) => dispatch({ type: 'SELECT_CANDIDATE', candidateId }),
-    saveDecision: (candidateId: string, decision: SelectionDecision, reason: string, note: string) => { if (!activeJob) return; const record: SelectionRecord = { candidateId, jobId: activeJob.id, decision, reason: reason.trim(), note: note.trim(), decidedAt: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), decidedBy: 'Current recruiter' }; dispatch({ type: 'SAVE_DECISION', record }); },
-    setApproval: (status: SelectionApproval['status'], note: string) => { if (!activeJob) return; dispatch({ type: 'SET_APPROVAL', jobId: activeJob.id, status, note, changedAt: new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }), changedBy: 'Current recruiter' }); },
-    setScoringWeights: (weights: SelectionScoringWeights) => { if (!activeJob) return; dispatch({ type: 'SET_SCORING_WEIGHTS', jobId: activeJob.id, weights }); },
+    saveDecision: async (candidateId: string, decision: SelectionDecision, reason: string, note: string) => {
+      if (!activeJob) return;
+      await saveSelectionDecisionApi(activeJob.id, candidateId, decision, reason.trim(), note.trim());
+      await refreshRemote();
+    },
+    setApproval: async (status: SelectionApproval['status'], note: string) => {
+      if (!activeJob) return;
+      await setSelectionApprovalApi(activeJob.id, status, note.trim());
+      await refreshRemote();
+    },
+    setScoringWeights: async (weights: SelectionScoringWeights) => {
+      if (!activeJob) return;
+      await setSelectionScoringApi(activeJob.id, weights);
+      await refreshRemote();
+    },
+    refreshRemote,
     retryLoad: () => dispatch({ type: 'RETRY_LOAD' }),
   };
+
   return { state, activeJob, rows: [...rows].sort(compareRows), tabRows: [...tabRows].sort(compareRows), selectedRow, approval, scoringWeights, suitability, history, metrics, visibleJobs: state.jobs, actions };
 };
