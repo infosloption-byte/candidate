@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateCandidateInput, type CandidateInput } from '../domain/candidateValidation.js';
+import { csvRowsToObjects } from '../domain/csv.js';
 
 interface CandidateParams {
   id: string;
@@ -28,9 +29,13 @@ const candidateSelect = {
   updatedAt: true,
 } as const;
 
-const getReference = (): string => `CA-${randomBytes(4).toString('hex').toUpperCase()}`;
+const getReference = (): string => 'CA-' + randomBytes(5).toString('hex').toUpperCase();
 
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
+  app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => {
+    done(null, body);
+  });
+
   app.get('/candidates', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
 
@@ -106,6 +111,133 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       });
 
       return reply.code(201).send({ success: true, data: candidate });
+    },
+  );
+
+  app.post<{ Params: AgencyCandidateParams; Body: string }>(
+    '/agencies/:agencyId/candidates/bulk',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    async (request, reply) => {
+      const csv = request.body;
+
+      if (typeof csv !== 'string' || !csv.trim()) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV content is required.' } });
+      }
+      if (csv.length > 2_000_000) {
+        return reply.code(413).send({ success: false, error: { code: 'CSV_TOO_LARGE', message: 'CSV must be 2 MB or smaller.' } });
+      }
+
+      let rows: Array<Record<string, string>>;
+      try {
+        rows = csvRowsToObjects(csv);
+      } catch (error) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: error instanceof Error ? error.message : 'CSV could not be parsed.' } });
+      }
+
+      if (!rows.length) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV must contain a header row and at least one candidate row.' } });
+      }
+      if (rows.length > 500) {
+        return reply.code(400).send({ success: false, error: { code: 'CSV_ROW_LIMIT', message: 'A single import can contain at most 500 candidate rows.' } });
+      }
+
+      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
+      if (!agency) {
+        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      }
+      if (agency.status !== 'ACTIVE') {
+        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be imported into an inactive agency.' } });
+      }
+
+      const errors: string[] = [];
+      const emails = new Set<string>();
+      const candidateInputs: CandidateInput[] = [];
+
+      rows.forEach((row, index) => {
+        const rowNumber = index + 2;
+        const email = row.email?.trim().toLowerCase() || null;
+        const skills = (row.skills ?? '')
+          .split(/[;|]/)
+          .map((skill) => skill.trim())
+          .filter(Boolean);
+        const experienceYears = row.experienceYears?.trim()
+          ? Number(row.experienceYears)
+          : null;
+
+        const input: CandidateInput = {
+          name: row.name,
+          email,
+          phone: row.phone || null,
+          profession: row.profession || null,
+          experienceYears,
+          skills,
+        };
+
+        const rowErrors = validateCandidateInput(input, 'create');
+        if (email && emails.has(email)) {
+          rowErrors.push('Email is duplicated in this file.');
+        }
+        if (email) emails.add(email);
+
+        if (rowErrors.length) {
+          errors.push(`Row ${rowNumber}: ${rowErrors.join(' ')}`);
+        }
+
+        candidateInputs.push(input);
+      });
+
+      const existingEmails = emails.size
+        ? await getPrisma().candidate.findMany({
+            where: { agencyId: agency.id, email: { in: [...emails] } },
+            select: { email: true },
+          })
+        : [];
+
+      const existingEmailSet = new Set(existingEmails.map((item) => item.email).filter(Boolean).map((item) => item!.toLowerCase()));
+
+      candidateInputs.forEach((input, index) => {
+        if (input.email && existingEmailSet.has(input.email.toLowerCase())) {
+          errors.push(`Row ${index + 2}: Email is already registered for this agency.`);
+        }
+      });
+
+      if (errors.length) {
+        return reply.code(400).send({
+          success: false,
+          error: {
+            code: 'CSV_VALIDATION_FAILED',
+            message: 'CSV import was not applied because one or more rows are invalid.',
+            rows: errors,
+          },
+        });
+      }
+
+      const prisma = getPrisma();
+      const imported = await prisma.$transaction(async (tx) => {
+        const created = [];
+
+        for (const input of candidateInputs) {
+          created.push(await tx.candidate.create({
+            data: {
+              agencyId: agency.id,
+              reference: getReference(),
+              name: input.name!.trim(),
+              email: input.email?.trim().toLowerCase() || null,
+              phone: input.phone?.trim() || null,
+              profession: input.profession?.trim() || null,
+              experienceYears: input.experienceYears ?? null,
+              skills: input.skills ?? [],
+              onboardingStatus: 'NOT_STARTED',
+              source: 'BULK_IMPORTED',
+            },
+            select: candidateSelect,
+          }));
+        }
+
+        return created;
+      });
+
+      return reply.code(201).send({ success: true, data: { importedCount: imported.length, candidates: imported } });
     },
   );
 

@@ -57,8 +57,8 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Build onboarding progress/submission states at API level.
 - ✅ Build frontend candidate list/form against Candidate API.
 - ⏳ Build agency review of submitted candidate profiles in the production UI.
-- ⏳ Build bulk candidate onboarding via CSV.
-- ⏳ Add row validation and duplicate protection for bulk import.
+- ✅ Build bulk candidate onboarding via CSV.
+- ✅ Add row validation and duplicate protection for bulk import.
 - ⏳ Add candidate API integration tests.
 
 ## Phase 5 — Applications
