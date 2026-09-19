@@ -27,6 +27,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [profileForm, setProfileForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
@@ -87,6 +88,61 @@ export const CandidatesPage = ({ role }: Props) => {
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
     return () => { cancelled = true; };
   }, [candidate?.id, developmentMode, role, state.interviews]);
+
+  useEffect(() => {
+    if (!candidate) return;
+    setProfileForm({
+      name: candidate.name,
+      email: candidate.email ?? '',
+      phone: candidate.phone ?? '',
+      profession: candidate.profession ?? '',
+      experienceYears: String(candidate.experienceYears ?? 0),
+      skills: candidate.skills.join(', '),
+    });
+  }, [candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
+
+  const saveOwnProfile = async () => {
+    if (!candidate) return;
+    const experienceYears = Number(profileForm.experienceYears);
+    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
+      setError('Experience years must be a whole number between 0 and 60.');
+      return;
+    }
+    if (profileForm.name.trim().length < 2) {
+      setError('Full name must be at least 2 characters.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const updated = developmentMode
+        ? { ...candidate, name: profileForm.name.trim(), email: profileForm.email.trim() || null, phone: profileForm.phone.trim() || null, profession: profileForm.profession.trim() || null, experienceYears, skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean), onboardingStatus: 'SUBMITTED' as const }
+        : await apiFetch<Candidate>('/candidates/' + candidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: profileForm.name.trim(),
+              email: profileForm.email.trim() || null,
+              phone: profileForm.phone.trim() || null,
+              profession: profileForm.profession.trim() || null,
+              experienceYears,
+              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+              onboardingStatus: 'SUBMITTED',
+            }),
+          });
+
+      if (developmentMode) {
+        dispatch({ type: 'SET_ONBOARDING_STATUS', candidateId: candidate.id, status: 'SUBMITTED' });
+      }
+      setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
+      setSuccessTitle('Profile saved');
+      setSuccess('Your candidate profile has been updated.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save your candidate profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -202,7 +258,16 @@ export const CandidatesPage = ({ role }: Props) => {
             <Card>
               <h2 className="text-sm font-black text-slate-950">Profile details</h2>
               <p className="mt-1 text-xs text-slate-400">Keep your contact, profession, experience, and skills up to date.</p>
-              <div className="mt-5"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
+                <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} autoComplete="email" /></FormField>
+                <FormField label="Phone"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
+                <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} placeholder="Mason, Welder…" /></FormField>
+                <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
+                <FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField>
+              </div>
+              <div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
+              <div className="mt-6 border-t border-slate-100 pt-6"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
             </Card>
           </div>
         ) : <StateMessage kind="empty" title="Profile not linked" description="This account is not linked to a candidate profile yet." />
