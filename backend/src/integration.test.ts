@@ -336,6 +336,45 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   const evaluationBody = json<{ data: { interviewCompleted: boolean; applicationStatus: string } }>(evaluationResponse);
   assert.equal(evaluationBody.data.interviewCompleted, true);
   assert.equal(evaluationBody.data.applicationStatus, 'SELECTED');
+
+  const agencyNotifications = await app.inject({
+    method: 'GET',
+    url: '/api/v1/notifications',
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(agencyNotifications.statusCode, 200);
+  const agencyNotificationBody = json<{ data: { notifications: Array<{ id: string }>; unreadCount: number } }>(agencyNotifications);
+  assert.ok(agencyNotificationBody.data.notifications.length >= 1);
+  assert.ok(agencyNotificationBody.data.unreadCount >= 1);
+
+  const candidateNotifications = await app.inject({
+    method: 'GET',
+    url: '/api/v1/notifications',
+    headers: { cookie: candidateCookie },
+  });
+  assert.equal(candidateNotifications.statusCode, 200);
+  const candidateNotificationBody = json<{ data: { notifications: Array<{ id: string }>; unreadCount: number } }>(candidateNotifications);
+  assert.ok(candidateNotificationBody.data.notifications.length >= 1);
+  assert.ok(candidateNotificationBody.data.unreadCount >= 1);
+
+  const notificationId = candidateNotificationBody.data.notifications[0]?.id;
+  assert.ok(notificationId);
+  const readNotification = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/notifications/' + notificationId + '/read',
+    headers: { cookie: candidateCookie, 'content-type': 'application/json' },
+    payload: {},
+  });
+  assert.equal(readNotification.statusCode, 200);
+
+  const auditResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/audit-events',
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(auditResponse.statusCode, 200);
+  const auditBody = json<{ data: Array<{ agencyId: string; entityType: string }> }>(auditResponse);
+  assert.ok(auditBody.data.some((event) => event.agencyId === agencyAId && event.entityType === 'JobApplication'));
 });
 
 dbTest('interviewee registration creates a linked candidate and session', async () => {
