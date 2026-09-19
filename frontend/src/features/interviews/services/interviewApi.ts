@@ -118,3 +118,10 @@ export const rescheduleInterviewApi = async (
       reason,
     }),
   });
+
+
+export const undoRescheduleApi = async (interviewId: string, historyId: string): Promise<Interview> =>
+  apiRequest<Interview>(`/interviews/${encodeURIComponent(interviewId)}/reschedule/${encodeURIComponent(historyId)}/undo`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
