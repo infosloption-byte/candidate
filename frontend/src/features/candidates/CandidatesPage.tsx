@@ -137,6 +137,7 @@ export const CandidatesPage = ({ role }: Props) => {
       if (developmentMode) {
         dispatch({ type: 'SET_ONBOARDING_STATUS', candidateId: candidate.id, status: 'SUBMITTED' });
       }
+      if (developmentMode) dispatch({ type: 'UPDATE_CANDIDATE', candidate: updated });
       setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
       setSuccessTitle('Profile saved');
       setSuccess('Your candidate profile has been updated.');
