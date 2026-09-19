@@ -87,7 +87,10 @@ export const CandidatesPage = ({ role }: Props) => {
   const [visaStatusFilter, setVisaStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
+  const [passportSearch, setPassportSearch] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
@@ -293,6 +296,7 @@ export const CandidatesPage = ({ role }: Props) => {
       const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
       const matchesLocation = !locationFilter || item.currentLocation === locationFilter;
       const matchesPassport = passportMatches(item);
+      const matchesPassportSearch = !passportSearch || (item.passportNumber ?? '').toLowerCase().includes(passportSearch.trim().toLowerCase());
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
@@ -311,9 +315,24 @@ export const CandidatesPage = ({ role }: Props) => {
         item.status,
         item.onboardingStatus,
       ].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesAgency && matchesQuery;
+      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesPassportSearch && matchesAgency && matchesQuery;
     });
-  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
+  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, passportSearch, professionFilter, role, search, statusFilter, visaStatusFilter]);
+
+  const sortedCandidates = useMemo(() => {
+    const sorted = [...filteredCandidates];
+    const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+    sorted.sort((left, right) => {
+      let result = 0;
+      if (sortBy === 'name') result = compareText(left.name, right.name);
+      if (sortBy === 'profession') result = compareText(left.profession ?? '', right.profession ?? '');
+      if (sortBy === 'experience') result = (left.experienceYears ?? -1) - (right.experienceYears ?? -1);
+      if (sortBy === 'passport') result = compareText(left.passportNumber ?? '', right.passportNumber ?? '');
+      if (sortBy === 'status') result = compareText(left.status, right.status);
+      return sortDirection === 'asc' ? result : -result;
+    });
+    return sorted;
+  }, [filteredCandidates, sortBy, sortDirection]);
 
   const createCandidate = async () => {
     if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
@@ -645,7 +664,12 @@ export const CandidatesPage = ({ role }: Props) => {
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Bulk onboarding</p>
                 <h2 id="import-candidates-title" className="mt-1 text-lg font-black text-slate-950">Import candidates</h2>
-                <p className="mt-1 text-xs text-slate-500">Choose the agency and CSV file before starting the import.</p>
+                <p className="mt-1 text-xs text-slate-500">Choose where the candidates belong, then select the CSV file.</p>
+                <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                  <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700">1 Agency</span>
+                  <span className="text-slate-300">→</span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">2 CSV file</span>
+                </div>
               </div>
               <button type="button" aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={closeImportModal}>×</button>
             </div>
@@ -663,19 +687,39 @@ export const CandidatesPage = ({ role }: Props) => {
                   )}
                 </select>
                 {role !== 'ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
+                {role === 'ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
               </div>
 
               <div>
-                <label className="field-label">CSV file</label>
-                <input
-                  ref={bulkFileRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="field-input mt-1 w-full"
-                  onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
-                  disabled={bulkImporting}
-                />
-                {importFile && <p className="mt-2 truncate text-xs font-semibold text-slate-600">{importFile.name}</p>}
+                <div className="flex items-center justify-between gap-3">
+                  <label className="field-label">CSV file</label>
+                  <span className="text-[10px] text-slate-400">Max 2 MB</span>
+                </div>
+                <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-6 text-center transition hover:border-cyan-300 hover:bg-cyan-50/30">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.7">
+                    <path d="M12 16V4m0 0 4 4m-4-4L8 8" />
+                    <path d="M5 12v7h14v-7" />
+                  </svg>
+                  <span className="mt-2 text-xs font-bold text-slate-700">{importFile ? 'Change selected file' : 'Choose a CSV file'}</span>
+                  <span className="mt-1 text-[10px] text-slate-400">CSV format only</span>
+                  <input
+                    ref={bulkFileRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="sr-only"
+                    onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+                    disabled={bulkImporting}
+                  />
+                </label>
+                {importFile && (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-slate-700">{importFile.name}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-400">{(importFile.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    {!bulkImporting && <button type="button" className="shrink-0 text-xs font-bold text-slate-500 hover:text-slate-800" onClick={() => { setImportFile(null); if (bulkFileRef.current) bulkFileRef.current.value = ''; }}>Remove</button>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -739,7 +783,11 @@ export const CandidatesPage = ({ role }: Props) => {
                   </select>
                 </div>
               )}
-              <div className="w-full lg:w-52">
+              <div className="w-full lg:max-w-xs">
+                <label className="field-label">Passport</label>
+                <input className="field-input mt-1 w-full" value={passportSearch} onChange={(event) => setPassportSearch(event.target.value)} placeholder="Passport number…" />
+              </div>
+              <div className="w-full lg:w-48">
                 <label className="field-label">Status</label>
                 <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="">All statuses</option>
@@ -802,6 +850,10 @@ export const CandidatesPage = ({ role }: Props) => {
                     </select>
                   </div>
                   <div>
+                    <label className="field-label">Passport number</label>
+                    <input className="field-input mt-1 w-full" value={passportSearch} onChange={(event) => setPassportSearch(event.target.value)} placeholder="Search passport number…" />
+                  </div>
+                  <div>
                     <label className="field-label">Passport expiry</label>
                     <select className="field-input mt-1 w-full" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}>
                       <option value="">Any passport status</option>
@@ -816,24 +868,44 @@ export const CandidatesPage = ({ role }: Props) => {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3">
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
-              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
-                <Button size="sm" variant="ghost" onClick={() => {
-                  setSearch('');
-                  setStatusFilter('');
-                  setCountryFilter('');
-                  setProfessionFilter('');
-                  setAvailabilityFilter('');
-                  setVisaStatusFilter('');
-                  setLocationFilter('');
-                  setPassportFilter('');
-                }}>Clear filters</Button>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="candidate-sort">Sort</label>
+                <select id="candidate-sort" className="field-input py-2 text-xs" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+                  <option value="name">Name</option>
+                  <option value="profession">Profession</option>
+                  <option value="experience">Experience</option>
+                  <option value="passport">Passport</option>
+                  <option value="status">Status</option>
+                </select>
+                <button
+                  type="button"
+                  title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                  aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
+                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+                >
+                  {sortDirection === 'asc' ? '↑' : '↓'}
+                </button>
+                {(search || passportSearch || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setSearch('');
+                    setPassportSearch('');
+                    setStatusFilter('');
+                    setCountryFilter('');
+                    setProfessionFilter('');
+                    setAvailabilityFilter('');
+                    setVisaStatusFilter('');
+                    setLocationFilter('');
+                    setPassportFilter('');
+                  }}>Clear filters</Button>
+                )}
+              </div>
             </div>
           </div>
 
-                    {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
+                    {!loading && <DataTable columns={columns} rows={sortedCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
             <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
