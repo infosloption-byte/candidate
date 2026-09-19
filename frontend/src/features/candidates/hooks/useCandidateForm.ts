@@ -8,7 +8,7 @@ const emptyDraft: CandidateDraft = {
 
 const makeId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `cand-${Date.now()}`);
 
-export const useCandidateForm = (existingCandidates: Candidate[], onCreate: (candidate: Candidate) => void, onClose: () => void) => {
+export const useCandidateForm = (existingCandidates: Candidate[], onCreate: (candidate: Candidate) => void | Promise<void>, onClose: () => void) => {
   const [draft, setDraft] = useState<CandidateDraft>(emptyDraft);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export const useCandidateForm = (existingCandidates: Candidate[], onCreate: (can
 
   const back = () => { setError(null); setStep((current) => current === 1 ? 1 : (current - 1) as 1 | 2); };
 
-  const submit = () => {
+  const submit = async () => {
     if (!draft.name.trim() || !draft.phone.trim() || !draft.profession.trim() || !draft.experienceYears) { setError('Complete the required candidate details before saving.'); return; }
     if (hasHighConfidenceDuplicate && !duplicateAcknowledged) { setError('Review the possible duplicate before creating this candidate.'); setStep(1); return; }
 
@@ -66,7 +66,12 @@ export const useCandidateForm = (existingCandidates: Candidate[], onCreate: (can
       journey: [{ id: makeId(), date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), title: 'Candidate added', detail: `Added from ${draft.source.toLowerCase()}.`, tone: 'neutral' }],
       createdAt: now,
     };
-    onCreate(candidate);
+    try {
+      await onCreate(candidate);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Candidate could not be created.');
+      return;
+    }
     setSaved(true);
     setDraft(emptyDraft);
     setStep(1);
