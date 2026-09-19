@@ -36,7 +36,6 @@ const pipeline: ApplicationStatus[] = ['APPLIED', 'SCREENING', 'SHORTLISTED', 'I
 const nextStage: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
   APPLIED: 'SCREENING',
   SCREENING: 'SHORTLISTED',
-  SHORTLISTED: 'INTERVIEW',
 };
 
 export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
