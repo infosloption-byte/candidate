@@ -34,6 +34,7 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(emptyForm);
+  const [profileForm, setProfileForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
 
@@ -156,21 +157,40 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
   const submitOwnProfile = async () => {
     if (!candidate) return;
 
+    const experienceYears = Number(profileForm.experienceYears);
+    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
+      setError('Experience years must be a whole number between 0 and 60.');
+      return;
+    }
+    if (profileForm.name.trim().length < 2) {
+      setError('Full name must be at least 2 characters.');
+      return;
+    }
+
     try {
       setError('');
 
       const updated = developmentMode
-        ? { ...candidate, onboardingStatus: 'SUBMITTED' as const }
+        ? {
+            ...candidate,
+            name: profileForm.name.trim(),
+            email: profileForm.email.trim() || null,
+            phone: profileForm.phone.trim() || null,
+            profession: profileForm.profession.trim() || null,
+            experienceYears,
+            skills: profileForm.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
+            onboardingStatus: 'SUBMITTED' as const,
+          }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({
               onboardingStatus: 'SUBMITTED',
-              name: candidate.name,
-              email: candidate.email,
-              phone: candidate.phone,
-              profession: candidate.profession,
-              experienceYears: candidate.experienceYears,
-              skills: candidate.skills,
+              name: profileForm.name.trim(),
+              email: profileForm.email.trim() || null,
+              phone: profileForm.phone.trim() || null,
+              profession: profileForm.profession.trim() || null,
+              experienceYears,
+              skills: profileForm.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
             }),
           });
 
@@ -205,6 +225,18 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
   const selectedCandidate = selectedCandidateId
     ? candidates.find((item) => item.id === selectedCandidateId)
     : undefined;
+
+  useEffect(() => {
+    if (!candidate) return;
+    setProfileForm({
+      name: candidate.name,
+      email: candidate.email ?? '',
+      phone: candidate.phone ?? '',
+      profession: candidate.profession ?? '',
+      experienceYears: String(candidate.experienceYears ?? 0),
+      skills: candidate.skills.join(', '),
+    });
+  }, [candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
 
   const columns = [
     {
@@ -390,14 +422,39 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
               <div className="mt-5"><StatusPill value={candidate.onboardingStatus} /></div>
             </Card>
             <Card>
-              <h2 className="text-sm font-black text-slate-950">Profile details</h2>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div><p className="field-label">Email</p><p className="mt-1 text-sm text-slate-700">{candidate.email ?? '—'}</p></div>
-                <div><p className="field-label">Phone</p><p className="mt-1 text-sm text-slate-700">{candidate.phone ?? '—'}</p></div>
-                <div><p className="field-label">Experience</p><p className="mt-1 text-sm text-slate-700">{candidate.experienceYears ?? 0} years</p></div>
-                <div><p className="field-label">Skills</p><p className="mt-1 text-sm text-slate-700">{candidate.skills.join(', ') || '—'}</p></div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-black text-slate-950">Profile details</h2>
+                  <p className="mt-1 text-xs text-slate-400">Keep your contact, profession, experience, and skills up to date.</p>
+                </div>
+                <StatusPill value={candidate.onboardingStatus} />
               </div>
-              <Button className="mt-6" onClick={() => void submitOwnProfile()}>Submit profile</Button>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <FormField label="Full name">
+                  <input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" />
+                </FormField>
+                <FormField label="Email">
+                  <input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} autoComplete="email" />
+                </FormField>
+                <FormField label="Phone">
+                  <input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" />
+                </FormField>
+                <FormField label="Profession">
+                  <input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} placeholder="Mason, Welder…" />
+                </FormField>
+                <FormField label="Experience years">
+                  <input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} />
+                </FormField>
+                <FormField label="Skills" hint="Separate skills with commas.">
+                  <input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" />
+                </FormField>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <Button onClick={() => void submitOwnProfile()}>Save & submit profile</Button>
+              </div>
+
               <div className="mt-6">
                 <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
               </div>
