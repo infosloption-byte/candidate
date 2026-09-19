@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useCandidateContext } from './useCandidateContext';
 import { findDuplicateMatches } from '../services/candidateMatching';
+import { createCandidateApi, updateCandidateApi, updateCandidateStatusApi } from '../services/candidateApi';
 import type { Candidate, CandidateFilters, CandidateSavedFilter, CandidateSmartFilters, CandidateStatus, RejectionReason } from '../types/candidate';
 
 const documentReady = (candidate: Candidate): boolean => Object.values(candidate.documents).every((status) => status === 'verified');
@@ -55,27 +56,86 @@ export const useCandidateWorkspace = () => {
       clearComparison: () => dispatch({ type: 'CLEAR_COMPARISON' }),
       setComparisonMinimized: (value: boolean) => dispatch({ type: 'SET_COMPARISON_MINIMIZED', value }),
       setComparisonHeight: (value: number) => dispatch({ type: 'SET_COMPARISON_HEIGHT', value }),
-      addTag: (candidateId: string, tag: string) => dispatch({ type: 'ADD_TAG', candidateId, tag }),
-      removeTag: (candidateId: string, tag: string) => dispatch({ type: 'REMOVE_TAG', candidateId, tag }),
+      addTag: async (candidateId: string, tag: string) => {
+        const candidate = state.candidates.find((item) => item.id === candidateId);
+        if (!candidate) return;
+        const normalizedTag = tag.trim().replace(/\s+/g, ' ');
+        if (!normalizedTag) return;
+        const tags = candidate.tags ?? [];
+        if (tags.some((item) => item.toLowerCase() === normalizedTag.toLowerCase())) return;
+        const updated = await updateCandidateApi(candidateId, { tags: [...tags, normalizedTag] });
+        dispatch({ type: 'REPLACE_CANDIDATE', candidate: updated });
+      },
+      removeTag: async (candidateId: string, tag: string) => {
+        const candidate = state.candidates.find((item) => item.id === candidateId);
+        if (!candidate) return;
+        const updated = await updateCandidateApi(candidateId, { tags: (candidate.tags ?? []).filter((item) => item.toLowerCase() !== tag.toLowerCase()) });
+        dispatch({ type: 'REPLACE_CANDIDATE', candidate: updated });
+      },
       openAddCandidate: () => dispatch({ type: 'OPEN_ADD_DRAWER' }),
       closeAddCandidate: () => dispatch({ type: 'CLOSE_ADD_DRAWER' }),
       openBulkImport: () => dispatch({ type: 'OPEN_BULK_IMPORT' }),
       closeBulkImport: () => dispatch({ type: 'CLOSE_BULK_IMPORT' }),
-      createCandidate: (candidate: Candidate) => dispatch({ type: 'ADD_CANDIDATE', candidate }),
+      createCandidate: async (candidate: Candidate) => {
+        const created = await createCandidateApi(candidate, false);
+        dispatch({ type: 'ADD_CANDIDATE', candidate: created });
+      },
       bulkImportCandidates: (candidates: Candidate[]) => dispatch({ type: 'BULK_ADD_CANDIDATES', candidates }),
       updateOnboarding: (candidateId: string, onboarding: Candidate['onboarding'], journeyEvent: Candidate['journey'][number]) => { if (onboarding) dispatch({ type: 'UPDATE_ONBOARDING', candidateId, onboarding, journeyEvent }); },
-      updateProfile: (candidateId: string, changes: Partial<Candidate>, journeyEvent: Candidate['journey'][number]) => dispatch({ type: 'UPDATE_PROFILE', candidateId, changes, journeyEvent }),
+      updateProfile: async (candidateId: string, changes: Partial<Candidate>, journeyEvent: Candidate['journey'][number]) => {
+        const {
+          id: _id,
+          reference: _reference,
+          journey: _journey,
+          documents: _documents,
+          lastInterview: _lastInterview,
+          rejectionReason: _rejectionReason,
+          rejectionNote: _rejectionNote,
+          createdAt: _createdAt,
+          fitScore: _fitScore,
+          onboarding: _onboarding,
+          recruiterOwnerName: _recruiterOwnerName,
+          status: _status,
+          ...candidatePatch
+        } = changes;
+        const patch = candidatePatch.emergencyContact
+          ? {
+              ...candidatePatch,
+              emergencyName: candidatePatch.emergencyContact.name,
+              emergencyPhone: candidatePatch.emergencyContact.phone,
+              emergencyRelationship: candidatePatch.emergencyContact.relationship,
+              emergencyContact: undefined,
+            }
+          : candidatePatch;
+        const updated = await updateCandidateApi(candidateId, patch);
+        dispatch({ type: 'REPLACE_CANDIDATE', candidate: updated });
+      },
       updateDocuments: (candidateId: string, documents: Candidate['documents'], journeyEvent: Candidate['journey'][number]) => dispatch({ type: 'UPDATE_DOCUMENTS', candidateId, documents, journeyEvent }),
-      moveToScreening: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'screening' }),
-      moveToInterview: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'interview' }),
-      moveCandidatesToInterview: (candidateIds: string[]) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status: 'interview' }),
-      moveCandidatesToStatus: (candidateIds: string[], status: CandidateStatus) => dispatch({ type: 'BULK_UPDATE_STATUS', candidateIds, status }),
-      selectCandidateForJob: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'selected' }),
-      moveToReserve: (candidateId: string) => dispatch({ type: 'UPDATE_STATUS', candidateId, status: 'reserve' }),
-      recordInterviewOutcome: (candidateId: string, status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>, interviewDate: string, interviewer: string, profession: string, score: number, reason: RejectionReason | '', note: string) => dispatch({ type: 'RECORD_INTERVIEW_OUTCOME', candidateId, status, interviewDate, interviewer, profession, score, reason, note }),
+      moveToScreening: async (candidateId: string) => dispatch({ type: 'REPLACE_CANDIDATE', candidate: await updateCandidateStatusApi(candidateId, 'screening') }),
+      moveToInterview: async (candidateId: string) => dispatch({ type: 'REPLACE_CANDIDATE', candidate: await updateCandidateStatusApi(candidateId, 'interview') }),
+      moveCandidatesToInterview: async (candidateIds: string[]) => {
+        const updated = await Promise.all(candidateIds.map((candidateId) => updateCandidateStatusApi(candidateId, 'interview')));
+        updated.forEach((candidate) => dispatch({ type: 'REPLACE_CANDIDATE', candidate }));
+      },
+      moveCandidatesToStatus: async (candidateIds: string[], status: CandidateStatus) => {
+        const updated = await Promise.all(candidateIds.map((candidateId) => updateCandidateStatusApi(candidateId, status)));
+        updated.forEach((candidate) => dispatch({ type: 'REPLACE_CANDIDATE', candidate }));
+      },
+      selectCandidateForJob: async (candidateId: string) => dispatch({ type: 'REPLACE_CANDIDATE', candidate: await updateCandidateStatusApi(candidateId, 'selected') }),
+      moveToReserve: async (candidateId: string) => dispatch({ type: 'REPLACE_CANDIDATE', candidate: await updateCandidateStatusApi(candidateId, 'reserve') }),
+      recordInterviewOutcome: async (candidateId: string, status: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'>, interviewDate: string, interviewer: string, profession: string, score: number, reason: RejectionReason | '', note: string) => {
+        const updated = await updateCandidateStatusApi(candidateId, status, reason, note);
+        dispatch({
+          type: 'REPLACE_CANDIDATE',
+          candidate: {
+            ...updated,
+            lastInterview: { date: interviewDate, interviewer, role: profession, result: status === 'rejected' ? 'Failed' : 'Passed', score, note: note || undefined },
+          },
+        });
+      },
       openRejection: (candidateId: string) => dispatch({ type: 'OPEN_REJECTION_DIALOG', candidateId }),
       closeRejection: () => dispatch({ type: 'CLOSE_REJECTION_DIALOG' }),
-      rejectCandidate: (candidateId: string, reason: RejectionReason, note: string) => dispatch({ type: 'REJECT_CANDIDATE', candidateId, reason, note }),
+      rejectCandidate: async (candidateId: string, reason: RejectionReason, note: string) => dispatch({ type: 'REPLACE_CANDIDATE', candidate: await updateCandidateStatusApi(candidateId, 'rejected', reason, note) }),
     },
   };
 };
