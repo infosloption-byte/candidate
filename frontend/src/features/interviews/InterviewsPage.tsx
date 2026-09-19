@@ -37,7 +37,7 @@ const toDateTimeLocal = (value: string): string => {
   return [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-') + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
 };
 
-const statusLabel = (value: CandidateStatus): string => value.replaceAll('_', ' ');
+const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
 export const InterviewsPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
@@ -302,7 +302,7 @@ export const InterviewsPage = ({ role }: Props) => {
         : await apiFetch<InterviewRecord>('/interviews/' + interview.id, { method: 'PATCH', body: JSON.stringify({ status }) });
       if (developmentMode) dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status });
       setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, ...updated } : item));
-      setSuccess('Interview marked ' + statusLabel(status as never).toLowerCase() + '.');
+      setSuccess('Interview marked ' + statusLabel(status).toLowerCase() + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the interview.');
     }
