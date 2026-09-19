@@ -29,6 +29,16 @@ const conflictResponse = (reply: FastifyReply, code: string, message: string) =>
   reply.code(409).send({ success: false, error: { code, message } });
 
 export const agencyRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/public/agencies', async (_request, reply) => {
+    const agencies = await getPrisma().agency.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: 'asc' },
+    });
+
+    return reply.send({ success: true, data: agencies });
+  });
+
   app.get('/agencies', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (_request, reply) => {
     const agencies = await getPrisma().agency.findMany({
       orderBy: { createdAt: 'desc' },
@@ -210,13 +220,13 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'User name cannot be empty.' } });
       }
 
-      const user = await getPrisma().user.update({
+      const updatedUser = await getPrisma().user.update({
         where: { id: existing.id },
         data,
         select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
       });
 
-      return reply.send({ success: true, data: user });
+      return reply.send({ success: true, data: updatedUser });
     },
   );
 };

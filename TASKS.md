@@ -31,8 +31,8 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Implement Agency user management.
 - ✅ Implement role-based access: Admin / Agency / Interviewer / Interviewee.
 - ✅ Implement agency-scoped authorization.
-- ⏳ Implement Interviewer user onboarding.
-- ⏳ Implement Interviewee account linkage.
+- ✅ Implement Interviewer user onboarding.
+- ✅ Implement Interviewee account registration and candidate account linkage.
 - ✅ Add secure password handling and session expiry.
 - 🔄 Add backend authentication/integration tests (password hashing is covered; DB-backed route tests remain for the QA phase).
 - ✅ Add reproducible development database seed for Admin, Agency, and Interviewer accounts.
@@ -41,7 +41,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 
 - ✅ Build Job API and persistence.
 - ✅ Build agency job list API.
-- 🔄 Build create/edit job form.
+- ✅ Build create/edit job form.
 - ✅ Implement publish / close.
 - ✅ Build published job API view.
 - ✅ Add job validation.
@@ -92,7 +92,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Store rating, recommendation, and comments.
 - ✅ Show evaluation summary API.
 - ✅ Map completed panel recommendations to application status.
-- 🔄 Connect interviewer evaluation form to Evaluation API.
+- ✅ Connect interviewer evaluation form to Evaluation API.
 - ⏳ Add evaluation authorization tests.
 - ⏳ Add evaluation workflow tests.
 

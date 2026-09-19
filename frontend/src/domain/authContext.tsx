@@ -7,17 +7,28 @@ interface LoginInput {
   password: string;
 }
 
+interface RegisterIntervieweeInput {
+  name: string;
+  email: string;
+  password: string;
+  agencyId: string;
+  phone: string;
+  profession: string;
+  experienceYears: number | null;
+  skills: string[];
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   error: string | null;
   developmentMode: boolean;
   login: (input: LoginInput) => Promise<void>;
+  registerInterviewee: (input: RegisterIntervieweeInput) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
 const isDev = import.meta.env.DEV;
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
@@ -70,6 +81,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setDevelopmentMode(false);
   };
 
+  const registerInterviewee = async (input: RegisterIntervieweeInput): Promise<void> => {
+    setError(null);
+    const result = await apiFetch<{ user: User }>('/auth/register/interviewee', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    setUser(result.user);
+    setDevelopmentMode(false);
+  };
+
   const logout = async (): Promise<void> => {
     setError(null);
 
@@ -81,7 +102,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   const value = useMemo(
-    () => ({ user, loading, error, developmentMode, login, logout }),
+    () => ({ user, loading, error, developmentMode, login, registerInterviewee, logout }),
     [user, loading, error, developmentMode],
   );
 
@@ -95,11 +116,11 @@ export const useAuth = (): AuthContextValue => {
 };
 
 export const developmentUser = (role: UserRole): User => ({
-  id: `dev-${role.toLowerCase()}`,
+  id: 'dev-' + role.toLowerCase(),
   agencyId: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'agency-1',
   candidateId: role === 'INTERVIEWEE' ? 'candidate-1' : null,
   name: 'Development Session',
-  email: `dev-${role.toLowerCase()}@buildhire.local`,
+  email: 'dev-' + role.toLowerCase() + '@buildhire.local',
   role,
   active: true,
 });
