@@ -98,6 +98,7 @@ model User {
   sessions      Session[]
   auditEvents   AuditEvent[]            @relation("AuditActor")
   notifications Notification[]
+  statusChanges CandidateStatusHistory[]
 
   @@index([agencyId, role, active])
 }
