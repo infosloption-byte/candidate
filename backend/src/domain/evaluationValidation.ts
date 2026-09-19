@@ -1,20 +1,35 @@
-export type Recommendation = 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED';
+export interface EvaluationScoreInput {
+  criterionId: string;
+  points: number;
+}
 
 export interface EvaluationInput {
-  rating?: number;
-  recommendation?: Recommendation;
+  scores?: EvaluationScoreInput[];
   comments?: string | null;
 }
 
 export const validateEvaluationInput = (input: EvaluationInput): string[] => {
   const errors: string[] = [];
 
-  if (!Number.isInteger(input.rating) || (input.rating ?? 0) < 1 || (input.rating ?? 0) > 5) {
-    errors.push('Rating must be a whole number between 1 and 5.');
+  if (!Array.isArray(input.scores) || input.scores.length === 0) {
+    errors.push('At least one interview criterion score is required.');
+  } else {
+    if (input.scores.length > 50) errors.push('An evaluation can contain at most 50 criterion scores.');
+    const seen = new Set<string>();
+    input.scores.forEach((score, index) => {
+      if (typeof score.criterionId !== 'string' || !score.criterionId.trim()) {
+        errors.push('Score ' + (index + 1) + ' must include a valid criterion ID.');
+      } else if (seen.has(score.criterionId)) {
+        errors.push('Each interview criterion can be scored only once.');
+      } else {
+        seen.add(score.criterionId);
+      }
+      if (!Number.isInteger(score.points) || score.points < 0) {
+        errors.push('Score ' + (index + 1) + ' must be a whole number of points greater than or equal to 0.');
+      }
+    });
   }
-  if (input.recommendation !== undefined && !['RECOMMENDED', 'MAYBE', 'NOT_RECOMMENDED'].includes(input.recommendation)) {
-    errors.push('Invalid recommendation.');
-  }
+
   if (input.comments !== undefined && input.comments !== null && input.comments.trim().length > 4000) {
     errors.push('Evaluation comments must be 4000 characters or fewer.');
   }
@@ -22,13 +37,5 @@ export const validateEvaluationInput = (input: EvaluationInput): string[] => {
   return errors;
 };
 
-export const resolveApplicationStatus = (
-  recommendations: Recommendation[],
-): 'INTERVIEW' | 'SELECTED' | 'REJECTED' => {
-  const recommended = recommendations.filter((item) => item === 'RECOMMENDED').length;
-  const notRecommended = recommendations.filter((item) => item === 'NOT_RECOMMENDED').length;
-
-  if (recommended > notRecommended) return 'SELECTED';
-  if (notRecommended > recommended) return 'REJECTED';
-  return 'INTERVIEW';
-};
+export const calculateEvaluationTotal = (scores: Array<{ points: number }>): number =>
+  scores.reduce((total, score) => total + score.points, 0);
