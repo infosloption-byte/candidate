@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
-import { getApplication, getCandidate, getJob, getUser } from '../../domain/fixtures';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
@@ -9,79 +8,73 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Interview, JobApplication, User, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion, InterviewType, Job, User, UserRole } from '../../domain/types';
 
-interface InterviewsPageProps { role: UserRole; }
-
-interface ApplicationRecord extends JobApplication {
-  job?: { id: string; agencyId: string; title: string; location: string | null };
-  candidate?: { id: string; agencyId: string; name: string; reference: string; email: string | null; profession: string | null };
-}
+interface Props { role: UserRole; }
 
 interface InterviewRecord extends Interview {
-  application?: {
-    id: string;
-    status: string;
-    job: { id: string; agencyId: string; title: string; location: string | null };
-    candidate: { id: string; name: string; reference: string; email: string | null; profession: string | null };
-  };
   panel?: Array<{
     userId: string;
     assignedAt: string;
-    user: { id: string; name: string; email: string; role: UserRole; active: boolean };
+    user: { id: string; name: string; email: string; active: boolean };
   }>;
   evaluations?: Array<{ id: string }>;
 }
 
-type Recommendation = 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED';
-
-interface EvaluationDraft {
-  rating: string;
-  recommendation: Recommendation;
-  comments: string;
-}
+const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const defaultForm = {
   scheduledAt: '',
-  type: 'TECHNICAL' as Interview['type'],
+  type: 'TECHNICAL' as InterviewType,
   durationMins: '45',
   location: '',
+  notes: '',
 };
 
-const defaultEvaluation: EvaluationDraft = {
-  rating: '4',
-  recommendation: 'RECOMMENDED',
-  comments: '',
+const toDateTimeLocal = (value: string): string => {
+  const date = new Date(value);
+  const pad = (input: number) => String(input).padStart(2, '0');
+  return [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-') + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
 };
 
-export const InterviewsPage = ({ role }: InterviewsPageProps) => {
+const statusLabel = (value: CandidateStatus): string => value.replaceAll('_', ' ');
+
+export const InterviewsPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
-  const [applications, setApplications] = useState<ApplicationRecord[]>(developmentMode ? state.applications : []);
-  const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER') : []);
-  const [showForm, setShowForm] = useState(false);
+  const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
+  const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
+  const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
+  const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
+  const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
+  const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
+  const [candidateId, setCandidateId] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [panel, setPanel] = useState<string[]>([]);
   const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
-  const [selectedApplicationId, setSelectedApplicationId] = useState('');
-  const [panel, setPanel] = useState<string[]>(developmentMode ? ['user-interviewer-1'] : []);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
-  const [evaluationDrafts, setEvaluationDrafts] = useState<Record<string, EvaluationDraft>>({});
-  const [submittedEvaluationIds, setSubmittedEvaluationIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
+  const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
+  const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
+  const [evaluationComments, setEvaluationComments] = useState('');
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
+  const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
-  const [evaluating, setEvaluating] = useState<string | null>(null);
+  const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (developmentMode) {
-      const shortlisted = state.applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
       setInterviews(state.interviews);
-      setApplications(state.applications);
-      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER'));
-      setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
-      setLoading(false);
+      setCandidates(state.candidates);
+      setJobs(state.jobs);
+      setAgencies(state.agencies);
+      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active));
+      setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId && item.active));
       return;
     }
 
@@ -89,28 +82,29 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     setLoading(true);
     setError('');
 
-    const interviewRequest = apiFetch<InterviewRecord[]>('/interviews');
-    const applicationsRequest = role === 'AGENCY'
-      ? apiFetch<ApplicationRecord[]>('/applications')
-      : Promise.resolve([] as ApplicationRecord[]);
-    const interviewerRequest = role === 'AGENCY' && user?.agencyId
-      ? apiFetch<User[]>('/agencies/' + user.agencyId + '/users')
-      : Promise.resolve([] as User[]);
+    const requests = [
+      apiFetch<InterviewRecord[]>('/interviews'),
+      ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Candidate[]>('/candidates') : Promise.resolve([] as Candidate[]),
+      ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Job[]>('/jobs') : Promise.resolve([] as Job[]),
+      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
+      role === 'AGENCY' && user?.agencyId
+        ? apiFetch<User[]>('/agencies/' + user.agencyId + '/users')
+        : Promise.resolve([] as User[]),
+    ];
 
-    Promise.all([interviewRequest, applicationsRequest, interviewerRequest])
-      .then(([interviewResult, applicationResult, users]) => {
+    Promise.all(requests)
+      .then(([interviewResult, candidateResult, jobResult, agencyResult, userResult]) => {
         if (cancelled) return;
         setInterviews(interviewResult);
-        setApplications(applicationResult);
-        setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
-
-        if (role === 'AGENCY') {
-          const shortlisted = applicationResult.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
-          setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
-          const firstActiveInterviewer = users.find((item) => item.role === 'INTERVIEWER' && item.active);
-          if (firstActiveInterviewer) {
-            setPanel((current) => current.length ? current : [firstActiveInterviewer.id]);
-          }
+        if (role !== 'INTERVIEWEE' && role !== 'INTERVIEWER') {
+          setCandidates(candidateResult);
+          setJobs(jobResult);
+        }
+        if (role === 'ADMIN') setAgencies(agencyResult);
+        if (role === 'AGENCY') setInterviewers(userResult.filter((item) => item.role === 'INTERVIEWER' && item.active));
+        if (role === 'ADMIN') {
+          const firstAgency = agencyResult.find((item) => item.status === 'ACTIVE');
+          setAgencyId((current) => current || firstAgency?.id || '');
         }
       })
       .catch((requestError: unknown) => {
@@ -120,177 +114,179 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         if (!cancelled) setLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id]);
+    return () => { cancelled = true; };
+  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriteria, user?.agencyId, user?.id, agencyId]);
 
-  const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
-
-  const localCandidate = (interview: InterviewRecord) => {
-    const application = localApplication(interview);
-    return application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined;
-  };
-
-  const localJob = (interview: InterviewRecord) => {
-    const application = localApplication(interview);
-    return application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined;
-  };
+  useEffect(() => {
+    if (!agencyId) return;
+    if (developmentMode) {
+      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && item.agencyId === agencyId));
+      setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId && item.active));
+      return;
+    }
+    if (role === 'ADMIN') {
+      Promise.all([
+        apiFetch<User[]>('/agencies/' + agencyId + '/users'),
+        apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
+      ])
+        .then(([users, criterionResult]) => {
+          setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
+          setCriteria(criterionResult.filter((item) => item.active));
+        })
+        .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load agency interview setup.'));
+    } else if (role === 'AGENCY') {
+      apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria')
+        .then((result) => setCriteria(result.filter((item) => item.active)))
+        .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load interview criteria.'));
+    }
+  }, [agencyId, developmentMode, role, state.users, state.interviewCriteria]);
 
   const visible = useMemo(() => {
-    const base = role === 'INTERVIEWER'
-      ? developmentMode
-        ? state.interviews.filter((item) => item.panelUserIds.includes('user-interviewer-1'))
-        : interviews
-      : role === 'INTERVIEWEE'
-        ? developmentMode
-          ? state.interviews.filter((item) => state.applications.find((application) => application.id === item.applicationId)?.candidateId === (user?.candidateId ?? 'candidate-1'))
-          : interviews
-        : interviews;
     const query = search.trim().toLowerCase();
+    const base = role === 'INTERVIEWER'
+      ? interviews
+      : role === 'INTERVIEWEE'
+        ? interviews
+        : interviews;
     if (!query) return base;
     return base.filter((interview) => {
-      const application = interview.application;
-      const candidate = application?.candidate ?? localCandidate(interview);
-      const job = application?.job ?? localJob(interview);
+      const candidate = interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
+      const job = interview.job ?? jobs.find((item) => item.id === interview.jobId);
       const panelNames = interview.panel?.map((item) => item.user.name) ?? [];
-      return [candidate?.name ?? '', candidate?.reference ?? '', job?.title ?? '', job?.location ?? '', interview.type, interview.status, ...panelNames]
+      return [candidate?.name ?? '', candidate?.reference ?? '', candidate?.profession ?? '', job?.title ?? '', job?.location ?? '', interview.type, interview.status, ...panelNames]
         .some((value) => value.toLowerCase().includes(query));
     });
-  }, [developmentMode, interviews, role, search, state.applications, state.interviews, user?.candidateId]);
+  }, [candidates, interviews, jobs, role, search]);
 
-  const applicationCandidates = applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
+  const availableCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
+    [agencyId, candidates],
+  );
 
-  const toDateTimeLocal = (value: string): string => {
-    const date = new Date(value);
-    const pad = (input: number) => String(input).padStart(2, '0');
-    return [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-')
-      + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
+  const availableJobs = useMemo(
+    () => jobs.filter((job) => job.agencyId === agencyId && job.status !== 'CLOSED'),
+    [agencyId, jobs],
+  );
+
+  const closeScheduleForm = () => {
+    setShowScheduleForm(false);
+    setEditingInterviewId(null);
+    setForm(defaultForm);
+    setCandidateId('');
+    setJobId('');
+    setPanel([]);
   };
 
   const openScheduleForm = () => {
-    const firstApplication = applicationCandidates[0];
+    const firstCandidate = availableCandidates[0];
     const firstInterviewer = interviewers[0];
     setEditingInterviewId(null);
     setForm(defaultForm);
-    setSelectedApplicationId(firstApplication?.id ?? '');
+    setCandidateId(firstCandidate?.id ?? '');
+    setJobId('');
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
-    setShowForm(true);
+    setShowScheduleForm(true);
+    setEvaluationFor(null);
     setError('');
     setSuccess('');
   };
 
-  const openRescheduleForm = (interview: InterviewRecord) => {
+  const openReschedule = (interview: InterviewRecord) => {
     setEditingInterviewId(interview.id);
-    setSelectedApplicationId(interview.applicationId);
+    setCandidateId(interview.candidateId);
+    setJobId(interview.jobId ?? '');
     setForm({
       scheduledAt: toDateTimeLocal(interview.scheduledAt),
       type: interview.type,
       durationMins: String(interview.durationMins),
       location: interview.location ?? '',
+      notes: '',
     });
-    const existingPanel = interview.panel ?? [];
     setInterviewers((current) => {
       const known = new Set(current.map((item) => item.id));
-      const missing = existingPanel.map((item) => item.user).filter((item) => !known.has(item.id));
+      const missing = (interview.panel ?? []).map((item) => ({ id: item.userId, agencyId, candidateId: null, name: item.user.name, email: item.user.email, role: 'INTERVIEWER' as const, active: item.user.active })).filter((item) => !known.has(item.id));
       return [...current, ...missing];
     });
     setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
-    setShowForm(true);
+    setShowScheduleForm(true);
     setError('');
     setSuccess('');
   };
 
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingInterviewId(null);
-    setForm(defaultForm);
-    setSelectedApplicationId('');
-    setPanel(developmentMode ? ['user-interviewer-1'] : []);
-  };
-
-  const schedule = async () => {
-    if (!editingInterviewId && (!selectedApplicationId || panel.length === 0)) {
-      setError('Select an application and at least one interviewer.');
+  const saveSchedule = async () => {
+    if (!candidateId || panel.length === 0) {
+      setError('Select a candidate and at least one interviewer.');
       return;
     }
-    if (editingInterviewId && panel.length === 0) {
-      setError('Select at least one interviewer.');
-      return;
-    }
-
-    const scheduledAt = form.scheduledAt ? new Date(form.scheduledAt).toISOString() : '';
-    if (!scheduledAt) {
+    if (!form.scheduledAt) {
       setError('Interview date and time are required.');
       return;
     }
 
     setSaving(true);
     setError('');
-
     try {
+      const scheduledAt = new Date(form.scheduledAt).toISOString();
       if (editingInterviewId) {
-        if (developmentMode) {
-          const currentInterview = interviews.find((item) => item.id === editingInterviewId);
-          if (!currentInterview) throw new Error('The selected interview could not be found.');
-          const updated: Interview = {
-            ...currentInterview,
-            type: form.type,
-            scheduledAt,
-            durationMins: Math.max(15, Number(form.durationMins) || 30),
-            location: form.location.trim() || null,
-            panelUserIds: panel,
-          };
-          dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
-          setInterviews((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
-        } else {
-          const updated = await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
-            method: 'PATCH',
-            body: JSON.stringify({
+        const updated = developmentMode
+          ? {
+              ...interviews.find((item) => item.id === editingInterviewId)!,
               type: form.type,
               scheduledAt,
               durationMins: Math.max(15, Number(form.durationMins) || 30),
               location: form.location.trim() || null,
-              interviewerIds: panel,
-            }),
-          });
-          setInterviews((current) => current.map((item) => item.id === updated.id ? updated : item));
-        }
-        closeForm();
-        setSuccess('Interview rescheduled successfully.');
+              panelUserIds: panel,
+            }
+          : await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
+              method: 'PATCH',
+              body: JSON.stringify({
+                type: form.type,
+                scheduledAt,
+                durationMins: Math.max(15, Number(form.durationMins) || 30),
+                location: form.location.trim() || null,
+                notes: form.notes.trim() || null,
+                interviewerIds: panel,
+              }),
+            });
+
+        if (developmentMode) dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
+        setInterviews((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+        closeScheduleForm();
+        setSuccess('Interview schedule updated.');
         return;
       }
 
-      if (developmentMode) {
-        const interview: Interview = {
-          id: 'interview-' + Date.now(),
-          applicationId: selectedApplicationId,
-          type: form.type,
-          status: 'SCHEDULED',
-          scheduledAt,
-          durationMins: Math.max(15, Number(form.durationMins) || 30),
-          location: form.location.trim() || null,
-          panelUserIds: panel,
-        };
-        dispatch({ type: 'SCHEDULE_INTERVIEW', interview });
-        setInterviews((current) => [interview, ...current]);
-      } else {
-        const created = await apiFetch<InterviewRecord>('/applications/' + selectedApplicationId + '/interviews', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: form.type,
-            scheduledAt,
-            durationMins: Math.max(15, Number(form.durationMins) || 30),
-            location: form.location.trim() || null,
-            interviewerIds: panel,
-          }),
-        });
-        setInterviews((current) => [...current, created].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)));
-        setApplications((current) => current.map((item) => item.id === selectedApplicationId ? { ...item, status: 'INTERVIEW' } : item));
-      }
+      const draft: Interview = {
+        id: 'interview-' + Date.now(),
+        candidateId,
+        jobId: jobId || null,
+        type: form.type,
+        status: 'SCHEDULED',
+        scheduledAt,
+        durationMins: Math.max(15, Number(form.durationMins) || 30),
+        location: form.location.trim() || null,
+        panelUserIds: panel,
+      };
 
-      closeForm();
-      setSuccess('Interview scheduled successfully.');
+      const created = developmentMode
+        ? draft
+        : await apiFetch<InterviewRecord>('/candidates/' + candidateId + '/interviews', {
+            method: 'POST',
+            body: JSON.stringify({
+              jobId: jobId || null,
+              type: form.type,
+              scheduledAt,
+              durationMins: Math.max(15, Number(form.durationMins) || 30),
+              location: form.location.trim() || null,
+              notes: form.notes.trim() || null,
+              interviewerIds: panel,
+            }),
+          });
+
+      if (developmentMode) dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft });
+      setInterviews((current) => [created, ...current]);
+      closeScheduleForm();
+      setSuccess('Candidate assigned to the interview successfully.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to schedule the interview.');
     } finally {
@@ -298,123 +294,136 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     }
   };
 
-  const cancelInterview = async (interview: InterviewRecord) => {
+  const changeInterviewStatus = async (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW') => {
     setError('');
-
     try {
-      if (developmentMode) {
-        dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'CANCELLED' });
-        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'CANCELLED' } : item));
-      } else {
-        const updated = await apiFetch<InterviewRecord>('/interviews/' + interview.id, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'CANCELLED' }),
-        });
-        setInterviews((current) => current.map((item) => item.id === updated.id ? updated : item));
-      }
-
-      setSuccess('Interview cancelled.');
+      const updated = developmentMode
+        ? { ...interview, status }
+        : await apiFetch<InterviewRecord>('/interviews/' + interview.id, { method: 'PATCH', body: JSON.stringify({ status }) });
+      if (developmentMode) dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status });
+      setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, ...updated } : item));
+      setSuccess('Interview marked ' + statusLabel(status as never).toLowerCase() + '.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to cancel the interview.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the interview.');
     }
   };
 
-  const submitEvaluation = async (interview: InterviewRecord) => {
-    const draft = evaluationDrafts[interview.id] ?? defaultEvaluation;
-
-    setEvaluating(interview.id);
+  const startEvaluation = (interview: InterviewRecord) => {
+    setEvaluationFor(interview.id);
+    const drafts: Record<string, string> = {};
+    for (const criterion of criteria) drafts[criterion.id] = '0';
+    setScoreDrafts(drafts);
+    setEvaluationComments('');
     setError('');
+  };
 
+  const submitEvaluation = async (interview: InterviewRecord) => {
+    if (!criteria.length) {
+      setError('No active interview criteria are configured for this agency. Ask an administrator to add criteria.');
+      return;
+    }
+    const scores = criteria.map((criterion) => ({ criterionId: criterion.id, points: Number(scoreDrafts[criterion.id] ?? 0) }));
+    if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > (criteria.find((item) => item.id === score.criterionId)?.maxPoints ?? 0))) {
+      setError('Every score must be a whole number within the criterion maximum.');
+      return;
+    }
+
+    setEvaluating(true);
+    setError('');
     try {
       if (developmentMode) {
         dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' });
-        dispatch({
-          type: 'SAVE_EVALUATION',
-          evaluation: {
-            id: 'evaluation-' + Date.now(),
-            interviewId: interview.id,
-            interviewerId: 'user-interviewer-1',
-            rating: Number(draft.rating),
-            recommendation: draft.recommendation,
-            comments: draft.comments.trim() || null,
-          },
-        });
         setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
       } else {
-        const result = await apiFetch<{
-          evaluation: unknown;
-          interviewCompleted: boolean;
-          applicationStatus: string;
-        }>('/interviews/' + interview.id + '/evaluations', {
+        const result = await apiFetch<{ interviewCompleted: boolean }>('/interviews/' + interview.id + '/evaluations', {
           method: 'POST',
-          body: JSON.stringify({
-            rating: Number(draft.rating),
-            recommendation: draft.recommendation,
-            comments: draft.comments.trim() || null,
-          }),
+          body: JSON.stringify({ scores, comments: evaluationComments.trim() || null }),
         });
-
-        setSubmittedEvaluationIds((current) => new Set(current).add(interview.id));
-
         if (result.interviewCompleted) {
           setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
         }
       }
-
-      setSuccess('Evaluation submitted.');
+      setEvaluationFor(null);
+      setSuccess('Interview criteria scores submitted.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to submit the evaluation.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to submit interview evaluation.');
     } finally {
-      setEvaluating(null);
+      setEvaluating(false);
     }
   };
+
+  const updateCandidateStatus = async (candidate: Candidate) => {
+    const status = statusDrafts[candidate.id];
+    if (!status) return;
+    try {
+      const updated = developmentMode
+        ? { ...candidate, status, statusUpdatedAt: new Date().toISOString() }
+        : await apiFetch<Candidate>('/candidates/' + candidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null }),
+          });
+      if (developmentMode) dispatch({ type: 'SET_CANDIDATE_STATUS', candidateId: candidate.id, status });
+      setCandidates((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSuccess('Candidate "' + candidate.name + '" is now ' + statusLabel(status) + '.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update candidate status.');
+    }
+  };
+
+  const candidateFor = (interview: InterviewRecord) =>
+    interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
+
+  const jobFor = (interview: InterviewRecord) =>
+    interview.job ?? jobs.find((item) => item.id === interview.jobId);
 
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow="Interview desk"
+        eyebrow={role === 'ADMIN' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
-        description="Every interview belongs to a job application. One interviewer or multiple interviewers can be assigned as a panel."
-        action={role === 'AGENCY' ? (
-          <Button onClick={showForm && !editingInterviewId ? closeForm : openScheduleForm}>
-            {showForm && !editingInterviewId ? 'Close scheduler' : 'Schedule interview'}
-          </Button>
-        ) : undefined}
+        description={role === 'INTERVIEWER' ? 'Complete the assigned interview criteria and submit your scorecard.' : role === 'INTERVIEWEE' ? 'Review your assigned interview schedule.' : 'Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.'}
+        action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Assign candidate</Button> : undefined}
       />
 
-      {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching schedules and panel assignments." />}
+      {role === 'ADMIN' && (
+        <Card>
+          <FormField label="Agency workspace" hint="Admin can operate the complete recruitment workflow on behalf of any agency.">
+            <select className="field-input" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
+              <option value="">Select an agency</option>
+              {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+            </select>
+          </FormField>
+        </Card>
+      )}
+
       {error && <StateMessage kind="error" title="Interview action failed" description={error} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
+      {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
-      <Card>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="field-label">Interview search</p>
-            <p className="mt-1 text-xs text-slate-400">Search candidate, job, panel member, interview type, or status.</p>
-          </div>
-          <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search interviews…" aria-label="Search interviews" />
-        </div>
-      </Card>
-
-      {showForm && role === 'AGENCY' && (
+      {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
         <Card>
-          <div className="mb-4 rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-950">{editingInterviewId ? 'Reschedule interview' : 'Schedule interview'}</p>
-            <p className="mt-1 text-xs text-slate-500">{editingInterviewId ? 'Update the time, panel, or meeting details for this scheduled interview.' : 'Choose an application, time, and one or more interviewers.'}</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black text-slate-950">{editingInterviewId ? 'Reschedule interview' : 'Assign candidate to interview'}</h2>
+              <p className="mt-1 text-xs text-slate-400">An interview belongs directly to a candidate. A job is optional context.</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={closeScheduleForm}>Close</Button>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Application">
-              <select className="field-input" value={selectedApplicationId} onChange={(event) => setSelectedApplicationId(event.target.value)} disabled={Boolean(editingInterviewId)}>
-                <option value="">Select application</option>
-                {applicationCandidates.map((application) => {
-                  const candidateName = application.candidate?.name ?? state.candidates.find((item) => item.id === application.candidateId)?.name ?? 'Candidate';
-                  const jobTitle = application.job?.title ?? state.jobs.find((item) => item.id === application.jobId)?.title ?? 'Job';
-                  return <option key={application.id} value={application.id}>{candidateName} — {jobTitle}</option>;
-                })}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <FormField label="Candidate">
+              <select className="field-input" value={candidateId} disabled={Boolean(editingInterviewId)} onChange={(event) => setCandidateId(event.target.value)}>
+                <option value="">Select candidate</option>
+                {availableCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.reference} — {candidate.name} · {statusLabel(candidate.status)}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Job / position" hint="Optional">
+              <select className="field-input" value={jobId} onChange={(event) => setJobId(event.target.value)}>
+                <option value="">No specific job</option>
+                {availableJobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
               </select>
             </FormField>
             <FormField label="Interview type">
-              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as Interview['type'] })}>
+              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}>
                 <option value="SCREENING">Screening</option>
                 <option value="TECHNICAL">Technical</option>
                 <option value="PRACTICAL">Practical</option>
@@ -424,181 +433,129 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
             <FormField label="Date & time">
               <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
             </FormField>
-            <FormField label="Duration">
+            <FormField label="Duration (minutes)">
               <input type="number" min="15" max="480" className="field-input" value={form.durationMins} onChange={(event) => setForm({ ...form, durationMins: event.target.value })} />
             </FormField>
             <FormField label="Location">
-              <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Interview room / video link" />
+              <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Interview room / online" />
             </FormField>
-            <FormField label="Interviewer panel" hint="Select one or more active interviewers.">
-              <div className="mt-1 space-y-2">
-                {interviewers.map((interviewer) => (
-                  <label key={interviewer.id} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      disabled={!editingInterviewId && !interviewer.active}
-                      checked={panel.includes(interviewer.id)}
-                      onChange={(event) => setPanel((current) => event.target.checked
-                        ? [...new Set([...current, interviewer.id])]
-                        : current.filter((id) => id !== interviewer.id))}
-                    />
-                    <span className="min-w-0 flex-1">{interviewer.name}</span>
-                    {!interviewer.active && <span className="text-[10px] font-bold text-amber-600">inactive</span>}
-                  </label>
-                ))}
-              </div>
-            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Interviewers" hint="Select one or more active interviewers from the candidate's agency.">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {interviewers.map((interviewer) => (
+                    <label key={interviewer.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:bg-slate-50">
+                      <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
+                      <span className="min-w-0"><span className="block text-xs font-bold text-slate-800">{interviewer.name}</span><span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span></span>
+                    </label>
+                  ))}
+                </div>
+                {!interviewers.length && <p className="mt-2 text-xs text-amber-600">No active interviewers are configured for this agency.</p>}
+              </FormField>
+            </div>
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <Button variant="secondary" onClick={closeForm}>Cancel</Button>
-            <Button disabled={saving} onClick={() => void schedule()}>{saving ? (editingInterviewId ? 'Rescheduling…' : 'Scheduling…') : editingInterviewId ? 'Reschedule' : 'Schedule'}</Button>
+            <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
+            <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
           </div>
         </Card>
       )}
 
-      {!loading && visible.length === 0 && (
-        <StateMessage kind="empty" title="No interviews yet" description="Scheduled interviews for this role will appear here." />
-      )}
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="field-label">Interview search</p>
+            <p className="mt-1 text-xs text-slate-400">Search by candidate, job, interviewer, type, or status.</p>
+          </div>
+          <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search interviews…" />
+        </div>
+      </Card>
+
+      {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
 
       {!loading && visible.length > 0 && (
         <div className="grid gap-4">
           {visible.map((interview) => {
-            const application = interview.application;
-            const candidate = application?.candidate ?? localCandidate(interview);
-            const job = application?.job ?? localJob(interview);
-            const panelNames = interview.panel?.map((item) => item.user.name)
-              ?? (interview.panelUserIds.map((id) => state.users.find((item) => item.id === id)?.name ?? getUser(id)?.name).filter(Boolean) as string[]);
-            const evaluationDraft = evaluationDrafts[interview.id] ?? defaultEvaluation;
-            const alreadySubmitted = submittedEvaluationIds.has(interview.id) || Boolean(interview.evaluations?.some((evaluation) => evaluation.id));
+            const candidate = candidateFor(interview);
+            const job = jobFor(interview);
+            const alreadyEvaluated = Boolean(interview.evaluations?.length);
+            const isAssignedInterviewer = role === 'INTERVIEWER';
+            const currentStatus = candidate?.status;
 
             return (
-              <article key={interview.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <Card key={interview.id}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-black text-slate-950">{candidate?.name ?? 'Candidate'}</h2>
+                      <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
                       <StatusPill value={interview.status} />
+                      {candidate?.status && <StatusPill value={candidate.status} />}
                     </div>
-                    <p className="mt-1 text-sm text-slate-500">{job?.title ?? 'Job'}</p>
+                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} {job ? '· ' + job.title : '· General interview'}</p>
+                    <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
+                    <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
-                  <div className="text-left lg:text-right">
-                    <p className="text-sm font-bold text-slate-900">{new Date(interview.scheduledAt).toLocaleString()}</p>
-                    <p className="mt-1 text-xs text-slate-400">{interview.durationMins} minutes · {interview.location ?? 'No location'}</p>
-                  </div>
+                  {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Reschedule</Button>
+                      <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                      <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                    </div>
+                  )}
+                  {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
+                    <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                  )}
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</p><p className="mt-1 text-sm font-bold text-slate-800">{interview.type}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p><p className="mt-1 text-sm font-bold text-slate-800">{panelNames.join(', ') || 'No panel'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Application</p><p className="mt-1 text-sm font-bold text-slate-800">{application?.status ?? localApplication(interview)?.status ?? '—'}</p></div>
-                </div>
-
-                {role === 'AGENCY' && interview.status === 'SCHEDULED' && (
-                  <div className="mt-5 flex flex-wrap justify-end gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => openRescheduleForm(interview)}>Reschedule</Button>
-                    <Button variant="danger" size="sm" onClick={() => void cancelInterview(interview)}>Cancel interview</Button>
+                {interview.panel && interview.panel.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {interview.panel.map((participant) => <span key={participant.userId} className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-slate-600">{participant.user.name}{participant.user.active ? '' : ' · inactive'}</span>)}
                   </div>
                 )}
 
-                {role === 'INTERVIEWER' && interview.status === 'SCHEDULED' && (
-                  <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                    <p className="text-xs font-black text-slate-900">Evaluation</p>
-                    {alreadySubmitted ? (
-                      <StateMessage kind="success" title="Evaluation submitted" description="Your panel evaluation has already been recorded." />
-                    ) : developmentMode ? (
-                      <div className="mt-3 grid gap-3 md:grid-cols-3">
-                        <FormField label="Rating (1–5)">
-                          <select
-                            className="field-input"
-                            value={evaluationDraft.rating}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, rating: event.target.value },
-                            }))}
-                          >
-                            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Recommendation">
-                          <select
-                            className="field-input"
-                            value={evaluationDraft.recommendation}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, recommendation: event.target.value as Recommendation },
-                            }))}
-                          >
-                            <option value="RECOMMENDED">Recommended</option>
-                            <option value="MAYBE">Maybe</option>
-                            <option value="NOT_RECOMMENDED">Not recommended</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Comments">
-                          <input
-                            className="field-input"
-                            value={evaluationDraft.comments}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, comments: event.target.value },
-                            }))}
-                            placeholder="Interview notes"
-                          />
-                        </FormField>
-                        <div className="md:col-span-3">
-                          <Button disabled={evaluating === interview.id} onClick={() => void submitEvaluation(interview)}>
-                            {evaluating === interview.id ? 'Submitting…' : 'Submit evaluation'}
-                          </Button>
+                {evaluationFor === interview.id && (
+                  <div className="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div><h3 className="text-sm font-black text-slate-950">Interview scorecard</h3><p className="mt-1 text-xs text-slate-500">Score every active criterion for this agency.</p></div>
+                      <Button size="sm" variant="secondary" onClick={() => setEvaluationFor(null)}>Close</Button>
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                      {criteria.map((criterion) => (
+                        <div key={criterion.id} className="rounded-xl border border-white bg-white p-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div><p className="text-xs font-extrabold text-slate-900">{criterion.name}</p><p className="mt-1 text-[10px] text-slate-400">{criterion.description ?? 'No description.'}</p></div>
+                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-400">/ {criterion.maxPoints}</span><input type="number" min="0" max={criterion.maxPoints} className="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-bold outline-none focus:border-cyan-500" value={scoreDrafts[criterion.id] ?? '0'} onChange={(event) => setScoreDrafts((current) => ({ ...current, [criterion.id]: event.target.value }))} /></div>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="mt-3 grid gap-3 md:grid-cols-3">
-                        <FormField label="Rating (1–5)">
-                          <select
-                            className="field-input"
-                            value={evaluationDraft.rating}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, rating: event.target.value },
-                            }))}
-                          >
-                            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Recommendation">
-                          <select
-                            className="field-input"
-                            value={evaluationDraft.recommendation}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, recommendation: event.target.value as Recommendation },
-                            }))}
-                          >
-                            <option value="RECOMMENDED">Recommended</option>
-                            <option value="MAYBE">Maybe</option>
-                            <option value="NOT_RECOMMENDED">Not recommended</option>
-                          </select>
-                        </FormField>
-                        <FormField label="Comments">
-                          <textarea
-                            className="field-input min-h-20 resize-y"
-                            value={evaluationDraft.comments}
-                            onChange={(event) => setEvaluationDrafts((current) => ({
-                              ...current,
-                              [interview.id]: { ...evaluationDraft, comments: event.target.value },
-                            }))}
-                            placeholder="Interview notes"
-                          />
-                        </FormField>
-                        <div className="md:col-span-3">
-                          <Button disabled={evaluating === interview.id} onClick={() => void submitEvaluation(interview)}>
-                            {evaluating === interview.id ? 'Submitting…' : 'Submit evaluation'}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
+                    <FormField label="Comments">
+                      <textarea className="field-input min-h-24 resize-y" value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Interview observations, strengths, concerns…" />
+                    </FormField>
+                    <div className="mt-4 flex justify-end"><Button disabled={evaluating} onClick={() => void submitEvaluation(interview)}>{evaluating ? 'Submitting…' : 'Submit scorecard'}</Button></div>
                   </div>
                 )}
-              </article>
+
+                {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
+                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">Final candidate status</h3>
+                      <p className="mt-1 text-xs text-slate-400">Review the completed scorecard, then update the candidate's lifecycle status.</p>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+                      <FormField label="Status">
+                        <select className="field-input" value={statusDrafts[candidate.id] ?? ''} onChange={(event) => setStatusDrafts((current) => ({ ...current, [candidate.id]: event.target.value as CandidateStatus }))}>
+                          <option value="">Select final status</option>
+                          {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+                        </select>
+                      </FormField>
+                      <FormField label="Reason" hint="Optional">
+                        <input className="field-input" value={statusReasons[candidate.id] ?? ''} onChange={(event) => setStatusReasons((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="Reason or decision note" />
+                      </FormField>
+                      <Button disabled={!statusDrafts[candidate.id]} onClick={() => void updateCandidateStatus(candidate)}>Update status</Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
             );
           })}
         </div>
