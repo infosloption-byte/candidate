@@ -300,10 +300,11 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
       availability: item.availability,
       visaStatus: item.visaStatus,
       experienceYears: item.experienceYears,
+      skills: item.skills,
     })),
     [
-      { name: 'Bulk Candidate One', email: firstEmail, phone: '+94 77 100 1001', alternatePhone: '+94 76 100 1001', country: 'Sri Lanka', passportNumber: 'N1234567', passportExpiry: '2031-12-31T00:00:00.000Z', currentLocation: 'Colombo', availability: 'Immediately', visaStatus: 'Required', experienceYears: 8 },
-      { name: 'Bulk Candidate Two', email: secondEmail, phone: '+94 77 100 1002', alternatePhone: '+94 76 100 1002', country: 'Sri Lanka', passportNumber: 'N7654321', passportExpiry: '2030-06-30T00:00:00.000Z', currentLocation: 'Kandy', availability: 'Within 2 weeks', visaStatus: 'In process', experienceYears: 12 },
+      { name: 'Bulk Candidate One', email: firstEmail, phone: '+94 77 100 1001', alternatePhone: '+94 76 100 1001', country: 'Sri Lanka', passportNumber: 'N1234567', passportExpiry: '2031-12-31T00:00:00.000Z', currentLocation: 'Colombo', availability: 'Immediately', visaStatus: 'Required', experienceYears: 8, skills: ['Masonry', 'Blockwork', 'Plastering'] },
+      { name: 'Bulk Candidate Two', email: secondEmail, phone: '+94 77 100 1002', alternatePhone: '+94 76 100 1002', country: 'Sri Lanka', passportNumber: 'N7654321', passportExpiry: '2030-06-30T00:00:00.000Z', currentLocation: 'Kandy', availability: 'Within 2 weeks', visaStatus: 'In process', experienceYears: 12, skills: ['Arc Welding', 'Steel Fabrication'] },
     ],
   );
 
