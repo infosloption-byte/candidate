@@ -99,6 +99,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         error: { code: 'INVALID_REGISTRATION', message: profileErrors.join(' ') },
       });
     }
+    if (!name) {
+      return reply.code(400).send({
+        success: false,
+        error: { code: 'INVALID_REGISTRATION', message: 'A valid name is required.' },
+      });
+    }
     if (!email || !email.includes('@')) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'A valid email address is required.' } });
     }
