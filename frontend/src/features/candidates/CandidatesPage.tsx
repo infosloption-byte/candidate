@@ -531,7 +531,7 @@ export const CandidatesPage = ({ role }: Props) => {
         eyebrow={role === 'ADMIN' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Candidate profile' : 'Candidate pool'}
         title={role === 'INTERVIEWEE' ? 'My Profile' : 'Candidates'}
         description={role === 'INTERVIEWEE' ? 'Maintain your candidate profile and documents.' : 'Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.'}
-        action={role !== 'INTERVIEWEE' ? (
+        action={role !== 'INTERVIE{role === 'INTERVIEWEE' ? (
           <div className="flex items-center gap-2">
             <button type="button" title="Download CSV template" aria-label="Download CSV template" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" onClick={downloadCsvTemplate}>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
