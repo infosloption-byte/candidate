@@ -85,6 +85,14 @@ enum DocumentState {
   MISSING
 }
 
+enum InvitationStatus {
+  PENDING
+  OPENED
+  STARTED
+  EXPIRED
+  CANCELLED
+}
+
 enum JobStatus {
   DRAFT
   OPEN
@@ -156,6 +164,7 @@ model Tenant {
   users       User[]
   sessions    Session[]
   candidates  Candidate[]
+  invitations CandidateInvitation[]
   jobs        Job[]
   interviews  Interview[]
   documents   CandidateDocument[]
@@ -244,6 +253,12 @@ model Candidate {
   source                         CandidateSource
   status                         CandidateStatus             @default(NEW)
   onboardingStatus               CandidateOnboardingStatus  @default(NOT_STARTED)
+  onboardingCompletionPercent    Int                       @default(0)
+  onboardingInvitedAt            DateTime?
+  onboardingLastActivityAt       DateTime?
+  onboardingSubmittedAt          DateTime?
+  onboardingReviewedAt           DateTime?
+  onboardingReviewerNote         String?                    @db.Text
   nationality                    String?                    @db.VarChar(100)
   dateOfBirth                    DateTime?
   passportExpiry                 DateTime?
@@ -275,6 +290,7 @@ model Candidate {
   selections                    SelectionRecord[]
   selectionHistory              SelectionHistory[]
   notifications                 Notification[]
+  invitation                    CandidateInvitation?
 
   tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@unique([tenantId, reference])
@@ -282,6 +298,29 @@ model Candidate {
   @@index([tenantId, status, profession])
   @@index([tenantId, phoneNormalized])
   @@index([tenantId, recruiterOwnerId])
+}
+
+model CandidateInvitation {
+  id            String           @id @default(uuid()) @db.VarChar(36)
+  tenantId      String           @db.VarChar(36)
+  candidateId   String           @unique @db.VarChar(36)
+  status        InvitationStatus @default(PENDING)
+  tokenHash     String           @unique @db.VarChar(128)
+  sentAt        DateTime
+  lastSentAt    DateTime
+  expiresAt     DateTime
+  openedAt      DateTime?
+  startedAt     DateTime?
+  reminderDueAt DateTime?
+  cancelledAt   DateTime?
+  sendCount     Int              @default(1)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  candidate     Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, expiresAt])
 }
 
 model CandidateJourneyEvent {
@@ -558,11 +597,11 @@ model SelectionHistory {
   occurredAt   DateTime               @default(now())
   occurredById String                 @db.VarChar(36)
 
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant                 @relation("SelectionHistoryTenant", fields: [tenantId], references: [id], onDelete: Cascade)
   candidate    Candidate?             @relation(fields: [candidateId], references: [id], onDelete: SetNull)
   job          Job                    @relation("SelectionHistoryJob", fields: [jobId], references: [id], onDelete: Cascade)
   relatedJob   Job?                   @relation("SelectionHistoryRelatedJob", fields: [relatedJobId], references: [id], onDelete: SetNull)
-  occurredBy   User                   @relation(fields: [occurredById], references: [id], onDelete: Restrict)
+  occurredBy   User                   @relation("SelectionHistoryActor", fields: [occurredById], references: [id], onDelete: Restrict)
 
   @@index([tenantId, jobId, occurredAt])
   @@index([tenantId, candidateId, occurredAt])
