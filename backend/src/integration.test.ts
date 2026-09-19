@@ -272,9 +272,9 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
   const firstEmail = 'bulk-one-' + suffix + '@buildhire.local';
   const secondEmail = 'bulk-two-' + suffix + '@buildhire.local';
   const csv = [
-    'name,email,phone,profession,experienceYears,skills',
-    'Bulk Candidate One,' + firstEmail + ',+94 77 100 1001,Mason,8,"Masonry,Blockwork,Plastering"',
-    'Bulk Candidate Two,' + secondEmail + ',+94 77 100 1002,Structural Welder,12,"Arc Welding,Steel Fabrication"',
+    'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills',
+    'Bulk Candidate One,' + firstEmail + ',+94 77 100 1001,+94 76 100 1001,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,8,"Masonry,Blockwork,Plastering"',
+    'Bulk Candidate Two,' + secondEmail + ',+94 77 100 1002,+94 76 100 1002,Sri Lanka,N7654321,2030-06-30,Kandy,Within 2 weeks,In process,Structural Welder,12,"Arc Welding,Steel Fabrication"',
   ].join('\n') + '\n';
 
   const importResponse = await app.inject({
@@ -285,13 +285,25 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
   });
   assert.equal(importResponse.statusCode, 201);
 
-  const importBody = json<{ data: { importedCount: number; candidates: Array<{ name: string; email: string | null; experienceYears: number | null; skills: unknown }> } }>(importResponse);
+  const importBody = json<{ data: { importedCount: number; candidates: Array<{ name: string; email: string | null; phone: string | null; alternatePhone: string | null; country: string | null; passportNumber: string | null; passportExpiry: string | null; currentLocation: string | null; availability: string | null; visaStatus: string | null; experienceYears: number | null; skills: unknown }> } }>(importResponse);
   assert.equal(importBody.data.importedCount, 2);
   assert.deepEqual(
-    importBody.data.candidates.map((item) => ({ name: item.name, email: item.email, experienceYears: item.experienceYears })),
+    importBody.data.candidates.map((item) => ({
+      name: item.name,
+      email: item.email,
+      phone: item.phone,
+      alternatePhone: item.alternatePhone,
+      country: item.country,
+      passportNumber: item.passportNumber,
+      passportExpiry: item.passportExpiry,
+      currentLocation: item.currentLocation,
+      availability: item.availability,
+      visaStatus: item.visaStatus,
+      experienceYears: item.experienceYears,
+    })),
     [
-      { name: 'Bulk Candidate One', email: firstEmail, experienceYears: 8 },
-      { name: 'Bulk Candidate Two', email: secondEmail, experienceYears: 12 },
+      { name: 'Bulk Candidate One', email: firstEmail, phone: '+94 77 100 1001', alternatePhone: '+94 76 100 1001', country: 'Sri Lanka', passportNumber: 'N1234567', passportExpiry: '2031-12-31T00:00:00.000Z', currentLocation: 'Colombo', availability: 'Immediately', visaStatus: 'Required', experienceYears: 8 },
+      { name: 'Bulk Candidate Two', email: secondEmail, phone: '+94 77 100 1002', alternatePhone: '+94 76 100 1002', country: 'Sri Lanka', passportNumber: 'N7654321', passportExpiry: '2030-06-30T00:00:00.000Z', currentLocation: 'Kandy', availability: 'Within 2 weeks', visaStatus: 'In process', experienceYears: 12 },
     ],
   );
 
@@ -300,8 +312,8 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
     url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
     headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
     payload: [
-      'name,email,phone,profession,experienceYears,skills',
-      'Duplicate Candidate,' + firstEmail + ',+94 77 100 1003,Mason,3,"Masonry"',
+      'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills',
+      'Duplicate Candidate,' + firstEmail + ',+94 77 100 1003,,Sri Lanka,N0000000,2032-01-01,Colombo,Immediately,Required,Mason,3,"Masonry"',
     ].join('\n') + '\n',
   });
   assert.equal(duplicateResponse.statusCode, 400);
