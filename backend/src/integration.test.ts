@@ -233,6 +233,38 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
   assert.equal(interviewerCandidates.statusCode, 403);
 });
 
+dbTest('bulk interview scheduling creates consecutive interview slots for selected candidates', async () => {
+  assert.ok(app);
+
+  const agencyCookie = await login(emails.agencyA);
+  const candidates = await prisma!.candidate.createManyAndReturn({
+    data: [
+      { agencyId: agencyAId, reference: 'BULK-I-' + suffix + '-1', name: 'Bulk Interview Candidate One', profession: 'Mason', status: 'POOL', source: 'AGENCY_ADDED', onboardingStatus: 'COMPLETED', skills: ['Masonry'] },
+      { agencyId: agencyAId, reference: 'BULK-I-' + suffix + '-2', name: 'Bulk Interview Candidate Two', profession: 'Welder', status: 'POOL', source: 'AGENCY_ADDED', onboardingStatus: 'COMPLETED', skills: ['Welding'] },
+    ],
+    select: { id: true },
+  });
+
+  const start = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/bulk',
+    headers: { cookie: agencyCookie },
+    payload: {
+      candidateIds: candidates.map((item) => item.id),
+      type: 'TECHNICAL',
+      scheduledAt: start.toISOString(),
+      durationMins: 30,
+      location: 'QA Interview Room',
+      interviewerIds: [interviewerId],
+    },
+  });
+
+  assert.equal(response.statusCode, 201);
+  const body = json<{ data: { importedCount: number; candidates: Array<{ candidateId: string; scheduledAt: string }> } }>(response);
+  assert.equal(body.data.importedCount, 2);
+  assert.equal(new Date(body.data.candidates[1]!.scheduledAt).getTime() - new Date(body.data.candidates[0]!.scheduledAt).getTime(), 30 * 60 * 1000);
+});
 dbTest('agency bulk candidate import preserves profile fields and rejects duplicate emails', async () => {
   assert.ok(app);
 
