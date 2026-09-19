@@ -1,6 +1,6 @@
 # BuildHire — Rebuild Task Tracker
 
-Legend: ✅ completed · 🔄 in progress · ⏳ planned
+Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 
 ## Reset baseline
 
@@ -34,7 +34,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Implement Interviewer user onboarding.
 - ✅ Implement Interviewee account registration and candidate account linkage.
 - ✅ Add secure password handling and session expiry.
-- 🔄 Add backend authentication/integration tests (password hashing is covered; DB-backed route tests remain for the QA phase).
+- 🔄 Backend authentication/integration test coverage added; green CI verification remains.
 - ✅ Add reproducible development database seed for Admin, Agency, and Interviewer accounts.
 
 ## Phase 3 — Jobs
@@ -56,10 +56,10 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Build candidate self-onboarding API and account linkage.
 - ✅ Build onboarding progress/submission states at API level.
 - ✅ Build frontend candidate list/form against Candidate API.
-- ⏳ Build agency review of submitted candidate profiles in the production UI.
+- ✅ Build agency review of submitted candidate profiles in the production UI.
 - ✅ Build bulk candidate onboarding via CSV.
 - ✅ Add row validation and duplicate protection for bulk import.
-- ⏳ Add candidate API integration tests.
+- 🔄 Candidate authorization, onboarding, and bulk-import integration coverage added; green CI verification remains.
 
 ## Phase 5 — Applications
 
@@ -83,7 +83,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Add reschedule and cancellation API.
 - ✅ Build interview list/calendar UI against Interview API.
 - ✅ Add interviewer My Interviews view against Interview API.
-- ⏳ Add interview scheduling integration tests.
+- 🔄 Interview scheduling, panel, conflict, and evaluation-access integration coverage added; green CI verification remains.
 
 ## Phase 7 — Evaluations
 
@@ -93,32 +93,35 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Show evaluation summary API.
 - ✅ Map completed panel recommendations to application status.
 - ✅ Connect interviewer evaluation form to Evaluation API.
-- ⏳ Add evaluation authorization tests.
-- ⏳ Add evaluation workflow tests.
+- 🔄 Evaluation authorization and final-decision workflow coverage added; green CI verification remains.
 
 ## Phase 8 — Operational polish
 
-- ⏳ Add simple dashboards by role.
-- ⏳ Add minimal audit events for important mutations.
-- ⏳ Add basic notifications only for core workflow events.
-- ⏳ Add candidate/job/application/interview search where actually needed.
-- ⏳ Add document upload only after the core onboarding flow is stable.
+- ✅ Add simple live API-backed dashboards by role.
+- ✅ Add minimal audit events for important workflow mutations.
+- ✅ Add basic notifications for core workflow events, without restoring the legacy notification center.
+- ✅ Add candidate/job/application/interview search where needed.
+- ⏳ Add document upload only after the core onboarding flow is stable and a storage contract is selected.
 
 ## Phase 9 — QA and release
 
-- ⏳ Frontend production build passes.
-- ⏳ Backend TypeScript build passes.
-- ⏳ Prisma schema validation passes.
-- ⏳ Prisma migration can recreate an empty database.
-- ⏳ Role authorization tests pass.
-- ⏳ Agency isolation tests pass.
-- ⏳ Self-onboarding end-to-end test passes.
-- ⏳ Agency onboarding and bulk import tests pass.
-- ⏳ Job publish/application end-to-end test passes.
-- ⏳ Interview panel scheduling end-to-end test passes.
-- ⏳ Interview evaluation end-to-end test passes.
-- ⏳ Responsive browser QA passes.
-- ⏳ Deployment, backup, and monitoring checklist complete.
+- 🔄 Frontend production build — GitHub Actions currently fails before exposing runner steps; source-level verification still needs a functioning runner/local build.
+- 🔄 Backend TypeScript build — same CI environment limitation.
+- 🔄 Prisma schema validation — same CI environment limitation.
+- 🔄 Prisma migration recreation — clean migration is committed and included in CI, but green execution is not yet verified.
+- 🔄 Role authorization tests — coverage committed, CI execution not yet verifiable.
+- 🔄 Agency isolation tests — coverage committed, CI execution not yet verifiable.
+- 🔄 Self-onboarding end-to-end test — coverage committed, CI execution not yet verifiable.
+- 🔄 Agency onboarding and bulk import tests — coverage committed, CI execution not yet verifiable.
+- 🔄 Job publish/application end-to-end test — coverage committed, CI execution not yet verifiable.
+- 🔄 Interview panel scheduling end-to-end test — coverage committed, CI execution not yet verifiable.
+- 🔄 Interview evaluation end-to-end test — coverage committed, CI execution not yet verifiable.
+- ⏳ Responsive browser QA.
+- ⏳ Deployment, backup, and monitoring checklist.
+
+### Current CI verification note
+
+The latest GitHub Actions runs have been completing as failures within roughly three seconds with no job steps/logs exposed by the available GitHub tooling. That prevents a truthful claim that the builds/tests pass; code changes above are committed, but release verification remains open until the runner/environment produces real execution results.
 
 ## Not planned in the rebuild baseline
 
