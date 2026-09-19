@@ -3,6 +3,7 @@ import { useSelectionContext } from '../../selection/context/useSelectionContext
 import type { SelectionJob } from '../../selection/types/selection';
 import type { JobDraft } from '../types/job';
 import { validateJobDraft } from '../services/jobValidation';
+import { createJobApi, fetchSelectionWorkspace, updateJobApi, closeJobApi } from '../../selection/services/selectionApi';
 
 const blankDraft: JobDraft = {
   title: '',
@@ -57,6 +58,7 @@ export const useJobsWorkspace = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<JobDraft>(blankDraft);
+  const [editorError, setEditorError] = useState<string | null>(null);
 
   const visibleJobs = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -70,27 +72,64 @@ export const useJobsWorkspace = () => {
   const openCreate = () => {
     setEditingId(null);
     setDraft(blankDraft);
+    setEditorError(null);
     setEditorOpen(true);
   };
 
   const openEdit = (job: SelectionJob) => {
     setEditingId(job.id);
     setDraft(toDraft(job));
+    setEditorError(null);
     setEditorOpen(true);
   };
 
-  const save = () => {
-    if (validateJobDraft(draft).length > 0) return false;
+  const refreshRemote = async () => {
+    const workspace = await fetchSelectionWorkspace();
+    dispatch({
+      type: 'REFRESH_REMOTE',
+      jobs: workspace.jobs,
+      records: workspace.records,
+      history: workspace.history,
+      approvalByJob: workspace.approvalByJob,
+      scoringByJob: workspace.scoringByJob,
+    });
+  };
+
+  const save = async (): Promise<boolean> => {
+    const validation = validateJobDraft(draft);
+    if (validation.length > 0) {
+      setEditorError(validation[0] ?? 'Please complete the required fields.');
+      return false;
+    }
+
     const job = toJob(draft, editingId ?? 'job-' + Date.now());
-    dispatch({ type: editingId ? 'UPDATE_JOB' : 'CREATE_JOB', job } as const);
-    setEditorOpen(false);
-    setEditingId(null);
-    setDraft(blankDraft);
-    return true;
+    try {
+      if (editingId) {
+        await updateJobApi(job);
+      } else {
+        await createJobApi(job);
+      }
+      await refreshRemote();
+      setEditorOpen(false);
+      setEditingId(null);
+      setDraft(blankDraft);
+      setEditorError(null);
+      return true;
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : 'The job could not be saved.');
+      return false;
+    }
   };
 
   const retryLoad = () => dispatch({ type: 'RETRY_LOAD' });
-  const closeJob = (jobId: string) => dispatch({ type: 'CLOSE_JOB', jobId });
+  const closeJob = async (jobId: string): Promise<void> => {
+    try {
+      await closeJobApi(jobId);
+      await refreshRemote();
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : 'The job could not be closed.');
+    }
+  };
 
   return {
     state,
@@ -106,10 +145,11 @@ export const useJobsWorkspace = () => {
       setDraft: (patch: Partial<JobDraft>) => setDraft((current) => ({ ...current, ...patch })),
       openCreate,
       openEdit,
-      closeEditor: () => setEditorOpen(false),
+      closeEditor: () => { setEditorError(null); setEditorOpen(false); },
       save,
       closeJob,
       retryLoad,
+      editorError,
     },
   };
 };
