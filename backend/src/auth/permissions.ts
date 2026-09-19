@@ -62,18 +62,24 @@ const rolePermissions: Record<UserRole, readonly Permission[]> = {
 export const hasPermission = (role: UserRole, permission: Permission): boolean =>
   rolePermissions[role].includes(permission);
 
-export const roleToFrontend = (role: UserRole): "system-admin" | "recruiter" | "interviewer" | "manager" | "candidate" => ({
+export type FrontendRole = "system-admin" | "recruiter" | "interviewer" | "manager" | "candidate";
+
+const frontendRoleMap = {
   SYSTEM_ADMIN: "system-admin",
   RECRUITER: "recruiter",
   INTERVIEWER: "interviewer",
   MANAGER: "manager",
   CANDIDATE: "candidate",
-}[role]);
+} as const satisfies Record<UserRole, FrontendRole>;
 
-export const roleFromFrontend = (role: "system-admin" | "recruiter" | "interviewer" | "manager" | "candidate"): UserRole => ({
+const backendRoleMap = {
   "system-admin": "SYSTEM_ADMIN",
   recruiter: "RECRUITER",
   interviewer: "INTERVIEWER",
   manager: "MANAGER",
   candidate: "CANDIDATE",
-}[role]);
+} as const satisfies Record<FrontendRole, UserRole>;
+
+export const roleToFrontend = (role: UserRole): FrontendRole => frontendRoleMap[role];
+
+export const roleFromFrontend = (role: FrontendRole): UserRole => backendRoleMap[role];
