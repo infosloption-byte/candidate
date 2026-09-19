@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "../generated/prisma/client.js";
 import { ApprovalStatus as PrismaApprovalStatus, SelectionDecision as PrismaSelectionDecision } from "../generated/prisma/enums.js";
 import { AppError } from "../errors/AppError.js";
@@ -438,6 +439,130 @@ export const reassignCandidates = async (
       entityId: fromJobId,
       action: "selection.candidates_reassigned",
       metadata: { toJobId, candidateIds: uniqueIds },
+    }, tx);
+  });
+
+  return getSelectionWorkspace(auth.tenantId);
+};
+
+export const bulkSaveDecisions = async (
+  auth: AuthContext,
+  jobId: string,
+  candidateIds: string[],
+  decision: SelectionDecisionInput,
+  reason: string,
+  note: string,
+) => {
+  const job = await findJobForSelection(auth.tenantId, jobId);
+  if (!job) throw AppError.notFound("Job not found.");
+  if (job.status === "CLOSED") throw AppError.conflict("Closed jobs cannot receive selection decisions.");
+
+  const uniqueCandidateIds = [...new Set(candidateIds)];
+  if (uniqueCandidateIds.length === 0) throw AppError.invalidInput("Select at least one candidate.");
+
+  const candidates = await Promise.all(uniqueCandidateIds.map((candidateId) =>
+    findCandidateById(auth.tenantId, candidateId),
+  ));
+  if (candidates.some((candidate) => !candidate)) {
+    throw AppError.notFound("One or more candidates could not be found.");
+  }
+
+  const existingRecords = await Promise.all(uniqueCandidateIds.map((candidateId) =>
+    findSelectionRecord(auth.tenantId, candidateId, jobId),
+  ));
+
+  await withTransaction(async (tx) => {
+    const existingSelected = await selectedCountInTx(tx, auth.tenantId, jobId);
+    const selectedDelta = existingRecords.reduce((delta, existing) => {
+      const wasSelected = existing?.decision === PrismaSelectionDecision.SELECTED;
+      const willBeSelected = decision === "selected";
+      if (willBeSelected && !wasSelected) return delta + 1;
+      if (!willBeSelected && wasSelected) return delta - 1;
+      return delta;
+    }, 0);
+
+    if (existingSelected + selectedDelta > job.openings) {
+      throw AppError.conflict("The selected shortlist exceeds the job capacity.", [
+        { field: "candidateIds", code: "CAPACITY_EXCEEDED", message: `The job has ${job.openings} openings.` },
+      ]);
+    }
+
+    for (let index = 0; index < uniqueCandidateIds.length; index += 1) {
+      const candidateId = uniqueCandidateIds[index];
+      const existing = existingRecords[index];
+      if (!candidateId) continue;
+
+      const nextDecision = decisionMap[decision];
+      if (existing) {
+        await updateSelectionRecord(tx, auth.tenantId, candidateId, jobId, {
+          decision: nextDecision,
+          reason: reason.trim(),
+          note: note.trim(),
+          decidedBy: { connect: { id: auth.userId } },
+          decidedAt: new Date(),
+        });
+      } else {
+        await createSelectionRecord(tx, {
+          id: randomUUID(),
+          tenant: { connect: { id: auth.tenantId } },
+          candidate: { connect: { id: candidateId } },
+          job: { connect: { id: jobId } },
+          decision: nextDecision,
+          reason: reason.trim(),
+          note: note.trim(),
+          decidedBy: { connect: { id: auth.userId } },
+        });
+      }
+
+      await createSelectionHistory(tx, {
+        id: randomUUID(),
+        tenant: { connect: { id: auth.tenantId } },
+        candidate: { connect: { id: candidateId } },
+        job: { connect: { id: jobId } },
+        action: "DECISION_CHANGED",
+        fromDecision: existing?.decision ?? null,
+        toDecision: nextDecision,
+        reason: reason.trim(),
+        note: note.trim(),
+        occurredBy: { connect: { id: auth.userId } },
+      });
+
+      const candidateStatus = decision === "selected"
+        ? "SELECTED"
+        : decision === "reserve"
+          ? "RESERVE"
+          : decision === "rejected"
+            ? "REJECTED"
+            : null;
+
+      if (candidateStatus) {
+        await tx.candidate.updateMany({
+          where: { tenantId: auth.tenantId, id: candidateId },
+          data: {
+            status: candidateStatus,
+            rejectionNote: decision === "rejected" ? note.trim() : null,
+          },
+        });
+      }
+    }
+
+    if (existingRecords.some((existing) => existing?.decision !== decisionMap[decision])) {
+      await tx.selectionApproval.updateMany({
+        where: { tenantId: auth.tenantId, jobId, status: "APPROVED" },
+        data: { status: "DRAFT", note: "" },
+      });
+    }
+
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "SelectionRecord",
+      entityId: jobId,
+      action: "selection.bulk_decision_changed",
+      metadata: {
+        candidateIds: uniqueCandidateIds,
+        decision,
+      },
     }, tx);
   });
 
