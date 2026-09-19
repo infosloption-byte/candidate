@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppShell, type AppView } from './components/AppShell';
 import type { UserRole } from '../domain/types';
+import { RecruitmentProvider } from '../domain/recruitmentContext';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
@@ -39,8 +40,10 @@ export const App = () => {
   })();
 
   return (
-    <AppShell role={role} activeView={activeView} onNavigate={setActiveView} onRoleChange={changeRole}>
-      {content}
-    </AppShell>
+    <RecruitmentProvider>
+      <AppShell role={role} activeView={activeView} onNavigate={setActiveView} onRoleChange={changeRole}>
+        {content}
+      </AppShell>
+    </RecruitmentProvider>
   );
 };
