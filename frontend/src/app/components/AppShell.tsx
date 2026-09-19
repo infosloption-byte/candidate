@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import type { UserRole } from '../../domain/types';
+import type { User, UserRole } from '../../domain/types';
 
 export type AppView = 'dashboard' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'agencies' | 'settings';
 
@@ -11,10 +11,22 @@ interface AppShellProps {
   activeView: AppView;
   onNavigate: (view: AppView) => void;
   onRoleChange: (role: UserRole) => void;
+  onLogout: () => void;
+  user: User;
+  showDevelopmentRoleSelector: boolean;
   children: ReactNode;
 }
 
-export const AppShell = ({ role, activeView, onNavigate, onRoleChange, children }: AppShellProps) => {
+export const AppShell = ({
+  role,
+  activeView,
+  onNavigate,
+  onRoleChange,
+  onLogout,
+  user,
+  showDevelopmentRoleSelector,
+  children,
+}: AppShellProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('buildhire.sidebar-collapsed') === 'true');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const mobileNavTitleId = useId();
@@ -45,7 +57,15 @@ export const AppShell = ({ role, activeView, onNavigate, onRoleChange, children 
         <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="absolute right-3 top-3 grid size-9 place-items-center rounded-xl bg-white/10 text-white">×</button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar role={role} activeView={activeView} onOpenMobileNav={() => setMobileNavOpen(true)} onRoleChange={onRoleChange} />
+        <TopBar
+          role={role}
+          activeView={activeView}
+          user={user}
+          showDevelopmentRoleSelector={showDevelopmentRoleSelector}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          onRoleChange={onRoleChange}
+          onLogout={onLogout}
+        />
         <main className="scrollbar-thin min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
     </div>

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppShell, type AppView } from './components/AppShell';
 import type { UserRole } from '../domain/types';
+import { AuthProvider, developmentUser, useAuth } from '../domain/authContext';
 import { RecruitmentProvider } from '../domain/recruitmentContext';
+import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
@@ -17,13 +19,60 @@ const roleDefaults: Record<UserRole, AppView> = {
   INTERVIEWEE: 'jobs',
 };
 
-export const App = () => {
-  const [role, setRole] = useState<UserRole>('ADMIN');
-  const [activeView, setActiveView] = useState<AppView>(roleDefaults.ADMIN);
+const AppContent = () => {
+  const { user, loading, developmentMode, logout } = useAuth();
+  const [developmentRole, setDevelopmentRole] = useState<UserRole>('ADMIN');
+
+  if (loading) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-slate-100 p-6">
+        <p className="text-sm font-semibold text-slate-500">Loading BuildHire…</p>
+      </main>
+    );
+  }
+
+  if (!user && !developmentMode) {
+    return <LoginPage />;
+  }
+
+  const role = user?.role ?? developmentRole;
+  const displayUser = user ?? developmentUser(role);
+
+  return (
+    <AuthenticatedApp
+      user={displayUser}
+      role={role}
+      developmentMode={developmentMode}
+      onDevelopmentRoleChange={setDevelopmentRole}
+      onLogout={() => void logout()}
+    />
+  );
+};
+
+interface AuthenticatedAppProps {
+  user: ReturnType<typeof developmentUser>;
+  role: UserRole;
+  developmentMode: boolean;
+  onDevelopmentRoleChange: (role: UserRole) => void;
+  onLogout: () => void;
+}
+
+const AuthenticatedApp = ({
+  user,
+  role,
+  developmentMode,
+  onDevelopmentRoleChange,
+  onLogout,
+}: AuthenticatedAppProps) => {
+  const [activeView, setActiveView] = useState<AppView>(roleDefaults[role]);
+
+  useEffect(() => {
+    setActiveView(roleDefaults[role]);
+  }, [role]);
 
   const changeRole = (nextRole: UserRole) => {
-    setRole(nextRole);
-    setActiveView(roleDefaults[nextRole]);
+    if (!developmentMode) return;
+    onDevelopmentRoleChange(nextRole);
   };
 
   const content = (() => {
@@ -41,9 +90,23 @@ export const App = () => {
 
   return (
     <RecruitmentProvider>
-      <AppShell role={role} activeView={activeView} onNavigate={setActiveView} onRoleChange={changeRole}>
+      <AppShell
+        role={role}
+        activeView={activeView}
+        onNavigate={setActiveView}
+        onRoleChange={changeRole}
+        onLogout={onLogout}
+        user={user}
+        showDevelopmentRoleSelector={developmentMode}
+      >
         {content}
       </AppShell>
     </RecruitmentProvider>
   );
 };
+
+export const App = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
