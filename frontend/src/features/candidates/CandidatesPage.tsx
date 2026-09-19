@@ -463,17 +463,19 @@ export const CandidatesPage = ({ role }: Props) => {
                   </div>
                 </div>
               ) : (
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p><p className="mt-1 text-xs text-slate-500">{candidate.phone ?? 'No phone'}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
-              </div>
-              <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><p className="text-xs font-black text-slate-900">Onboarding review</p><p className="mt-1 text-[11px] text-slate-500">Review the candidate profile before completing onboarding.</p></div>
-                  <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500"><span className="rounded-full bg-white px-3 py-1.5">Profile {candidate.name && candidate.profession ? 'complete' : 'needs review'}</span><span className="rounded-full bg-white px-3 py-1.5">Contact {candidate.email || candidate.phone ? 'available' : 'missing'}</span><span className="rounded-full bg-white px-3 py-1.5">Skills {candidate.skills.length ? candidate.skills.length + ' recorded' : 'missing'}</span></div>
+              <>
+                <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p><p className="mt-1 text-xs text-slate-500">{candidate.phone ?? 'No phone'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
                 </div>
-              </div>
+                <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p className="text-xs font-black text-slate-900">Onboarding review</p><p className="mt-1 text-[11px] text-slate-500">Review the candidate profile before completing onboarding.</p></div>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500"><span className="rounded-full bg-white px-3 py-1.5">Profile {candidate.name && candidate.profession ? 'complete' : 'needs review'}</span><span className="rounded-full bg-white px-3 py-1.5">Contact {candidate.email || candidate.phone ? 'available' : 'missing'}</span><span className="rounded-full bg-white px-3 py-1.5">Skills {candidate.skills.length ? candidate.skills.length + ' recorded' : 'missing'}</span></div>
+                  </div>
+                </div>
+              </>
               )}
 
               <div className="mt-5 rounded-2xl border border-slate-200 p-4">
