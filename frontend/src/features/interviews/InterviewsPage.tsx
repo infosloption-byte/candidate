@@ -443,7 +443,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
                         : current.filter((id) => id !== interviewer.id))}
                     />
                     <span className="min-w-0 flex-1">{interviewer.name}</span>
-                    {!interviewer.active && <span className="text-[10px] font-bold text-amber-600">{editingInterviewId ? 'inactive' : 'inactive'}</span>}
+                    {!interviewer.active && <span className="text-[10px] font-bold text-amber-600">inactive</span>}
                   </label>
                 ))}
               </div>
