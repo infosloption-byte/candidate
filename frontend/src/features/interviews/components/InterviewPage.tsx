@@ -46,7 +46,7 @@ export const InterviewPage = () => {
   const scheduleCandidates = candidateState.candidates.filter((candidate) => candidate.status !== 'rejected');
   const handleCreateInterview = async (interview: Interview) => {
     await actions.createInterview(interview);
-    await candidateActions.moveToInterview(interview.candidateId);
+    candidateActions.retryLoad();
   };
   const handleDecisionRecorded = (candidateId: string, decision: Exclude<Decision, 'pending'>, score: number, date: string, interviewer: string, profession: string, reason: string, note: string) => {
     const candidateStatus: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'> = decision;
