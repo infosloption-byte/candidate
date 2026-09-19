@@ -16,7 +16,7 @@ const emptyForm = { name: '', description: '', maxPoints: '5' };
 
 export const InterviewCriteriaPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
-  const { state } = useRecruitment();
+  const { state, dispatch } = useRecruitment();
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria : []);
@@ -78,7 +78,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           });
       if (developmentMode) {
         setCriteria((current) => [created, ...current]);
-        // The fixture state is intentionally simple; local criteria are reflected by the page.
+        dispatch({ type: 'CREATE_CRITERION', criterion: created });
       } else {
         setCriteria((current) => [created, ...current]);
       }
@@ -102,6 +102,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             body: JSON.stringify({ active: !criterion.active }),
           });
       setCriteria((current) => current.map((item) => item.id === updated.id ? updated : item));
+      if (developmentMode) dispatch({ type: 'UPDATE_CRITERION', criterion: updated });
       setSuccess('Criterion "' + criterion.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the criterion.');
