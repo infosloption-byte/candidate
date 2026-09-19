@@ -36,6 +36,11 @@ interface InterviewInput {
   timezone?: string;
   interviewerIds: string[];
   notes?: string;
+  scorecard?: {
+    templateId: string;
+    criteria: Array<{ id: string; label: string; weight: number; score?: number | null; note?: string }>;
+  };
+  practicalTest?: Array<{ id: string; label: string; required: boolean; result: "not-started" | "passed" | "failed" | "pending"; note?: string }>;
 }
 
 const typeMap = {
@@ -276,6 +281,36 @@ export const createInterviewRecord = async (auth: AuthContext, input: InterviewI
           userId,
         })),
       },
+      scorecard: input.scorecard
+        ? {
+            create: {
+              tenantId: auth.tenantId,
+              templateId: input.scorecard.templateId,
+              criteria: {
+                create: input.scorecard.criteria.map((criterion) => ({
+                  id: randomUUID(),
+                  tenantId: auth.tenantId,
+                  label: criterion.label,
+                  weight: criterion.weight,
+                  score: criterion.score ?? null,
+                  note: criterion.note?.trim() || null,
+                })),
+              },
+            },
+          }
+        : undefined,
+      practicalItems: input.practicalTest
+        ? {
+            create: input.practicalTest.map((item) => ({
+              id: randomUUID(),
+              tenantId: auth.tenantId,
+              label: item.label,
+              required: item.required,
+              result: item.result,
+              note: item.note?.trim() || null,
+            })),
+          }
+        : undefined,
     });
 
     await createJourneyEvent(tx, {
