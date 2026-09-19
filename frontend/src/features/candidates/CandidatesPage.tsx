@@ -87,6 +87,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [visaStatusFilter, setVisaStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
@@ -516,7 +517,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: 'Actions', render: (item: Candidate) => <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>View details</Button>{role !== 'INTERVIEWEE' && <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>Review onboarding</Button>}</div> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>Open</Button> },
   ];
 
   return (
@@ -529,7 +530,13 @@ export const CandidatesPage = ({ role }: Props) => {
       />
 
       {role === 'ADMIN' && (
-        <Card><FormField label="Agency workspace" hint="Admin can manage candidates on behalf of any agency."><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">All agencies</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField></Card>
+        <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center">
+          <span className="text-xs font-bold text-slate-500">Agency</span>
+          <select className="field-input sm:max-w-xs" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
+            <option value="">All agencies</option>
+            {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+          </select>
+        </div>
       )}
 
       {error && <StateMessage kind="error" title="Candidate action failed" description={error} />}
@@ -594,29 +601,23 @@ export const CandidatesPage = ({ role }: Props) => {
         ) : <StateMessage kind="empty" title="Profile not linked" description="This account is not linked to a candidate profile yet." />
       ) : (
         <>
-          <Card>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-              <div className="xl:col-span-2"><FormField label="Candidate search"><input className="field-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, passport, contact, location, skills…" /></FormField></div>
-              <FormField label="Status"><select className="field-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option>{statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></FormField>
-              <FormField label="Country"><select className="field-input" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}><option value="">All countries</option>{filterOptions.countries.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
-              <FormField label="Profession"><select className="field-input" value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}><option value="">All professions</option>{filterOptions.professions.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
-              <FormField label="Availability"><select className="field-input" value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}><option value="">Any availability</option>{filterOptions.availabilities.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
-              <FormField label="Visa / work status"><select className="field-input" value={visaStatusFilter} onChange={(event) => setVisaStatusFilter(event.target.value)}><option value="">Any visa status</option>{filterOptions.visaStatuses.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
-              <FormField label="Current location"><select className="field-input" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}><option value="">All locations</option>{filterOptions.locations.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
-              <FormField label="Passport expiry"><select className="field-input" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}><option value="">Any passport status</option><option value="expired">Expired</option><option value="30d">Expires in 30 days</option><option value="90d">Expires in 90 days</option><option value="valid">Valid beyond 90 days</option><option value="missing">Missing expiry</option></select></FormField>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-slate-400">{filteredCandidates.length} candidate(s) in this view.</p>
-              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter) && <Button size="sm" variant="ghost" onClick={() => { setSearch(''); setStatusFilter(''); setCountryFilter(''); setProfessionFilter(''); setAvailabilityFilter(''); setVisaStatusFilter(''); setLocationFilter(''); setPassportFilter(''); }}>Clear filters</Button>}
-            </div>
-          </Card>
-          <Card>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-black text-slate-950">Bulk candidate onboarding</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Import up to 500 candidates at once. Every imported candidate starts in the candidate pool and can later be assigned directly to an interview.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-end">
+              <div className="min-w-0 flex-1">
+                <label className="field-label">Search candidates</label>
+                <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, contact, passport, location or skill…" />
+              </div>
+              <div className="w-full lg:w-52">
+                <label className="field-label">Status</label>
+                <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                  <option value="">All statuses</option>
+                  {statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
+                </select>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setShowAdvancedFilters((value) => !value)}>
+                  {showAdvancedFilters ? 'Hide filters' : 'More filters'}
+                </Button>
                 <Button size="sm" variant="secondary" onClick={downloadCsvTemplate}>CSV template</Button>
                 <input
                   ref={bulkFileRef}
@@ -633,10 +634,85 @@ export const CandidatesPage = ({ role }: Props) => {
                 </Button>
               </div>
             </div>
-            {role === 'ADMIN' && !agencyId && <p className="mt-3 text-xs font-semibold text-amber-600">Select an agency workspace above before importing.</p>}
-          </Card>
 
-          {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
+            {showAdvancedFilters && (
+              <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  <div>
+                    <label className="field-label">Country</label>
+                    <select className="field-input mt-1 w-full" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}>
+                      <option value="">All countries</option>
+                      {filterOptions.countries.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Profession</label>
+                    <select className="field-input mt-1 w-full" value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}>
+                      <option value="">All professions</option>
+                      {filterOptions.professions.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Availability</label>
+                    <select className="field-input mt-1 w-full" value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}>
+                      <option value="">Any availability</option>
+                      {filterOptions.availabilities.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Visa / work status</label>
+                    <select className="field-input mt-1 w-full" value={visaStatusFilter} onChange={(event) => setVisaStatusFilter(event.target.value)}>
+                      <option value="">Any visa status</option>
+                      {filterOptions.visaStatuses.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Location</label>
+                    <select className="field-input mt-1 w-full" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}>
+                      <option value="">All locations</option>
+                      {filterOptions.locations.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="field-label">Passport expiry</label>
+                    <select className="field-input mt-1 w-full" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}>
+                      <option value="">Any passport status</option>
+                      <option value="expired">Expired</option>
+                      <option value="30d">Expires in 30 days</option>
+                      <option value="90d">Expires in 90 days</option>
+                      <option value="valid">Valid beyond 90 days</option>
+                      <option value="missing">Missing expiry</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3">
+              <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
+              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                <Button size="sm" variant="ghost" onClick={() => {
+                  setSearch('');
+                  setStatusFilter('');
+                  setCountryFilter('');
+                  setProfessionFilter('');
+                  setAvailabilityFilter('');
+                  setVisaStatusFilter('');
+                  setLocationFilter('');
+                  setPassportFilter('');
+                }}>Clear filters</Button>
+              )}
+            </div>
+          </div>
+
+          {role !== 'INTERVIEWEE' && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-200 px-4 py-3">
+              <p className="text-xs text-slate-500">Need to add one candidate manually?</p>
+              <Button size="sm" variant="secondary" onClick={() => { setForm(emptyForm); setShowForm(true); setError(''); }}>Add manually</Button>
+            </div>
+          )}
+
+                    {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
             <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
