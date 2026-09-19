@@ -1,3 +1,4 @@
+import { fetchSelectionWorkspace } from "./selectionApi";
 import type { ApprovalStatus, SelectionApproval, SelectionDecision, SelectionHistoryEntry, SelectionJob, SelectionRecord, SelectionScoringWeights } from '../types/selection';
 import { defaultSelectionScoringWeights } from '../types/selection';
 
@@ -62,36 +63,16 @@ const normalizeWeights = (value: SelectionScoringWeights): SelectionScoringWeigh
 
 const normalizeJob = (job: SelectionJob): SelectionJob => ({ ...job, status: job.status ?? 'open', preferredSkills: job.preferredSkills ?? [] });
 
-export const loadSelectionJobs = async (): Promise<SelectionJob[]> => parseArray(window.localStorage.getItem(JOBS_KEY), selectionJobSeed).map(normalizeJob);
-export const saveSelectionJobs = async (jobs: SelectionJob[]): Promise<void> => { window.localStorage.setItem(JOBS_KEY, JSON.stringify(jobs)); };
-export const loadSelectionRecords = async (): Promise<SelectionRecord[]> => parseArray(window.localStorage.getItem(RECORDS_KEY), recordSeed);
-export const loadSelectionHistory = async (): Promise<SelectionHistoryEntry[]> => parseHistory(window.localStorage.getItem(HISTORY_KEY));
-export const loadSelectionScoring = async (): Promise<Record<string, SelectionScoringWeights>> => {
-  const raw = window.localStorage.getItem(SCORING_KEY);
-  if (!raw) return {};
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
-    return Object.fromEntries(Object.entries(parsed as Record<string, unknown>).map(([jobId, value]) => [jobId, isWeights(value) ? normalizeWeights(value) : defaultSelectionScoringWeights]));
-  } catch { return {}; }
-};
-export const saveSelectionRecords = async (records: SelectionRecord[]): Promise<void> => { window.localStorage.setItem(RECORDS_KEY, JSON.stringify(records)); };
-export const saveSelectionHistory = async (history: SelectionHistoryEntry[]): Promise<void> => { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); };
-export const saveSelectionScoring = async (scoringByJob: Record<string, SelectionScoringWeights>): Promise<void> => { window.localStorage.setItem(SCORING_KEY, JSON.stringify(scoringByJob)); };
-export const loadSelectionApproval = async (): Promise<Record<string, SelectionApproval>> => {
-  const raw = window.localStorage.getItem(APPROVAL_KEY);
-  if (!raw) return {};
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
-    const source = parsed as Record<string, unknown>;
-    if (typeof source.status === 'string') { const status: ApprovalStatus = ['draft', 'pending', 'approved', 'returned'].includes(source.status) ? source.status as ApprovalStatus : 'draft'; return { legacy: { status, note: typeof source.note === 'string' ? source.note : '' } }; }
-    return Object.fromEntries(Object.entries(source).map(([jobId, value]) => {
-      if (typeof value !== 'object' || value === null || Array.isArray(value)) return [jobId, defaultApproval];
-      const record = value as Record<string, unknown>;
-      const status: ApprovalStatus = ['draft', 'pending', 'approved', 'returned'].includes(record.status as string) ? record.status as ApprovalStatus : 'draft';
-      return [jobId, { status, note: typeof record.note === 'string' ? record.note : '' }];
-    }));
-  } catch { return {}; }
-};
-export const saveSelectionApproval = async (approvalByJob: Record<string, SelectionApproval>): Promise<void> => { window.localStorage.setItem(APPROVAL_KEY, JSON.stringify(approvalByJob)); };
+export const loadSelectionWorkspace = async () => fetchSelectionWorkspace();
+
+export const loadSelectionJobs = async () => (await fetchSelectionWorkspace()).jobs;
+export const loadSelectionRecords = async () => (await fetchSelectionWorkspace()).records;
+export const loadSelectionHistory = async () => (await fetchSelectionWorkspace()).history;
+export const loadSelectionScoring = async () => (await fetchSelectionWorkspace()).scoringByJob;
+export const loadSelectionApproval = async () => (await fetchSelectionWorkspace()).approvalByJob;
+
+export const saveSelectionJobs = async (_jobs: SelectionJob[]): Promise<void> => undefined;
+export const saveSelectionRecords = async (_records: SelectionRecord[]): Promise<void> => undefined;
+export const saveSelectionHistory = async (_history: SelectionHistoryEntry[]): Promise<void> => undefined;
+export const saveSelectionScoring = async (_scoring: Record<string, SelectionScoringWeights>): Promise<void> => undefined;
+export const saveSelectionApproval = async (_approval: Record<string, SelectionApproval>): Promise<void> => undefined;
