@@ -12,14 +12,7 @@ import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion,
 
 interface Props { role: UserRole; }
 
-interface InterviewRecord extends Interview {
-  panel?: Array<{
-    userId: string;
-    assignedAt: string;
-    user: { id: string; name: string; email: string; active: boolean };
-  }>;
-  evaluations?: Array<{ id: string }>;
-}
+type InterviewRecord = Interview;
 
 const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
@@ -82,7 +75,13 @@ export const InterviewsPage = ({ role }: Props) => {
     setLoading(true);
     setError('');
 
-    const requests = [
+    const requests: [
+      Promise<InterviewRecord[]>,
+      Promise<Candidate[]>,
+      Promise<Job[]>,
+      Promise<Agency[]>,
+      Promise<User[]>,
+    ] = [
       apiFetch<InterviewRecord[]>('/interviews'),
       ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Candidate[]>('/candidates') : Promise.resolve([] as Candidate[]),
       ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Job[]>('/jobs') : Promise.resolve([] as Job[]),
@@ -352,12 +351,16 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const updateCandidateStatus = async (candidate: Candidate) => {
+  const updateCandidateStatus = async (candidate: Pick<Candidate, 'id' | 'name' | 'status'>) => {
     const status = statusDrafts[candidate.id];
     if (!status) return;
     try {
-      const updated = developmentMode
-        ? { ...candidate, status, statusUpdatedAt: new Date().toISOString() }
+      const currentCandidate = candidates.find((item) => item.id === candidate.id);
+      if (!currentCandidate && developmentMode) {
+        throw new Error('The candidate is not available in the local workspace.');
+      }
+      const updated: Candidate = developmentMode
+        ? { ...(currentCandidate as Candidate), status, statusUpdatedAt: new Date().toISOString() }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null }),
