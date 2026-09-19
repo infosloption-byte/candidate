@@ -91,7 +91,7 @@ export const findActiveInterviewsForWindow = async (
     where: {
       tenantId,
       status: { in: ["SCHEDULED", "IN_PROGRESS", "EVALUATION"] },
-      startsAt: { lt: to },
+      startsAt: { gte: from, lt: to },
       ...(excludeId ? { NOT: { id: excludeId } } : {}),
     },
     include: includeRelations,
