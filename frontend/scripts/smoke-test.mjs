@@ -41,6 +41,12 @@ assert.match(candidatesPage, /useFocusTrap/);
 assert.match(candidatesPage, /Close candidate details/);
 assert.match(candidatesPage, /Review onboarding/);
 assert.match(candidatesPage, /experienceYears/);
+const interviewsPage = read('src/features/interviews/InterviewsPage.tsx');
+assert.match(interviewsPage, /Create interview/);
+assert.match(interviewsPage, /Candidates/);
+assert.match(interviewsPage, /View details/);
+assert.match(interviewsPage, /role=\"dialog\"/);
+assert.match(interviewsPage, /interviews\/bulk/);
 assert.match(settingsPage, /Candidate lifecycle/);
 assert.doesNotMatch(settingsPage, /Applications/);
 
