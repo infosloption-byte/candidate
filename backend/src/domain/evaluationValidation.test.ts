@@ -1,23 +1,42 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveApplicationStatus, validateEvaluationInput } from './evaluationValidation.js';
+import { calculateEvaluationTotal, validateEvaluationInput } from './evaluationValidation.js';
 
-test('evaluation validation accepts a normal review', () => {
+test('evaluation validation accepts complete criterion scores', () => {
   assert.deepEqual(
-    validateEvaluationInput({ rating: 4, recommendation: 'RECOMMENDED', comments: 'Good trade experience.' }),
+    validateEvaluationInput({
+      scores: [
+        { criterionId: 'criterion-1', points: 8 },
+        { criterionId: 'criterion-2', points: 4 },
+      ],
+      comments: 'Good technical ability.',
+    }),
     [],
   );
 });
 
-test('evaluation validation rejects an out of range rating', () => {
+test('evaluation validation requires at least one criterion score', () => {
   assert.deepEqual(
-    validateEvaluationInput({ rating: 6, recommendation: 'MAYBE' }),
-    ['Rating must be a whole number between 1 and 5.'],
+    validateEvaluationInput({ scores: [] }),
+    ['At least one interview criterion score is required.'],
   );
 });
 
-test('evaluation resolution uses panel recommendation majority', () => {
-  assert.equal(resolveApplicationStatus(['RECOMMENDED']), 'SELECTED');
-  assert.equal(resolveApplicationStatus(['NOT_RECOMMENDED']), 'REJECTED');
-  assert.equal(resolveApplicationStatus(['RECOMMENDED', 'NOT_RECOMMENDED']), 'INTERVIEW');
+test('evaluation validation rejects duplicate criteria and negative points', () => {
+  assert.deepEqual(
+    validateEvaluationInput({
+      scores: [
+        { criterionId: 'criterion-1', points: 3 },
+        { criterionId: 'criterion-1', points: -1 },
+      ],
+    }),
+    [
+      'Each interview criterion can be scored only once.',
+      'Score 2 must be a whole number of points greater than or equal to 0.',
+    ],
+  );
+});
+
+test('evaluation total sums criterion points', () => {
+  assert.equal(calculateEvaluationTotal([{ points: 8 }, { points: 4 }, { points: 3 }]), 15);
 });
