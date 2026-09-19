@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput } from '../domain/jobValidation.js';
+import { jobListWhereForUser } from '../domain/jobsAccess.js';
 
 interface JobParams {
   id: string;
@@ -11,19 +12,25 @@ interface AgencyJobParams {
   agencyId: string;
 }
 
-const canManageJob = (requestUser: { role: string; agencyId: string | null }, agencyId: string): boolean =>
-  requestUser.role === 'ADMIN' || (requestUser.role === 'AGENCY' && requestUser.agencyId === agencyId);
-
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
+    let candidateAgencyId: string | null = null;
+
+    if (user.role === 'INTERVIEWEE' && user.candidateId) {
+      const candidate = await getPrisma().candidate.findUnique({
+        where: { id: user.candidateId },
+        select: { agencyId: true },
+      });
+      candidateAgencyId = candidate?.agencyId ?? null;
+    }
 
     const jobs = await getPrisma().job.findMany({
-      where: user.role === 'ADMIN'
-        ? undefined
-        : user.role === 'INTERVIEWEE'
-          ? { status: 'PUBLISHED' }
-          : { agencyId: user.agencyId ?? '__missing__' },
+      where: jobListWhereForUser({
+        role: user.role,
+        agencyId: user.agencyId,
+        candidateAgencyId,
+      }),
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
       include: { agency: { select: { id: true, name: true, slug: true } } },
     });
@@ -42,10 +49,20 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const user = request.authUser!;
+    let candidateAgencyId: string | null = null;
+
+    if (user.role === 'INTERVIEWEE' && user.candidateId) {
+      const candidate = await getPrisma().candidate.findUnique({
+        where: { id: user.candidateId },
+        select: { agencyId: true },
+      });
+      candidateAgencyId = candidate?.agencyId ?? null;
+    }
+
     const canRead =
       user.role === 'ADMIN'
       || (user.role === 'AGENCY' && user.agencyId === job.agencyId)
-      || (user.role === 'INTERVIEWEE' && job.status === 'PUBLISHED');
+      || (user.role === 'INTERVIEWEE' && job.status === 'PUBLISHED' && candidateAgencyId === job.agencyId);
 
     if (!canRead) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
@@ -100,7 +117,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
 
-      if (!canManageJob(request.authUser!, existing.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && request.authUser!.agencyId !== existing.agencyId) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
@@ -152,7 +169,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
 
-      if (!canManageJob(request.authUser!, existing.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && request.authUser!.agencyId !== existing.agencyId) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
