@@ -67,6 +67,12 @@ CREATE TABLE `CandidateStatusHistory` (
   INDEX `CandidateStatusHistory_candidateId_createdAt_idx`(`candidateId`, `createdAt`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+INSERT INTO `CandidateStatusHistory` (
+  `id`, `candidateId`, `fromStatus`, `toStatus`, `reason`, `changedById`
+)
+SELECT UUID(), `id`, NULL, 'POOL', 'Candidate entered the candidate pool during workflow migration.', NULL
+FROM `Candidate`;
+
 ALTER TABLE `Interview`
   DROP INDEX `Interview_applicationId_scheduledAt_idx`;
 
