@@ -3,24 +3,28 @@ import { requireAuth } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers, notifyCandidateAccount } from '../lib/notifications.js';
-import { resolveApplicationStatus, validateEvaluationInput, type EvaluationInput } from '../domain/evaluationValidation.js';
+import { calculateEvaluationTotal, validateEvaluationInput, type EvaluationInput } from '../domain/evaluationValidation.js';
 
-interface InterviewParams {
-  interviewId: string;
-}
+interface InterviewParams { interviewId: string; }
 
-const summary = (evaluations: Array<{ rating: number; recommendation: 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED' }>, panelSize: number) => ({
-  completed: evaluations.length,
-  required: panelSize,
-  averageRating: evaluations.length
-    ? Math.round((evaluations.reduce((total, item) => total + item.rating, 0) / evaluations.length) * 100) / 100
-    : null,
-  recommendations: {
-    recommended: evaluations.filter((item) => item.recommendation === 'RECOMMENDED').length,
-    maybe: evaluations.filter((item) => item.recommendation === 'MAYBE').length,
-    notRecommended: evaluations.filter((item) => item.recommendation === 'NOT_RECOMMENDED').length,
-  },
-});
+const buildSummary = (
+  evaluations: Array<{ scores: Array<{ points: number; criterion: { maxPoints: number } }> }>,
+  panelSize: number,
+) => {
+  let totalPoints = 0;
+  let maxPoints = 0;
+  for (const evaluation of evaluations) {
+    totalPoints += calculateEvaluationTotal(evaluation.scores);
+    maxPoints += evaluation.scores.reduce((total, score) => total + score.criterion.maxPoints, 0);
+  }
+  return {
+    completed: evaluations.length,
+    required: panelSize,
+    totalPoints,
+    maxPoints,
+    averagePercentage: maxPoints ? Math.round((totalPoints / maxPoints) * 10000) / 100 : null,
+  };
+};
 
 export const evaluationRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: InterviewParams }>(
@@ -30,40 +34,34 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       const interview = await getPrisma().interview.findUnique({
         where: { id: request.params.interviewId },
         include: {
-          application: {
-            select: {
-              candidateId: true,
-              job: { select: { agencyId: true } },
-            },
-          },
+          candidate: { select: { id: true, agencyId: true } },
           panel: { select: { userId: true } },
           evaluations: {
-            include: { interviewer: { select: { id: true, name: true, email: true } } },
+            include: {
+              interviewer: { select: { id: true, name: true, email: true } },
+              scores: { include: { criterion: { select: { id: true, name: true, maxPoints: true } } } },
+            },
             orderBy: { createdAt: 'asc' },
           },
         },
       });
 
-      if (!interview) {
-        return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
-      }
+      if (!interview) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
       const user = request.authUser!;
       const allowed =
         user.role === 'ADMIN'
-        || (user.role === 'AGENCY' && user.agencyId === interview.application.job.agencyId)
+        || (user.role === 'AGENCY' && user.agencyId === interview.candidate.agencyId)
         || (user.role === 'INTERVIEWER' && interview.panel.some((item) => item.userId === user.id))
-        || (user.role === 'INTERVIEWEE' && user.candidateId === interview.application.candidateId);
+        || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidateId);
 
-      if (!allowed) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to these evaluations.' } });
-      }
+      if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to these evaluations.' } });
 
       return reply.send({
         success: true,
         data: {
           evaluations: interview.evaluations,
-          summary: summary(interview.evaluations, interview.panel.length),
+          summary: buildSummary(interview.evaluations, interview.panel.length),
         },
       });
     },
@@ -74,34 +72,48 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requireAuth },
     async (request, reply) => {
       const user = request.authUser!;
-
       if (user.role !== 'INTERVIEWER') {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Only interviewers can submit evaluations.' } });
       }
 
       const errors = validateEvaluationInput(request.body);
-      if (errors.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_EVALUATION', message: errors.join(' ') } });
-      }
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_EVALUATION', message: errors.join(' ') } });
 
       const interview = await getPrisma().interview.findUnique({
         where: { id: request.params.interviewId },
         include: {
-          application: { select: { id: true, candidateId: true, job: { select: { agencyId: true } } } },
+          candidate: { select: { id: true, agencyId: true, name: true, status: true } },
           panel: { select: { userId: true } },
         },
       });
 
-      if (!interview) {
-        return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
-      }
-
+      if (!interview) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
       if (!interview.panel.some((item) => item.userId === user.id)) {
         return reply.code(403).send({ success: false, error: { code: 'PANEL_ACCESS_DENIED', message: 'You are not assigned to this interview panel.' } });
       }
-
       if (interview.status !== 'SCHEDULED') {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_OPEN', message: 'Evaluations can only be submitted for scheduled interviews.' } });
+      }
+
+      const criteria = await getPrisma().interviewCriterion.findMany({
+        where: { agencyId: interview.candidate.agencyId, active: true },
+        select: { id: true, name: true, maxPoints: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (!criteria.length) {
+        return reply.code(409).send({ success: false, error: { code: 'NO_ACTIVE_CRITERIA', message: 'No active interview criteria are configured for this agency.' } });
+      }
+
+      const criteriaById = new Map(criteria.map((criterion) => [criterion.id, criterion]));
+      const submittedScores = request.body.scores!;
+      if (submittedScores.length !== criteria.length || submittedScores.some((score) => !criteriaById.has(score.criterionId))) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: 'Every active interview criterion must be scored exactly once.' } });
+      }
+      for (const score of submittedScores) {
+        const criterion = criteriaById.get(score.criterionId)!;
+        if (score.points > criterion.maxPoints) {
+          return reply.code(400).send({ success: false, error: { code: 'SCORE_TOO_HIGH', message: 'Score for "' + criterion.name + '" cannot exceed ' + criterion.maxPoints + ' points.' } });
+        }
       }
 
       try {
@@ -110,61 +122,76 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             data: {
               interviewId: interview.id,
               interviewerId: user.id,
-              rating: request.body.rating!,
-              recommendation: request.body.recommendation!,
               comments: request.body.comments?.trim() || null,
+              scores: {
+                create: submittedScores.map((score) => ({ criterionId: score.criterionId, points: score.points })),
+              },
             },
-            include: { interviewer: { select: { id: true, name: true, email: true } } },
+            include: {
+              interviewer: { select: { id: true, name: true, email: true } },
+              scores: { include: { criterion: { select: { id: true, name: true, maxPoints: true } } } },
+            },
           });
 
           const evaluations = await tx.interviewEvaluation.findMany({
             where: { interviewId: interview.id },
-            select: { rating: true, recommendation: true },
+            include: { scores: { include: { criterion: { select: { maxPoints: true } } } } },
           });
 
-          let applicationStatus: 'INTERVIEW' | 'SELECTED' | 'REJECTED' = 'INTERVIEW';
-
+          let interviewCompleted = false;
           if (evaluations.length === interview.panel.length) {
-            applicationStatus = resolveApplicationStatus(evaluations.map((item) => item.recommendation));
-            await tx.interview.update({
-              where: { id: interview.id },
-              data: { status: 'COMPLETED' },
-            });
-            await tx.jobApplication.update({
-              where: { id: interview.application.id },
-              data: { status: applicationStatus },
-            });
+            interviewCompleted = true;
+            await tx.interview.update({ where: { id: interview.id }, data: { status: 'COMPLETED' } });
+
+            if (interview.candidate.status !== 'INTERVIEW_COMPLETED') {
+              await tx.candidate.update({
+                where: { id: interview.candidateId },
+                data: { status: 'INTERVIEW_COMPLETED', statusUpdatedAt: new Date() },
+              });
+              await tx.candidateStatusHistory.create({
+                data: {
+                  candidateId: interview.candidateId,
+                  fromStatus: interview.candidate.status,
+                  toStatus: 'INTERVIEW_COMPLETED',
+                  reason: 'All interview panel evaluations were submitted.',
+                  changedById: user.id,
+                },
+              });
+            }
           }
 
-          return { evaluation, evaluations, applicationStatus };
+          return { evaluation, evaluations, interviewCompleted };
         });
+
+        const summary = buildSummary(result.evaluations, interview.panel.length);
 
         await recordAuditEvent({
           actorId: user.id,
-          agencyId: interview.application.job.agencyId,
+          agencyId: interview.candidate.agencyId,
           action: 'EVALUATION_SUBMITTED',
           entityType: 'InterviewEvaluation',
           entityId: result.evaluation.id,
-          summary: 'Submitted interview evaluation for interview ' + interview.id + '.',
+          summary: 'Submitted criteria scores for interview ' + interview.id + '.',
         });
-        if (result.evaluations.length === interview.panel.length) {
+
+        if (result.interviewCompleted) {
           await notifyCandidateAccount(
-            interview.application.candidateId,
-            { type: 'INTERVIEW_DECISION', title: 'Interview decision recorded', message: 'Your interview has been completed and the application status is now ' + result.applicationStatus.toLowerCase() + '.' },
+            interview.candidate.id,
+            { type: 'INTERVIEW_COMPLETED', title: 'Interview completed', message: 'Your interview has been completed. The recruitment team will update your candidate status after review.' },
           );
           await notifyAgencyUsers(
-            interview.application.job.agencyId,
-            { type: 'INTERVIEW_DECISION', title: 'Interview decision recorded', message: 'Interview completed with final application status: ' + result.applicationStatus.toLowerCase() + '.' },
+            interview.candidate.agencyId,
+            { type: 'INTERVIEW_COMPLETED', title: 'Interview completed', message: 'All panel evaluations are complete for ' + interview.candidate.name + '. Please review the score summary and update the candidate status.' },
             ['AGENCY'],
           );
         }
+
         return reply.code(201).send({
           success: true,
           data: {
             evaluation: result.evaluation,
-            summary: summary(result.evaluations, interview.panel.length),
-            interviewCompleted: result.evaluations.length === interview.panel.length,
-            applicationStatus: result.applicationStatus,
+            summary,
+            interviewCompleted: result.interviewCompleted,
           },
         });
       } catch (error) {
