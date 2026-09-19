@@ -28,7 +28,7 @@ const packageJson = JSON.parse(read('package.json'));
 for (const role of ['ADMIN', 'AGENCY', 'INTERVIEWER', 'INTERVIEWEE']) {
   assert.match(sidebar, new RegExp(role));
 }
-for (const view of ['dashboard', 'jobs', 'candidates', 'applications', 'interviews', 'agencies', 'settings']) {
+for (const view of ['dashboard', 'jobs', 'candidates', 'interviews', 'criteria', 'agencies', 'settings']) {
   assert.match(app, new RegExp(view));
 }
 
