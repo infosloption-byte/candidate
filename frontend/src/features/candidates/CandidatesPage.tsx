@@ -407,8 +407,11 @@ export const CandidatesPage = ({ role }: Props) => {
     } catch (requestError: unknown) { setError(requestError instanceof Error ? requestError.message : 'Unable to update onboarding status.'); }
   };
 
+  const maskPassport = (value: string | null) => value ? (value.length <= 4 ? value : '••••' + value.slice(-4)) : 'Not provided';
+
   const columns = [
     { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p></div> },
+    { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
@@ -436,13 +439,20 @@ export const CandidatesPage = ({ role }: Props) => {
         <Card>
           <h2 className="text-sm font-black text-slate-950">Add candidate to pool</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></FormField>
+            <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></FormField>
+            <FormField label="Country / nationality"><input className="field-input" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} placeholder="Sri Lanka" /></FormField>
+            <FormField label="Contact number"><input className="field-input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} autoComplete="tel" /></FormField>
+            <FormField label="Alternate contact number"><input className="field-input" value={form.alternatePhone} onChange={(event) => setForm({ ...form, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
+            <FormField label="Email"><input type="email" className="field-input" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} autoComplete="email" /></FormField>
+            <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} placeholder="Passport number" /></FormField>
+            <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
+            <FormField label="Current location"><input className="field-input" value={form.currentLocation} onChange={(event) => setForm({ ...form, currentLocation: event.target.value })} placeholder="Colombo, Sri Lanka" /></FormField>
+            <FormField label="Availability"><select className="field-input" value={form.availability} onChange={(event) => setForm({ ...form, availability: event.target.value })}><option value="">Select availability</option><option value="Immediately">Immediately</option><option value="Within 2 weeks">Within 2 weeks</option><option value="Within 1 month">Within 1 month</option><option value="Not available">Not available</option></select></FormField>
+            <FormField label="Visa / work status"><select className="field-input" value={form.visaStatus} onChange={(event) => setForm({ ...form, visaStatus: event.target.value })}><option value="">Select status</option><option value="Available">Available</option><option value="Required">Required</option><option value="In process">In process</option><option value="Expired">Expired</option><option value="Not applicable">Not applicable</option></select></FormField>
             <FormField label="Profession"><input className="field-input" value={form.profession} onChange={(event) => setForm({ ...form, profession: event.target.value })} /></FormField>
-            <FormField label="Email"><input type="email" className="field-input" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></FormField>
-            <FormField label="Phone"><input className="field-input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></FormField>
-            <FormField label="Experience years"><input type="number" min="0" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
+            <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
             {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
-            <FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField>
+            <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
           </div>
           <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
         </Card>
@@ -463,11 +473,18 @@ export const CandidatesPage = ({ role }: Props) => {
               <p className="mt-1 text-xs text-slate-400">Keep your contact, profession, experience, and skills up to date.</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
+                <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
+                <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
+                <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
                 <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} autoComplete="email" /></FormField>
-                <FormField label="Phone"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
+                <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
+                <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
+                <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
+                <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} placeholder="Immediately / Within 2 weeks" /></FormField>
+                <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} placeholder="Available / Required / In process" /></FormField>
                 <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} placeholder="Mason, Welder…" /></FormField>
                 <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                <FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField>
+                <div className="sm:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
               </div>
               <div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
               <div className="mt-6 border-t border-slate-100 pt-6"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
@@ -477,11 +494,18 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <Card>
-            <div className="grid gap-3 md:grid-cols-[1.5fr_.7fr]">
-              <FormField label="Candidate search"><input className="field-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, reference, profession, phone…" /></FormField>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="xl:col-span-2"><FormField label="Candidate search"><input className="field-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, passport, contact, location, skills…" /></FormField></div>
               <FormField label="Status"><select className="field-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option>{statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></FormField>
+              <FormField label="Country"><select className="field-input" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}><option value="">All countries</option>{filterOptions.countries.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
+              <FormField label="Profession"><select className="field-input" value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}><option value="">All professions</option>{filterOptions.professions.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
+              <FormField label="Availability"><select className="field-input" value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}><option value="">Any availability</option>{filterOptions.availabilities.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
+              <FormField label="Visa / work status"><select className="field-input" value={visaStatusFilter} onChange={(event) => setVisaStatusFilter(event.target.value)}><option value="">Any visa status</option>{filterOptions.visaStatuses.map((value) => <option key={value} value={value}>{value}</option>)}</select></FormField>
             </div>
-            <p className="mt-3 text-xs text-slate-400">{filteredCandidates.length} candidate(s) in this view.</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-400">{filteredCandidates.length} candidate(s) in this view.</p>
+              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter) && <Button size="sm" variant="ghost" onClick={() => { setSearch(''); setStatusFilter(''); setCountryFilter(''); setProfessionFilter(''); setAvailabilityFilter(''); setVisaStatusFilter(''); }}>Clear filters</Button>}
+            </div>
           </Card>
           <Card>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -537,11 +561,18 @@ export const CandidatesPage = ({ role }: Props) => {
                   <h3 className="text-sm font-black text-slate-950">Edit candidate profile</h3>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
+                    <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
+                    <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
+                    <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} /></FormField>
                     <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
-                    <FormField label="Phone"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
+                    <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
+                    <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
+                    <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
+                    <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} /></FormField>
+                    <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} /></FormField>
                     <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
                     <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                    <FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField>
+                    <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
                     <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
@@ -550,11 +581,17 @@ export const CandidatesPage = ({ role }: Props) => {
                 </div>
               ) : (
               <>
-                <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p><p className="mt-1 text-xs text-slate-500">{candidate.phone ?? 'No phone'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact number</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-1 text-xs text-slate-500">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Identity</p><p className="mt-2 text-sm font-bold text-slate-800">{maskPassport(candidate.passportNumber)}</p><p className="mt-1 text-xs text-slate-500">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Country / location</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.country ?? 'Not set'}</p><p className="mt-1 text-xs text-slate-500">{candidate.currentLocation ?? 'Location not set'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Work readiness</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-1 text-xs text-slate-500">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
                 </div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
+                </div>
+                <div className="mt-4 rounded-2xl bg-slate-50 p-4"><div className="flex flex-wrap items-center gap-2"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
                 <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div><p className="text-xs font-black text-slate-900">Onboarding review</p><p className="mt-1 text-[11px] text-slate-500">Review the candidate profile before completing onboarding.</p></div>
