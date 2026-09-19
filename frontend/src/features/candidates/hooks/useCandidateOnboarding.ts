@@ -1,8 +1,12 @@
 import { useMemo } from 'react';
 import { useCandidateContext } from './useCandidateContext';
-import { buildOnboardingUpdate } from '../services/candidateOnboarding';
-import { buildInvitationTransition, type InvitationAction } from '../services/candidateInvitations';
-import type { CandidateOnboardingStatus } from '../types/candidate';
+import {
+  resendCandidateInvitationApi,
+  sendCandidateInvitationApi,
+  transitionCandidateInvitationApi,
+  updateCandidateOnboardingApi,
+} from '../services/candidateOnboardingApi';
+import type { Candidate, CandidateOnboardingStatus } from '../types/candidate';
 
 export const useCandidateOnboarding = () => {
   const { state, dispatch } = useCandidateContext();
@@ -20,30 +24,47 @@ export const useCandidateOnboarding = () => {
     };
   }, [state.candidates]);
 
-  const applyInvitation = (candidateId: string, action: InvitationAction) => {
-    const candidate = state.candidates.find((item) => item.id === candidateId);
-    if (!candidate) return;
-    const update = buildInvitationTransition(candidate, action);
-    dispatch({ type: 'UPDATE_ONBOARDING', candidateId, onboarding: update.onboarding, journeyEvent: update.journeyEvent });
+  const reconcile = (candidate: Candidate) => {
+    dispatch({ type: 'REPLACE_CANDIDATE', candidate });
   };
 
-  const updateStatus = (candidateId: string, status: CandidateOnboardingStatus, reviewerNote = '') => {
-    const candidate = state.candidates.find((item) => item.id === candidateId);
-    if (!candidate) return;
-    const update = buildOnboardingUpdate(candidate, status, reviewerNote);
-    dispatch({ type: 'UPDATE_ONBOARDING', candidateId, onboarding: update.onboarding, journeyEvent: update.journeyEvent });
+  const updateStatus = async (
+    candidateId: string,
+    status: CandidateOnboardingStatus,
+    reviewerNote = '',
+  ): Promise<void> => {
+    const response = await updateCandidateOnboardingApi(candidateId, status, reviewerNote);
+    reconcile(response.candidate);
+  };
+
+  const sendInvitation = async (candidateId: string): Promise<void> => {
+    const response = await sendCandidateInvitationApi(candidateId);
+    reconcile(response.candidate);
+  };
+
+  const resendInvitation = async (candidateId: string): Promise<void> => {
+    const response = await resendCandidateInvitationApi(candidateId);
+    reconcile(response.candidate);
+  };
+
+  const transitionInvitation = async (
+    candidateId: string,
+    action: 'opened' | 'started' | 'expired' | 'cancelled',
+  ): Promise<void> => {
+    const response = await transitionCandidateInvitationApi(candidateId, action);
+    reconcile(response.candidate);
   };
 
   return {
     counts,
     actions: {
       updateStatus,
-      sendInvitation: (candidateId: string) => applyInvitation(candidateId, 'send'),
-      resendInvitation: (candidateId: string) => applyInvitation(candidateId, 'resend'),
-      markInvitationOpened: (candidateId: string) => applyInvitation(candidateId, 'opened'),
-      markStarted: (candidateId: string) => applyInvitation(candidateId, 'started'),
-      expireInvitation: (candidateId: string) => applyInvitation(candidateId, 'expired'),
-      cancelInvitation: (candidateId: string) => applyInvitation(candidateId, 'cancelled'),
+      sendInvitation,
+      resendInvitation,
+      markInvitationOpened: (candidateId: string) => transitionInvitation(candidateId, 'opened'),
+      markStarted: (candidateId: string) => transitionInvitation(candidateId, 'started'),
+      expireInvitation: (candidateId: string) => transitionInvitation(candidateId, 'expired'),
+      cancelInvitation: (candidateId: string) => transitionInvitation(candidateId, 'cancelled'),
       markSubmitted: (candidateId: string) => updateStatus(candidateId, 'submitted'),
       requestChanges: (candidateId: string, note: string) => updateStatus(candidateId, 'needs-changes', note),
       markCompleted: (candidateId: string) => updateStatus(candidateId, 'completed'),
