@@ -13,6 +13,7 @@ import {
   listInterviewsController,
   recordDecisionController,
   rescheduleInterviewController,
+  undoRescheduleController,
   updateInterviewNoteController,
   updateCriterionNoteController,
   updateInterviewStatusController,
@@ -147,4 +148,19 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     onRequest: [app.authenticate, app.authorize("interview.schedule")],
     schema: { params: interviewIdParamsSchema, body: rescheduleBodySchema },
   }, rescheduleInterviewController);
+
+  app.post<{ Params: { id: string; historyId: string } }>("/interviews/:id/reschedule/:historyId/undo", {
+    onRequest: [app.authenticate, app.authorize("interview.schedule")],
+    schema: {
+      params: {
+        type: "object",
+        required: ["id", "historyId"],
+        additionalProperties: false,
+        properties: {
+          id: { type: "string", maxLength: 36 },
+          historyId: { type: "string", maxLength: 36 },
+        },
+      },
+    },
+  }, undoRescheduleController);
 };
