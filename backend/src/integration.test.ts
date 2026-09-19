@@ -233,6 +233,47 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
   assert.equal(interviewerCandidates.statusCode, 403);
 });
 
+dbTest('agency bulk candidate import preserves profile fields and rejects duplicate emails', async () => {
+  assert.ok(app);
+
+  const agencyCookie = await login(emails.agencyA);
+  const firstEmail = 'bulk-one-' + suffix + '@buildhire.local';
+  const secondEmail = 'bulk-two-' + suffix + '@buildhire.local';
+  const csv = [
+    'name,email,phone,profession,experienceYears,skills',
+    'Bulk Candidate One,' + firstEmail + ',+94 77 100 1001,Mason,8,"Masonry,Blockwork,Plastering"',
+    'Bulk Candidate Two,' + secondEmail + ',+94 77 100 1002,Structural Welder,12,"Arc Welding,Steel Fabrication"',
+  ].join('\n') + '\n';
+
+  const importResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
+    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
+    payload: csv,
+  });
+  assert.equal(importResponse.statusCode, 201);
+
+  const importBody = json<{ data: { importedCount: number; candidates: Array<{ name: string; email: string | null; experienceYears: number | null; skills: unknown }> } }>(importResponse);
+  assert.equal(importBody.data.importedCount, 2);
+  assert.deepEqual(
+    importBody.data.candidates.map((item) => ({ name: item.name, email: item.email, experienceYears: item.experienceYears })),
+    [
+      { name: 'Bulk Candidate One', email: firstEmail, experienceYears: 8 },
+      { name: 'Bulk Candidate Two', email: secondEmail, experienceYears: 12 },
+    ],
+  );
+
+  const duplicateResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
+    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
+    payload: [
+      'name,email,phone,profession,experienceYears,skills',
+      'Duplicate Candidate,' + firstEmail + ',+94 77 100 1003,Mason,3,"Masonry"',
+    ].join('\n') + '\n',
+  });
+  assert.equal(duplicateResponse.statusCode, 400);
+});
 dbTest('candidate can be assigned directly to interview, scored, finalized, and viewed in history', async () => {
   assert.ok(app);
 
