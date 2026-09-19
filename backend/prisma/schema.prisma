@@ -168,32 +168,16 @@ model Job {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  applications JobApplication[]
-}
-
-model JobApplication {
-  id          String            @id @default(uuid()) @db.VarChar(36)
-  jobId       String            @db.VarChar(36)
-  candidateId String            @db.VarChar(36)
-  status      ApplicationStatus @default(APPLIED)
-  appliedAt   DateTime          @default(now())
-  notes       String?           @db.Text
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  job        Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  candidate  Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  agency     Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   interviews Interview[]
 
-  @@unique([jobId, candidateId])
-  @@index([jobId, status])
-  @@index([candidateId, status])
+  @@index([agencyId, status])
 }
 
 model Interview {
   id            String          @id @default(uuid()) @db.VarChar(36)
-  applicationId String          @db.VarChar(36)
+  candidateId   String          @db.VarChar(36)
+  jobId         String?         @db.VarChar(36)
   type          InterviewType
   status        InterviewStatus @default(SCHEDULED)
   scheduledAt   DateTime
@@ -203,11 +187,13 @@ model Interview {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  application JobApplication        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job       Job?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
   panel       InterviewParticipant[]
   evaluations InterviewEvaluation[]
 
-  @@index([applicationId, scheduledAt])
+  @@index([candidateId, scheduledAt])
+  @@index([jobId, scheduledAt])
   @@index([status, scheduledAt])
 }
 
