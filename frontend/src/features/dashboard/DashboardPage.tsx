@@ -96,8 +96,8 @@ export const DashboardPage = ({ role }: Props) => {
   const stats = role === 'ADMIN'
     ? [
         { label: 'Active agencies', value: agencies.filter((agency) => agency.status === 'ACTIVE').length },
-        { label: 'Open positions', value: jobs.filter((job) => job.status === 'PUBLISHED').length },
         { label: 'Candidate pool', value: candidates.length },
+        { label: 'Pending decisions', value: candidateStatusCounts.get('INTERVIEW_COMPLETED') ?? 0 },
         { label: 'Scheduled interviews', value: interviews.filter((item) => item.status === 'SCHEDULED').length },
       ]
     : role === 'AGENCY'
@@ -165,6 +165,28 @@ export const DashboardPage = ({ role }: Props) => {
                     <StatusPill value={interview.status} />
                   </div>
                 )) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No upcoming interviews.</p>}
+              </div>
+            </Card>
+
+            <Card>
+              <h2 className="text-sm font-black text-slate-950">Pending candidate decisions</h2>
+              <p className="mt-1 text-xs text-slate-400">Candidates whose interview process is complete and are waiting for a final lifecycle decision.</p>
+              <div className="mt-5 space-y-3">
+                {role === 'ADMIN' && candidates.filter((candidate) => candidate.status === 'INTERVIEW_COMPLETED').slice(0, 5).map((candidate) => (
+                  <div key={candidate.id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-900">{candidate.name}</p>
+                      <p className="mt-1 text-xs text-slate-400">{candidate.reference} · {candidate.profession ?? 'Profession not set'}</p>
+                    </div>
+                    <StatusPill value={candidate.status} />
+                  </div>
+                ))}
+                {role === 'ADMIN' && candidates.filter((candidate) => candidate.status === 'INTERVIEW_COMPLETED').length === 0 && (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No candidates are currently waiting for a final decision.</p>
+                )}
+                {role === 'AGENCY' && (
+                  <p className="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">Use the Candidates or Interviews workspace to review completed interview scores and record the final candidate status.</p>
+                )}
               </div>
             </Card>
 
