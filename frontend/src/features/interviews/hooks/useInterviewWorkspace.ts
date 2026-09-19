@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { createInterviewApi, updateInterviewStatusApi } from '../services/interviewApi';
 import { useInterviewContext } from '../context/useInterviewContext';
 import type { Decision, Interview, InterviewStatus, PracticalResult } from '../types/interview';
 
@@ -28,8 +29,16 @@ export const useInterviewWorkspace = () => {
     selectInterview: (interviewId: string) => dispatch({ type: 'SELECT_INTERVIEW', interviewId }),
     openSchedule: () => dispatch({ type: 'OPEN_SCHEDULE_DRAWER' }),
     closeSchedule: () => dispatch({ type: 'CLOSE_SCHEDULE_DRAWER' }),
-    createInterview: (interview: Interview) => dispatch({ type: 'CREATE_INTERVIEW', interview }),
-    updateStatus: (interviewId: string, status: InterviewStatus) => dispatch({ type: 'UPDATE_STATUS', interviewId, status }),
+    createInterview: async (interview: Interview) => {
+      const created = await createInterviewApi(interview);
+      dispatch({ type: 'CREATE_INTERVIEW', interview: created });
+      return created;
+    },
+    updateStatus: async (interviewId: string, status: InterviewStatus) => {
+      const updated = await updateInterviewStatusApi(interviewId, status);
+      dispatch({ type: 'REPLACE_INTERVIEW', interview: updated });
+      return updated;
+    },
     setScore: (interviewId: string, criterionId: string, score: number | null) => dispatch({ type: 'SET_SCORE', interviewId, criterionId, score }),
     setCriterionNote: (interviewId: string, criterionId: string, note: string) => dispatch({ type: 'SET_CRITERION_NOTE', interviewId, criterionId, note }),
     setPracticalResult: (interviewId: string, itemId: string, result: PracticalResult) => dispatch({ type: 'SET_PRACTICAL_RESULT', interviewId, itemId, result }),
