@@ -17,6 +17,13 @@ const candidateSelect = {
   name: true,
   email: true,
   phone: true,
+  alternatePhone: true,
+  country: true,
+  passportNumber: true,
+  passportExpiry: true,
+  currentLocation: true,
+  availability: true,
+  visaStatus: true,
   profession: true,
   experienceYears: true,
   skills: true,
@@ -134,6 +141,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             name: request.body.name!.trim(),
             email: request.body.email?.trim().toLowerCase() || null,
             phone: request.body.phone?.trim() || null,
+            alternatePhone: request.body.alternatePhone?.trim() || null,
+            country: request.body.country?.trim() || null,
+            passportNumber: request.body.passportNumber?.trim() || null,
+            passportExpiry: request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
+            currentLocation: request.body.currentLocation?.trim() || null,
+            availability: request.body.availability?.trim() || null,
+            visaStatus: request.body.visaStatus?.trim() || null,
             profession: request.body.profession?.trim() || null,
             experienceYears: request.body.experienceYears ?? null,
             skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
@@ -190,8 +204,21 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         const skills = (row.skills ?? '').split(/[;|]/).map((skill) => skill.trim()).filter(Boolean);
         const experienceRaw = row.experienceyears?.trim() || row.experience?.trim() || '';
         const experienceYears = experienceRaw ? Number(experienceRaw) : null;
+        const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
         const input: CandidateInput = {
-          name: row.name, email, phone: row.phone || null, profession: row.profession || null, experienceYears, skills,
+          name: row.name,
+          email,
+          phone: row.phone || row.contactnumber || row.contact_number || null,
+          alternatePhone: row.alternatephone || row.alternate_phone || null,
+          country: row.country || row.nationality || null,
+          passportNumber: row.passportnumber || row.passport_number || null,
+          passportExpiry: passportExpiryRaw || null,
+          currentLocation: row.currentlocation || row.current_location || row.location || null,
+          availability: row.availability || null,
+          visaStatus: row.visastatus || row.visa_status || null,
+          profession: row.profession || null,
+          experienceYears,
+          skills,
         };
         const rowErrors = validateCandidateInput(input, 'create');
         if (email && emails.has(email)) rowErrors.push('Email is duplicated in this file.');
@@ -221,6 +248,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
               name: input.name!.trim(),
               email: input.email?.trim().toLowerCase() || null,
               phone: input.phone?.trim() || null,
+              alternatePhone: input.alternatePhone?.trim() || null,
+              country: input.country?.trim() || null,
+              passportNumber: input.passportNumber?.trim() || null,
+              passportExpiry: input.passportExpiry?.trim() ? new Date(input.passportExpiry) : null,
+              currentLocation: input.currentLocation?.trim() || null,
+              availability: input.availability?.trim() || null,
+              visaStatus: input.visaStatus?.trim() || null,
               profession: input.profession?.trim() || null,
               experienceYears: input.experienceYears ?? null,
               skills: input.skills ?? [],
@@ -271,10 +305,17 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             agencyId: agency.id,
             reference: getReference(),
             name: request.body.name!.trim(),
-            email: request.body.email?.trim().toLowerCase() || null,
-            phone: request.body.phone?.trim() || null,
-            profession: request.body.profession?.trim() || null,
-            experienceYears: request.body.experienceYears ?? null,
+              email: request.body.email?.trim().toLowerCase() || null,
+              phone: request.body.phone?.trim() || null,
+              alternatePhone: request.body.alternatePhone?.trim() || null,
+              country: request.body.country?.trim() || null,
+              passportNumber: request.body.passportNumber?.trim() || null,
+              passportExpiry: request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
+              currentLocation: request.body.currentLocation?.trim() || null,
+              availability: request.body.availability?.trim() || null,
+              visaStatus: request.body.visaStatus?.trim() || null,
+              profession: request.body.profession?.trim() || null,
+              experienceYears: request.body.experienceYears ?? null,
             skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
             onboardingStatus: 'SUBMITTED',
             source: 'SELF_ONBOARDED',
@@ -393,6 +434,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.name !== undefined) data.name = request.body.name.trim();
       if (request.body.email !== undefined) data.email = request.body.email?.trim().toLowerCase() || null;
       if (request.body.phone !== undefined) data.phone = request.body.phone?.trim() || null;
+      if (request.body.alternatePhone !== undefined) data.alternatePhone = request.body.alternatePhone?.trim() || null;
+      if (request.body.country !== undefined) data.country = request.body.country?.trim() || null;
+      if (request.body.passportNumber !== undefined) data.passportNumber = request.body.passportNumber?.trim() || null;
+      if (request.body.passportExpiry !== undefined) data.passportExpiry = request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null;
+      if (request.body.currentLocation !== undefined) data.currentLocation = request.body.currentLocation?.trim() || null;
+      if (request.body.availability !== undefined) data.availability = request.body.availability?.trim() || null;
+      if (request.body.visaStatus !== undefined) data.visaStatus = request.body.visaStatus?.trim() || null;
       if (request.body.profession !== undefined) data.profession = request.body.profession?.trim() || null;
       if (request.body.experienceYears !== undefined) data.experienceYears = request.body.experienceYears;
       if (request.body.skills !== undefined) data.skills = request.body.skills.map((skill) => skill.trim()).filter(Boolean);
