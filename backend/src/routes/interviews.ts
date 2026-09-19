@@ -135,6 +135,156 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: interview });
   });
 
+  app.post<{
+    Body: InterviewInput & { jobId?: string | null; candidateIds?: string[] }
+  }>(
+    '/interviews/bulk',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const candidateIds = [...new Set(request.body.candidateIds ?? [])];
+      if (!candidateIds.length || candidateIds.length > 100) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATES', message: 'Select between 1 and 100 candidates.' } });
+      }
+
+      const errors = validateInterviewInput(request.body, 'create');
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW', message: errors.join(' ') } });
+
+      const candidates = await getPrisma().candidate.findMany({
+        where: { id: { in: candidateIds } },
+        select: { id: true, agencyId: true, name: true, status: true },
+      });
+      if (candidates.length !== candidateIds.length) {
+        return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
+      }
+
+      const agencyIds = new Set(candidates.map((candidate) => candidate.agencyId));
+      if (agencyIds.size !== 1) {
+        return reply.code(400).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'Bulk interview candidates must belong to the same agency.' } });
+      }
+      const agencyId = candidates[0]!.agencyId;
+      if (!canManage(request.authUser!.role, request.authUser!.agencyId, agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule these candidates.' } });
+      }
+
+      const unavailable = candidates.filter((candidate) => isTerminalCandidateStatus(candidate.status));
+      if (unavailable.length) {
+        return reply.code(409).send({
+          success: false,
+          error: {
+            code: 'CANDIDATES_NOT_AVAILABLE',
+            message: 'One or more selected candidates have a final or inactive status.',
+            candidates: unavailable.map((candidate) => ({ id: candidate.id, name: candidate.name, status: candidate.status })),
+          },
+        });
+      }
+
+      let job: { id: string; agencyId: string; title: string; location: string | null } | null = null;
+      if (request.body.jobId) {
+        job = await getPrisma().job.findUnique({
+          where: { id: request.body.jobId },
+          select: { id: true, agencyId: true, title: true, location: true },
+        });
+        if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+        if (job.agencyId !== agencyId) return reply.code(409).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'The selected job does not belong to the candidate agency.' } });
+      }
+
+      const interviewerIds = [...new Set(request.body.interviewerIds!)];
+      const interviewers = await getInterviewers(interviewerIds, agencyId);
+      if (interviewers.length !== interviewerIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the candidate agency.' } });
+      }
+
+      const scheduledAt = new Date(request.body.scheduledAt!);
+      const durationMins = request.body.durationMins ?? 30;
+      if (scheduledAt.getTime() <= Date.now()) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
+      }
+
+      const schedule = candidateIds.map((candidateId, index) => ({
+        candidateId,
+        scheduledAt: new Date(scheduledAt.getTime() + index * durationMins * 60_000),
+      }));
+
+      for (const slot of schedule) {
+        if (await hasScheduleConflict(interviewerIds, slot.candidateId, slot.scheduledAt, durationMins)) {
+          const candidate = candidates.find((item) => item.id === slot.candidateId)!;
+          return reply.code(409).send({
+            success: false,
+            error: {
+              code: 'SCHEDULE_CONFLICT',
+              message: 'Schedule conflict for "' + candidate.name + '" at ' + slot.scheduledAt.toISOString() + '.',
+            },
+          });
+        }
+      }
+
+      const prisma = getPrisma();
+      const created = await prisma.$transaction(async (tx) => {
+        const records = [];
+        for (const slot of schedule) {
+          const candidate = candidates.find((item) => item.id === slot.candidateId)!;
+          const interview = await tx.interview.create({
+            data: {
+              candidateId: candidate.id,
+              jobId: job?.id ?? null,
+              type: request.body.type!,
+              scheduledAt: slot.scheduledAt,
+              durationMins,
+              location: request.body.location?.trim() || null,
+              notes: request.body.notes?.trim() || null,
+              panel: { create: interviewerIds.map((userId) => ({ userId })) },
+            },
+            include: interviewInclude,
+          });
+          await tx.candidate.update({
+            where: { id: candidate.id },
+            data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
+          });
+          await addCandidateStatusHistory(
+            tx,
+            candidate.id,
+            candidate.status,
+            'INTERVIEW_SCHEDULED',
+            'Interview ' + interview.id + ' scheduled.',
+            request.authUser!.id,
+          );
+          records.push(interview);
+        }
+        return records;
+      });
+
+      for (const result of created) {
+        await recordAuditEvent({
+          actorId: request.authUser!.id,
+          agencyId,
+          action: 'INTERVIEW_SCHEDULED',
+          entityType: 'Interview',
+          entityId: result.id,
+          summary: 'Scheduled ' + result.type + ' interview for "' + result.candidate.name + '".',
+        });
+        await createNotifications(result.panel.map((participant) => ({
+          userId: participant.userId,
+          type: 'INTERVIEW_SCHEDULED',
+          title: 'Interview scheduled',
+          message: 'Your panel interview for "' + result.candidate.name + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
+        })));
+        await notifyCandidateAccount(
+          result.candidate.id,
+          { type: 'INTERVIEW_SCHEDULED', title: 'Interview scheduled', message: 'Your ' + result.type.toLowerCase() + ' interview is scheduled for ' + result.scheduledAt.toISOString() + '.' },
+        );
+      }
+
+      return reply.code(201).send({
+        success: true,
+        data: {
+          importedCount: created.length,
+          candidates: created,
+          slotMinutes: durationMins,
+        },
+      });
+    },
+  );
+
   app.post<{ Params: CandidateInterviewParams; Body: InterviewInput & { jobId?: string | null } }>(
     '/candidates/:candidateId/interviews',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
