@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { getApplication, getCandidate, getJob, getUser } from '../../domain/fixtures';
 import { useRecruitment } from '../../domain/recruitmentContext';
@@ -70,6 +70,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
   const [evaluating, setEvaluating] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (developmentMode) {
@@ -121,15 +122,27 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     };
   }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id, panel.length]);
 
-  const visible = role === 'INTERVIEWER'
-    ? developmentMode
-      ? state.interviews.filter((item) => item.panelUserIds.includes('user-interviewer-1'))
-      : interviews
-    : role === 'INTERVIEWEE'
+  const visible = useMemo(() => {
+    const base = role === 'INTERVIEWER'
       ? developmentMode
-        ? state.interviews.filter((item) => state.applications.find((application) => application.id === item.applicationId)?.candidateId === (user?.candidateId ?? 'candidate-1'))
+        ? state.interviews.filter((item) => item.panelUserIds.includes('user-interviewer-1'))
         : interviews
-      : interviews;
+      : role === 'INTERVIEWEE'
+        ? developmentMode
+          ? state.interviews.filter((item) => state.applications.find((application) => application.id === item.applicationId)?.candidateId === (user?.candidateId ?? 'candidate-1'))
+          : interviews
+        : interviews;
+    const query = search.trim().toLowerCase();
+    if (!query) return base;
+    return base.filter((interview) => {
+      const application = interview.application;
+      const candidate = application?.candidate ?? localCandidate(interview);
+      const job = application?.job ?? localJob(interview);
+      const panelNames = interview.panel?.map((item) => item.user.name) ?? [];
+      return [candidate?.name ?? '', candidate?.reference ?? '', job?.title ?? '', job?.location ?? '', interview.type, interview.status, ...panelNames]
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [developmentMode, interviews, role, search, state.applications, state.interviews, user?.candidateId]);
 
   const applicationCandidates = applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
 
@@ -285,6 +298,16 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching schedules and panel assignments." />}
       {error && <StateMessage kind="error" title="Interview action failed" description={error} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
+
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="field-label">Interview search</p>
+            <p className="mt-1 text-xs text-slate-400">Search candidate, job, panel member, interview type, or status.</p>
+          </div>
+          <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search interviews…" aria-label="Search interviews" />
+        </div>
+      </Card>
 
       {showForm && role === 'AGENCY' && (
         <Card>

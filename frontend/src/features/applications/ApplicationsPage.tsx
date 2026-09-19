@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { applications as fixtureApplications, candidates as fixtureCandidates, jobs as fixtureJobs } from '../../domain/fixtures';
@@ -49,6 +49,7 @@ export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (developmentMode) {
@@ -107,6 +108,17 @@ export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
     ? (state.jobs.length ? state.jobs : fixtureJobs)
     : [];
 
+  const filteredApplications = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return applications;
+    return applications.filter((application) => {
+      const candidate = application.candidate ?? candidateData.find((item) => item.id === application.candidateId);
+      const job = application.job ?? jobData.find((item) => item.id === application.jobId);
+      return [candidate?.name ?? '', candidate?.reference ?? '', candidate?.email ?? '', candidate?.profession ?? '', job?.title ?? '', job?.location ?? '', application.status]
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [applications, candidateData, jobData, search]);
+
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
@@ -128,9 +140,20 @@ export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
       )}
 
       {!loading && applications.length > 0 && (
-        <div className="grid gap-4">
+        <>
+          <Card>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="field-label">Application search</p>
+                <p className="mt-1 text-xs text-slate-400">Search candidate, job, profession, location, or status.</p>
+              </div>
+              <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search applications…" aria-label="Search applications" />
+            </div>
+            {search && <p className="mt-3 text-xs font-semibold text-slate-500">Showing {filteredApplications.length} of {applications.length} applications.</p>}
+          </Card>
+          <div className="grid gap-4">
           {pipeline.map((stage) => {
-            const stageApplications = applications.filter((application) => application.status === stage);
+            const stageApplications = filteredApplications.filter((application) => application.status === stage);
             return (
               <Card key={stage}>
                 <div className="flex items-center justify-between">
@@ -166,7 +189,8 @@ export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
               </Card>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
     </section>
   );

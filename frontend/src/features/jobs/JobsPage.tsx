@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -34,6 +34,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
   const [form, setForm] = useState(emptyForm);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (developmentMode) {
@@ -242,7 +243,12 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     }
   };
 
-  const visibleJobs = jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
+  const visibleJobs = useMemo(() => {
+    const available = jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
+    const query = search.trim().toLowerCase();
+    if (!query) return available;
+    return available.filter((job) => [job.title, job.description ?? '', job.location ?? '', job.status].some((value) => value.toLowerCase().includes(query)));
+  }, [jobs, role, search]);
 
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -260,6 +266,16 @@ export const JobsPage = ({ role }: JobsPageProps) => {
       {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest job advertisements." />}
       {error && <StateMessage kind="error" title="Job action failed" description={error} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
+
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="field-label">Job search</p>
+            <p className="mt-1 text-xs text-slate-400">Search by title, location, description, or status.</p>
+          </div>
+          <input className="field-input w-full sm:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search jobs…" aria-label="Search jobs" />
+        </div>
+      </Card>
 
       {showForm && (
         <Card>
