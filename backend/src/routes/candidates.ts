@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
+import type { Prisma } from '../generated/prisma/client.js';
 import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateCandidateInput, type CandidateInput } from '../domain/candidateValidation.js';
@@ -27,6 +28,8 @@ const candidateSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+type CandidateRecord = Prisma.CandidateGetPayload<{ select: typeof candidateSelect }>;
 
 const getReference = (): string => 'CA-' + randomBytes(5).toString('hex').toUpperCase();
 
@@ -126,7 +129,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be added to an inactive agency.' } });
 
       const prisma = getPrisma();
-      let candidate: Awaited<ReturnType<typeof prisma.candidate.update>>;
+      let candidate: CandidateRecord;
       try {
         candidate = await prisma.$transaction(async (tx) => {
         const created = await tx.candidate.create({
