@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
+import { useAuth } from '../../auth/hooks/useAuth';
 import { InterviewContext } from './InterviewContextObject';
-import { loadInterviews, loadInterviewers, saveInterviews } from '../services/interviewRepository';
+import { loadInterviews, loadInterviewers } from '../services/interviewRepository';
 import type { InterviewAction, InterviewState, Interviewer } from '../types/interview';
 
 const toIsoDate = (date: Date): string => {
@@ -38,6 +39,14 @@ export const interviewReducer = (state: InterviewState, action: InterviewAction)
     case 'CREATE_INTERVIEWS':
       if (action.interviews.length === 0) return state;
       return { ...state, interviews: [...action.interviews, ...state.interviews], selectedInterviewId: action.interviews[0]?.id ?? state.selectedInterviewId, isScheduleDrawerOpen: false, calendarDate: toIsoDate(new Date(`${action.interviews[0]?.date ?? state.calendarDate} ${action.interviews[0]?.time ?? '09:00'}`)) };
+    case 'REPLACE_INTERVIEW':
+      return {
+        ...state,
+        interviews: state.interviews.some((item) => item.id === action.interview.id)
+          ? state.interviews.map((item) => item.id === action.interview.id ? action.interview : item)
+          : [action.interview, ...state.interviews],
+        selectedInterviewId: action.interview.id,
+      };
     case 'UPDATE_STATUS': return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, status: action.status } : interview) };
     case 'SET_SCORE':
       return { ...state, interviews: state.interviews.map((interview) => interview.id !== action.interviewId ? interview : { ...interview, scorecard: { ...interview.scorecard, criteria: interview.scorecard.criteria.map((criterion) => criterion.id === action.criterionId ? { ...criterion, score: action.score } : criterion) } }) };
@@ -122,11 +131,13 @@ export const interviewReducer = (state: InterviewState, action: InterviewAction)
 };
 
 export const InterviewProvider = ({ children }: PropsWithChildren) => {
+  const { state: authState } = useAuth();
   const [state, dispatch] = useReducer(interviewReducer, initialState);
 
   useEffect(() => {
     let cancelled = false;
     const hydrate = async () => {
+      if (!authState.authenticated || authState.user.role === 'candidate') return;
       try {
         const [interviews, interviewers] = await Promise.all([loadInterviews(), loadInterviewers()]);
         if (!cancelled) dispatch({ type: 'HYDRATE', interviews, interviewers });
@@ -136,12 +147,7 @@ export const InterviewProvider = ({ children }: PropsWithChildren) => {
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [state.loadAttempt]);
-
-  useEffect(() => {
-    if (state.loadState !== 'success') return;
-    void saveInterviews(state.interviews).catch(() => undefined);
-  }, [state.interviews, state.loadState]);
+  }, [authState.authenticated, authState.user.role, state.loadAttempt]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <InterviewContext.Provider value={value}>{children}</InterviewContext.Provider>;
