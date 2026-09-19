@@ -50,20 +50,8 @@ export const createSeedInterviews = (): Interview[] => [
   },
 ];
 
-export const loadInterviews = async (): Promise<Interview[]> => {
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return createSeedInterviews();
-  const parsed: unknown = JSON.parse(raw);
-  return Array.isArray(parsed) ? parsed as Interview[] : createSeedInterviews();
-};
+import { fetchInterviews, fetchInterviewers } from "./interviewApi";
 
-export const saveInterviews = async (interviews: Interview[]): Promise<void> => {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(interviews));
-};
-
-export const loadInterviewers = async (): Promise<Interviewer[]> => {
-  const raw = window.localStorage.getItem(INTERVIEWER_KEY);
-  if (!raw) return interviewerSeed;
-  const parsed: unknown = JSON.parse(raw);
-  return Array.isArray(parsed) ? parsed as Interviewer[] : interviewerSeed;
-};
+export const loadInterviews = async (): Promise<Interview[]> => fetchInterviews();
+export const loadInterviewers = async (): Promise<Interviewer[]> => fetchInterviewers();
+export const saveInterviews = async (_interviews: Interview[]): Promise<void> => undefined;
