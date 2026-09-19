@@ -86,6 +86,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       skills,
     }, 'self');
 
+    if (!email) {
+      profileErrors.push('A valid email address is required.');
+    }
+    if (password.length > 128) {
+      profileErrors.push('Password must be 128 characters or fewer.');
+    }
+
     if (profileErrors.length) {
       return reply.code(400).send({
         success: false,
