@@ -107,7 +107,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned · 🧪 verify
 
 - ✅ Create Node.js + TypeScript backend under `backend/`.
 - ✅ Add Fastify health endpoints, standardized API responses, backend CI and strict server error handling.
-- 🧪 Backend local verification baseline confirmed: Prisma Client generation, Prisma schema validation, backend tests, and TypeScript production build all pass on the current `main` implementation.
+- 🧪 Backend local verification baseline confirmed: Prisma Client generation, Prisma schema validation, backend tests (2 passing), TypeScript production build, database reset/migration application, and repeated idempotent development seeding all pass locally. The generated migration must still be committed to `main` before migration reproducibility is considered repository-complete.
 - 🔄 Add tenant-scoped authentication/session infrastructure and RBAC enforcement.
 - 🔄 Add tenant-scoped Candidate REST API matching the existing frontend Candidate contract.
 - ✅ Define REST API contracts matching frontend domain types.
