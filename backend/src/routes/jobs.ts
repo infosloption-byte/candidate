@@ -17,6 +17,11 @@ interface AgencyJobParams {
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
+
+    if (user.role === 'INTERVIEWER') {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access job details through assigned interviews.' } });
+    }
+
     let candidateAgencyId: string | null = null;
 
     if (user.role === 'INTERVIEWEE' && user.candidateId) {
