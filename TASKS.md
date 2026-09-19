@@ -81,17 +81,18 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Assign multiple interviewers as a panel.
 - ✅ Add basic schedule-conflict validation.
 - ✅ Add reschedule and cancellation API.
-- 🔄 Build interview list/calendar UI against Interview API.
-- 🔄 Add interviewer My Interviews view against Interview API.
+- ✅ Build interview list/calendar UI against Interview API.
+- ✅ Add interviewer My Interviews view against Interview API.
 - ⏳ Add interview scheduling integration tests.
 
 ## Phase 7 — Evaluations
 
-- ⏳ Build InterviewEvaluation API and persistence.
-- ⏳ Allow each panel interviewer to submit one evaluation.
-- ⏳ Store rating, recommendation, and comments.
-- ⏳ Show evaluation summary.
-- ⏳ Map evaluation result to application status.
+- ✅ Build InterviewEvaluation API and persistence.
+- ✅ Allow each panel interviewer to submit one evaluation.
+- ✅ Store rating, recommendation, and comments.
+- ✅ Show evaluation summary API.
+- ✅ Map completed panel recommendations to application status.
+- 🔄 Connect interviewer evaluation form to Evaluation API.
 - ⏳ Add evaluation authorization tests.
 - ⏳ Add evaluation workflow tests.
 
