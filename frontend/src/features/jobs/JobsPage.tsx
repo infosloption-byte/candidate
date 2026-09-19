@@ -16,6 +16,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [successTitle, setSuccessTitle] = useState('');
   const [form, setForm] = useState({ title: '', description: '', location: '', openings: '1' });
   const candidateId = state.users.find((user) => user.role === 'INTERVIEWEE')?.candidateId;
   const jobs = state.jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
@@ -42,6 +43,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     setForm({ title: '', description: '', location: '', openings: '1' });
     setShowForm(false);
     setError('');
+    setSuccessTitle('Job created');
     setSuccess(`"${job.title}" was created as a draft.`);
   };
 
@@ -58,7 +60,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
         )}
       />
 
-      {success && <StateMessage kind="success" title="Job created" description={success} />}
+      {success && <StateMessage kind="success" title={successTitle} description={success} />}
       {showForm && (
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
@@ -114,6 +116,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                             appliedAt: new Date().toISOString(),
                           },
                         });
+                        setSuccessTitle('Application submitted');
                         setSuccess(`Application submitted for "${job.title}".`);
                       }}
                       disabled={alreadyApplied}

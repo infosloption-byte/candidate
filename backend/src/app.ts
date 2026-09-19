@@ -2,6 +2,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { env } from './config/env.js';
+import { agencyRoutes } from './routes/agencies.js';
+import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 
 export const buildApp = (): FastifyInstance => {
@@ -17,7 +19,10 @@ export const buildApp = (): FastifyInstance => {
     origin: env.corsOrigin,
     credentials: true,
   });
+
   void app.register(healthRoutes, { prefix: '/api/v1' });
+  void app.register(authRoutes, { prefix: '/api/v1' });
+  void app.register(agencyRoutes, { prefix: '/api/v1' });
 
   return app;
 };

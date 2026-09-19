@@ -26,15 +26,15 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 
 ## Phase 2 — Authentication and agencies
 
-- ⏳ Implement login and session handling.
-- ⏳ Implement Admin agency CRUD.
-- ⏳ Implement Agency user management.
-- ⏳ Implement role-based access: Admin / Agency / Interviewer / Interviewee.
-- ⏳ Implement agency-scoped authorization.
+- ✅ Implement login and session handling.
+- ✅ Implement Admin agency CRUD.
+- ✅ Implement Agency user management.
+- ✅ Implement role-based access: Admin / Agency / Interviewer / Interviewee.
+- ✅ Implement agency-scoped authorization.
 - ⏳ Implement Interviewer user onboarding.
 - ⏳ Implement Interviewee account linkage.
-- ⏳ Add secure password handling and session expiry.
-- ⏳ Add backend authentication tests.
+- ✅ Add secure password handling and session expiry.
+- 🔄 Add backend authentication/integration tests (password hashing is covered; DB-backed route tests remain for the QA phase).
 
 ## Phase 3 — Jobs
 
