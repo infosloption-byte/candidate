@@ -7,13 +7,8 @@ import { csvRowsToObjects } from '../domain/csv.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers } from '../lib/notifications.js';
 
-interface CandidateParams {
-  id: string;
-}
-
-interface AgencyCandidateParams {
-  agencyId: string;
-}
+interface CandidateParams { id: string; }
+interface AgencyCandidateParams { agencyId: string; }
 
 const candidateSelect = {
   id: true,
@@ -27,20 +22,22 @@ const candidateSelect = {
   skills: true,
   onboardingStatus: true,
   source: true,
+  status: true,
+  statusUpdatedAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
 
 const getReference = (): string => 'CA-' + randomBytes(5).toString('hex').toUpperCase();
 
+const canManageCandidate = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
+  role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId);
+
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
-  app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => {
-    done(null, body);
-  });
+  app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => done(null, body));
 
   app.get('/candidates', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-
     if (!['ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access candidate details through assigned interviews.' } });
     }
@@ -49,71 +46,102 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       where: user.role === 'ADMIN'
         ? undefined
         : user.role === 'INTERVIEWEE'
-          ? user.candidateId
-            ? { id: user.candidateId }
-            : { id: '__not_found__' }
+          ? user.candidateId ? { id: user.candidateId } : { id: '__not_found__' }
           : { agencyId: user.agencyId ?? '__missing__' },
       select: candidateSelect,
       orderBy: { createdAt: 'desc' },
     });
-
     return reply.send({ success: true, data: candidates });
   });
 
   app.get<{ Params: CandidateParams }>('/candidates/:id', { preHandler: requireAuth }, async (request, reply) => {
-    const candidate = await getPrisma().candidate.findUnique({
-      where: { id: request.params.id },
-      select: candidateSelect,
-    });
-
-    if (!candidate) {
-      return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
-    }
+    const candidate = await getPrisma().candidate.findUnique({ where: { id: request.params.id }, select: candidateSelect });
+    if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
     const user = request.authUser!;
-    const allowed =
-      user.role === 'ADMIN'
-      || (user.role === 'INTERVIEWEE' && user.candidateId === candidate.id)
-      || (user.role === 'AGENCY' && user.agencyId === candidate.agencyId);
-
-    if (!allowed) {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
-    }
+    const allowed = canManageCandidate(user.role, user.agencyId, candidate.agencyId)
+      || (user.role === 'INTERVIEWEE' && user.candidateId === candidate.id);
+    if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
 
     return reply.send({ success: true, data: candidate });
   });
+
+  app.get<{ Params: CandidateParams }>(
+    '/candidates/:id/history',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const candidate = await getPrisma().candidate.findUnique({
+        where: { id: request.params.id },
+        select: { id: true, agencyId: true },
+      });
+      if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
+
+      if (!canManageCandidate(request.authUser!.role, request.authUser!.agencyId, candidate.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate history.' } });
+      }
+
+      const [statusHistory, interviews] = await Promise.all([
+        getPrisma().candidateStatusHistory.findMany({
+          where: { candidateId: candidate.id },
+          include: { changedBy: { select: { id: true, name: true, role: true } } },
+          orderBy: { createdAt: 'desc' },
+        }),
+        getPrisma().interview.findMany({
+          where: { candidateId: candidate.id },
+          include: {
+            job: { select: { id: true, title: true, location: true } },
+            panel: { select: { userId: true, user: { select: { id: true, name: true, email: true, active: true } } } },
+            evaluations: {
+              select: {
+                id: true,
+                interviewerId: true,
+                createdAt: true,
+                scores: { select: { points: true, criterion: { select: { id: true, name: true, maxPoints: true } } } },
+              },
+            },
+          },
+          orderBy: { scheduledAt: 'desc' },
+        }),
+      ]);
+
+      return reply.send({ success: true, data: { statusHistory, interviews } });
+    },
+  );
 
   app.post<{ Params: AgencyCandidateParams; Body: CandidateInput }>(
     '/agencies/:agencyId/candidates',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const errors = validateCandidateInput(request.body, 'create');
-      if (errors.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
-      }
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
 
       const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
-      if (!agency) {
-        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
-      }
-      if (agency.status !== 'ACTIVE') {
-        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be added to an inactive agency.' } });
-      }
+      if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be added to an inactive agency.' } });
 
-      const candidate = await getPrisma().candidate.create({
-        data: {
-          agencyId: agency.id,
-          reference: getReference(),
-          name: request.body.name!.trim(),
-          email: request.body.email?.trim().toLowerCase() || null,
-          phone: request.body.phone?.trim() || null,
-          profession: request.body.profession?.trim() || null,
-          experienceYears: request.body.experienceYears ?? null,
-          skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
-          onboardingStatus: 'NOT_STARTED',
-          source: 'AGENCY_ADDED',
-        },
-        select: candidateSelect,
+      const prisma = getPrisma();
+      const candidate = await prisma.$transaction(async (tx) => {
+        const created = await tx.candidate.create({
+          data: {
+            agencyId: agency.id,
+            reference: getReference(),
+            name: request.body.name!.trim(),
+            email: request.body.email?.trim().toLowerCase() || null,
+            phone: request.body.phone?.trim() || null,
+            profession: request.body.profession?.trim() || null,
+            experienceYears: request.body.experienceYears ?? null,
+            skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
+            onboardingStatus: 'NOT_STARTED',
+            source: 'AGENCY_ADDED',
+            status: 'POOL',
+          },
+          select: candidateSelect,
+        });
+
+        await tx.candidateStatusHistory.create({
+          data: { candidateId: created.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate added to the candidate pool.', changedById: request.authUser!.id },
+        });
+        return created;
       });
 
       await recordAuditEvent({
@@ -122,7 +150,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_CREATED',
         entityType: 'Candidate',
         entityId: candidate.id,
-        summary: 'Added candidate "' + candidate.name + '".',
+        summary: 'Added candidate "' + candidate.name + '" to the candidate pool.',
       });
       return reply.code(201).send({ success: true, data: candidate });
     },
@@ -133,105 +161,53 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const csv = request.body;
-
-      if (typeof csv !== 'string' || !csv.trim()) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV content is required.' } });
-      }
-      if (csv.length > 2_000_000) {
-        return reply.code(413).send({ success: false, error: { code: 'CSV_TOO_LARGE', message: 'CSV must be 2 MB or smaller.' } });
-      }
+      if (typeof csv !== 'string' || !csv.trim()) return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV content is required.' } });
+      if (csv.length > 2_000_000) return reply.code(413).send({ success: false, error: { code: 'CSV_TOO_LARGE', message: 'CSV must be 2 MB or smaller.' } });
 
       let rows: Array<Record<string, string>>;
-      try {
-        rows = csvRowsToObjects(csv);
-      } catch (error) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: error instanceof Error ? error.message : 'CSV could not be parsed.' } });
-      }
+      try { rows = csvRowsToObjects(csv); }
+      catch (error) { return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: error instanceof Error ? error.message : 'CSV could not be parsed.' } }); }
 
-      if (!rows.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV must contain a header row and at least one candidate row.' } });
-      }
-      if (rows.length > 500) {
-        return reply.code(400).send({ success: false, error: { code: 'CSV_ROW_LIMIT', message: 'A single import can contain at most 500 candidate rows.' } });
-      }
+      if (!rows.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV must contain a header row and at least one candidate row.' } });
+      if (rows.length > 500) return reply.code(400).send({ success: false, error: { code: 'CSV_ROW_LIMIT', message: 'A single import can contain at most 500 candidate rows.' } });
 
       const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
-      if (!agency) {
-        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
-      }
-      if (agency.status !== 'ACTIVE') {
-        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be imported into an inactive agency.' } });
-      }
+      if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be imported into an inactive agency.' } });
 
       const errors: string[] = [];
       const emails = new Set<string>();
       const candidateInputs: CandidateInput[] = [];
 
       rows.forEach((row, index) => {
-        const rowNumber = index + 2;
         const email = row.email?.trim().toLowerCase() || null;
-        const skills = (row.skills ?? '')
-          .split(/[;|]/)
-          .map((skill) => skill.trim())
-          .filter(Boolean);
-        const experienceYears = row.experienceYears?.trim()
-          ? Number(row.experienceYears)
-          : null;
-
+        const skills = (row.skills ?? '').split(/[;|]/).map((skill) => skill.trim()).filter(Boolean);
+        const experienceYears = row.experienceYears?.trim() ? Number(row.experienceYears) : null;
         const input: CandidateInput = {
-          name: row.name,
-          email,
-          phone: row.phone || null,
-          profession: row.profession || null,
-          experienceYears,
-          skills,
+          name: row.name, email, phone: row.phone || null, profession: row.profession || null, experienceYears, skills,
         };
-
         const rowErrors = validateCandidateInput(input, 'create');
-        if (email && emails.has(email)) {
-          rowErrors.push('Email is duplicated in this file.');
-        }
+        if (email && emails.has(email)) rowErrors.push('Email is duplicated in this file.');
         if (email) emails.add(email);
-
-        if (rowErrors.length) {
-          errors.push(`Row ${rowNumber}: ${rowErrors.join(' ')}`);
-        }
-
+        if (rowErrors.length) errors.push('Row ' + (index + 2) + ': ' + rowErrors.join(' '));
         candidateInputs.push(input);
       });
 
       const existingEmails = emails.size
-        ? await getPrisma().candidate.findMany({
-            where: { agencyId: agency.id, email: { in: [...emails] } },
-            select: { email: true },
-          })
+        ? await getPrisma().candidate.findMany({ where: { agencyId: agency.id, email: { in: [...emails] } }, select: { email: true } })
         : [];
-
       const existingEmailSet = new Set(existingEmails.map((item) => item.email).filter(Boolean).map((item) => item!.toLowerCase()));
-
       candidateInputs.forEach((input, index) => {
-        if (input.email && existingEmailSet.has(input.email.toLowerCase())) {
-          errors.push(`Row ${index + 2}: Email is already registered for this agency.`);
-        }
+        if (input.email && existingEmailSet.has(input.email.toLowerCase())) errors.push('Row ' + (index + 2) + ': Email is already registered for this agency.');
       });
 
-      if (errors.length) {
-        return reply.code(400).send({
-          success: false,
-          error: {
-            code: 'CSV_VALIDATION_FAILED',
-            message: 'CSV import was not applied because one or more rows are invalid.',
-            rows: errors,
-          },
-        });
-      }
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'CSV_VALIDATION_FAILED', message: 'CSV import was not applied because one or more rows are invalid.', rows: errors } });
 
       const prisma = getPrisma();
       const imported = await prisma.$transaction(async (tx) => {
         const created = [];
-
         for (const input of candidateInputs) {
-          created.push(await tx.candidate.create({
+          const candidate = await tx.candidate.create({
             data: {
               agencyId: agency.id,
               reference: getReference(),
@@ -243,11 +219,15 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
               skills: input.skills ?? [],
               onboardingStatus: 'NOT_STARTED',
               source: 'BULK_IMPORTED',
+              status: 'POOL',
             },
             select: candidateSelect,
-          }));
+          });
+          await tx.candidateStatusHistory.create({
+            data: { candidateId: candidate.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate imported into the candidate pool.', changedById: request.authUser!.id },
+          });
+          created.push(candidate);
         }
-
         return created;
       });
 
@@ -257,7 +237,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATES_IMPORTED',
         entityType: 'CandidateImport',
         entityId: agency.id,
-        summary: 'Imported ' + imported.length + ' candidates from CSV.',
+        summary: 'Imported ' + imported.length + ' candidates into the candidate pool.',
       });
       return reply.code(201).send({ success: true, data: { importedCount: imported.length, candidates: imported } });
     },
@@ -268,23 +248,15 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('INTERVIEWEE')] },
     async (request, reply) => {
       const user = request.authUser!;
-      if (user.candidateId) {
-        return reply.code(409).send({ success: false, error: { code: 'CANDIDATE_ALREADY_LINKED', message: 'This account is already linked to a candidate.' } });
-      }
+      if (user.candidateId) return reply.code(409).send({ success: false, error: { code: 'CANDIDATE_ALREADY_LINKED', message: 'This account is already linked to a candidate.' } });
 
       const errors = validateCandidateInput(request.body, 'self');
       if (!request.body.agencyId) errors.push('Agency is required for self-onboarding.');
-      if (errors.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
-      }
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
 
       const agency = await getPrisma().agency.findUnique({ where: { id: request.body.agencyId! } });
-      if (!agency) {
-        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
-      }
-      if (agency.status !== 'ACTIVE') {
-        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Self-onboarding is not available for this agency.' } });
-      }
+      if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Self-onboarding is not available for this agency.' } });
 
       const result = await getPrisma().$transaction(async (tx) => {
         const candidate = await tx.candidate.create({
@@ -299,15 +271,16 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
             onboardingStatus: 'SUBMITTED',
             source: 'SELF_ONBOARDED',
+            status: 'POOL',
           },
           select: candidateSelect,
         });
 
-        await tx.user.update({
-          where: { id: user.id },
-          data: { candidateId: candidate.id },
+        await tx.candidateStatusHistory.create({
+          data: { candidateId: candidate.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate joined the candidate pool through self-onboarding.', changedById: user.id },
         });
 
+        await tx.user.update({ where: { id: user.id }, data: { candidateId: candidate.id } });
         return candidate;
       });
 
@@ -317,7 +290,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_SELF_SUBMITTED',
         entityType: 'Candidate',
         entityId: result.id,
-        summary: 'Candidate "' + result.name + '" submitted a self-onboarding profile.',
+        summary: 'Candidate "' + result.name + '" completed self-onboarding and entered the candidate pool.',
       });
       await notifyAgencyUsers(
         agency.id,
@@ -333,37 +306,24 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requireAuth },
     async (request, reply) => {
       const existing = await getPrisma().candidate.findUnique({ where: { id: request.params.id }, select: candidateSelect });
-      if (!existing) {
-        return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
-      }
+      if (!existing) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
       const user = request.authUser!;
       const isSelf = user.role === 'INTERVIEWEE' && user.candidateId === existing.id;
-      const canManage = user.role === 'ADMIN' || ((user.role === 'AGENCY') && user.agencyId === existing.agencyId);
-
-      if (!isSelf && !canManage) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to update this candidate.' } });
-      }
+      const canManage = canManageCandidate(user.role, user.agencyId, existing.agencyId);
+      if (!isSelf && !canManage) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to update this candidate.' } });
 
       const errors = validateCandidateInput(request.body, 'update');
-      if (errors.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
-      }
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
 
+      if (isSelf && (request.body.status !== undefined || request.body.statusReason !== undefined)) {
+        return reply.code(403).send({ success: false, error: { code: 'INVALID_STATUS_CHANGE', message: 'Interviewees cannot change candidate lifecycle status.' } });
+      }
       if (isSelf && request.body.onboardingStatus !== undefined && request.body.onboardingStatus !== 'SUBMITTED') {
         return reply.code(403).send({ success: false, error: { code: 'INVALID_STATUS_CHANGE', message: 'Interviewees may only submit their own profile.' } });
       }
 
-      const data: {
-        name?: string;
-        email?: string | null;
-        phone?: string | null;
-        profession?: string | null;
-        experienceYears?: number | null;
-        skills?: string[];
-        onboardingStatus?: CandidateInput['onboardingStatus'];
-      } = {};
-
+      const data: Record<string, unknown> = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
       if (request.body.email !== undefined) data.email = request.body.email?.trim().toLowerCase() || null;
       if (request.body.phone !== undefined) data.phone = request.body.phone?.trim() || null;
@@ -373,19 +333,38 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.onboardingStatus !== undefined && canManage) data.onboardingStatus = request.body.onboardingStatus;
       if (isSelf) data.onboardingStatus = 'SUBMITTED';
 
-      const candidate = await getPrisma().candidate.update({
-        where: { id: existing.id },
-        data,
-        select: candidateSelect,
+      if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
+        data.status = request.body.status;
+        data.statusUpdatedAt = new Date();
+      }
+
+      const prisma = getPrisma();
+      const candidate = await prisma.$transaction(async (tx) => {
+        const updated = await tx.candidate.update({ where: { id: existing.id }, data, select: candidateSelect });
+
+        if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
+          await tx.candidateStatusHistory.create({
+            data: {
+              candidateId: existing.id,
+              fromStatus: existing.status,
+              toStatus: request.body.status,
+              reason: request.body.statusReason?.trim() || null,
+              changedById: user.id,
+            },
+          });
+        }
+        return updated;
       });
 
       await recordAuditEvent({
         actorId: user.id,
         agencyId: candidate.agencyId,
-        action: 'CANDIDATE_UPDATED',
+        action: request.body.status !== undefined && request.body.status !== existing.status ? 'CANDIDATE_STATUS_CHANGED' : 'CANDIDATE_UPDATED',
         entityType: 'Candidate',
         entityId: candidate.id,
-        summary: 'Updated candidate "' + candidate.name + '".',
+        summary: request.body.status !== undefined && request.body.status !== existing.status
+          ? 'Changed candidate "' + candidate.name + '" status to ' + candidate.status + '.'
+          : 'Updated candidate "' + candidate.name + '".',
       });
       return reply.send({ success: true, data: candidate });
     },
