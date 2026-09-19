@@ -131,6 +131,13 @@ enum ApprovalStatus {
   RETURNED
 }
 
+enum SelectionHistoryAction {
+  DECISION_CHANGED
+  REASSIGNED
+  APPROVAL_CHANGED
+  ALLOCATED
+}
+
 enum JourneyTone {
   NEUTRAL
   POSITIVE
@@ -186,9 +193,11 @@ model User {
   interviewAssignments InterviewerAssignment[]
   decisions            SelectionRecord[]       @relation("SelectionDecider")
   approvals            SelectionApproval[]     @relation("ApprovalActor")
+  selectionHistory     SelectionHistory[]     @relation("SelectionHistoryActor")
   notifications        Notification[]
   auditEvents          AuditEvent[]
   sessions             Session[]
+  selectionHistory     SelectionHistory[]
   tenant               Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, role, active])
@@ -335,6 +344,7 @@ model Job {
   updatedAt           DateTime           @updatedAt
 
   tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scoringWeights      Json
   selections          SelectionRecord[]
   approval            SelectionApproval?
 
@@ -528,4 +538,29 @@ model AuditEvent {
 
   @@index([tenantId, entityType, entityId, occurredAt])
   @@index([tenantId, actorUserId, occurredAt])
+}
+
+
+model SelectionHistory {
+  id           String                 @id @default(uuid()) @db.VarChar(36)
+  tenantId     String                 @db.VarChar(36)
+  candidateId  String?                @db.VarChar(36)
+  jobId        String                 @db.VarChar(36)
+  relatedJobId String?                @db.VarChar(36)
+  action       SelectionHistoryAction
+  fromDecision SelectionDecision?
+  toDecision   SelectionDecision?
+  reason       String                 @db.VarChar(160)
+  note         String                 @db.Text
+  occurredAt   DateTime               @default(now())
+  occurredById String                 @db.VarChar(36)
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  candidate    Candidate?             @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  job          Job                    @relation("SelectionHistoryJob", fields: [jobId], references: [id], onDelete: Cascade)
+  relatedJob   Job?                   @relation("SelectionHistoryRelatedJob", fields: [relatedJobId], references: [id], onDelete: SetNull)
+  occurredBy   User                   @relation(fields: [occurredById], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, jobId, occurredAt])
+  @@index([tenantId, candidateId, occurredAt])
 }
