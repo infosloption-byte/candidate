@@ -170,7 +170,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     const base = interviews.filter((interview) => {
-      const candidate = interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
+      const linkedCandidate = candidates.find((item) => item.id === interview.candidateId);
+      const candidate = interview.candidate ?? linkedCandidate;
       const job = interview.job ?? jobs.find((item) => item.id === interview.jobId);
       const panelNames = interview.panel?.map((item) => item.user?.name ?? '') ?? [];
       const matchesSearch = !query || [
@@ -178,7 +179,7 @@ export const InterviewsPage = ({ role }: Props) => {
         candidate?.reference ?? '',
         candidate?.profession ?? '',
         candidate?.email ?? '',
-        ('phone' in (candidate ?? {}) ? candidate?.phone ?? '' : ''),
+        linkedCandidate?.phone ?? '',
         job?.title ?? '',
         job?.location ?? '',
         interview.type,
