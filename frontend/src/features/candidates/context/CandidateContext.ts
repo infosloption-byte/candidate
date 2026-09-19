@@ -48,6 +48,7 @@ export type CandidateAction =
   | { type: 'CLOSE_BULK_IMPORT' }
   | { type: 'ADD_CANDIDATE'; candidate: Candidate }
   | { type: 'BULK_ADD_CANDIDATES'; candidates: Candidate[] }
+  | { type: 'REPLACE_CANDIDATE'; candidate: Candidate }
   | { type: 'UPDATE_ONBOARDING'; candidateId: string; onboarding: CandidateOnboarding; journeyEvent: CandidateJourneyEvent }
   | { type: 'UPDATE_PROFILE'; candidateId: string; changes: Partial<Candidate>; journeyEvent: CandidateJourneyEvent }
   | { type: 'UPDATE_DOCUMENTS'; candidateId: string; documents: Candidate['documents']; journeyEvent: CandidateJourneyEvent }
