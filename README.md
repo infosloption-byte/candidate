@@ -1,53 +1,76 @@
 # BuildHire — Construction Recruitment Platform
 
-This repository has been reset to a smaller product scope and is being rebuilt from a clean domain model.
+BuildHire is a lightweight construction recruitment and interview management platform built around a candidate-first workflow.
 
 ## Product roles
 
-- **Admin** — system administrator.
-- **Agency** — recruitment agency that publishes jobs and onboards candidates.
-- **Interviewer** — person who conducts interviews and submits evaluations.
-- **Interviewee** — candidate who applies for jobs and completes onboarding.
+- **Admin** — manages all agency workspaces and can operate the complete recruitment workflow on behalf of any agency.
+- **Agency** — manages its own candidate pool, positions, interviews, and interviewers.
+- **Interviewer** — sees assigned interviews and completes interview scorecards.
+- **Interviewee** — maintains their own candidate profile and sees assigned interview information.
 
 ## Core workflow
 
-`Agency → Publish Job → Onboard Candidate → Candidate Applies → Schedule Interview → Assign Interviewer / Panel → Interview Evaluation → Decision`
+`Agency → Candidate Pool → Assign Candidate to Interview → Interview Panel → Criteria Scoring → Interview Completed → Final Candidate Status → Candidate History`
 
-Candidate onboarding supports three entry modes in the target product:
+A candidate is added to the system once and remains in the candidate pool. There is no separate job-application workflow.
+
+Positions/jobs remain available as optional context when an interview is assigned; they do not create an application record.
+
+Candidate onboarding supports:
 
 - Candidate self-onboarding.
 - Agency-created onboarding.
-- Bulk agency onboarding.
+- Bulk agency onboarding by CSV.
+
+## Candidate record
+
+Each candidate maintains a persistent profile containing:
+
+- identity and contact information
+- profession, experience, and skills
+- onboarding state
+- lifecycle status
+- candidate documents
+- interview history
+- interview score totals
+- status-change history
+- candidate activity/audit history
+
+## Interview and scoring
+
+An interview is assigned directly to a candidate and may optionally reference a job/position.
+
+An interview can have one or more active interviewers. Each panel interviewer submits one scorecard using the agency's configured interview criteria. Each criterion has its own maximum points.
+
+When all assigned interviewers have completed their scorecards:
+
+1. the interview is marked completed;
+2. the candidate moves to **INTERVIEW_COMPLETED**;
+3. the score summary is retained with the interview history;
+4. Admin or Agency records the final candidate status, such as **PASSED**, **REJECTED**, **HIRED**, or **ON_HOLD**.
+
+## Admin operations
+
+Admin has cross-agency access for operational work. The Admin interface can select an agency workspace and manage:
+
+- candidates and candidate history
+- jobs/positions
+- interview assignment, rescheduling, and cancellation
+- interview criteria
+- agency users and interviewers
+- agency activation/deactivation
 
 ## Repository layout
 
 ```text
 candidate/
-├── frontend/       # React 19 + TypeScript + Tailwind visual shell
-├── backend/        # Fastify + TypeScript API
-├── docs/           # Current rebuild plan
+├── frontend/       # React 19 + TypeScript + Tailwind
+├── backend/        # Fastify + TypeScript + Prisma/MySQL
+├── docs/           # Current product/release documentation
 ├── TASKS.md        # Living implementation tracker
 └── README.md
 ```
-
-## Current implementation
-
-The rebuilt system now has the core database model and protected API workflow for:
-
-- session-based authentication with four roles
-- Admin agency management
-- Agency and Interviewer account management
-- candidate self-registration and agency onboarding
-- job create/edit/publish/close
-- candidate applications and duplicate protection
-- application workflow progression
-- interview scheduling against an application
-- single or panel interview assignment
-- interviewer/candidate schedule conflict checks
-- panel evaluation and application decision
-- optional candidate document upload with agency-isolated access
-
-The frontend is connected to these APIs for authentication, jobs, candidates, applications, interviews, evaluations, and candidate documents. Set `VITE_API_BASE_URL` when the API is not served from the default `/api/v1` path.
 
 ## Development setup
 
@@ -66,7 +89,7 @@ npm run prisma:seed
 npm run dev
 ```
 
-The seed requires `BUILDHIRE_SEED_PASSWORD` and creates a demo agency plus Admin, Agency, and Interviewer accounts. The email addresses are configurable in `.env`.
+The seed requires `BUILDHIRE_SEED_PASSWORD` and creates a demo agency plus Admin, Agency, and Interviewer accounts. It also creates the default interview scoring criteria for the demo agency.
 
 ### Frontend
 
@@ -82,17 +105,19 @@ Vite proxies `/api` requests to `http://localhost:4000` during development.
 
 ### Candidate self-registration
 
-Open the frontend without an active session, choose **Create a candidate account**, select an active agency, complete the profile, and submit. The API creates the Interviewee account and linked Candidate record in one transaction.
+Open the frontend without an active session, choose **Create a candidate account**, select an active agency, complete the profile, and submit. The API creates the Interviewee account and linked Candidate record in one transaction. The candidate then enters the pool.
 
 ## Development principles
 
-- Keep the workflow small and explicit.
-- Build frontend UX first, then API/database behavior for the same workflow.
+- Keep the workflow candidate-first and explicit.
+- A candidate is created once and reused across all interview history.
+- Do not introduce a separate application entity for the interview workflow.
+- Jobs are optional interview context, not a prerequisite for candidate management.
+- Keep interview scheduling attached directly to a Candidate.
+- Keep interview criteria configurable at agency level.
+- Record lifecycle changes and important candidate actions as history.
+- Admin can operate on behalf of an agency while Agency users remain isolated to their own agency.
 - Prefer simple React state and native browser APIs.
 - Avoid introducing a subsystem until the core workflow needs it.
-- Keep interview scheduling attached to a **JobApplication**, not directly to a candidate.
-- A panel is simply multiple interviewers assigned to one interview.
-- Candidate onboarding and recruitment status are separate concepts.
-- Bulk onboarding is an import operation, not a separate candidate domain.
 
-The full rebuild sequence is maintained in [docs/BUILD_PLAN.md](./docs/BUILD_PLAN.md), the detailed task tracker is [TASKS.md](./TASKS.md), and release checks are documented in [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md).
+The detailed tracker is [TASKS.md](./TASKS.md) and release checks are documented in [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md).
