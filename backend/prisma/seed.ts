@@ -24,20 +24,26 @@ const main = async (): Promise<void> => {
   const passwordHash = await argon2.hash("password", { type: argon2.argon2id });
 
   const users = [
-    ["admin@buildhire.demo", "BuildHire Admin", "SYSTEM_ADMIN"],
-    ["recruiter@buildhire.demo", "BuildHire Recruiter", "RECRUITER"],
-    ["interviewer@buildhire.demo", "BuildHire Interviewer", "INTERVIEWER"],
-    ["manager@buildhire.demo", "BuildHire Manager", "MANAGER"],
+    ["user-admin", "admin@buildhire.demo", "BuildHire Admin", "System Administrator", "SYSTEM_ADMIN", []],
+    ["user-recruiter", "recruiter@buildhire.demo", "BuildHire Recruiter", "Recruitment Lead", "RECRUITER", []],
+    ["int-001", "nadeesha@buildhire.demo", "Nadeesha Fernando", "Senior Technical Interviewer", "INTERVIEWER", ["Mason", "Tile Mason", "Plaster"]],
+    ["int-002", "aruna@buildhire.demo", "Aruna Wijesinghe", "Carpentry & Formwork Interviewer", "INTERVIEWER", ["Shuttering Carpenter", "Carpenter", "Scaffolding"]],
+    ["int-003", "suresh@buildhire.demo", "Suresh Perera", "Finishing Trades Interviewer", "INTERVIEWER", ["Painter", "Putty", "Finishing"]],
+    ["int-004", "kasun.j@buildhire.demo", "Kasun Jayawardena", "Welding & Fabrication Interviewer", "INTERVIEWER", ["Welder", "Fabricator", "Arc Welding"]],
+    ["user-manager", "manager@buildhire.demo", "BuildHire Manager", "Manager / Approver", "MANAGER", []],
   ] as const;
 
-  for (const [email, name, role] of users) {
+  for (const [id, email, name, title, role, specialties] of users) {
     await prisma.user.upsert({
       where: { email },
-      update: { tenantId: tenant.id, name, role, active: true, passwordHash },
+      update: { id, tenantId: tenant.id, name, title, specialties, role, active: true, passwordHash },
       create: {
+        id,
         tenantId: tenant.id,
         email,
         name,
+        title,
+        specialties,
         role,
         active: true,
         passwordHash,
@@ -312,6 +318,274 @@ const main = async (): Promise<void> => {
         },
       });
     }
+  }
+
+  const interviewerUsers = [
+    {
+      id: "int-001",
+      email: "nadeesha@buildhire.demo",
+      name: "Nadeesha Fernando",
+      title: "Senior Technical Interviewer",
+      specialties: ["Mason", "Tile Mason", "Plaster"],
+      role: "INTERVIEWER" as const,
+    },
+    {
+      id: "int-002",
+      email: "aruna@buildhire.demo",
+      name: "Aruna Wijesinghe",
+      title: "Carpentry & Formwork Interviewer",
+      specialties: ["Shuttering Carpenter", "Carpenter", "Scaffolding"],
+      role: "INTERVIEWER" as const,
+    },
+    {
+      id: "int-003",
+      email: "suresh@buildhire.demo",
+      name: "Suresh Perera",
+      title: "Finishing Trades Interviewer",
+      specialties: ["Painter", "Putty", "Finishing"],
+      role: "INTERVIEWER" as const,
+    },
+    {
+      id: "int-004",
+      email: "kasun.j@buildhire.demo",
+      name: "Kasun Jayawardena",
+      title: "Welding & Fabrication Interviewer",
+      specialties: ["Welder", "Fabricator", "Arc Welding"],
+      role: "INTERVIEWER" as const,
+    },
+  ];
+
+  const interviewSeeds = [
+    {
+      id: "iv-001",
+      reference: "IV-1001",
+      candidateId: "cand-001",
+      type: "TECHNICAL" as const,
+      status: "EVALUATION" as const,
+      startsAt: new Date("2026-09-18T04:00:00.000Z"),
+      timezone: "Asia/Colombo",
+      durationMinutes: 45,
+      location: "Colombo Interview Room 1",
+      notes: "Client requires strong finish work.",
+      decision: "PENDING" as const,
+      interviewerId: "int-001",
+      templateId: "mason-standard",
+      criteria: [
+        ["technical", "Technical trade skill", 30],
+        ["experience", "Relevant experience", 15],
+        ["secondary", "Secondary skills", 15],
+        ["safety", "Safety awareness", 15],
+        ["quality", "Finish quality", 10],
+        ["english", "English / communication", 5],
+        ["tools", "Tools & methods", 10],
+      ],
+      practical: [
+        ["practical-block", "Block / masonry work", true, "not-started"],
+        ["practical-finish", "Plaster / finish quality", true, "not-started"],
+        ["practical-tile", "Tile alignment / grouting", false, "not-started"],
+        ["practical-safety", "Safe tool handling", true, "not-started"],
+      ],
+    },
+    {
+      id: "iv-002",
+      reference: "IV-1002",
+      candidateId: "cand-003",
+      type: "PRACTICAL" as const,
+      status: "SCHEDULED" as const,
+      startsAt: new Date("2026-09-18T05:30:00.000Z"),
+      timezone: "Asia/Colombo",
+      durationMinutes: 60,
+      location: "Practical Yard A",
+      notes: "Focus on formwork accuracy.",
+      decision: "PENDING" as const,
+      interviewerId: "int-002",
+      templateId: "carpentry-standard",
+      criteria: [
+        ["technical", "Formwork / carpentry skill", 30],
+        ["experience", "Relevant experience", 15],
+        ["drawing", "Drawing understanding", 15],
+        ["safety", "Safety awareness", 15],
+        ["quality", "Accuracy / finish", 10],
+        ["english", "English / communication", 5],
+        ["tools", "Tools & methods", 10],
+      ],
+      practical: [
+        ["practical-trade", "Core practical trade task", true, "not-started"],
+        ["practical-quality", "Accuracy / finish quality", true, "not-started"],
+        ["practical-safety", "PPE and safe handling", true, "not-started"],
+      ],
+    },
+    {
+      id: "iv-003",
+      reference: "IV-1003",
+      candidateId: "cand-002",
+      type: "SCREENING" as const,
+      status: "SCHEDULED" as const,
+      startsAt: new Date("2026-09-19T04:30:00.000Z"),
+      timezone: "Asia/Colombo",
+      durationMinutes: 30,
+      location: "Colombo Interview Room 2",
+      notes: "",
+      decision: "PENDING" as const,
+      interviewerId: "int-004",
+      templateId: "welding-standard",
+      criteria: [
+        ["technical", "Welding technique", 30],
+        ["experience", "Relevant experience", 15],
+        ["fabrication", "Fabrication skill", 15],
+        ["safety", "Safety awareness", 15],
+        ["quality", "Weld quality", 10],
+        ["english", "English / communication", 5],
+        ["tools", "Tools & methods", 10],
+      ],
+      practical: [
+        ["practical-weld", "Weld execution", true, "not-started"],
+        ["practical-fabrication", "Cut / fit / fabrication", true, "not-started"],
+        ["practical-safety", "PPE and safe handling", true, "not-started"],
+      ],
+    },
+  ];
+
+  for (const interviewer of interviewerUsers) {
+    await prisma.user.upsert({
+      where: { email: interviewer.email },
+      update: {
+        id: interviewer.id,
+        tenantId: tenant.id,
+        name: interviewer.name,
+        title: interviewer.title,
+        specialties: interviewer.specialties,
+        role: interviewer.role,
+        active: true,
+        passwordHash,
+      },
+      create: {
+        id: interviewer.id,
+        tenantId: tenant.id,
+        email: interviewer.email,
+        name: interviewer.name,
+        title: interviewer.title,
+        specialties: interviewer.specialties,
+        role: interviewer.role,
+        active: true,
+        passwordHash,
+      },
+    });
+  }
+
+  for (const interview of interviewSeeds) {
+    await prisma.interview.upsert({
+      where: { id: interview.id },
+      update: {
+        tenantId: tenant.id,
+        reference: interview.reference,
+        candidateId: interview.candidateId,
+        type: interview.type,
+        status: interview.status,
+        startsAt: interview.startsAt,
+        timezone: interview.timezone,
+        durationMinutes: interview.durationMinutes,
+        location: interview.location,
+        notes: interview.notes,
+        decision: interview.decision,
+        createdById: recruiter.id,
+      },
+      create: {
+        id: interview.id,
+        tenantId: tenant.id,
+        reference: interview.reference,
+        candidateId: interview.candidateId,
+        type: interview.type,
+        status: interview.status,
+        startsAt: interview.startsAt,
+        timezone: interview.timezone,
+        durationMinutes: interview.durationMinutes,
+        location: interview.location,
+        notes: interview.notes,
+        decision: interview.decision,
+        createdById: recruiter.id,
+        interviewers: {
+          create: [{
+            tenantId: tenant.id,
+            userId: interview.interviewerId,
+          }],
+        },
+        scorecard: {
+          create: {
+            tenantId: tenant.id,
+            templateId: interview.templateId,
+            criteria: {
+              create: interview.criteria.map(([id, label, weight]) => ({
+                id: `${interview.id}-${id}`,
+                tenantId: tenant.id,
+                label,
+                weight,
+                score: null,
+                note: null,
+              })),
+            },
+          },
+        },
+        practicalItems: {
+          create: interview.practical.map(([id, label, required, result]) => ({
+            id: `${interview.id}-${id}`,
+            tenantId: tenant.id,
+            label,
+            required,
+            result,
+            note: null,
+          })),
+        },
+      },
+    });
+
+    await prisma.interviewerAssignment.deleteMany({
+      where: { tenantId: tenant.id, interviewId: interview.id },
+    });
+    await prisma.interviewerAssignment.create({
+      data: {
+        tenantId: tenant.id,
+        interviewId: interview.id,
+        userId: interview.interviewerId,
+      },
+    });
+
+    await prisma.interviewScorecard.deleteMany({
+      where: { tenantId: tenant.id, interviewId: interview.id },
+    });
+    await prisma.interviewScorecard.create({
+      data: {
+        id: `${interview.id}-scorecard`,
+        tenantId: tenant.id,
+        interviewId: interview.id,
+        templateId: interview.templateId,
+        criteria: {
+          create: interview.criteria.map(([id, label, weight]) => ({
+            id: `${interview.id}-${id}`,
+            tenantId: tenant.id,
+            label,
+            weight,
+            score: null,
+            note: null,
+          })),
+        },
+      },
+    });
+
+    await prisma.practicalTestItem.deleteMany({
+      where: { tenantId: tenant.id, interviewId: interview.id },
+    });
+    await prisma.practicalTestItem.createMany({
+      data: interview.practical.map(([id, label, required, result]) => ({
+        id: `${interview.id}-${id}`,
+        tenantId: tenant.id,
+        interviewId: interview.id,
+        label,
+        required,
+        result,
+        note: null,
+      })),
+    });
   }
 
   console.log("BuildHire development seed completed.");
