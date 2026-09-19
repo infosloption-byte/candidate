@@ -9,7 +9,7 @@ import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
 interface Props { role: UserRole; }
@@ -317,7 +317,7 @@ export const CandidatesPage = ({ role }: Props) => {
   };
 
   const updateOnboarding = async (item: Candidate) => {
-    const next = item.onboardingStatus === 'SUBMITTED' ? 'COMPLETED' : 'SUBMITTED';
+    const next: OnboardingStatus = item.onboardingStatus === 'SUBMITTED' ? 'COMPLETED' : 'SUBMITTED';
     try {
       const updated = developmentMode ? { ...item, onboardingStatus: next } : await apiFetch<Candidate>('/candidates/' + item.id, { method: 'PATCH', body: JSON.stringify({ onboardingStatus: next }) });
       if (developmentMode) dispatch({ type: 'SET_ONBOARDING_STATUS', candidateId: item.id, status: next });
@@ -495,7 +495,7 @@ export const CandidatesPage = ({ role }: Props) => {
                     <div className="mt-3 space-y-3">
                       {history.interviews.length ? history.interviews.map((item) => {
                         const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
-                        const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.criterion.maxPoints, 0), 0);
+                        const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + (score.criterion?.maxPoints ?? 0), 0), 0);
                         return <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
                           <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p><StatusPill value={item.status} /></div>
                           <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min</p>
@@ -506,8 +506,8 @@ export const CandidatesPage = ({ role }: Props) => {
                               <div className="mt-3 space-y-2">
                                 {item.evaluations.map((evaluation) => evaluation.scores.map((score) => (
                                   <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-                                    <span className="text-[11px] font-semibold text-slate-600">{score.criterion.name}</span>
-                                    <span className="text-xs font-black text-slate-900">{score.points} / {score.criterion.maxPoints}</span>
+                                    <span className="text-[11px] font-semibold text-slate-600">{score.criterion?.name ?? 'Criterion'}</span>
+                                    <span className="text-xs font-black text-slate-900">{score.points} / {score.criterion?.maxPoints ?? 0}</span>
                                   </div>
                                 )))}
                               </div>
