@@ -142,6 +142,7 @@ model Tenant {
   id          String    @id @default(uuid()) @db.VarChar(36)
   name        String    @db.VarChar(160)
   slug        String    @unique @db.VarChar(80)
+  timezone    String    @default("Asia/Colombo") @db.VarChar(80)
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -349,6 +350,7 @@ model Interview {
   startsAt        DateTime
   durationMinutes Int
   location        String                     @db.VarChar(255)
+  timezone        String                     @default("Asia/Colombo") @db.VarChar(80)
   notes           String                     @db.Text
   decision        InterviewDecision           @default(PENDING)
   decisionReason  String?                    @db.VarChar(160)
