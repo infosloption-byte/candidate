@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useInterviewContext } from '../context/useInterviewContext';
+import { rescheduleInterviewApi, undoRescheduleApi } from '../services/interviewApi';
 import { formatInterviewDateLabel, validateInterviewReschedule } from '../services/interviewRescheduler';
 import { parseInterviewDate, toIsoDate } from '../services/interviewCalendar';
 import type { Interview, InterviewRescheduleAlternative, InterviewRescheduleDraft } from '../types/interview';
@@ -64,25 +65,34 @@ export const useInterviewRescheduler = (): UseInterviewReschedulerResult => {
     return validation.valid;
   };
 
-  const commit = (nextDraft: InterviewRescheduleDraft, reason: string) => {
+  const commit = async (nextDraft: InterviewRescheduleDraft, reason: string) => {
     const interview = state.interviews.find((item) => item.id === nextDraft.interviewId);
     if (!interview) return;
-    const changedAt = new Date().toISOString();
-    const historyId = `reschedule-${Date.now()}-${interview.id}`;
-    dispatch({
-      type: 'RESCHEDULE_INTERVIEW',
-      interviewId: interview.id,
-      date: formatInterviewDateLabel(nextDraft.date),
-      time: nextDraft.time,
-      interviewerIds: nextDraft.interviewerIds,
-      reason: reason.trim() || 'Interview schedule changed',
-      changedAt,
-      historyId,
-    });
-    setLastReschedule({ interviewId: interview.id, candidateName: interview.candidateName, changedAt, historyId });
-    setOpen(false);
-    setError(null);
-    setAlternatives([]);
+
+    try {
+      const updated = await rescheduleInterviewApi(
+        interview.id,
+        nextDraft.date,
+        nextDraft.time,
+        nextDraft.interviewerIds,
+        reason.trim() || 'Interview schedule changed',
+      );
+      const history = updated.rescheduleHistory?.at(-1);
+      dispatch({ type: 'REPLACE_INTERVIEW', interview: updated });
+      if (history) {
+        setLastReschedule({
+          interviewId: interview.id,
+          candidateName: interview.candidateName,
+          changedAt: history.changedAt,
+          historyId: history.id,
+        });
+      }
+      setOpen(false);
+      setError(null);
+      setAlternatives([]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The interview could not be rescheduled.');
+    }
   };
 
   const openForInterview = (interviewId: string) => {
@@ -106,7 +116,7 @@ export const useInterviewRescheduler = (): UseInterviewReschedulerResult => {
     };
     setDraft(nextDraft);
     if (prepare(nextDraft)) {
-      commit(nextDraft, 'Calendar drag-and-drop');
+      void commit(nextDraft, 'Calendar drag-and-drop');
       return;
     }
     setOpen(true);
@@ -152,7 +162,7 @@ export const useInterviewRescheduler = (): UseInterviewReschedulerResult => {
   const save = () => {
     if (!draft) return;
     if (!prepare(draft)) return;
-    commit(draft, draft.reason);
+    void commit(draft, draft.reason);
   };
 
   const close = () => {
@@ -162,10 +172,16 @@ export const useInterviewRescheduler = (): UseInterviewReschedulerResult => {
     setAlternatives([]);
   };
 
-  const undo = () => {
+  const undo = async () => {
     if (!lastReschedule) return;
-    dispatch({ type: 'UNDO_RESCHEDULE', interviewId: lastReschedule.interviewId, historyId: lastReschedule.historyId, undoneAt: new Date().toISOString() });
-    setLastReschedule(null);
+    try {
+      const updated = await undoRescheduleApi(lastReschedule.interviewId, lastReschedule.historyId);
+      dispatch({ type: 'REPLACE_INTERVIEW', interview: updated });
+      setLastReschedule(null);
+      setError(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The reschedule could not be undone.');
+    }
   };
 
   return {
