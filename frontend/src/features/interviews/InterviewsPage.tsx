@@ -1,32 +1,367 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../domain/authContext';
 import { getApplication, getCandidate, getJob, getUser } from '../../domain/fixtures';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
-import type { Interview, UserRole } from '../../domain/types';
+import { Button } from '../../shared/components/Button';
+import { Card } from '../../shared/components/Card';
+import { FormField } from '../../shared/components/FormField';
+import { StateMessage } from '../../shared/components/StateMessage';
+import { apiFetch } from '../../shared/lib/api';
+import type { Interview, JobApplication, User, UserRole } from '../../domain/types';
 
 interface InterviewsPageProps { role: UserRole; }
 
+interface ApplicationRecord extends JobApplication {
+  job?: { id: string; agencyId: string; title: string; location: string | null };
+  candidate?: { id: string; agencyId: string; name: string; reference: string; email: string | null; profession: string | null };
+}
+
+interface InterviewRecord extends Interview {
+  application?: {
+    id: string;
+    status: string;
+    job: { id: string; agencyId: string; title: string; location: string | null };
+    candidate: { id: string; name: string; reference: string; email: string | null; profession: string | null };
+  };
+  panel?: Array<{
+    userId: string;
+    assignedAt: string;
+    user: { id: string; name: string; email: string; role: UserRole; active: boolean };
+  }>;
+}
+
+const defaultForm = {
+  scheduledAt: '',
+  type: 'TECHNICAL' as Interview['type'],
+  durationMins: '45',
+  location: '',
+};
+
 export const InterviewsPage = ({ role }: InterviewsPageProps) => {
+  const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
+  const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
+  const [applications, setApplications] = useState<ApplicationRecord[]>(developmentMode ? state.applications : []);
+  const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER') : []);
   const [showForm, setShowForm] = useState(false);
-  const [selectedApplicationId, setSelectedApplicationId] = useState(state.applications.find((item) => item.status === 'SHORTLISTED')?.id ?? '');
-  const [panel, setPanel] = useState<string[]>(['user-interviewer-1']);
-  const [form, setForm] = useState({ scheduledAt: '2026-09-24T09:00', type: 'TECHNICAL' as Interview['type'], durationMins: '45', location: 'Colombo Interview Room 1' });
+  const [selectedApplicationId, setSelectedApplicationId] = useState('');
+  const [panel, setPanel] = useState<string[]>(developmentMode ? ['user-interviewer-1'] : []);
+  const [form, setForm] = useState(defaultForm);
   const [rating, setRating] = useState('4');
   const [recommendation, setRecommendation] = useState<'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED'>('RECOMMENDED');
-  const visible = role === 'INTERVIEWER' ? state.interviews.filter((item) => item.panelUserIds.includes('user-interviewer-1')) : role === 'INTERVIEWEE' ? state.interviews.filter((item) => state.applications.find((application) => application.id === item.applicationId)?.candidateId === state.users.find((user) => user.role === 'INTERVIEWEE')?.candidateId) : state.interviews;
-  const interviewers = state.users.filter((user) => user.role === 'INTERVIEWER');
-  const schedule = () => {
-    if (!selectedApplicationId || panel.length === 0) return;
-    const interview: Interview = { id: `interview-${Date.now()}`, applicationId: selectedApplicationId, type: form.type, status: 'SCHEDULED', scheduledAt: new Date(form.scheduledAt).toISOString(), durationMins: Math.max(15, Number(form.durationMins) || 30), location: form.location.trim() || null, panelUserIds: panel };
-    dispatch({ type: 'SCHEDULE_INTERVIEW', interview });
-    setShowForm(false);
+  const [loading, setLoading] = useState(!developmentMode);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (developmentMode) {
+      const shortlisted = state.applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
+      setInterviews(state.interviews);
+      setApplications(state.applications);
+      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER'));
+      setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+
+    const interviewRequest = apiFetch<InterviewRecord[]>('/interviews');
+    const applicationsRequest = role === 'AGENCY'
+      ? apiFetch<ApplicationRecord[]>('/applications')
+      : Promise.resolve([] as ApplicationRecord[]);
+    const interviewerRequest = role === 'AGENCY' && user?.agencyId
+      ? apiFetch<User[]>('/agencies/' + user.agencyId + '/users')
+      : Promise.resolve([] as User[]);
+
+    Promise.all([interviewRequest, applicationsRequest, interviewerRequest])
+      .then(([interviewResult, applicationResult, users]) => {
+        if (cancelled) return;
+        setInterviews(interviewResult);
+        setApplications(applicationResult);
+        setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
+        if (role === 'AGENCY') {
+          const shortlisted = applicationResult.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
+          setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
+          if (users.some((item) => item.role === 'INTERVIEWER' && item.active) && panel.length === 0) {
+            setPanel([users.find((item) => item.role === 'INTERVIEWER' && item.active)!.id]);
+          }
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load interviews.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id]);
+
+  const visible = role === 'INTERVIEWER'
+    ? developmentMode
+      ? state.interviews.filter((item) => item.panelUserIds.includes('user-interviewer-1'))
+      : interviews
+    : role === 'INTERVIEWEE'
+      ? developmentMode
+        ? state.interviews.filter((item) => state.applications.find((application) => application.id === item.applicationId)?.candidateId === (user?.candidateId ?? 'candidate-1'))
+        : interviews
+      : interviews;
+
+  const applicationCandidates = applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
+
+  const schedule = async () => {
+    if (!selectedApplicationId || panel.length === 0) {
+      setError('Select an application and at least one interviewer.');
+      return;
+    }
+
+    const scheduledAt = form.scheduledAt ? new Date(form.scheduledAt).toISOString() : '';
+    if (!scheduledAt) {
+      setError('Interview date and time are required.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      if (developmentMode) {
+        const interview: Interview = {
+          id: 'interview-' + Date.now(),
+          applicationId: selectedApplicationId,
+          type: form.type,
+          status: 'SCHEDULED',
+          scheduledAt,
+          durationMins: Math.max(15, Number(form.durationMins) || 30),
+          location: form.location.trim() || null,
+          panelUserIds: panel,
+        };
+        dispatch({ type: 'SCHEDULE_INTERVIEW', interview });
+        setInterviews((current) => [interview, ...current]);
+      } else {
+        if (!selectedApplicationId) return;
+        const created = await apiFetch<InterviewRecord>('/applications/' + selectedApplicationId + '/interviews', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: form.type,
+            scheduledAt,
+            durationMins: Math.max(15, Number(form.durationMins) || 30),
+            location: form.location.trim() || null,
+            interviewerIds: panel,
+          }),
+        });
+        setInterviews((current) => [...current, created].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)));
+        setApplications((current) => current.map((item) => item.id === selectedApplicationId ? { ...item, status: 'INTERVIEW' } : item));
+      }
+
+      setShowForm(false);
+      setSuccess('Interview scheduled successfully.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to schedule the interview.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  return <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-    <SectionHeading eyebrow="Interview desk" title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'} description="Every interview belongs to a job application. One interviewer or multiple interviewers can be assigned as a panel." action={role === 'AGENCY' ? <button type="button" onClick={() => setShowForm((value) => !value)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">Schedule interview</button> : undefined} />
-    {showForm && <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="grid gap-4 md:grid-cols-2"><div><label className="field-label">Application</label><select className="field-input" value={selectedApplicationId} onChange={(e) => setSelectedApplicationId(e.target.value)}>{state.applications.filter((item) => item.status === 'SHORTLISTED').map((application) => <option key={application.id} value={application.id}>{getCandidate(application.candidateId)?.name} — {getJob(application.jobId)?.title}</option>)}</select></div><div><label className="field-label">Interview type</label><select className="field-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as Interview['type'] })}><option value="SCREENING">Screening</option><option value="TECHNICAL">Technical</option><option value="PRACTICAL">Practical</option><option value="FINAL">Final</option></select></div><div><label className="field-label">Date & time</label><input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} /></div><div><label className="field-label">Duration</label><input type="number" min="15" className="field-input" value={form.durationMins} onChange={(e) => setForm({ ...form, durationMins: e.target.value })} /></div><div><label className="field-label">Location</label><input className="field-input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div><div><label className="field-label">Interviewer panel</label><div className="mt-1 space-y-2">{interviewers.map((interviewer) => <label key={interviewer.id} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-700"><input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(e) => setPanel((current) => e.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />{interviewer.name}</label>)}</div></div></div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600">Cancel</button><button type="button" onClick={schedule} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">Schedule</button></div></div>}
-    <div className="grid gap-4">{visible.map((interview) => { const application = state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId); const candidate = application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined; const job = application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined; const canEvaluate = role === 'INTERVIEWER' && interview.panelUserIds.includes('user-interviewer-1'); return <article key={interview.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black text-slate-950">{candidate?.name ?? 'Candidate'}</h2><StatusPill value={interview.status} /></div><p className="mt-1 text-sm text-slate-500">{job?.title ?? 'Job'}</p></div><div className="text-left lg:text-right"><p className="text-sm font-bold text-slate-900">{new Date(interview.scheduledAt).toLocaleString()}</p><p className="mt-1 text-xs text-slate-400">{interview.durationMins} minutes · {interview.location ?? 'No location'}</p></div></div><div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</p><p className="mt-1 text-sm font-bold text-slate-800">{interview.type}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p><p className="mt-1 text-sm font-bold text-slate-800">{interview.panelUserIds.map((id) => state.users.find((user) => user.id === id)?.name ?? getUser(id)?.name).filter(Boolean).join(', ')}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Application</p><p className="mt-1 text-sm font-bold text-slate-800">{application?.status}</p></div></div>{canEvaluate && <div className="mt-5 rounded-2xl border border-slate-200 p-4"><p className="text-xs font-black text-slate-900">Evaluation</p><div className="mt-3 grid gap-3 md:grid-cols-3"><div><label className="field-label">Rating (1–5)</label><select className="field-input" value={rating} onChange={(e) => setRating(e.target.value)}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div><div><label className="field-label">Recommendation</label><select className="field-input" value={recommendation} onChange={(e) => setRecommendation(e.target.value as typeof recommendation)}><option value="RECOMMENDED">Recommended</option><option value="MAYBE">Maybe</option><option value="NOT_RECOMMENDED">Not recommended</option></select></div><div><label className="field-label">Comments</label><input id={`comment-${interview.id}`} className="field-input" placeholder="Interview notes" /></div></div><button type="button" onClick={() => { const comments = (document.getElementById(`comment-${interview.id}`) as HTMLInputElement | null)?.value ?? ''; dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' }); dispatch({ type: 'SAVE_EVALUATION', evaluation: { id: `evaluation-${Date.now()}`, interviewId: interview.id, interviewerId: 'user-interviewer-1', rating: Number(rating), recommendation, comments: comments || null } }); }} className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">Submit evaluation</button></div>}</article>; })}</div>
-  </section>;
+  const cancelInterview = async (interview: InterviewRecord) => {
+    setError('');
+
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'CANCELLED' });
+        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'CANCELLED' } : item));
+      } else {
+        const updated = await apiFetch<InterviewRecord>('/interviews/' + interview.id, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'CANCELLED' }),
+        });
+        setInterviews((current) => current.map((item) => item.id === updated.id ? updated : item));
+      }
+
+      setSuccess('Interview cancelled.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to cancel the interview.');
+    }
+  };
+
+  const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
+  const localCandidate = (interview: InterviewRecord) => {
+    const application = localApplication(interview);
+    return application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined;
+  };
+  const localJob = (interview: InterviewRecord) => {
+    const application = localApplication(interview);
+    return application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined;
+  };
+
+  return (
+    <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <SectionHeading
+        eyebrow="Interview desk"
+        title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
+        description="Every interview belongs to a job application. One interviewer or multiple interviewers can be assigned as a panel."
+        action={role === 'AGENCY' ? (
+          <Button onClick={() => { setShowForm((value) => !value); setError(''); }}>
+            Schedule interview
+          </Button>
+        ) : undefined}
+      />
+
+      {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching schedules and panel assignments." />}
+      {error && <StateMessage kind="error" title="Interview action failed" description={error} />}
+      {success && <StateMessage kind="success" title="Saved" description={success} />}
+
+      {showForm && role === 'AGENCY' && (
+        <Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Application">
+              <select className="field-input" value={selectedApplicationId} onChange={(event) => setSelectedApplicationId(event.target.value)}>
+                <option value="">Select application</option>
+                {applicationCandidates.map((application) => {
+                  const candidateName = application.candidate?.name ?? state.candidates.find((item) => item.id === application.candidateId)?.name ?? 'Candidate';
+                  const jobTitle = application.job?.title ?? state.jobs.find((item) => item.id === application.jobId)?.title ?? 'Job';
+                  return <option key={application.id} value={application.id}>{candidateName} — {jobTitle}</option>;
+                })}
+              </select>
+            </FormField>
+            <FormField label="Interview type">
+              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as Interview['type'] })}>
+                <option value="SCREENING">Screening</option>
+                <option value="TECHNICAL">Technical</option>
+                <option value="PRACTICAL">Practical</option>
+                <option value="FINAL">Final</option>
+              </select>
+            </FormField>
+            <FormField label="Date & time">
+              <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+            </FormField>
+            <FormField label="Duration">
+              <input type="number" min="15" max="480" className="field-input" value={form.durationMins} onChange={(event) => setForm({ ...form, durationMins: event.target.value })} />
+            </FormField>
+            <FormField label="Location">
+              <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Interview room / video link" />
+            </FormField>
+            <FormField label="Interviewer panel" hint="Select one or more active interviewers.">
+              <div className="mt-1 space-y-2">
+                {interviewers.map((interviewer) => (
+                  <label key={interviewer.id} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={panel.includes(interviewer.id)}
+                      onChange={(event) => setPanel((current) => event.target.checked
+                        ? [...new Set([...current, interviewer.id])]
+                        : current.filter((id) => id !== interviewer.id))}
+                    />
+                    {interviewer.name}
+                  </label>
+                ))}
+              </div>
+            </FormField>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void schedule()}>{saving ? 'Scheduling…' : 'Schedule'}</Button>
+          </div>
+        </Card>
+      )}
+
+      {!loading && visible.length === 0 && (
+        <StateMessage kind="empty" title="No interviews yet" description="Scheduled interviews for this role will appear here." />
+      )}
+
+      {!loading && visible.length > 0 && (
+        <div className="grid gap-4">
+          {visible.map((interview) => {
+            const application = interview.application;
+            const candidate = application?.candidate ?? localCandidate(interview);
+            const job = application?.job ?? localJob(interview);
+            const panelNames = interview.panel?.map((item) => item.user.name)
+              ?? interview.panelUserIds.map((id) => state.users.find((item) => item.id === id)?.name ?? getUser(id)?.name)
+                .filter(Boolean) as string[];
+
+            return (
+              <article key={interview.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-black text-slate-950">{candidate?.name ?? 'Candidate'}</h2>
+                      <StatusPill value={interview.status} />
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">{job?.title ?? 'Job'}</p>
+                  </div>
+                  <div className="text-left lg:text-right">
+                    <p className="text-sm font-bold text-slate-900">{new Date(interview.scheduledAt).toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-slate-400">{interview.durationMins} minutes · {interview.location ?? 'No location'}</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</p><p className="mt-1 text-sm font-bold text-slate-800">{interview.type}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p><p className="mt-1 text-sm font-bold text-slate-800">{panelNames.join(', ') || 'No panel'}</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Application</p><p className="mt-1 text-sm font-bold text-slate-800">{application?.status ?? localApplication(interview)?.status ?? '—'}</p></div>
+                </div>
+
+                {role === 'AGENCY' && interview.status === 'SCHEDULED' && (
+                  <div className="mt-5 flex justify-end">
+                    <Button variant="danger" size="sm" onClick={() => void cancelInterview(interview)}>Cancel interview</Button>
+                  </div>
+                )}
+
+                {role === 'INTERVIEWER' && interview.status === 'SCHEDULED' && (
+                  <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-black text-slate-900">Evaluation</p>
+                    {developmentMode ? (
+                      <>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <FormField label="Rating (1–5)">
+                            <select className="field-input" value={rating} onChange={(event) => setRating(event.target.value)}>
+                              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                            </select>
+                          </FormField>
+                          <FormField label="Recommendation">
+                            <select className="field-input" value={recommendation} onChange={(event) => setRecommendation(event.target.value as typeof recommendation)}>
+                              <option value="RECOMMENDED">Recommended</option>
+                              <option value="MAYBE">Maybe</option>
+                              <option value="NOT_RECOMMENDED">Not recommended</option>
+                            </select>
+                          </FormField>
+                        </div>
+                        <Button className="mt-4" onClick={() => {
+                          const comments = window.prompt('Interview comments (optional):') ?? '';
+                          dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' });
+                          dispatch({
+                            type: 'SAVE_EVALUATION',
+                            evaluation: {
+                              id: 'evaluation-' + Date.now(),
+                              interviewId: interview.id,
+                              interviewerId: 'user-interviewer-1',
+                              rating: Number(rating),
+                              recommendation,
+                              comments: comments || null,
+                            },
+                          });
+                          setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
+                          setSuccess('Evaluation submitted.');
+                        }}>Submit evaluation</Button>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-xs text-slate-500">Evaluation form will connect to the evaluation API in the next slice.</p>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 };
