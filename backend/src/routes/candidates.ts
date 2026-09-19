@@ -329,6 +329,17 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'INVALID_STATUS_CHANGE', message: 'Interviewees may only submit their own profile.' } });
       }
 
+      const linkedAccount = await getPrisma().user.findUnique({
+        where: { candidateId: existing.id },
+        select: { id: true },
+      });
+      if (linkedAccount && request.body.email !== undefined && !request.body.email?.trim()) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'EMAIL_REQUIRED_FOR_ACCOUNT', message: 'A candidate linked to an Interviewee account must keep an email address.' },
+        });
+      }
+
       if (request.body.status !== undefined && canManage) {
         const lifecycleManagedByWorkflow = ['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED'].includes(request.body.status);
         if (lifecycleManagedByWorkflow) {
@@ -370,6 +381,16 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       const prisma = getPrisma();
       const candidate = await prisma.$transaction(async (tx) => {
         const updated = await tx.candidate.update({ where: { id: existing.id }, data, select: candidateSelect });
+
+        if (linkedAccount && (data.name !== undefined || data.email !== undefined)) {
+          await tx.user.update({
+            where: { id: linkedAccount.id },
+            data: {
+              ...(data.name !== undefined ? { name: data.name as string } : {}),
+              ...(data.email !== undefined ? { email: data.email as string } : {}),
+            },
+          });
+        }
 
         if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
           await tx.candidateStatusHistory.create({
