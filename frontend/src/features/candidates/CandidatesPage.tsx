@@ -15,7 +15,7 @@ import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface Props { role: UserRole; }
 
-const emptyForm = { name: '', email: '', phone: '', profession: '', experienceYears: '0', skills: '' };
+const emptyForm = { name: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
@@ -32,6 +32,10 @@ export const CandidatesPage = ({ role }: Props) => {
   const [profileForm, setProfileForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [professionFilter, setProfessionFilter] = useState('');
+  const [availabilityFilter, setAvailabilityFilter] = useState('');
+  const [visaStatusFilter, setVisaStatusFilter] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
@@ -117,11 +121,18 @@ export const CandidatesPage = ({ role }: Props) => {
       name: candidate.name,
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
+      alternatePhone: candidate.alternatePhone ?? '',
+      country: candidate.country ?? '',
+      passportNumber: candidate.passportNumber ?? '',
+      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
+      currentLocation: candidate.currentLocation ?? '',
+      availability: candidate.availability ?? '',
+      visaStatus: candidate.visaStatus ?? '',
       profession: candidate.profession ?? '',
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
     });
-  }, [candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
+  }, [candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.alternatePhone, candidate?.country, candidate?.passportNumber, candidate?.passportExpiry, candidate?.currentLocation, candidate?.availability, candidate?.visaStatus, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
 
   const saveOwnProfile = async () => {
     if (!candidate) return;
@@ -146,6 +157,13 @@ export const CandidatesPage = ({ role }: Props) => {
               name: profileForm.name.trim(),
               email: profileForm.email.trim() || null,
               phone: profileForm.phone.trim() || null,
+              alternatePhone: profileForm.alternatePhone.trim() || null,
+              country: profileForm.country.trim() || null,
+              passportNumber: profileForm.passportNumber.trim() || null,
+              passportExpiry: profileForm.passportExpiry.trim() || null,
+              currentLocation: profileForm.currentLocation.trim() || null,
+              availability: profileForm.availability.trim() || null,
+              visaStatus: profileForm.visaStatus.trim() || null,
               profession: profileForm.profession.trim() || null,
               experienceYears,
               skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
@@ -164,15 +182,41 @@ export const CandidatesPage = ({ role }: Props) => {
     }
   };
 
+  const filterOptions = useMemo(() => ({
+    countries: [...new Set(candidates.map((item) => item.country).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+    professions: [...new Set(candidates.map((item) => item.profession).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+    availabilities: [...new Set(candidates.map((item) => item.availability).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+    visaStatuses: [...new Set(candidates.map((item) => item.visaStatus).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+  }), [candidates]);
+
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLowerCase();
     return candidates.filter((item) => {
       const matchesStatus = !statusFilter || item.status === statusFilter;
+      const matchesCountry = !countryFilter || item.country === countryFilter;
+      const matchesProfession = !professionFilter || item.profession === professionFilter;
+      const matchesAvailability = !availabilityFilter || item.availability === availabilityFilter;
+      const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
-      const matchesQuery = !query || [item.name, item.reference, item.email ?? '', item.phone ?? '', item.profession ?? '', item.skills.join(' '), item.status, item.onboardingStatus].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesAgency && matchesQuery;
+      const matchesQuery = !query || [
+        item.name,
+        item.reference,
+        item.email ?? '',
+        item.phone ?? '',
+        item.alternatePhone ?? '',
+        item.passportNumber ?? '',
+        item.country ?? '',
+        item.currentLocation ?? '',
+        item.profession ?? '',
+        item.availability ?? '',
+        item.visaStatus ?? '',
+        item.skills.join(' '),
+        item.status,
+        item.onboardingStatus,
+      ].some((value) => value.toLowerCase().includes(query));
+      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesAgency && matchesQuery;
     });
-  }, [agencyId, candidates, role, search, statusFilter]);
+  }, [agencyId, availabilityFilter, candidates, countryFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
 
   const createCandidate = async () => {
     if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
@@ -182,11 +226,22 @@ export const CandidatesPage = ({ role }: Props) => {
     try {
       const draft: Candidate = {
         id: 'candidate-' + Date.now(), agencyId: agencyId || 'agency-1', reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
-        name: form.name.trim(), email: form.email.trim() || null, phone: form.phone.trim() || null, profession: form.profession.trim() || null,
-        experienceYears: Math.max(0, Number(form.experienceYears) || 0), skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
+        name: form.name.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        alternatePhone: form.alternatePhone.trim() || null,
+        country: form.country.trim() || null,
+        passportNumber: form.passportNumber.trim() || null,
+        passportExpiry: form.passportExpiry.trim() || null,
+        currentLocation: form.currentLocation.trim() || null,
+        availability: form.availability.trim() || null,
+        visaStatus: form.visaStatus.trim() || null,
+        profession: form.profession.trim() || null,
+        experienceYears: Math.max(0, Number(form.experienceYears) || 0),
+        skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
         onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
       };
-      const created = developmentMode ? draft : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', { method: 'POST', body: JSON.stringify({ name: draft.name, email: draft.email, phone: draft.phone, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills }) });
+      const created = developmentMode ? draft : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', { method: 'POST', body: JSON.stringify({ name: draft.name, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills }) });
       if (developmentMode) dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
       setCandidates((current) => [created, ...current]);
       setForm(emptyForm);
@@ -301,6 +356,13 @@ export const CandidatesPage = ({ role }: Props) => {
               name: profileForm.name.trim(),
               email: profileForm.email.trim() || null,
               phone: profileForm.phone.trim() || null,
+              alternatePhone: profileForm.alternatePhone.trim() || null,
+              country: profileForm.country.trim() || null,
+              passportNumber: profileForm.passportNumber.trim() || null,
+              passportExpiry: profileForm.passportExpiry.trim() || null,
+              currentLocation: profileForm.currentLocation.trim() || null,
+              availability: profileForm.availability.trim() || null,
+              visaStatus: profileForm.visaStatus.trim() || null,
               profession: profileForm.profession.trim() || null,
               experienceYears,
               skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
