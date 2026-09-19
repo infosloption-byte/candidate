@@ -87,7 +87,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           : user.role === 'INTERVIEWEE'
             ? { application: { candidateId: user.candidateId ?? '__missing__' } }
             : { application: { job: { agencyId: user.agencyId ?? '__missing__' } } },
-      include: interviewInclude,
+      include: {
+        ...interviewInclude,
+        evaluations: {
+          where: { interviewerId: user.id },
+          select: { id: true },
+        },
+      },
       orderBy: { scheduledAt: 'asc' },
     });
 
