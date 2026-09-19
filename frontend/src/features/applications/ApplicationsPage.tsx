@@ -37,7 +37,6 @@ const nextStage: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
   APPLIED: 'SCREENING',
   SCREENING: 'SHORTLISTED',
   SHORTLISTED: 'INTERVIEW',
-  INTERVIEW: 'SELECTED',
 };
 
 export const ApplicationsPage = ({ role }: ApplicationsPageProps) => {
