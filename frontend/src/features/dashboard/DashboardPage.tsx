@@ -1,42 +1,267 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../domain/authContext';
+import { agencies as fixtureAgencies } from '../../domain/fixtures';
+import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
-import { useRecruitment } from '../../domain/recruitmentContext';
-import type { UserRole } from '../../domain/types';
+import { Card } from '../../shared/components/Card';
+import { StateMessage } from '../../shared/components/StateMessage';
+import { apiFetch } from '../../shared/lib/api';
+import type { Agency, Candidate, Interview, Job, JobApplication, UserRole } from '../../domain/types';
 
-interface DashboardPageProps { role: UserRole; }
+interface DashboardPageProps {
+  role: UserRole;
+}
+
+interface AgencyRecord extends Agency {
+  counts?: {
+    users: number;
+    jobs: number;
+    candidates: number;
+  };
+}
+
+interface ApplicationRecord extends JobApplication {
+  job?: {
+    id: string;
+    title: string;
+    location: string | null;
+  };
+  candidate?: {
+    id: string;
+    name: string;
+    profession: string | null;
+  };
+}
+
+interface DashboardData {
+  agencies: AgencyRecord[];
+  jobs: Job[];
+  candidates: Candidate[];
+  applications: ApplicationRecord[];
+  interviews: Interview[];
+}
+
+const emptyData: DashboardData = {
+  agencies: [],
+  jobs: [],
+  candidates: [],
+  applications: [],
+  interviews: [],
+};
+
+const formatDateTime = (value: string): string =>
+  new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
 export const DashboardPage = ({ role }: DashboardPageProps) => {
+  const { user, developmentMode } = useAuth();
   const { state } = useRecruitment();
-  const myCandidateId = state.users.find((user) => user.role === 'INTERVIEWEE')?.candidateId;
+  const [data, setData] = useState<DashboardData>(() => developmentMode
+    ? {
+        agencies: fixtureAgencies,
+        jobs: state.jobs,
+        candidates: state.candidates,
+        applications: state.applications,
+        interviews: state.interviews,
+      }
+    : emptyData);
+  const [loading, setLoading] = useState(!developmentMode);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (developmentMode) {
+      setData({
+        agencies: fixtureAgencies,
+        jobs: state.jobs,
+        candidates: state.candidates,
+        applications: state.applications,
+        interviews: state.interviews,
+      });
+      setLoading(false);
+      setError('');
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+
+    const requests: Array<Promise<unknown>> = [
+      apiFetch<Job[]>('/jobs'),
+      apiFetch<Candidate[]>('/candidates'),
+      apiFetch<ApplicationRecord[]>('/applications'),
+      apiFetch<Interview[]>('/interviews'),
+    ];
+
+    if (role === 'ADMIN') {
+      requests.push(apiFetch<AgencyRecord[]>('/agencies'));
+    }
+
+    Promise.all(requests)
+      .then((results) => {
+        if (cancelled) return;
+
+        const [jobs, candidates, applications, interviews, agencies = []] = results as [
+          Job[],
+          Candidate[],
+          ApplicationRecord[],
+          Interview[],
+          AgencyRecord[]?,
+        ];
+
+        setData({ jobs, candidates, applications, interviews, agencies });
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) {
+          setError(requestError instanceof Error ? requestError.message : 'Unable to load dashboard data.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [developmentMode, role, state.applications, state.candidates, state.interviews, state.jobs, user?.id]);
+
+  const upcomingInterviews = useMemo(
+    () => data.interviews
+      .filter((interview) => interview.status === 'SCHEDULED' && new Date(interview.scheduledAt).getTime() >= Date.now())
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
+      .slice(0, 5),
+    [data.interviews],
+  );
+
+  const recentApplications = useMemo(
+    () => data.applications
+      .slice()
+      .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt))
+      .slice(0, 5),
+    [data.applications],
+  );
 
   const stats = useMemo(() => {
-    if (role === 'ADMIN') return [
-      ['Agencies', state.agencies.length, 'Recruitment workspaces'],
-      ['Active agencies', state.agencies.filter((agency) => agency.status === 'ACTIVE').length, 'Currently active'],
-      ['Agency users', state.users.filter((user) => user.role === 'AGENCY').length, 'Agency accounts'],
-    ];
-    if (role === 'INTERVIEWER') return [
-      ['Assigned interviews', state.interviews.filter((interview) => interview.panelUserIds.includes('user-interviewer-1')).length, 'Interviews in your panel'],
-      ['Upcoming', state.interviews.filter((interview) => interview.status === 'SCHEDULED').length, 'Scheduled sessions'],
-    ];
-    if (role === 'INTERVIEWEE') return [
-      ['Published jobs', state.jobs.filter((job) => job.status === 'PUBLISHED').length, 'Available positions'],
-      ['My applications', state.applications.filter((application) => application.candidateId === myCandidateId).length, 'Current applications'],
-      ['My interviews', state.interviews.filter((interview) => state.applications.find((application) => application.id === interview.applicationId)?.candidateId === myCandidateId).length, 'Interview sessions'],
-    ];
-    return [
-      ['Published jobs', state.jobs.filter((job) => job.status === 'PUBLISHED').length, 'Jobs visible to candidates'],
-      ['Candidates', state.candidates.length, 'Candidate records'],
-      ['Applications', state.applications.length, 'Current applications'],
-      ['Upcoming interviews', state.interviews.filter((interview) => interview.status === 'SCHEDULED').length, 'Sessions to prepare'],
-    ];
-  }, [myCandidateId, role, state]);
+    if (role === 'ADMIN') {
+      return [
+        { label: 'Active agencies', value: data.agencies.filter((agency) => agency.status === 'ACTIVE').length },
+        { label: 'Open jobs', value: data.jobs.filter((job) => job.status === 'PUBLISHED').length },
+        { label: 'Candidates', value: data.candidates.length },
+        { label: 'Applications', value: data.applications.length },
+      ];
+    }
 
-  return <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-    <SectionHeading eyebrow="Role-aware workspace" title="Recruitment at a glance" description={role === 'ADMIN' ? 'System administration across agency workspaces.' : role === 'AGENCY' ? 'Jobs, candidates, applications, and interviews in one place.' : role === 'INTERVIEWER' ? 'Your assigned interview workload and upcoming sessions.' : 'Find jobs, manage applications, and view interviews.'} />
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(([label, value, note]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-500">{label}</p><p className="mt-3 text-3xl font-black text-slate-950">{value}</p><p className="mt-2 text-xs leading-5 text-slate-400">{note}</p></div>)}</div>
-    {role === 'AGENCY' && <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-sm font-black text-slate-950">Current application flow</h2><div className="mt-5 grid gap-3 sm:grid-cols-4">{['APPLIED','SCREENING','SHORTLISTED','INTERVIEW'].map((status) => <div key={status} className="rounded-2xl bg-slate-50 p-4"><p className="text-2xl font-black text-slate-900">{state.applications.filter((application) => application.status === status).length}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{status}</p></div>)}</div></div>}
-    {role === 'INTERVIEWEE' && <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-sm font-black text-slate-950">My recruitment status</h2><div className="mt-4 space-y-3">{state.applications.filter((application) => application.candidateId === myCandidateId).map((application) => <div key={application.id} className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-900">{state.jobs.find((job) => job.id === application.jobId)?.title}</p><p className="mt-1 text-xs text-slate-400">Applied {new Date(application.appliedAt).toLocaleDateString()}</p></div><StatusPill value={application.status} /></div>)}</div></div>}
-  </section>;
+    if (role === 'AGENCY') {
+      return [
+        { label: 'Published jobs', value: data.jobs.filter((job) => job.status === 'PUBLISHED').length },
+        { label: 'Candidates', value: data.candidates.length },
+        { label: 'Applications', value: data.applications.length },
+        { label: 'Upcoming interviews', value: upcomingInterviews.length },
+      ];
+    }
+
+    if (role === 'INTERVIEWER') {
+      return [
+        { label: 'My interviews', value: data.interviews.length },
+        { label: 'Scheduled', value: data.interviews.filter((interview) => interview.status === 'SCHEDULED').length },
+        { label: 'Completed', value: data.interviews.filter((interview) => interview.status === 'COMPLETED').length },
+        { label: 'Next', value: upcomingInterviews.length ? 1 : 0 },
+      ];
+    }
+
+    return [
+      { label: 'Open jobs', value: data.jobs.filter((job) => job.status === 'PUBLISHED').length },
+      { label: 'My applications', value: data.applications.length },
+      { label: 'Upcoming interviews', value: upcomingInterviews.length },
+      { label: 'Completed interviews', value: data.interviews.filter((interview) => interview.status === 'COMPLETED').length },
+    ];
+  }, [data, role, upcomingInterviews.length]);
+
+  return (
+    <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <SectionHeading
+        eyebrow="Workspace overview"
+        title={'Welcome, ' + (user?.name ?? 'there')}
+        description={
+          role === 'ADMIN'
+            ? 'Monitor agencies and the overall recruitment workflow.'
+            : role === 'AGENCY'
+              ? 'Manage jobs, candidates, applications, and interviews from one workspace.'
+              : role === 'INTERVIEWER'
+                ? 'Review your assigned interviews and upcoming evaluation work.'
+                : 'Follow your applications and upcoming interview schedule.'
+        }
+      />
+
+      {loading && <StateMessage kind="loading" title="Loading dashboard" description="Fetching the latest workflow data." />}
+      {error && <StateMessage kind="error" title="Dashboard data unavailable" description={error} />}
+
+      {!loading && !error && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((stat) => (
+              <Card key={stat.label}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{stat.label}</p>
+                <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">{stat.value}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-black text-slate-950">Upcoming interviews</h2>
+                  <p className="mt-1 text-xs text-slate-400">Next scheduled interviews visible to this role.</p>
+                </div>
+              </div>
+
+              <div className="mt-5 divide-y divide-slate-100">
+                {upcomingInterviews.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No upcoming interviews.</p>
+                ) : (
+                  upcomingInterviews.map((interview) => (
+                    <div key={interview.id} className="flex items-center justify-between gap-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">{formatDateTime(interview.scheduledAt)}</p>
+                        <p className="mt-1 text-xs text-slate-400">{interview.type} · {interview.durationMins} min</p>
+                      </div>
+                      <StatusPill value={interview.status} />
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            <Card>
+              <div>
+                <h2 className="text-sm font-black text-slate-950">Recent applications</h2>
+                <p className="mt-1 text-xs text-slate-400">The latest candidates moving through the application workflow.</p>
+              </div>
+
+              <div className="mt-5 divide-y divide-slate-100">
+                {recentApplications.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No applications yet.</p>
+                ) : (
+                  recentApplications.map((application) => (
+                    <div key={application.id} className="flex items-center justify-between gap-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">
+                          {application.candidate?.name ?? application.candidateId}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-slate-400">
+                          {application.job?.title ?? application.jobId}
+                        </p>
+                      </div>
+                      <StatusPill value={application.status} />
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+    </section>
+  );
 };
