@@ -588,6 +588,21 @@ const main = async (): Promise<void> => {
     });
   }
 
+  const jobSeeds = [
+    { id: "job-dubai-mason", title: "Mason — Dubai Tower Project", project: "Dubai Tower Project", location: "Dubai, UAE", openings: 5, profession: "Mason", requiredExperience: 5, requiredSkills: ["Tile", "Putty"], preferredSkills: ["Plaster", "Grouting"], client: "Gulf Build Contracting", status: "OPEN" as const, startDate: "2026-10-15", deadline: "2026-10-01" },
+    { id: "job-colombo-shuttering", title: "Shuttering Carpenter — Colombo Mall", project: "Colombo Mall Project", location: "Colombo, Sri Lanka", openings: 3, profession: "Shuttering Carpenter", requiredExperience: 4, requiredSkills: ["Formwork"], preferredSkills: ["Scaffolding"], client: "Urban Structure Group", status: "OPEN" as const, startDate: "2026-10-01", deadline: "2026-09-25" },
+    { id: "job-doha-welder", title: "Welder — Doha Industrial Expansion", project: "Doha Industrial Expansion", location: "Doha, Qatar", openings: 4, profession: "Welder", requiredExperience: 5, requiredSkills: ["Fabrication", "Arc Welding"], preferredSkills: ["MIG Welding"], client: "Qatar Industrial Works", status: "OPEN" as const, startDate: "2026-10-20", deadline: "2026-10-05" },
+  ];
+  const scoringWeights = { experience: 25, skills: 25, interview: 25, documents: 10, readiness: 10, communication: 5 };
+
+  for (const job of jobSeeds) {
+    await prisma.job.upsert({
+      where: { id: job.id },
+      update: { tenantId: tenant.id, title: job.title, project: job.project, location: job.location, openings: job.openings, profession: job.profession, requiredExperience: job.requiredExperience, requiredSkills: job.requiredSkills, preferredSkills: job.preferredSkills, client: job.client, status: job.status, startDate: new Date(`${job.startDate}T00:00:00.000Z`), deadline: new Date(`${job.deadline}T00:00:00.000Z`), scoringWeights },
+      create: { id: job.id, tenantId: tenant.id, title: job.title, project: job.project, location: job.location, openings: job.openings, profession: job.profession, requiredExperience: job.requiredExperience, requiredSkills: job.requiredSkills, preferredSkills: job.preferredSkills, client: job.client, status: job.status, startDate: new Date(`${job.startDate}T00:00:00.000Z`), deadline: new Date(`${job.deadline}T00:00:00.000Z`), scoringWeights },
+    });
+  }
+
   console.log("BuildHire development seed completed.");
   console.log("Staff login password: password");
   console.log("Workspace: buildhire-demo");
