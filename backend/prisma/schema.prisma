@@ -170,6 +170,7 @@ model Tenant {
   approvals   SelectionApproval[]
   notifications Notification[]
   auditEvents AuditEvent[]
+  selectionHistory SelectionHistory[] @relation("SelectionHistoryTenant")
 
   @@index([active])
 }
@@ -272,6 +273,7 @@ model Candidate {
   interviews                    Interview[]
   journey                       CandidateJourneyEvent[]
   selections                    SelectionRecord[]
+  selectionHistory              SelectionHistory[]
   notifications                 Notification[]
 
   tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
