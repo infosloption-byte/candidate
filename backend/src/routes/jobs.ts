@@ -18,25 +18,15 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
 
-    if (user.role === 'INTERVIEWER') {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access job details through assigned interviews.' } });
-    }
-
-    let candidateAgencyId: string | null = null;
-
-    if (user.role === 'INTERVIEWEE' && user.candidateId) {
-      const candidate = await getPrisma().candidate.findUnique({
-        where: { id: user.candidateId },
-        select: { agencyId: true },
-      });
-      candidateAgencyId = candidate?.agencyId ?? null;
+    if (user.role === 'INTERVIEWER' || user.role === 'INTERVIEWEE') {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Jobs are managed internally and are not part of the candidate workflow.' } });
     }
 
     const jobs = await getPrisma().job.findMany({
       where: jobListWhereForUser({
         role: user.role,
         agencyId: user.agencyId,
-        candidateAgencyId,
+        candidateAgencyId: null,
       }),
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
       include: { agency: { select: { id: true, name: true, slug: true } } },
@@ -56,20 +46,11 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const user = request.authUser!;
-    let candidateAgencyId: string | null = null;
-
-    if (user.role === 'INTERVIEWEE' && user.candidateId) {
-      const candidate = await getPrisma().candidate.findUnique({
-        where: { id: user.candidateId },
-        select: { agencyId: true },
-      });
-      candidateAgencyId = candidate?.agencyId ?? null;
-    }
-
     const canRead =
       user.role === 'ADMIN'
       || (user.role === 'AGENCY' && user.agencyId === job.agencyId)
-      || (user.role === 'INTERVIEWEE' && job.status === 'PUBLISHED' && candidateAgencyId === job.agencyId);
+      || (user.role === 'INTERVIEWER' && false)
+      || (user.role === 'INTERVIEWEE' && false);
 
     if (!canRead) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
@@ -121,7 +102,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (job.status === 'PUBLISHED') {
         await notifyAgencyUsers(
           agency.id,
-          { type: 'JOB_PUBLISHED', title: 'New job published', message: '"' + job.title + '" is now open for applications.' },
+          { type: 'JOB_PUBLISHED', title: 'New job published', message: '"' + job.title + '" is now available as an internal position for interview scheduling.' },
           ['AGENCY'],
         );
       }
@@ -188,7 +169,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
         await notifyAgencyUsers(
           existing.agencyId,
-          { type: 'JOB_PUBLISHED', title: 'Job published', message: '"' + job.title + '" is now open for applications.' },
+          { type: 'JOB_PUBLISHED', title: 'Job published', message: '"' + job.title + '" is now available as an internal position for interview scheduling.' },
           ['AGENCY'],
         );
       }
