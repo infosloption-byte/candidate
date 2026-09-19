@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import {
-  candidateIdParamsSchema,
   createInterviewBodySchema,
   decisionBodySchema,
   interviewIdParamsSchema,
