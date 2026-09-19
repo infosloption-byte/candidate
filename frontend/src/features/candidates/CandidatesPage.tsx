@@ -18,6 +18,7 @@ const emptyForm = { name: '', email: '', phone: '', profession: '', experienceYe
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
+const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
 
 export const CandidatesPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
@@ -299,7 +300,10 @@ export const CandidatesPage = ({ role }: Props) => {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div><h3 className="text-sm font-black text-slate-950">Lifecycle status</h3><p className="mt-1 text-xs text-slate-400">Every status change is recorded in the candidate history.</p></div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div><p className="field-label">Status</p><select className="field-input sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>{statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></div>
+                    <div><p className="field-label">Status</p><select className="field-input sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>{statusOptions.filter((status) => {
+                      const hasCompletedInterview = history.interviews.some((interview) => interview.status === 'COMPLETED');
+                      return !finalStatusOptions.includes(status) || hasCompletedInterview || status === candidate.status;
+                    }).map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></div>
                     <div><p className="field-label">Reason</p><input className="field-input sm:min-w-64" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" /></div>
                     <Button disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save status</Button>
                   </div>
