@@ -26,6 +26,10 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Bulk CSV onboarding creates candidates in the pool.
 - ✅ Candidate Pool bulk-import UI with CSV template and agency selection.
 - ✅ Candidate profile editing.
+- ✅ Candidate identity/contact fields: country, passport number, passport expiry, contact and alternate contact numbers.
+- ✅ Candidate recruitment-readiness fields: current location, availability, and visa/work status.
+- ✅ Candidate CSV import/template supports expanded profile fields.
+- ✅ Candidate filtering/search covers country, profession, current location, availability, visa/work status, passport expiry, passport number, and contact data.
 - ✅ Candidate onboarding state tracking.
 - ✅ Candidate lifecycle status.
 - ✅ Candidate status-change history.
