@@ -48,9 +48,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     const user = request.authUser!;
     const canRead =
       user.role === 'ADMIN'
-      || (user.role === 'AGENCY' && user.agencyId === job.agencyId)
-      || (user.role === 'INTERVIEWER' && false)
-      || (user.role === 'INTERVIEWEE' && false);
+      || (user.role === 'AGENCY' && user.agencyId === job.agencyId);
 
     if (!canRead) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
