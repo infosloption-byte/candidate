@@ -46,5 +46,6 @@ export const logoutController = async (
 
 export const currentUserController = async (request: FastifyRequest) => {
   if (!request.auth) throw AppError.unauthenticated();
-  return { success: true, data: { user: await currentUser(request.auth) } };
+  const session = await currentUser(request.auth);
+  return { success: true, data: session };
 };
