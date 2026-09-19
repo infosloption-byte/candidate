@@ -48,7 +48,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
-  const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
+  const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
   const [jobId, setJobId] = useState('');
   const [panel, setPanel] = useState<string[]>([]);
