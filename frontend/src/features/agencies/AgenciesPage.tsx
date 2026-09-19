@@ -108,7 +108,7 @@ export const AgenciesPage = () => {
         body: JSON.stringify({ name: agencyName.trim(), slug: agencySlug.trim() }),
       });
 
-      setAgencies((current) => [created, ...current]);
+      setAgencies((current) => [{ ...created, counts: { users: 0, jobs: 0, candidates: 0 } }, ...current]);
       setAgencyName('');
       setAgencySlug('');
       setShowAgencyForm(false);

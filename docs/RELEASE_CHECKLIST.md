@@ -8,6 +8,12 @@ The repository contains separate frontend and backend CI workflows. Once the Git
 
 ## Pre-release checks
 
+### Frontend/API deployment configuration
+
+- Set `VITE_API_BASE_URL` when the API is not served from the default `/api/v1` path.
+- Keep the frontend and API on the same site (for example, sibling subdomains under one domain) so the existing `SameSite=Strict` session cookie works with credentialed API requests.
+
+
 ### Source and database
 
 - [ ] npm run build passes in frontend/.

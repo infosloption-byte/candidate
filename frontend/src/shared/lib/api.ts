@@ -33,13 +33,15 @@ export const apiFetch = async <T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> => {
+  const headers = new Headers(options.headers);
+  if (options.body !== undefined && options.body !== null && !headers.has('content-type')) {
+    headers.set('content-type', 'application/json');
+  }
+
   const response = await fetch(apiUrl(path), {
-    credentials: 'include',
-    headers: {
-      'content-type': 'application/json',
-      ...(options.headers ?? {}),
-    },
     ...options,
+    credentials: 'include',
+    headers,
   });
 
   if (!response.ok) {

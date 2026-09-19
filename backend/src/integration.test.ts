@@ -306,7 +306,6 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   assert.equal(duplicateResponse.statusCode, 409);
 
   const application = json<{ data: { id: string } }>(applicationResponse);
-  const agencyCookie = await login(emails.agencyA);
 
   for (const status of ['SCREENING', 'SHORTLISTED'] as const) {
     const response = await app.inject({

@@ -60,6 +60,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
   const [applications, setApplications] = useState<ApplicationRecord[]>(developmentMode ? state.applications : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER') : []);
   const [showForm, setShowForm] = useState(false);
+  const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState('');
   const [panel, setPanel] = useState<string[]>(developmentMode ? ['user-interviewer-1'] : []);
   const [form, setForm] = useState(defaultForm);
@@ -105,8 +106,9 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         if (role === 'AGENCY') {
           const shortlisted = applicationResult.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
           setSelectedApplicationId((current) => current || shortlisted[0]?.id || '');
-          if (users.some((item) => item.role === 'INTERVIEWER' && item.active) && panel.length === 0) {
-            setPanel([users.find((item) => item.role === 'INTERVIEWER' && item.active)!.id]);
+          const firstActiveInterviewer = users.find((item) => item.role === 'INTERVIEWER' && item.active);
+          if (firstActiveInterviewer) {
+            setPanel((current) => current.length ? current : [firstActiveInterviewer.id]);
           }
         }
       })
@@ -120,7 +122,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     return () => {
       cancelled = true;
     };
-  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id, panel.length]);
+  }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id]);
 
   const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
 
@@ -158,9 +160,55 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
 
   const applicationCandidates = applications.filter((item) => ['SHORTLISTED', 'INTERVIEW'].includes(item.status));
 
+  const toDateTimeLocal = (value: string): string => {
+    const date = new Date(value);
+    const pad = (input: number) => String(input).padStart(2, '0');
+    return [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-')
+      + 'T' + [pad(date.getHours()), pad(date.getMinutes())].join(':');
+  };
+
+  const openScheduleForm = () => {
+    const firstApplication = applicationCandidates[0];
+    const firstInterviewer = interviewers[0];
+    setEditingInterviewId(null);
+    setForm(defaultForm);
+    setSelectedApplicationId(firstApplication?.id ?? '');
+    setPanel(firstInterviewer ? [firstInterviewer.id] : []);
+    setShowForm(true);
+    setError('');
+    setSuccess('');
+  };
+
+  const openRescheduleForm = (interview: InterviewRecord) => {
+    setEditingInterviewId(interview.id);
+    setSelectedApplicationId(interview.applicationId);
+    setForm({
+      scheduledAt: toDateTimeLocal(interview.scheduledAt),
+      type: interview.type,
+      durationMins: String(interview.durationMins),
+      location: interview.location ?? '',
+    });
+    setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
+    setShowForm(true);
+    setError('');
+    setSuccess('');
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingInterviewId(null);
+    setForm(defaultForm);
+    setSelectedApplicationId('');
+    setPanel(developmentMode ? ['user-interviewer-1'] : []);
+  };
+
   const schedule = async () => {
-    if (!selectedApplicationId || panel.length === 0) {
+    if (!editingInterviewId && (!selectedApplicationId || panel.length === 0)) {
       setError('Select an application and at least one interviewer.');
+      return;
+    }
+    if (editingInterviewId && panel.length === 0) {
+      setError('Select at least one interviewer.');
       return;
     }
 
@@ -174,6 +222,38 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     setError('');
 
     try {
+      if (editingInterviewId) {
+        if (developmentMode) {
+          const currentInterview = interviews.find((item) => item.id === editingInterviewId);
+          if (!currentInterview) throw new Error('The selected interview could not be found.');
+          const updated: Interview = {
+            ...currentInterview,
+            type: form.type,
+            scheduledAt,
+            durationMins: Math.max(15, Number(form.durationMins) || 30),
+            location: form.location.trim() || null,
+            panelUserIds: panel,
+          };
+          dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
+          setInterviews((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+        } else {
+          const updated = await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              type: form.type,
+              scheduledAt,
+              durationMins: Math.max(15, Number(form.durationMins) || 30),
+              location: form.location.trim() || null,
+              interviewerIds: panel,
+            }),
+          });
+          setInterviews((current) => current.map((item) => item.id === updated.id ? updated : item));
+        }
+        closeForm();
+        setSuccess('Interview rescheduled successfully.');
+        return;
+      }
+
       if (developmentMode) {
         const interview: Interview = {
           id: 'interview-' + Date.now(),
@@ -202,7 +282,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         setApplications((current) => current.map((item) => item.id === selectedApplicationId ? { ...item, status: 'INTERVIEW' } : item));
       }
 
-      setShowForm(false);
+      closeForm();
       setSuccess('Interview scheduled successfully.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to schedule the interview.');
@@ -289,8 +369,8 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
         description="Every interview belongs to a job application. One interviewer or multiple interviewers can be assigned as a panel."
         action={role === 'AGENCY' ? (
-          <Button onClick={() => { setShowForm((value) => !value); setError(''); }}>
-            Schedule interview
+          <Button onClick={showForm && !editingInterviewId ? closeForm : openScheduleForm}>
+            {showForm && !editingInterviewId ? 'Close scheduler' : 'Schedule interview'}
           </Button>
         ) : undefined}
       />
@@ -311,9 +391,13 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
 
       {showForm && role === 'AGENCY' && (
         <Card>
+          <div className="mb-4 rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm font-black text-slate-950">{editingInterviewId ? 'Reschedule interview' : 'Schedule interview'}</p>
+            <p className="mt-1 text-xs text-slate-500">{editingInterviewId ? 'Update the time, panel, or meeting details for this scheduled interview.' : 'Choose an application, time, and one or more interviewers.'}</p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Application">
-              <select className="field-input" value={selectedApplicationId} onChange={(event) => setSelectedApplicationId(event.target.value)}>
+              <select className="field-input" value={selectedApplicationId} onChange={(event) => setSelectedApplicationId(event.target.value)} disabled={Boolean(editingInterviewId)}>
                 <option value="">Select application</option>
                 {applicationCandidates.map((application) => {
                   const candidateName = application.candidate?.name ?? state.candidates.find((item) => item.id === application.candidateId)?.name ?? 'Candidate';
@@ -357,8 +441,8 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
             </FormField>
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
-            <Button disabled={saving} onClick={() => void schedule()}>{saving ? 'Scheduling…' : 'Schedule'}</Button>
+            <Button variant="secondary" onClick={closeForm}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void schedule()}>{saving ? (editingInterviewId ? 'Rescheduling…' : 'Scheduling…') : editingInterviewId ? 'Reschedule' : 'Schedule'}</Button>
           </div>
         </Card>
       )}
@@ -401,7 +485,8 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
                 </div>
 
                 {role === 'AGENCY' && interview.status === 'SCHEDULED' && (
-                  <div className="mt-5 flex justify-end">
+                  <div className="mt-5 flex flex-wrap justify-end gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => openRescheduleForm(interview)}>Reschedule</Button>
                     <Button variant="danger" size="sm" onClick={() => void cancelInterview(interview)}>Cancel interview</Button>
                   </div>
                 )}

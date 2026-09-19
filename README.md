@@ -47,7 +47,7 @@ The rebuilt system now has the core database model and protected API workflow fo
 - panel evaluation and application decision
 - optional candidate document upload with agency-isolated access
 
-The frontend is connected to these APIs for authentication, jobs, candidates, applications, interviews, and evaluations. When the backend is unavailable in local development, the frontend falls back to its development-role fixture mode so UI work can continue without a database.
+The frontend is connected to these APIs for authentication, jobs, candidates, applications, interviews, evaluations, and candidate documents. Set `VITE_API_BASE_URL` when the API is not served from the default `/api/v1` path.
 
 ## Development setup
 

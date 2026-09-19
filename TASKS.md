@@ -83,6 +83,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Add reschedule and cancellation API.
 - ✅ Build interview list/calendar UI against Interview API.
 - ✅ Add interviewer My Interviews view against Interview API.
+- ✅ Add agency reschedule control for scheduled interviews.
 - 🔄 Interview scheduling, panel, conflict, and evaluation-access integration coverage added; green CI verification remains.
 
 ## Phase 7 — Evaluations
@@ -117,7 +118,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - 🔄 Interview panel scheduling end-to-end test — coverage committed, CI execution not yet verifiable.
 - 🔄 Interview evaluation end-to-end test — coverage committed, CI execution not yet verifiable.
 - ⏳ Responsive browser QA.
-- ✅ Deployment, backup, and monitoring checklist documented in `RELEASE_CHECKLIST.md`.
+- ✅ Deployment, backup, and monitoring checklist documented in `docs/RELEASE_CHECKLIST.md`.
 
 ### Current CI verification note
 

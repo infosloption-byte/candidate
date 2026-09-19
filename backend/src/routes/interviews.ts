@@ -164,6 +164,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const scheduledAt = new Date(request.body.scheduledAt!);
       const durationMins = request.body.durationMins ?? 30;
 
+      if (scheduledAt.getTime() <= Date.now()) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
+      }
+
       if (await hasScheduleConflict(interviewerIds, application.candidate.id, scheduledAt, durationMins)) {
         return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
       }
@@ -253,19 +257,20 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const nextDuration = request.body.durationMins ?? existing.durationMins;
       const nextPanel = request.body.interviewerIds ?? existing.panel.map((item) => item.userId);
 
-      if (!nextPanel.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'At least one interviewer is required.' } });
-      }
+      if (nextStatus === 'SCHEDULED') {
+        if (!nextPanel.length) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'At least one interviewer is required.' } });
+        }
 
-      const interviewers = await getInterviewers(nextPanel, agencyId);
-      if (interviewers.length !== new Set(nextPanel).size) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the job agency.' } });
-      }
+        const interviewers = await getInterviewers(nextPanel, agencyId);
+        if (interviewers.length !== new Set(nextPanel).size) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the job agency.' } });
+        }
 
-      if (
-        (request.body.status ?? existing.status) === 'SCHEDULED'
-        && await hasScheduleConflict(nextPanel, existing.application.candidateId, nextScheduledAt, nextDuration, existing.id)
-      ) {
+        if (await hasScheduleConflict(nextPanel, existing.application.candidateId, nextScheduledAt, nextDuration, existing.id)) {
+          return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
+        }
+      }
         return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
       }
 

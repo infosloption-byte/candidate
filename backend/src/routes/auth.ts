@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
 import {
   clearSessionCookie,
@@ -109,7 +110,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const candidate = await tx.candidate.create({
           data: {
             agencyId: agency.id,
-            reference: 'CA-' + Date.now().toString(36).toUpperCase(),
+            reference: 'CA-' + randomBytes(5).toString('hex').toUpperCase(),
             name,
             email,
             phone: request.body?.phone?.trim() || null,

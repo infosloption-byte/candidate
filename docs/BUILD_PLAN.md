@@ -91,7 +91,6 @@ Status: **completed**
 - Enforce agency ownership for agency-scoped records.
 - Add Interviewer assignment eligibility.
 - Add Interviewee account/profile relationship.
-- Add basic password recovery/change flows only after core login is stable.
 
 ## Phase 3 — Jobs
 

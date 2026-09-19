@@ -21,6 +21,7 @@ type RecruitmentAction =
   | { type: 'SET_APPLICATION_STATUS'; applicationId: string; status: JobApplication['status'] }
   | { type: 'SCHEDULE_INTERVIEW'; interview: Interview }
   | { type: 'SET_INTERVIEW_STATUS'; interviewId: string; status: Interview['status'] }
+  | { type: 'UPDATE_INTERVIEW'; interview: Interview }
   | { type: 'SAVE_EVALUATION'; evaluation: InterviewEvaluation };
 
 const initialState: RecruitmentState = {
@@ -51,6 +52,8 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
       return { ...state, interviews: [action.interview, ...state.interviews], applications: state.applications.map((application) => application.id === action.interview.applicationId ? { ...application, status: 'INTERVIEW' } : application) };
     case 'SET_INTERVIEW_STATUS':
       return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, status: action.status } : interview) };
+    case 'UPDATE_INTERVIEW':
+      return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interview.id ? action.interview : interview) };
     case 'SAVE_EVALUATION':
       return {
         ...state,
