@@ -323,6 +323,29 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'INVALID_STATUS_CHANGE', message: 'Interviewees may only submit their own profile.' } });
       }
 
+      if (request.body.status !== undefined && canManage) {
+        const lifecycleManagedByWorkflow = ['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED'].includes(request.body.status);
+        if (lifecycleManagedByWorkflow) {
+          return reply.code(409).send({
+            success: false,
+            error: { code: 'STATUS_WORKFLOW_MANAGED', message: 'Interview-scheduled and interview-completed statuses are managed automatically by the interview workflow.' },
+          });
+        }
+
+        if (['PASSED', 'REJECTED', 'HIRED'].includes(request.body.status)) {
+          const completedInterview = await getPrisma().interview.findFirst({
+            where: { candidateId: existing.id, status: 'COMPLETED' },
+            select: { id: true },
+          });
+          if (!completedInterview) {
+            return reply.code(409).send({
+              success: false,
+              error: { code: 'INTERVIEW_REQUIRED', message: 'A candidate can only receive a final pass, reject, or hire status after at least one interview is completed.' },
+            });
+          }
+        }
+      }
+
       const data: Record<string, unknown> = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
       if (request.body.email !== undefined) data.email = request.body.email?.trim().toLowerCase() || null;
