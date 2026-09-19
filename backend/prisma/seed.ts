@@ -64,6 +64,21 @@ const main = async () => {
     agency.id,
   );
 
+  const defaultCriteria = [
+    { name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10 },
+    { name: 'Relevant experience', description: 'Relevant trade experience and project exposure.', maxPoints: 10 },
+    { name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5 },
+  ];
+
+  for (const criterion of defaultCriteria) {
+    const id = agency.id + '-' + criterion.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    await prisma.interviewCriterion.upsert({
+      where: { id },
+      update: { description: criterion.description, maxPoints: criterion.maxPoints, active: true },
+      create: { id, agencyId: agency.id, name: criterion.name, description: criterion.description, maxPoints: criterion.maxPoints, active: true },
+    });
+  }
+
   console.log(`Seeded admin=${admin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
 };
 
