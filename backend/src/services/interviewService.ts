@@ -607,3 +607,63 @@ export const updateInterviewNote = async (auth: AuthContext, id: string, note: s
   if (!updated) throw AppError.internal();
   return toDto(updated);
 };
+
+
+export const undoReschedule = async (auth: AuthContext, interviewId: string, historyId: string) => {
+  const existing = await findInterviewById(auth.tenantId, interviewId);
+  if (!existing) throw AppError.notFound("Interview not found.");
+
+  const history = existing.reschedules.find((item) => item.id === historyId);
+  if (!history || history.undoneAt) throw AppError.notFound("Reschedule history entry not found.");
+
+  const restoredInterviewerIds = Array.isArray(history.fromInterviewerIds)
+    ? history.fromInterviewerIds.filter((value): value is string => typeof value === "string")
+    : [];
+
+  await validateWindow(
+    auth,
+    existing.candidateId,
+    existing.location,
+    restoredInterviewerIds,
+    history.fromStartsAt,
+    history.fromDurationMinutes,
+    interviewId,
+  );
+
+  await withTransaction(async (tx) => {
+    await updateInterview(tx, auth.tenantId, interviewId, {
+      startsAt: history.fromStartsAt,
+      timezone: existing.timezone,
+      interviewers: {
+        deleteMany: {},
+        create: restoredInterviewerIds.map((userId) => ({
+          tenantId: auth.tenantId,
+          userId,
+        })),
+      },
+    });
+
+    await tx.interviewReschedule.updateMany({
+      where: {
+        id: historyId,
+        tenantId: auth.tenantId,
+        interviewId,
+        undoneAt: null,
+      },
+      data: { undoneAt: new Date() },
+    });
+
+    await createAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      entityType: "Interview",
+      entityId: interviewId,
+      action: "interview.reschedule_undone",
+      metadata: { historyId },
+    }, tx);
+  });
+
+  const updated = await findInterviewById(auth.tenantId, interviewId);
+  if (!updated) throw AppError.internal();
+  return toDto(updated);
+};
