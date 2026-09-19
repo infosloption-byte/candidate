@@ -6,7 +6,7 @@ export const SettingsPage = () => (
     <div className="grid gap-4 md:grid-cols-2">{[
       ['Roles', 'Admin, Agency, Interviewer, Interviewee'],
       ['Onboarding', 'Self onboarding, agency onboarding, and bulk onboarding'],
-      ['Applications', 'Applied, Screening, Shortlisted, Interview, Selected, Rejected, Withdrawn'],
+      ['Candidate lifecycle', 'Pool, Ready for interview, Interview scheduled, Interview completed, Passed, Rejected, On hold, Hired, Inactive'],
       ['Interviews', 'One interviewer or multiple interviewers as a panel'],
     ].map(([title, value]) => <div key={title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-500">{title}</p><p className="mt-2 text-sm font-bold leading-6 text-slate-900">{value}</p></div>)}</div>
   </section>
