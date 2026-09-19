@@ -191,7 +191,7 @@ model User {
   name                 String                  @db.VarChar(160)
   title                String?                 @db.VarChar(160)
   specialties          Json
-  email                String                  @unique @db.VarChar(255)
+  email                String                  @unique @db.VarChar(191)
   passwordHash         String                  @db.VarChar(255)
   role                 UserRole
   active               Boolean                 @default(true)
@@ -346,7 +346,7 @@ model CandidateDocument {
   type           DocumentType
   state          DocumentState @default(NEEDS_REVIEW)
   fileName       String?       @db.VarChar(255)
-  storageKey     String?       @unique @db.VarChar(500)
+  storageKey     String?       @unique @db.VarChar(191)
   mimeType       String?       @db.VarChar(120)
   sizeBytes      BigInt?
   version        Int           @default(1)
@@ -374,7 +374,7 @@ model CandidateDocumentVersion {
   documentId    String            @db.VarChar(36)
   version       Int
   fileName      String            @db.VarChar(255)
-  storageKey    String            @unique @db.VarChar(500)
+  storageKey    String            @unique @db.VarChar(191)
   mimeType      String            @db.VarChar(120)
   sizeBytes     BigInt
   uploadedById  String            @db.VarChar(36)
