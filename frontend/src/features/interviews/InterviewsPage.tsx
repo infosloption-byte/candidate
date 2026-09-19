@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion, InterviewType, Job, User, UserRole } from '../../domain/types';
 
@@ -32,6 +33,21 @@ const toDateTimeLocal = (value: string): string => {
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
+interface InterviewDetail extends Interview {
+  notes?: string | null;
+  evaluations?: Array<{
+    id: string;
+    interviewerId: string;
+    comments: string | null;
+    interviewer: { id: string; name: string; email: string };
+    scores: Array<{
+      criterionId: string;
+      points: number;
+      criterion: { id: string; name: string; maxPoints: number } | null;
+    }>;
+  }>;
+}
+
 export const InterviewsPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
@@ -43,6 +59,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [candidateSearch, setCandidateSearch] = useState('');
   const [jobId, setJobId] = useState('');
   const [panel, setPanel] = useState<string[]>([]);
   const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
@@ -59,6 +77,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [detailFor, setDetailFor] = useState<string | null>(null);
+  const [detail, setDetail] = useState<InterviewDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     if (developmentMode) {
@@ -167,21 +188,46 @@ export const InterviewsPage = ({ role }: Props) => {
     [agencyId, jobs],
   );
 
+  const selectableCandidates = useMemo(() => {
+    const query = candidateSearch.trim().toLowerCase();
+    return availableCandidates.filter((candidate) => {
+      if (editingInterviewId && candidate.id === candidateId) return false;
+      if (!query) return true;
+      return [candidate.name, candidate.reference, candidate.profession ?? '', candidate.email ?? '', candidate.phone ?? '']
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [availableCandidates, candidateSearch, candidateId, editingInterviewId]);
+
+  const toggleCandidateSelection = (id: string) => {
+    setSelectedCandidateIds((current) => current.includes(id)
+      ? current.filter((candidateId) => candidateId !== id)
+      : [...current, id]);
+  };
+
+  const selectAllVisibleCandidates = () => {
+    setSelectedCandidateIds((current) => [...new Set([...current, ...selectableCandidates.map((candidate) => candidate.id)])]);
+  };
+
+  const clearCandidateSelection = () => setSelectedCandidateIds([]);
+
   const closeScheduleForm = () => {
     setShowScheduleForm(false);
     setEditingInterviewId(null);
     setForm(defaultForm);
     setCandidateId('');
+    setSelectedCandidateIds([]);
+    setCandidateSearch('');
     setJobId('');
     setPanel([]);
   };
 
   const openScheduleForm = () => {
-    const firstCandidate = availableCandidates[0];
     const firstInterviewer = interviewers[0];
     setEditingInterviewId(null);
     setForm(defaultForm);
-    setCandidateId(firstCandidate?.id ?? '');
+    setCandidateId('');
+    setSelectedCandidateIds([]);
+    setCandidateSearch('');
     setJobId('');
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
@@ -193,6 +239,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const openReschedule = (interview: InterviewRecord) => {
     setEditingInterviewId(interview.id);
     setCandidateId(interview.candidateId);
+    setSelectedCandidateIds([]);
+    setCandidateSearch('');
     setJobId(interview.jobId ?? '');
     setForm({
       scheduledAt: toDateTimeLocal(interview.scheduledAt),
@@ -213,12 +261,17 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   const saveSchedule = async () => {
-    if (!candidateId || panel.length === 0) {
-      setError('Select a candidate and at least one interviewer.');
+    const createIds = selectedCandidateIds;
+    if (panel.length === 0) {
+      setError('Select at least one interviewer.');
       return;
     }
     if (!form.scheduledAt) {
       setError('Interview date and time are required.');
+      return;
+    }
+    if (!editingInterviewId && createIds.length === 0) {
+      setError('Select at least one candidate.');
       return;
     }
 
@@ -226,13 +279,15 @@ export const InterviewsPage = ({ role }: Props) => {
     setError('');
     try {
       const scheduledAt = new Date(form.scheduledAt).toISOString();
+      const durationMins = Math.max(15, Number(form.durationMins) || 30);
+
       if (editingInterviewId) {
         const updated = developmentMode
           ? {
               ...interviews.find((item) => item.id === editingInterviewId)!,
               type: form.type,
               scheduledAt,
-              durationMins: Math.max(15, Number(form.durationMins) || 30),
+              durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
             }
@@ -241,7 +296,7 @@ export const InterviewsPage = ({ role }: Props) => {
               body: JSON.stringify({
                 type: form.type,
                 scheduledAt,
-                durationMins: Math.max(15, Number(form.durationMins) || 30),
+                durationMins,
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
@@ -250,42 +305,80 @@ export const InterviewsPage = ({ role }: Props) => {
 
         if (developmentMode) dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
         setInterviews((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+
+        if (createIds.length > 0) {
+          const additionalStart = new Date(new Date(scheduledAt).getTime() + durationMins * 60_000).toISOString();
+          if (developmentMode) {
+            const drafts = createIds.map((id, index) => ({
+              id: 'interview-' + Date.now() + '-' + index,
+              candidateId: id,
+              jobId: jobId || null,
+              type: form.type,
+              status: 'SCHEDULED' as const,
+              scheduledAt: new Date(new Date(additionalStart).getTime() + index * durationMins * 60_000).toISOString(),
+              durationMins,
+              location: form.location.trim() || null,
+              panelUserIds: panel,
+            }));
+            drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
+            setInterviews((current) => [...drafts, ...current]);
+          } else {
+            const result = await apiFetch<{ importedCount: number; candidates: InterviewRecord[] }>('/interviews/bulk', {
+              method: 'POST',
+              body: JSON.stringify({
+                candidateIds: createIds,
+                jobId: jobId || null,
+                type: form.type,
+                scheduledAt: additionalStart,
+                durationMins,
+                location: form.location.trim() || null,
+                notes: form.notes.trim() || null,
+                interviewerIds: panel,
+              }),
+            });
+            setInterviews((current) => [...result.candidates, ...current]);
+          }
+        }
+
         closeScheduleForm();
-        setSuccess('Interview schedule updated.');
+        setSuccess(createIds.length ? 'Interview updated and copied to ' + createIds.length + ' additional candidate(s).' : 'Interview schedule updated.');
         return;
       }
 
-      const draft: Interview = {
-        id: 'interview-' + Date.now(),
-        candidateId,
-        jobId: jobId || null,
-        type: form.type,
-        status: 'SCHEDULED',
-        scheduledAt,
-        durationMins: Math.max(15, Number(form.durationMins) || 30),
-        location: form.location.trim() || null,
-        panelUserIds: panel,
-      };
-
-      const created = developmentMode
-        ? draft
-        : await apiFetch<InterviewRecord>('/candidates/' + candidateId + '/interviews', {
-            method: 'POST',
-            body: JSON.stringify({
-              jobId: jobId || null,
-              type: form.type,
-              scheduledAt,
-              durationMins: Math.max(15, Number(form.durationMins) || 30),
-              location: form.location.trim() || null,
-              notes: form.notes.trim() || null,
-              interviewerIds: panel,
-            }),
-          });
-
-      if (developmentMode) dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft });
-      setInterviews((current) => [created, ...current]);
-      closeScheduleForm();
-      setSuccess('Candidate assigned to the interview successfully.');
+      if (developmentMode) {
+        const drafts = createIds.map((id, index) => ({
+          id: 'interview-' + Date.now() + '-' + index,
+          candidateId: id,
+          jobId: jobId || null,
+          type: form.type,
+          status: 'SCHEDULED' as const,
+          scheduledAt: new Date(new Date(scheduledAt).getTime() + index * durationMins * 60_000).toISOString(),
+          durationMins,
+          location: form.location.trim() || null,
+          panelUserIds: panel,
+        }));
+        drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
+        setInterviews((current) => [...drafts, ...current]);
+        closeScheduleForm();
+        setSuccess(drafts.length + ' interview(s) created with consecutive time slots.');
+      } else {
+        const result = await apiFetch<{ importedCount: number; candidates: InterviewRecord[] }>('/interviews/bulk', {
+          method: 'POST',
+          body: JSON.stringify({
+            candidateIds: createIds,
+            jobId: jobId || null,
+            type: form.type,
+            scheduledAt,
+            durationMins,
+            location: form.location.trim() || null,
+            notes: form.notes.trim() || null,
+            interviewerIds: panel,
+          }),
+        });
+        setInterviews((current) => [...result.candidates, ...current]);
+        closeScheduleForm();
+        setSuccess(result.importedCount + ' interview(s) created with consecutive time slots.');
+      }
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to schedule the interview.');
     } finally {
@@ -373,6 +466,44 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
+  const openInterviewDetails = async (interview: InterviewRecord) => {
+    setDetailFor(interview.id);
+    setDetail(interview as InterviewDetail);
+    setDetailLoading(!developmentMode);
+    setError('');
+    if (developmentMode) return;
+
+    try {
+      const result = await apiFetch<InterviewDetail>('/interviews/' + interview.id);
+      setDetail(result);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load interview details.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeInterviewDetails = () => {
+    setDetailFor(null);
+    setDetail(null);
+    setDetailLoading(false);
+  };
+
+  const interviewDetailModalOpen = Boolean(detailFor && detail);
+  const interviewDetailModalRef = useFocusTrap<HTMLDivElement>({
+    enabled: interviewDetailModalOpen,
+    onEscape: closeInterviewDetails,
+  });
+
+  useEffect(() => {
+    if (!interviewDetailModalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [interviewDetailModalOpen]);
+
   const candidateFor = (interview: InterviewRecord) =>
     interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
 
@@ -385,7 +516,7 @@ export const InterviewsPage = ({ role }: Props) => {
         eyebrow={role === 'ADMIN' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
         description={role === 'INTERVIEWER' ? 'Complete the assigned interview criteria and submit your scorecard.' : role === 'INTERVIEWEE' ? 'Review your assigned interview schedule.' : 'Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.'}
-        action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Assign candidate</Button> : undefined}
+        action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
       {role === 'ADMIN' && (
@@ -407,18 +538,74 @@ export const InterviewsPage = ({ role }: Props) => {
         <Card>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-black text-slate-950">{editingInterviewId ? 'Reschedule interview' : 'Assign candidate to interview'}</h2>
+              <h2 className="text-sm font-black text-slate-950">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
               <p className="mt-1 text-xs text-slate-400">An interview belongs directly to a candidate. A job is optional context.</p>
             </div>
             <Button size="sm" variant="secondary" onClick={closeScheduleForm}>Close</Button>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <FormField label="Candidate">
-              <select className="field-input" value={candidateId} disabled={Boolean(editingInterviewId)} onChange={(event) => setCandidateId(event.target.value)}>
-                <option value="">Select candidate</option>
-                {availableCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.reference} — {candidate.name} · {statusLabel(candidate.status)}</option>)}
-              </select>
-            </FormField>
+            {editingInterviewId ? (
+              <>
+                <FormField label="Current candidate">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? candidateId}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId}</p>
+                  </div>
+                </FormField>
+                <div className="md:col-span-2">
+                  <FormField label="Also schedule for other candidates" hint="Optional. Selected candidates receive new interviews in consecutive time slots after this interview.">
+                    <div className="rounded-2xl border border-slate-200 bg-white">
+                      <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
+                        <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates to add…" />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
+                          <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
+                        </div>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto p-2">
+                        {selectableCandidates.map((candidate) => (
+                          <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
+                            <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
+                              <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} additional candidate(s) selected</div>
+                    </div>
+                  </FormField>
+                </div>
+              </>
+            ) : (
+              <div className="md:col-span-2">
+                <FormField label="Candidates" hint="Select one or more candidates. Each candidate receives an individual interview in consecutive time slots starting at the selected time.">
+                  <div className="rounded-2xl border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
+                      <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates…" />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
+                        <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {selectableCandidates.map((candidate) => (
+                        <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
+                          <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
+                            <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
+                          </span>
+                        </label>
+                      ))}
+                      {!selectableCandidates.length && <p className="p-4 text-center text-xs text-slate-400">No candidates match this search.</p>}
+                    </div>
+                    <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} candidate(s) selected</div>
+                  </div>
+                </FormField>
+              </div>
+            )}
             <FormField label="Job / position" hint="Optional">
               <select className="field-input" value={jobId} onChange={(event) => setJobId(event.target.value)}>
                 <option value="">No specific job</option>
@@ -499,13 +686,20 @@ export const InterviewsPage = ({ role }: Props) => {
                   </div>
                   {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Reschedule</Button>
+                      <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
+                      <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
                       <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
                       <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
                     </div>
                   )}
                   {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
-                    <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
+                      <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                    </div>
+                  )}
+                  {(role === 'INTERVIEWER' || role === 'INTERVIEWEE') && interview.status !== 'SCHEDULED' && (
+                    <Button size="sm" variant="secondary" onClick={() => void openInterviewDetails(interview)}>View details</Button>
                   )}
                 </div>
 
@@ -563,6 +757,61 @@ export const InterviewsPage = ({ role }: Props) => {
           })}
         </div>
       )}
+      {detailFor && detail && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close interview details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeInterviewDetails} />
+          <div ref={interviewDetailModalRef} role="dialog" aria-modal="true" aria-labelledby="interview-details-title" tabIndex={-1} className="relative z-10 my-auto w-full max-w-5xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
+            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
+                <h2 id="interview-details-title" className="mt-1 text-xl font-black text-slate-950">{detail.candidate?.name ?? detail.candidateId}</h2>
+                <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · {detail.type} interview · {statusLabel(detail.status)}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2"><StatusPill value={detail.status} /><Button size="sm" variant="secondary" onClick={closeInterviewDetails}>Close</Button></div>
+            </div>
+
+            {detailLoading && <div className="mt-5"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date & time</p><p className="mt-2 text-sm font-bold text-slate-900">{new Date(detail.scheduledAt).toLocaleString()}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.durationMins} minutes</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Job</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.job?.title ?? 'General interview'}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.location ?? 'Not specified'}</p></div>
+            </div>
+
+            {detail.notes && <div className="mt-4 rounded-2xl border border-slate-200 p-4"><h3 className="text-sm font-black text-slate-950">Notes</h3><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{detail.notes}</p></div>}
+
+            <div className="mt-5">
+              <h3 className="text-sm font-black text-slate-950">Interview panel</h3>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {detail.panel?.length ? detail.panel.map((participant) => (
+                  <div key={participant.userId} className="rounded-2xl border border-slate-200 p-4">
+                    <p className="text-sm font-bold text-slate-900">{participant.user?.name ?? 'Interviewer unavailable'}</p>
+                    <p className="mt-1 text-xs text-slate-400">{participant.user?.email ?? 'No email'}</p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-500">{participant.user?.active === false ? 'Inactive' : 'Active'}</p>
+                  </div>
+                )) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No panel information available.</p>}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <h3 className="text-sm font-black text-slate-950">Scorecards</h3>
+              <div className="mt-3 space-y-3">
+                {detail.evaluations?.length ? detail.evaluations.map((evaluation) => {
+                  const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
+                  const max = evaluation.scores.reduce((sum, score) => sum + (score.criterion?.maxPoints ?? 0), 0);
+                  return <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p><p className="text-xs text-slate-400">{evaluation.interviewer.email}</p></div><p className="text-sm font-black text-cyan-700">{total} / {max} {max ? '(' + Math.round((total / max) * 100) + '%)' : ''}</p></div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{evaluation.scores.map((score) => <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[11px] font-semibold text-slate-600">{score.criterion?.name ?? 'Criterion'}</span><span className="text-xs font-black text-slate-900">{score.points} / {score.criterion?.maxPoints ?? 0}</span></div>)}</div>
+                    {evaluation.comments && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{evaluation.comments}</p>}
+                  </div>;
+                }) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No scorecards submitted yet.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </section>
   );
 };
