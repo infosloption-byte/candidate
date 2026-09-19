@@ -121,7 +121,14 @@ model Candidate {
   reference        String           @db.VarChar(32)
   name             String           @db.VarChar(160)
   email            String?          @db.VarChar(191)
-  phone            String?           @db.VarChar(60)
+  phone            String?          @db.VarChar(60)
+  alternatePhone   String?          @db.VarChar(60)
+  country          String?          @db.VarChar(100)
+  passportNumber   String?          @db.VarChar(60)
+  passportExpiry   DateTime?
+  currentLocation  String?          @db.VarChar(160)
+  availability     String?          @db.VarChar(80)
+  visaStatus       String?          @db.VarChar(80)
   profession       String?          @db.VarChar(120)
   experienceYears  Int?
   skills           Json
@@ -141,6 +148,10 @@ model Candidate {
   @@unique([agencyId, reference])
   @@index([agencyId, name])
   @@index([agencyId, profession])
+  @@index([agencyId, country])
+  @@index([agencyId, passportNumber])
+  @@index([agencyId, visaStatus])
+  @@index([agencyId, availability])
 }
 
 model CandidateDocument {
