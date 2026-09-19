@@ -15,3 +15,10 @@ test('csv object parser normalizes headers', () => {
     [{ name: 'Kamal', email: 'kamal@example.com' }],
   );
 });
+
+test('csv object parser lowercases camel-case experience header', () => {
+  assert.deepEqual(
+    csvRowsToObjects('name,experienceYears\nKamal,8\n'),
+    [{ name: 'Kamal', experienceyears: '8' }],
+  );
+});
