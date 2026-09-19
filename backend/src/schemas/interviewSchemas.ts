@@ -34,6 +34,46 @@ export const createInterviewBodySchema = {
     timezone: { type: "string", minLength: 1, maxLength: 80 },
     interviewerIds: { type: "array", minItems: 1, maxItems: 10, items: { type: "string", minLength: 1, maxLength: 36 } },
     notes: { type: "string", maxLength: 5000 },
+    scorecard: {
+      type: "object",
+      additionalProperties: false,
+      required: ["templateId", "criteria"],
+      properties: {
+        templateId: { type: "string", minLength: 1, maxLength: 100 },
+        criteria: {
+          type: "array",
+          maxItems: 30,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "label", "weight"],
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 100 },
+              label: { type: "string", minLength: 1, maxLength: 160 },
+              weight: { type: "integer", minimum: 0, maximum: 100 },
+              score: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+              note: { type: "string", maxLength: 5000 },
+            },
+          },
+        },
+      },
+    },
+    practicalTest: {
+      type: "array",
+      maxItems: 30,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "label", "required", "result"],
+        properties: {
+          id: { type: "string", minLength: 1, maxLength: 100 },
+          label: { type: "string", minLength: 1, maxLength: 200 },
+          required: { type: "boolean" },
+          result: { type: "string", enum: ["not-started", "passed", "failed", "pending"] },
+          note: { type: "string", maxLength: 5000 },
+        },
+      },
+    },
   },
 } as const;
 
