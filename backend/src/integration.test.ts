@@ -213,6 +213,30 @@ dbTest('authentication and agency isolation protect real API boundaries', async 
     headers: { cookie: interviewerCookie },
   });
   assert.equal(interviewerApplications.statusCode, 403);
+
+  const adminCookie = await login(emails.admin);
+  const deactivateAgency = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/agencies/' + agencyAId,
+    headers: { cookie: adminCookie },
+    payload: { status: 'INACTIVE' },
+  });
+  assert.equal(deactivateAgency.statusCode, 200);
+
+  const inactiveAgencyLogin = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    payload: { email: emails.agencyA, password },
+  });
+  assert.equal(inactiveAgencyLogin.statusCode, 401);
+
+  const reactivateAgency = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/agencies/' + agencyAId,
+    headers: { cookie: adminCookie },
+    payload: { status: 'ACTIVE' },
+  });
+  assert.equal(reactivateAgency.statusCode, 200);
 });
 
 dbTest('candidate bulk onboarding is atomic and rejects duplicates', async () => {
