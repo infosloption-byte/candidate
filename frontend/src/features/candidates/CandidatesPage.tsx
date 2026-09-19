@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -41,6 +41,8 @@ export const CandidatesPage = ({ role }: Props) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const bulkFileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (developmentMode) {
@@ -178,6 +180,79 @@ export const CandidatesPage = ({ role }: Props) => {
     finally { setSaving(false); }
   };
 
+  const downloadCsvTemplate = () => {
+    const csv = 'name,email,phone,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,Mason,5,"Masonry,Tile,Plaster"\n';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'buildhire-candidate-import-template.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importCandidates = async (file: File) => {
+    if (!agencyId) {
+      setError('Select an agency workspace before importing candidates.');
+      return;
+    }
+    if (file.size > 2_000_000) {
+      setError('CSV must be 2 MB or smaller.');
+      return;
+    }
+
+    setBulkImporting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const csv = await file.text();
+      if (developmentMode) {
+        const lines = csv.split(/\r?\n/).filter((line) => line.trim());
+        if (lines.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
+        const header = lines[0].split(',').map((item) => item.trim().toLowerCase());
+        const nameIndex = header.indexOf('name');
+        if (nameIndex < 0) throw new Error('CSV must contain a name column.');
+        const created: Candidate[] = lines.slice(1).map((line, index) => {
+          const values = line.split(',');
+          const name = values[nameIndex]?.trim() || 'Imported Candidate ' + (index + 1);
+          return {
+            id: 'candidate-import-' + Date.now() + '-' + index,
+            agencyId,
+            reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
+            name,
+            email: null,
+            phone: null,
+            profession: null,
+            experienceYears: 0,
+            skills: [],
+            onboardingStatus: 'NOT_STARTED',
+            source: 'BULK_IMPORTED',
+            status: 'POOL',
+            statusUpdatedAt: new Date().toISOString(),
+          };
+        });
+        created.forEach((candidate) => dispatch({ type: 'CREATE_CANDIDATE', candidate }));
+        setCandidates((current) => [...created, ...current]);
+        setSuccessTitle('Candidates imported');
+        setSuccess(created.length + ' candidate(s) were added to the candidate pool.');
+      } else {
+        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + agencyId + '/candidates/bulk', {
+          method: 'POST',
+          headers: { 'content-type': 'text/csv' },
+          body: csv,
+        });
+        setCandidates((current) => [...result.candidates, ...current]);
+        setSuccessTitle('Candidates imported');
+        setSuccess(result.importedCount + ' candidate(s) were added to the candidate pool.');
+      }
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to import the CSV.');
+    } finally {
+      setBulkImporting(false);
+      if (bulkFileRef.current) bulkFileRef.current.value = '';
+    }
+  };
+
   const updateStatus = async () => {
     if (!candidate || !statusDraft || statusDraft === candidate.status) return;
     setSaving(true);
@@ -281,6 +356,32 @@ export const CandidatesPage = ({ role }: Props) => {
             </div>
             <p className="mt-3 text-xs text-slate-400">{filteredCandidates.length} candidate(s) in this view.</p>
           </Card>
+          <Card>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-black text-slate-950">Bulk candidate onboarding</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Import up to 500 candidates at once. Every imported candidate starts in the candidate pool and can later be assigned directly to an interview.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={downloadCsvTemplate}>CSV template</Button>
+                <input
+                  ref={bulkFileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void importCandidates(file);
+                  }}
+                />
+                <Button size="sm" disabled={bulkImporting || !agencyId} onClick={() => bulkFileRef.current?.click()}>
+                  {bulkImporting ? 'Importing…' : 'Import CSV'}
+                </Button>
+              </div>
+            </div>
+            {role === 'ADMIN' && !agencyId && <p className="mt-3 text-xs font-semibold text-amber-600">Select an agency workspace above before importing.</p>}
+          </Card>
+
           {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
