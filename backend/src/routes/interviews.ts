@@ -36,7 +36,7 @@ const canManage = (role: string, agencyId: string | null, interviewAgencyId: str
 
 const getInterviewers = async (ids: string[], agencyId: string) => {
   const uniqueIds = [...new Set(ids)];
-  const users = await getPrisma().user.findMany({
+  return getPrisma().user.findMany({
     where: {
       id: { in: uniqueIds },
       agencyId,
@@ -45,8 +45,6 @@ const getInterviewers = async (ids: string[], agencyId: string) => {
     },
     select: { id: true },
   });
-
-  return users;
 };
 
 const hasScheduleConflict = async (
@@ -156,14 +154,12 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
       const interviewers = await getInterviewers(interviewerIds, application.job.agencyId);
-
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the job agency.' } });
       }
 
       const scheduledAt = new Date(request.body.scheduledAt!);
       const durationMins = request.body.durationMins ?? 30;
-
       if (scheduledAt.getTime() <= Date.now()) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
       }
@@ -218,6 +214,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         result.application.candidate.id,
         { type: 'INTERVIEW_SCHEDULED', title: 'Interview scheduled', message: 'Your ' + result.type.toLowerCase() + ' interview is scheduled for ' + result.scheduledAt.toISOString() + '.' },
       );
+
       return reply.code(201).send({ success: true, data: result });
     },
   );
@@ -253,9 +250,22 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW', message: errors.join(' ') } });
       }
 
+      if (existing.status !== 'SCHEDULED') {
+        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_OPEN', message: 'Only scheduled interviews can be edited or rescheduled.' } });
+      }
+
       const nextScheduledAt = request.body.scheduledAt ? new Date(request.body.scheduledAt) : existing.scheduledAt;
       const nextDuration = request.body.durationMins ?? existing.durationMins;
       const nextPanel = request.body.interviewerIds ?? existing.panel.map((item) => item.userId);
+      const nextStatus = request.body.status ?? existing.status;
+
+      if (request.body.status !== undefined && !['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(request.body.status)) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview can only be scheduled, cancelled, or marked as a no-show from the scheduler.' } });
+      }
+
+      if (nextStatus === 'SCHEDULED' && nextScheduledAt.getTime() <= Date.now()) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
+      }
 
       if (nextStatus === 'SCHEDULED') {
         if (!nextPanel.length) {
@@ -270,8 +280,6 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (await hasScheduleConflict(nextPanel, existing.application.candidateId, nextScheduledAt, nextDuration, existing.id)) {
           return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
         }
-      }
-        return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
       }
 
       const result = await getPrisma().$transaction(async (tx) => {
@@ -316,6 +324,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         result.application.candidate.id,
         { type: 'INTERVIEW_UPDATED', title: 'Interview updated', message: 'Your interview schedule has been updated.' },
       );
+
       return reply.send({ success: true, data: result });
     },
   );
