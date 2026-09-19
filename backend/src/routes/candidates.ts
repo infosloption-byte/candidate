@@ -80,7 +80,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate history.' } });
       }
 
-      const [statusHistory, interviews] = await Promise.all([
+      const [statusHistory, interviews, auditEvents] = await Promise.all([
         getPrisma().candidateStatusHistory.findMany({
           where: { candidateId: candidate.id },
           include: { changedBy: { select: { id: true, name: true, role: true } } },
@@ -102,9 +102,15 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           },
           orderBy: { scheduledAt: 'desc' },
         }),
+        getPrisma().auditEvent.findMany({
+          where: { entityType: 'Candidate', entityId: candidate.id },
+          include: { actor: { select: { id: true, name: true, role: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        }),
       ]);
 
-      return reply.send({ success: true, data: { statusHistory, interviews } });
+      return reply.send({ success: true, data: { statusHistory, interviews, auditEvents } });
     },
   );
 
