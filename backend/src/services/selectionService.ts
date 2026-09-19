@@ -15,6 +15,7 @@ import {
   findSelectionRecord,
   updateSelectionRecord,
   upsertSelectionApproval,
+  type SelectionRecordWithActor,
 } from "../repositories/selectionRepository.js";
 import type { AuthContext } from "../types/fastify.js";
 
@@ -44,19 +45,23 @@ const approvalMap = {
   returned: PrismaApprovalStatus.RETURNED,
 } satisfies Record<ApprovalStatusInput, PrismaApprovalStatus>;
 
-const frontendDecision = (value: PrismaSelectionDecision): SelectionDecisionInput => ({
+const frontendDecisionMap = {
   RECOMMENDED: "recommended",
   SELECTED: "selected",
   RESERVE: "reserve",
   REJECTED: "rejected",
-}[value]);
+} as const satisfies Record<PrismaSelectionDecision, SelectionDecisionInput>;
 
-const frontendApproval = (value: PrismaApprovalStatus): ApprovalStatusInput => ({
+const frontendApprovalMap = {
   DRAFT: "draft",
   PENDING: "pending",
   APPROVED: "approved",
   RETURNED: "returned",
-}[value]);
+} as const satisfies Record<PrismaApprovalStatus, ApprovalStatusInput>;
+
+const frontendDecision = (value: PrismaSelectionDecision): SelectionDecisionInput => frontendDecisionMap[value];
+
+const frontendApproval = (value: PrismaApprovalStatus): ApprovalStatusInput => frontendApprovalMap[value];
 
 const defaultWeights: SelectionScoringWeights = {
   experience: 25,
@@ -93,8 +98,7 @@ const normalizeWeights = (input: SelectionScoringWeights): SelectionScoringWeigh
 const strings = (value: Prisma.JsonValue): string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 
-export const toSelectionJobDto = (job: Awaited<ReturnType<typeof findJobById>> & object) => {
-  if (!job) throw AppError.notFound("Job not found.");
+export const toSelectionJobDto = (job: Prisma.JobGetPayload<{}>) => {
   return {
     id: job.id,
     title: job.title,
