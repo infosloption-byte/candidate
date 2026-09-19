@@ -2,182 +2,206 @@
 
 ## Goal
 
-Rebuild the application around one simple recruitment workflow and remove the legacy ERP complexity.
+Rebuild the application around one simple, candidate-first recruitment workflow and remove unnecessary application-stage complexity.
 
 ## Target roles
 
 | Role | Responsibility |
 |---|---|
-| Admin | System-wide administration and agency/user control |
-| Agency | Publish jobs, onboard candidates, review applications, schedule interviews |
-| Interviewer | Participate in interviews and submit evaluations |
-| Interviewee | Maintain candidate profile and apply for jobs |
+| Admin | System-wide administration and full agency operations on behalf of any agency |
+| Agency | Manage its candidate pool, positions, interviews, interviewers, and candidate decisions |
+| Interviewer | Participate in assigned interviews and submit criterion scores |
+| Interviewee | Maintain candidate profile and view assigned interview information |
 
 ## Target workflow
 
-```text
-Agency creates job
-      ↓
-Job is published
-      ↓
 Candidate is onboarded
-      ├─ self onboarding
-      ├─ agency onboarding
-      └─ bulk onboarding
       ↓
-Candidate applies to a job
+Candidate enters the agency candidate pool
       ↓
-Agency reviews application
+Admin / Agency selects candidate
       ↓
-Interview is scheduled for that application
-      ↓
-One interviewer OR multiple interviewers are assigned
+Interview is assigned directly to candidate
+  ├─ optional job / position context
+  └─ one interviewer OR panel
       ↓
 Interview is conducted
       ↓
-Interviewer(s) submit evaluation
+Each assigned interviewer scores configured criteria
       ↓
-Application moves to the next decision state
-```
+All panel evaluations complete
+      ↓
+Interview is marked COMPLETED
+      ↓
+Candidate moves to INTERVIEW_COMPLETED
+      ↓
+Admin / Agency records final status
+  ├─ PASSED
+  ├─ REJECTED
+  ├─ HIRED
+  └─ another supported lifecycle status
+      ↓
+Candidate profile retains status, interview, score, and activity history
+
+## Candidate lifecycle
+
+POOL → READY_FOR_INTERVIEW → INTERVIEW_SCHEDULED → INTERVIEW_COMPLETED → PASSED / REJECTED / HIRED
+
+Supporting operational states include ON_HOLD and INACTIVE.
 
 ## Domain model
 
-```text
 Agency
  ├─ Users
- ├─ Jobs
- └─ Candidates
+ ├─ Jobs / Positions
+ ├─ Candidates
+ └─ Interview Criteria
 
 Candidate
- └─ Job Applications
-
-Job
- └─ Job Applications
-
-JobApplication
- └─ Interviews
+ ├─ Documents
+ ├─ Interviews
+ └─ Candidate Status History
 
 Interview
+ ├─ optional Job
  ├─ Interview Participants
  └─ Interview Evaluations
-```
+
+InterviewEvaluation
+ └─ Interview Evaluation Scores
+      └─ Interview Criterion
+
+There is intentionally no JobApplication domain object.
 
 ## Phase 0 — Repository reset
 
-Status: **completed**
+Status: completed
 
-- Remove all previous frontend business features and domain state.
-- Keep the existing frontend theme, responsive shell, typography, spacing, icons, and mobile navigation.
-- Remove legacy backend controllers, services, repositories, auth stack, feature routes, and test suites.
-- Replace the old Prisma schema with the minimal target-domain schema.
-- Remove legacy Prisma migrations and seed data.
-- Reduce frontend and backend dependencies to the foundation required by the rebuild.
-- Replace the old task tracker and blueprint with this rebuild plan.
+- Remove legacy ERP complexity.
+- Preserve the frontend visual theme and responsive shell.
+- Reduce the backend to the Fastify + Prisma/MySQL foundation.
+- Reduce the frontend to the React + Tailwind + Vite foundation.
 
 ## Phase 1 — Frontend foundation
 
-- Rebuild the application shell on the preserved theme.
-- Define role-aware navigation for Admin, Agency, Interviewer, and Interviewee.
-- Create frontend domain types for agencies, jobs, candidates, applications, interviews, participants, and evaluations.
-- Establish simple feature folders and state boundaries only where a module needs them.
-- Keep business screens initially backed by local fixture data so UX is stable before API integration.
-- Build responsive empty, loading, error, and success presentation primitives.
+Status: completed
+
+- Role-aware application shell.
+- Responsive navigation.
+- Shared table, card, form, status, and state components.
+- Simple role-aware domain state and fixtures.
 
 ## Phase 2 — Identity and agency foundation
 
-- Implement login and session behavior for the four roles.
-- Create Admin agency management.
-- Create Agency user management.
-- Enforce agency ownership for agency-scoped records.
-- Add Interviewer assignment eligibility.
-- Add Interviewee account/profile relationship.
+Status: completed
 
-## Phase 3 — Jobs
+- Login/session behavior for all four roles.
+- Admin agency management.
+- Agency user management.
+- Agency-scoped authorization.
+- Interviewer eligibility.
+- Interviewee candidate account relationship.
 
-- Create agency job form.
-- Edit draft jobs.
-- Publish jobs.
-- Close jobs.
+## Phase 3 — Jobs / Positions
+
+Status: completed
+
+- Create/edit/publish/close positions.
 - Store title, description, location, openings, and publish state.
-- Build agency job list and job detail screens.
-- Build the published-job view needed for applications.
+- Admin can manage positions on behalf of an agency.
+- Jobs remain independent from candidate lifecycle and are optional interview context.
 
-## Phase 4 — Candidate onboarding
+## Phase 4 — Candidate pool and onboarding
 
-- Build candidate self-onboarding.
-- Build agency-created candidate onboarding.
-- Add candidate profile editing.
-- Add onboarding progress and submission.
-- Add agency review of submitted onboarding.
-- Add bulk onboarding via CSV first.
-- Add validation and duplicate handling only at the level required to import safely.
-- Add optional candidate documents after the core profile/application flow is stable, using a replaceable storage contract.
+Status: completed
 
-## Phase 5 — Applications
+- Candidate self-onboarding.
+- Agency-created candidate onboarding.
+- Bulk CSV onboarding.
+- Persistent candidate profile.
+- Candidate lifecycle status.
+- Candidate status history.
+- Candidate activity history.
+- Candidate interview history and score summaries.
+- Candidate documents.
 
-- Add JobApplication API and persistence.
-- Allow an interviewee to apply to a published job.
-- Allow an agency to review applications.
-- Implement application states: APPLIED → SCREENING → SHORTLISTED → INTERVIEW → SELECTED / REJECTED.
-- Support candidate withdrawal.
-- Prevent duplicate applications to the same job.
-- Keep the application as the source record for job-specific recruitment progress.
+## Phase 5 — Interview assignment
 
-## Phase 6 — Interview scheduling
+Status: completed
 
-- Schedule an interview against a JobApplication.
-- Add interview type, date/time, duration, and location.
-- Add one interviewer.
-- Add multiple interviewers as a panel.
-- Detect basic interviewer conflicts.
-- Allow reschedule and cancel.
-- Show interview calendar/list views.
-- Keep scheduling rules simple until real workflow usage identifies additional needs.
+- Direct candidate-to-interview assignment.
+- Optional job / position context.
+- One or multiple interviewers.
+- Schedule conflict checks.
+- Reschedule and cancellation.
+- No-show handling.
+- Admin cross-agency interview operations.
 
-## Phase 7 — Interview evaluation
+## Phase 6 — Interview criteria and scoring
 
-- Allow each assigned interviewer to submit an evaluation.
-- Capture simple rating, recommendation, and comments.
-- Support panel evaluations independently.
-- Show evaluation summary on the application/interview.
-- Move the application to the appropriate next state.
-- Do not introduce weighted scorecards or configurable scoring engines initially.
+Status: completed
+
+- Agency-configurable interview criteria.
+- Criterion maximum points.
+- Activate/deactivate criteria without deleting historical score meaning.
+- One evaluation per panel interviewer.
+- Per-criterion points.
+- Total and percentage summaries.
+- Complete interview after all panel evaluations.
+
+## Phase 7 — Candidate decision and history
+
+Status: completed
+
+- Automatically move candidate to INTERVIEW_COMPLETED after all panel evaluations.
+- Require a completed interview before final pass/reject/hire decisions.
+- Record final status and reason.
+- Preserve status history and candidate activity history.
+- Keep interview score history attached to the candidate.
 
 ## Phase 8 — Admin and operational polish
 
-- Admin dashboard with essential counts only.
-- Agency dashboard with jobs, applications, candidates, and upcoming interviews.
-- Interviewer dashboard with assigned interviews.
-- Interviewee dashboard with profile, applications, and upcoming interviews.
-- Basic audit logging for important mutations.
-- Basic notification hooks after the core workflow is stable.
+Status: completed / verification pending
+
+- Admin dashboard with cross-agency counts.
+- Admin agency workspace selection on operational screens.
+- Admin access to agency jobs, candidates, interviews, criteria, and users.
+- Basic audit logging.
+- Basic notifications.
+- Professional application shell/top bar/sidebar.
+- Responsive mobile navigation.
 
 ## Phase 9 — QA and release
 
+Status: in progress
+
 - Frontend type/build verification.
-- Backend unit/integration tests for every core workflow.
-- Prisma migration reproducibility from an empty database.
-- Role and agency-scope authorization tests.
-- Candidate self-onboarding test.
-- Agency onboarding and bulk-import tests.
-- Job publish/application tests.
-- Interview panel scheduling tests.
-- Interview evaluation tests.
+- Backend TypeScript build.
+- Prisma schema validation.
+- Fresh migration recreation.
+- Authentication/role/agency isolation integration tests.
+- Candidate onboarding/bulk import integration tests.
+- Candidate interview assignment/reschedule/conflict tests.
+- Criteria scoring/final status tests.
 - Responsive browser QA.
-- Production environment, backup, monitoring, and deployment checklist.
+- Production deployment, backup, monitoring, and rollback checks.
 
-## Explicitly removed from the new baseline
+## Explicitly removed
 
-- Selection board and selection approvals.
-- Cross-job allocation and reassignment.
-- Weighted suitability/scoring engines.
-- Complex interview scorecards and practical-test subsystems.
-- Notification center and reminder/escalation workflows.
-- Advanced document versioning/verification workflows.
-- Reports/analytics workspace and reporting exports.
-- Complex audit history UI.
-- Large-batch scheduling optimizer.
-- Specialty-aware scheduling and workload balancing engine.
-- Candidate comparison/search intelligence subsystem.
+- JobApplication entity.
+- Candidate Apply workflow.
+- Application status pipeline.
+- Application-based interview scheduling.
+- Rating-only evaluation.
+- Recommendation-based automatic final decisions.
+- Selection board / selection approvals.
+- Allocation / reassignment.
 - Manager/approver role.
 - Recruiter role as a separate account type.
+- Weighted suitability/scoring engine.
+- Complex practical-test subsystem.
+- Candidate comparison intelligence.
+- Batch scheduling optimizer.
+- Advanced notification center/escalation framework.
+- Advanced document versioning/verification.
+- Reporting/analytics suite.
