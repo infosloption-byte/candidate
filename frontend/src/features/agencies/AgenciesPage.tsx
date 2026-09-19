@@ -31,6 +31,7 @@ export const AgenciesPage = () => {
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [showAgencyForm, setShowAgencyForm] = useState(false);
+  const [editingAgencyId, setEditingAgencyId] = useState<string | null>(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [agencyName, setAgencyName] = useState('');
   const [agencySlug, setAgencySlug] = useState('');
@@ -93,7 +94,16 @@ export const AgenciesPage = () => {
     };
   }, [developmentMode, selectedAgencyId]);
 
-  const createAgency = async () => {
+  const beginEditAgency = (agency: AgencyRecord) => {
+    setEditingAgencyId(agency.id);
+    setAgencyName(agency.name);
+    setAgencySlug(agency.slug);
+    setShowAgencyForm(true);
+    setError('');
+    setSuccess('');
+  };
+
+  const saveAgency = async () => {
     if (!agencyName.trim() || !agencySlug.trim()) {
       setError('Agency name and slug are required.');
       return;
@@ -101,20 +111,29 @@ export const AgenciesPage = () => {
 
     setSaving(true);
     setError('');
-
     try {
-      const created = await apiFetch<AgencyRecord>('/agencies', {
-        method: 'POST',
-        body: JSON.stringify({ name: agencyName.trim(), slug: agencySlug.trim() }),
-      });
-
-      setAgencies((current) => [{ ...created, counts: { users: 0, jobs: 0, candidates: 0 } }, ...current]);
+      if (!editingAgencyId) {
+        const created = await apiFetch<AgencyRecord>('/agencies', {
+          method: 'POST',
+          body: JSON.stringify({ name: agencyName.trim(), slug: agencySlug.trim() }),
+        });
+        setAgencies((current) => [{ ...created, counts: { users: 0, jobs: 0, candidates: 0 } }, ...current]);
+        setSuccess('Agency "' + created.name + '" was created.');
+      } else {
+        const existing = agencies.find((item) => item.id === editingAgencyId);
+        const updated = await apiFetch<AgencyRecord>('/agencies/' + editingAgencyId, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: agencyName.trim(), slug: agencySlug.trim() }),
+        });
+        setAgencies((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated, counts: existing?.counts } : item));
+        setSuccess('Agency "' + updated.name + '" was updated.');
+      }
       setAgencyName('');
       setAgencySlug('');
+      setEditingAgencyId(null);
       setShowAgencyForm(false);
-      setSuccess('Agency "' + created.name + '" was created.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to create the agency.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save the agency.');
     } finally {
       setSaving(false);
     }
@@ -244,6 +263,10 @@ export const AgenciesPage = () => {
 
       {showAgencyForm && !developmentMode && (
         <Card>
+          <div className="mb-4">
+            <h2 className="text-sm font-black text-slate-950">{editingAgencyId ? 'Edit agency' : 'Create agency'}</h2>
+            <p className="mt-1 text-xs text-slate-400">{editingAgencyId ? 'Update the agency workspace name or slug.' : 'Create a new agency workspace.'}</p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Agency name">
               <input className="field-input" value={agencyName} onChange={(event) => setAgencyName(event.target.value)} placeholder="Example Recruitment" />
@@ -253,8 +276,8 @@ export const AgenciesPage = () => {
             </FormField>
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowAgencyForm(false)}>Cancel</Button>
-            <Button disabled={saving} onClick={() => void createAgency()}>{saving ? 'Saving…' : 'Create agency'}</Button>
+            <Button variant="secondary" onClick={() => { setShowAgencyForm(false); setEditingAgencyId(null); }}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void saveAgency()}>{saving ? 'Saving…' : editingAgencyId ? 'Save changes' : 'Create agency'}</Button>
           </div>
         </Card>
       )}
