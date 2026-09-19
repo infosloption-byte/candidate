@@ -30,6 +30,7 @@ interface InterviewRecord extends Interview {
     assignedAt: string;
     user: { id: string; name: string; email: string; role: UserRole; active: boolean };
   }>;
+  evaluations?: Array<{ id: string }>;
 }
 
 type Recommendation = 'RECOMMENDED' | 'MAYBE' | 'NOT_RECOMMENDED';
@@ -460,7 +461,7 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
             const panelNames = interview.panel?.map((item) => item.user.name)
               ?? (interview.panelUserIds.map((id) => state.users.find((item) => item.id === id)?.name ?? getUser(id)?.name).filter(Boolean) as string[]);
             const evaluationDraft = evaluationDrafts[interview.id] ?? defaultEvaluation;
-            const alreadySubmitted = submittedEvaluationIds.has(interview.id);
+            const alreadySubmitted = submittedEvaluationIds.has(interview.id) || Boolean(interview.evaluations?.some((evaluation) => evaluation.id));
 
             return (
               <article key={interview.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
