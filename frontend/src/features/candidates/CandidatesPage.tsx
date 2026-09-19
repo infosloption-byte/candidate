@@ -99,6 +99,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
   const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'documents' | 'activity'>('overview');
   const [bulkImporting, setBulkImporting] = useState(false);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
@@ -522,7 +523,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); }}>Open</Button> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
   ];
 
   return (
@@ -728,12 +729,12 @@ export const CandidatesPage = ({ role }: Props) => {
                     {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
               <button
                 type="button"
                 aria-label="Close candidate details"
                 className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
-                onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); }}
+                onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
               />
               <div
                 ref={candidateModalRef}
@@ -741,135 +742,210 @@ export const CandidatesPage = ({ role }: Props) => {
                 aria-modal="true"
                 aria-labelledby="candidate-details-title"
                 tabIndex={-1}
-                className="relative z-10 my-auto w-full max-w-6xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6"
+                className="relative z-10 my-auto w-full max-w-5xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p><h2 id="candidate-details-title" className="mt-1 text-xl font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p></div>
-                <div className="flex flex-wrap items-center gap-2"><StatusPill value={candidate.status} /><Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setError(''); }}>{editingCandidateProfile ? 'Close edit' : 'Edit profile'}</Button><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); }}>Close</Button></div>
-              </div>
-
-              {editingCandidateProfile ? (
-                <div className="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
-                  <h3 className="text-sm font-black text-slate-950">Edit candidate profile</h3>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
-                    <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
-                    <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
-                    <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} /></FormField>
-                    <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
-                    <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
-                    <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
-                    <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
-                    <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} /></FormField>
-                    <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} /></FormField>
-                    <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
-                    <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                    <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
-                  </div>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
-                    <Button disabled={saving} onClick={() => void saveManagedProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button>
-                  </div>
-                </div>
-              ) : (
-              <>
-                <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contact number</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-1 text-xs text-slate-500">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Identity</p><p className="mt-2 text-sm font-bold text-slate-800">{maskPassport(candidate.passportNumber)}</p><p className="mt-1 text-xs text-slate-500">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Country / location</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.country ?? 'Not set'}</p><p className="mt-1 text-xs text-slate-500">{candidate.currentLocation ?? 'Location not set'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Work readiness</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-1 text-xs text-slate-500">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
-                </div>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</p><p className="mt-2 text-sm font-bold text-slate-800">{candidate.email ?? 'No email'}</p></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Skills</p><p className="mt-2 text-xs leading-5 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
-                </div>
-                <div className="mt-4 rounded-2xl bg-slate-50 p-4"><div className="flex flex-wrap items-center gap-2"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</p><StatusPill value={candidate.onboardingStatus} />{candidate.onboardingStatus !== 'COMPLETED' && <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>}</div></div>
-                <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p className="text-xs font-black text-slate-900">Onboarding review</p><p className="mt-1 text-[11px] text-slate-500">Review the candidate profile before completing onboarding.</p></div>
-                    <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500"><span className="rounded-full bg-white px-3 py-1.5">Profile {candidate.name && candidate.profession ? 'complete' : 'needs review'}</span><span className="rounded-full bg-white px-3 py-1.5">Contact {candidate.email || candidate.phone ? 'available' : 'missing'}</span><span className="rounded-full bg-white px-3 py-1.5">Skills {candidate.skills.length ? candidate.skills.length + ' recorded' : 'missing'}</span></div>
-                  </div>
-                </div>
-              </>
-              )}
-
-              <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div><h3 className="text-sm font-black text-slate-950">Lifecycle status</h3><p className="mt-1 text-xs text-slate-400">Every status change is recorded in the candidate history.</p></div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div><p className="field-label">Status</p><select className="field-input sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>{statusOptions.filter((status) => {
-                      const hasCompletedInterview = history.interviews.some((interview) => interview.status === 'COMPLETED');
-                      return !finalStatusOptions.includes(status) || hasCompletedInterview || status === candidate.status;
-                    }).map((status) => <option key={status} value={status}>{label(status)}</option>)}</select></div>
-                    <div><p className="field-label">Reason</p><input className="field-input sm:min-w-64" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" /></div>
-                    <Button disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save status</Button>
-                  </div>
-                </div>
-              </div>
-
-              {loadingHistory ? <div className="mt-5"><StateMessage kind="loading" title="Loading candidate history" /></div> : (
-                <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-950">Status history</h3>
-                    <div className="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                      {history.statusHistory.length ? history.statusHistory.map((item) => (
-                        <div key={item.id} className="p-4">
-                          <div className="flex items-center justify-between gap-3"><StatusPill value={item.toStatus} /><span className="text-[10px] text-slate-400">{new Date(item.createdAt).toLocaleString()}</span></div>
-                          <p className="mt-2 text-xs text-slate-500">{item.reason ?? 'Status updated.'}</p>
-                          {item.changedBy && <p className="mt-1 text-[10px] text-slate-400">By {item.changedBy.name}</p>}
-                        </div>
-                      )) : <p className="p-5 text-xs text-slate-400">No status history recorded.</p>}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-950">Interview history</h3>
-                    <div className="mt-3 space-y-3">
-                      {history.interviews.length ? history.interviews.map((item) => {
-                        const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
-                        const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + (score.criterion?.maxPoints ?? 0), 0), 0);
-                        return <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
-                          <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p><StatusPill value={item.status} /></div>
-                          <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min</p>
-                          <p className="mt-1 text-xs text-slate-400">{item.job?.title ?? 'General interview'} · {item.location ?? 'Location not specified'}</p>
-                          {item.evaluations.length > 0 && (
-                            <>
-                              <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>
-                              <div className="mt-3 space-y-2">
-                                {item.evaluations.map((evaluation) => evaluation.scores.map((score) => (
-                                  <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-                                    <span className="text-[11px] font-semibold text-slate-600">{score.criterion?.name ?? 'Criterion'}</span>
-                                    <span className="text-xs font-black text-slate-900">{score.points} / {score.criterion?.maxPoints ?? 0}</span>
-                                  </div>
-                                )))}
-                              </div>
-                            </>
-                          )}
-                        </div>;
-                      }) : <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-xs text-slate-400">No interview history yet.</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-5">
-                <h3 className="text-sm font-black text-slate-950">Activity history</h3>
-                <div className="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                  {history.auditEvents.length ? history.auditEvents.map((event) => (
-                    <div key={event.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">{event.summary}</p>
-                        <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {label(event.action)}</p>
+                <header className="border-b border-slate-200 px-4 py-5 sm:px-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p>
+                        <StatusPill value={candidate.status} />
+                        <StatusPill value={candidate.onboardingStatus} />
                       </div>
-                      <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                      <h2 id="candidate-details-title" className="mt-2 text-2xl font-black tracking-tight text-slate-950">{candidate.name}</h2>
+                      <p className="mt-1 text-sm text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
-                  )) : <p className="p-5 text-xs text-slate-400">No candidate activity recorded yet.</p>}
-                </div>
-              </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
+                        <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
+                      )}
+                      <Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
+                        {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Close</Button>
+                    </div>
+                  </div>
 
-              <div className="mt-5"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
+                  <nav className="mt-5 flex gap-1 overflow-x-auto" aria-label="Candidate profile sections">
+                    {([
+                      ['overview', 'Overview'],
+                      ['documents', 'Documents'],
+                      ['activity', 'Activity'],
+                    ] as const).map(([tab, textLabel]) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActiveDetailTab(tab)}
+                        className={`rounded-xl px-4 py-2 text-xs font-bold transition ${activeDetailTab === tab ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                        aria-current={activeDetailTab === tab ? 'page' : undefined}
+                      >
+                        {textLabel}
+                      </button>
+                    ))}
+                  </nav>
+                </header>
+
+                <div className="px-4 py-5 sm:px-6">
+                  {editingCandidateProfile && activeDetailTab === 'overview' ? (
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-950">Edit profile</h3>
+                          <p className="mt-1 text-xs text-slate-500">Update the candidate's contact, identity, location, work status, profession, experience, and skills.</p>
+                        </div>
+                      </div>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
+                        <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
+                        <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
+                        <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} /></FormField>
+                        <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
+                        <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
+                        <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
+                        <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
+                        <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} /></FormField>
+                        <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} /></FormField>
+                        <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
+                        <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
+                        <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
+                      </div>
+                      <div className="mt-5 flex justify-end gap-2">
+                        <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
+                        <Button disabled={saving} onClick={() => void saveManagedProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {activeDetailTab === 'overview' && (
+                        <div className="space-y-7">
+                          <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                            <div><p className="field-label">Contact</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
+                            <div><p className="field-label">Email</p><p className="mt-1 text-sm font-semibold break-words text-slate-800">{candidate.email ?? 'No email'}</p></div>
+                            <div><p className="field-label">Country</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.country ?? 'Not set'}</p></div>
+                            <div><p className="field-label">Location</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.currentLocation ?? 'Not set'}</p></div>
+                            <div><p className="field-label">Passport</p><p className="mt-1 text-sm font-semibold text-slate-800">{maskPassport(candidate.passportNumber)}</p><p className="mt-0.5 text-xs text-slate-400">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                            <div><p className="field-label">Work readiness</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
+                            <div><p className="field-label">Skills</p><p className="mt-1 text-sm leading-6 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
+                            <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
+                            <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
+                          </div>
+
+                          <section className="border-t border-slate-200 pt-6">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                              <div>
+                                <h3 className="text-sm font-black text-slate-950">Lifecycle status</h3>
+                                <p className="mt-1 text-xs text-slate-500">Update the recruitment stage and record an optional reason.</p>
+                              </div>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div>
+                                  <label className="field-label">Status</label>
+                                  <select className="field-input mt-1 sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
+                                    {statusOptions.filter((status) => {
+                                      const hasCompletedInterview = history.interviews.some((interview) => interview.status === 'COMPLETED');
+                                      return !finalStatusOptions.includes(status) || hasCompletedInterview || status === candidate.status;
+                                    }).map((status) => <option key={status} value={status}>{label(status)}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="field-label">Reason</label>
+                                  <input className="field-input mt-1 sm:min-w-56" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" />
+                                </div>
+                                <Button disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save</Button>
+                              </div>
+                            </div>
+                          </section>
+
+                          <section className="border-t border-slate-200 pt-6">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h3 className="text-sm font-black text-slate-950">Interview history</h3>
+                                <p className="mt-1 text-xs text-slate-500">Past and scheduled interviews for this candidate.</p>
+                              </div>
+                              {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
+                            </div>
+                            <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+                              {!loadingHistory && history.interviews.length === 0 && <p className="py-6 text-xs text-slate-400">No interview history yet.</p>}
+                              {history.interviews.map((item) => {
+                                const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
+                                const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + (score.criterion?.maxPoints ?? 0), 0), 0);
+                                return (
+                                  <div key={item.id} className="py-4">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p>
+                                        <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min · {item.location ?? 'Location not specified'}</p>
+                                        <p className="mt-1 text-xs text-slate-400">{item.job?.title ?? 'General interview'}</p>
+                                      </div>
+                                      <StatusPill value={item.status} />
+                                    </div>
+                                    {item.evaluations.length > 0 && <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        </div>
+                      )}
+
+                      {activeDetailTab === 'documents' && (
+                        <div>
+                          <h3 className="text-sm font-black text-slate-950">Candidate documents</h3>
+                          <p className="mt-1 text-xs text-slate-500">Manage documents attached to this candidate profile.</p>
+                          <div className="mt-5">
+                            <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
+                          </div>
+                        </div>
+                      )}
+
+                      {activeDetailTab === 'activity' && (
+                        <div>
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-950">Activity history</h3>
+                              <p className="mt-1 text-xs text-slate-500">Status changes and other recorded candidate actions.</p>
+                            </div>
+                            {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
+                          </div>
+
+                          <div className="mt-5">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Status history</h4>
+                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+                              {history.statusHistory.length ? history.statusHistory.map((item) => (
+                                <div key={item.id} className="py-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <StatusPill value={item.toStatus} />
+                                    <span className="text-[10px] text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
+                                  </div>
+                                  <p className="mt-2 text-xs text-slate-500">{item.reason ?? 'Status updated.'}</p>
+                                  {item.changedBy && <p className="mt-1 text-[10px] text-slate-400">By {item.changedBy.name}</p>}
+                                </div>
+                              )) : <p className="py-5 text-xs text-slate-400">No status history recorded.</p>}
+                            </div>
+                          </div>
+
+                          <div className="mt-7">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Activity log</h4>
+                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+                              {history.auditEvents.length ? history.auditEvents.map((event) => (
+                                <div key={event.id} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-800">{event.summary}</p>
+                                    <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {label(event.action)}</p>
+                                  </div>
+                                  <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                                </div>
+                              )) : <p className="py-5 text-xs text-slate-400">No candidate activity recorded yet.</p>}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
+
         </>
       )}
     </section>
