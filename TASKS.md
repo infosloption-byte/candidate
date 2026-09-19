@@ -16,12 +16,13 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 
 ## Phase 1 — Frontend foundation
 
-- ⏳ Build role-aware shell for Admin, Agency, Interviewer, and Interviewee.
-- ⏳ Create core frontend types and fixtures: Agency, User, Candidate, Job, JobApplication, Interview, InterviewParticipant, InterviewEvaluation.
-- ⏳ Build reusable table/list/detail/form primitives using the preserved theme.
+- ✅ Build role-aware shell for Admin, Agency, Interviewer, and Interviewee.
+- ✅ Create core frontend types and fixture data: Agency, User, Candidate, Job, JobApplication, Interview, InterviewParticipant, InterviewEvaluation.
+- ✅ Create first-pass pages for Dashboard, Jobs, Candidates, Applications, Interviews, Agencies & Users, and Settings using the preserved theme.
+- 🔄 Build reusable table/list/detail/form primitives using the preserved theme.
 - ⏳ Add loading, empty, error, and success states.
 - ⏳ Add frontend smoke tests for the new shell and core navigation.
-- ⏳ Keep business logic behind simple feature hooks/state boundaries.
+- ✅ Keep business data isolated in a simple domain/fixtures boundary for the frontend-first phase.
 
 ## Phase 2 — Authentication and agencies
 
