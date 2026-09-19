@@ -2,6 +2,13 @@ export interface CandidateInput {
   name?: string;
   email?: string | null;
   phone?: string | null;
+  alternatePhone?: string | null;
+  country?: string | null;
+  passportNumber?: string | null;
+  passportExpiry?: string | null;
+  currentLocation?: string | null;
+  availability?: string | null;
+  visaStatus?: string | null;
   profession?: string | null;
   experienceYears?: number | null;
   skills?: string[];
@@ -35,6 +42,24 @@ export const validateCandidateInput = (
   }
   if (input.phone !== undefined && input.phone !== null && input.phone.trim().length > 60) {
     errors.push('Candidate phone must be 60 characters or fewer.');
+  }
+  if (input.alternatePhone !== undefined && input.alternatePhone !== null && input.alternatePhone.trim().length > 60) {
+    errors.push('Candidate alternate phone must be 60 characters or fewer.');
+  }
+  for (const [field, max, message] of [
+    ['country', 100, 'Candidate country'],
+    ['passportNumber', 60, 'Candidate passport number'],
+    ['currentLocation', 160, 'Candidate current location'],
+    ['availability', 80, 'Candidate availability'],
+    ['visaStatus', 80, 'Candidate visa status'],
+  ] as const) {
+    const value = input[field];
+    if (value !== undefined && value !== null && value.trim().length > max) {
+      errors.push(message + ' must be ' + max + ' characters or fewer.');
+    }
+  }
+  if (input.passportExpiry !== undefined && input.passportExpiry !== null && input.passportExpiry.trim() && Number.isNaN(Date.parse(input.passportExpiry))) {
+    errors.push('Candidate passport expiry date is invalid.');
   }
   if (input.profession !== undefined && input.profession !== null && input.profession.trim().length > 120) {
     errors.push('Candidate profession must be 120 characters or fewer.');
