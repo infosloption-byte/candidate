@@ -26,6 +26,7 @@ export const buildApp = (): FastifyInstance => {
   void app.register(cors, {
     origin: env.corsOrigin,
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   void app.register(healthRoutes, { prefix: '/api/v1' });
