@@ -24,6 +24,8 @@ for (const path of [
 const sidebar = read('src/app/components/Sidebar.tsx');
 const app = read('src/app/App.tsx');
 const packageJson = JSON.parse(read('package.json'));
+const candidatesPage = read('src/features/candidates/CandidatesPage.tsx');
+const settingsPage = read('src/features/settings/SettingsPage.tsx');
 
 for (const role of ['ADMIN', 'AGENCY', 'INTERVIEWER', 'INTERVIEWEE']) {
   assert.match(sidebar, new RegExp(role));
@@ -31,6 +33,13 @@ for (const role of ['ADMIN', 'AGENCY', 'INTERVIEWER', 'INTERVIEWEE']) {
 for (const view of ['dashboard', 'jobs', 'candidates', 'interviews', 'criteria', 'agencies', 'settings']) {
   assert.match(app, new RegExp(view));
 }
+
+assert.match(candidatesPage, /Bulk candidate onboarding/);
+assert.match(candidatesPage, /View details/);
+assert.match(candidatesPage, /Review onboarding/);
+assert.match(candidatesPage, /experienceYears/);
+assert.match(settingsPage, /Candidate lifecycle/);
+assert.doesNotMatch(settingsPage, /Applications/);
 
 assert.equal(packageJson.scripts.build, 'tsc -b && vite build');
 assert.equal(packageJson.scripts['test:smoke'], 'node scripts/smoke-test.mjs');
