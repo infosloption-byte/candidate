@@ -109,3 +109,48 @@ export const rescheduleBodySchema = {
     reason: { type: "string", maxLength: 5000 },
   },
 } as const;
+
+export const scoreBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["score"],
+  properties: {
+    score: { type: ["integer", "null"], minimum: 1, maximum: 5 },
+  },
+} as const;
+
+export const criterionNoteBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["note"],
+  properties: {
+    note: { type: "string", maxLength: 5000 },
+  },
+} as const;
+
+export const practicalResultBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["result"],
+  properties: {
+    result: { type: "string", enum: ["not-started", "passed", "failed", "pending"] },
+  },
+} as const;
+
+export const practicalNoteBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["note"],
+  properties: {
+    note: { type: "string", maxLength: 5000 },
+  },
+} as const;
+
+export const interviewNoteBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["note"],
+  properties: {
+    note: { type: "string", maxLength: 5000 },
+  },
+} as const;
