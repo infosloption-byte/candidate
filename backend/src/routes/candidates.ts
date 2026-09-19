@@ -41,6 +41,10 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
   app.get('/candidates', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
 
+    if (!['ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access candidate details through assigned interviews.' } });
+    }
+
     const candidates = await getPrisma().candidate.findMany({
       where: user.role === 'ADMIN'
         ? undefined
@@ -70,7 +74,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     const allowed =
       user.role === 'ADMIN'
       || (user.role === 'INTERVIEWEE' && user.candidateId === candidate.id)
-      || ((user.role === 'AGENCY' || user.role === 'INTERVIEWER') && user.agencyId === candidate.agencyId);
+      || (user.role === 'AGENCY' && user.agencyId === candidate.agencyId);
 
     if (!allowed) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
