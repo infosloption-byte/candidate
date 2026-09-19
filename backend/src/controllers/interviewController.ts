@@ -6,6 +6,11 @@ import {
   recordDecision,
   rescheduleInterview,
   updateInterviewStatus,
+  updateScore,
+  updateCriterionNote,
+  updatePracticalResult,
+  updatePracticalNote,
+  updateInterviewNote,
 } from "../services/interviewService.js";
 import { AppError } from "../errors/AppError.js";
 
@@ -104,5 +109,59 @@ export const rescheduleInterviewController = async (
       request.body.reason,
       request.body.timezone,
     ),
+  };
+};
+
+interface ScoreBody { score: number | null; }
+interface NoteBody { note: string; }
+interface PracticalResultBody { result: "not-started" | "passed" | "failed" | "pending"; }
+
+export const updateScoreController = async (
+  request: FastifyRequest<{ Params: Params & { criterionId: string }; Body: ScoreBody }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await updateScore(request.auth, request.params.id, request.params.criterionId, request.body.score),
+  };
+};
+
+export const updateCriterionNoteController = async (
+  request: FastifyRequest<{ Params: Params & { criterionId: string }; Body: NoteBody }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await updateCriterionNote(request.auth, request.params.id, request.params.criterionId, request.body.note),
+  };
+};
+
+export const updatePracticalResultController = async (
+  request: FastifyRequest<{ Params: Params & { itemId: string }; Body: PracticalResultBody }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await updatePracticalResult(request.auth, request.params.id, request.params.itemId, request.body.result),
+  };
+};
+
+export const updatePracticalNoteController = async (
+  request: FastifyRequest<{ Params: Params & { itemId: string }; Body: NoteBody }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await updatePracticalNote(request.auth, request.params.id, request.params.itemId, request.body.note),
+  };
+};
+
+export const updateInterviewNoteController = async (
+  request: FastifyRequest<{ Params: Params; Body: NoteBody }>,
+) => {
+  if (!request.auth) throw AppError.unauthenticated();
+  return {
+    success: true,
+    data: await updateInterviewNote(request.auth, request.params.id, request.body.note),
   };
 };
