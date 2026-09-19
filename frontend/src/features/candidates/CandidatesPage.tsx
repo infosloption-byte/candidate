@@ -134,6 +134,7 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
 
     try {
       setError('');
+      setSaving(true);
 
       const updated = developmentMode
         ? { ...candidateToUpdate, onboardingStatus: nextStatus }
@@ -203,6 +204,8 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
       setSuccess('Your profile has been submitted.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to submit your profile.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -452,7 +455,9 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
               </div>
 
               <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                <Button onClick={() => void submitOwnProfile()}>Save & submit profile</Button>
+                <Button disabled={saving} onClick={() => void submitOwnProfile()}>
+                  {saving ? 'Saving…' : 'Save & submit profile'}
+                </Button>
               </div>
 
               <div className="mt-6">
