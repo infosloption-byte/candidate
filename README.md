@@ -11,7 +11,7 @@ This repository has been reset to a smaller product scope and is being rebuilt f
 
 ## Core workflow
 
-`Agency → Publish Job → Onboard Candidate → Candidate Applies → Schedule Interview → Assign Interviewer / Panel → Interview Evaluation`
+`Agency → Publish Job → Onboard Candidate → Candidate Applies → Schedule Interview → Assign Interviewer / Panel → Interview Evaluation → Decision`
 
 Candidate onboarding supports three entry modes in the target product:
 
@@ -24,19 +24,64 @@ Candidate onboarding supports three entry modes in the target product:
 ```text
 candidate/
 ├── frontend/       # React 19 + TypeScript + Tailwind visual shell
-├── backend/        # Fastify + TypeScript API foundation
+├── backend/        # Fastify + TypeScript API
 ├── docs/           # Current rebuild plan
 ├── TASKS.md        # Living implementation tracker
 └── README.md
 ```
 
-## Current reset state
+## Current implementation
 
-The previous feature implementation has been removed from the active codebase. The frontend keeps the existing BuildHire visual theme, responsive sidebar, top bar, typography, spacing, colors, and mobile navigation pattern. Business screens and business state will be rebuilt on top of this shell.
+The rebuilt system now has the core database model and protected API workflow for:
 
-The backend now contains only a minimal Fastify foundation and health endpoint. Prisma remains installed, but the database model has been replaced with a new minimal schema for Agency, User, Candidate, Job, JobApplication, Interview, InterviewParticipant, and InterviewEvaluation.
+- session-based authentication with four roles
+- Admin agency management
+- Agency and Interviewer account management
+- candidate self-registration and agency onboarding
+- job create/edit/publish/close
+- candidate applications and duplicate protection
+- application workflow progression
+- interview scheduling against an application
+- single or panel interview assignment
+- interviewer/candidate schedule conflict checks
+- panel evaluation and application decision
 
-No selection, allocation, notification, reports, complex document control, approval workflow, or legacy recruitment state is part of the new baseline.
+The frontend is connected to these APIs for authentication, jobs, candidates, applications, interviews, and evaluations. When the backend is unavailable in local development, the frontend falls back to its development-role fixture mode so UI work can continue without a database.
+
+## Development setup
+
+### Backend
+
+Create `backend/.env` from `backend/.env.example` and point `DATABASE_URL` at a local MySQL/MariaDB database.
+
+Then:
+
+```bash
+cd backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:seed
+npm run dev
+```
+
+The seed requires `BUILDHIRE_SEED_PASSWORD` and creates a demo agency plus Admin, Agency, and Interviewer accounts. The email addresses are configurable in `.env`.
+
+### Frontend
+
+In another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite proxies `/api` requests to `http://localhost:4000` during development.
+
+### Candidate self-registration
+
+Open the frontend without an active session, choose **Create a candidate account**, select an active agency, complete the profile, and submit. The API creates the Interviewee account and linked Candidate record in one transaction.
 
 ## Development principles
 
@@ -48,21 +93,5 @@ No selection, allocation, notification, reports, complex document control, appro
 - A panel is simply multiple interviewers assigned to one interview.
 - Candidate onboarding and recruitment status are separate concepts.
 - Bulk onboarding is an import operation, not a separate candidate domain.
-
-## Run frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Run backend
-
-```bash
-cd backend
-npm install
-npm run dev
-```
 
 The full rebuild sequence is maintained in [docs/BUILD_PLAN.md](./docs/BUILD_PLAN.md), and the detailed task tracker is [TASKS.md](./TASKS.md).

@@ -32,6 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Generate Prisma Client
+        env:
+          DATABASE_URL: mysql://candidate_erp:password@127.0.0.1:3306/construction_candidate_erp
         run: npm run prisma:generate
       - name: Validate Prisma schema
         env:
