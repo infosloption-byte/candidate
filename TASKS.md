@@ -106,6 +106,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 
 ## Phase 9 — QA and release
 
+- ✅ Complete pre-release frontend/backend audit: route registration, role scope, workflow transitions, session lifecycle, validation limits, document access, API configuration, and mobile interaction hardening.
 - 🔄 Frontend production build — GitHub Actions currently fails before exposing runner steps; source-level verification still needs a functioning runner/local build.
 - 🔄 Backend TypeScript build — same CI environment limitation.
 - 🔄 Prisma schema validation — same CI environment limitation.
