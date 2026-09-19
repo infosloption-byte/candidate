@@ -15,12 +15,12 @@ import { AppError } from "../errors/AppError.js";
 import { withTransaction } from "../lib/db.js";
 import { createAuditEvent } from "../repositories/auditRepository.js";
 import {
-  createCandidate,
+  createCandidate as createCandidateRecord,
   createJourneyEvent,
   findCandidateById,
   findCandidates,
   findDuplicateCandidates,
-  updateCandidate,
+  updateCandidate as updateCandidateRecord,
   type CandidateWithRelations,
   type CandidateListFilters,
 } from "../repositories/candidateRepository.js";
@@ -463,7 +463,7 @@ export const createCandidate = async (auth: AuthContext, input: CreateCandidateI
   data.id = candidateId;
 
   await withTransaction(async (tx) => {
-    await createCandidate(tx, data);
+    await createCandidateRecord(tx, data);
     await createJourneyEvent(tx, {
       id: randomUUID(),
       tenantId: auth.tenantId,
@@ -541,13 +541,12 @@ export const updateCandidate = async (auth: AuthContext, id: string, input: Upda
   if (input.priority !== undefined) changes.priority = priorityMap[input.priority];
   if (input.sourceCampaign !== undefined) changes.sourceCampaign = input.sourceCampaign.trim() || null;
   if (input.tags !== undefined) changes.tags = input.tags;
-  if (input.tags !== undefined) changes.tags = input.tags;
 
   if (Object.keys(changes).length === 0) return toCandidateDto(existing);
 
   const now = new Date();
   await withTransaction(async (tx) => {
-    await updateCandidate(tx, auth.tenantId, id, changes);
+    await updateCandidateRecord(tx, auth.tenantId, id, changes);
     await createJourneyEvent(tx, {
       id: randomUUID(),
       tenantId: auth.tenantId,
@@ -598,7 +597,7 @@ export const changeCandidateStatus = async (
     : note.trim() || `Candidate status changed from ${currentStatus} to ${nextStatus}.`;
 
   await withTransaction(async (tx) => {
-    await updateCandidate(tx, auth.tenantId, id, {
+    await updateCandidateRecord(tx, auth.tenantId, id, {
       status: statusMap[nextStatus],
       rejectionReason: nextStatus === "rejected" ? reason.trim() || null : null,
       rejectionNote: nextStatus === "rejected" ? note.trim() : null,
