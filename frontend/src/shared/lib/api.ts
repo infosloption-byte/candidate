@@ -10,6 +10,13 @@ export class ApiError extends Error {
   }
 }
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL?.trim() || '/api/v1').replace(/\/+$/, '');
+
+const apiUrl = (path: string): string => {
+  const normalizedPath = path.startsWith('/') ? path : '/' + path;
+  return apiBaseUrl + normalizedPath;
+};
+
 const parseError = async (response: Response): Promise<ApiError> => {
   const body = await response.json().catch(() => null) as
     | { error?: { code?: string; message?: string } }
@@ -26,7 +33,7 @@ export const apiFetch = async <T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> => {
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'include',
     headers: {
       'content-type': 'application/json',
@@ -47,7 +54,7 @@ export const apiFetch = async <T>(
 };
 
 export const apiDownload = async (path: string): Promise<Blob> => {
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'include',
   });
 
