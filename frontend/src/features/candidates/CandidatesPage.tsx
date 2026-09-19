@@ -11,6 +11,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface Props { role: UserRole; }
 
@@ -44,8 +45,6 @@ export const CandidatesPage = ({ role }: Props) => {
   const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
-  const candidateDetailsRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     if (developmentMode) {
       setCandidates(state.candidates);
@@ -76,12 +75,24 @@ export const CandidatesPage = ({ role }: Props) => {
     [candidates, selectedCandidateId, user?.candidateId],
   );
 
+  const candidateModalOpen = Boolean(candidate && selectedCandidateId);
+
+  const candidateModalRef = useFocusTrap<HTMLDivElement>({
+    enabled: candidateModalOpen,
+    onEscape: () => {
+      setSelectedCandidateId('');
+      setEditingCandidateProfile(false);
+    },
+  });
+
   useEffect(() => {
-    if (!selectedCandidateId) return;
-    window.requestAnimationFrame(() => {
-      candidateDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [selectedCandidateId]);
+    if (!candidateModalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [candidateModalOpen]);
 
   useEffect(() => {
     if (!candidate || role === 'INTERVIEWEE') return;
@@ -439,10 +450,23 @@ export const CandidatesPage = ({ role }: Props) => {
           {!loading && <DataTable columns={columns} rows={filteredCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
 
           {candidate && selectedCandidateId && (
-            <div ref={candidateDetailsRef}>
-            <Card>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p><h2 className="mt-1 text-xl font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p></div>
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+              <button
+                type="button"
+                aria-label="Close candidate details"
+                className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
+                onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); }}
+              />
+              <div
+                ref={candidateModalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="candidate-details-title"
+                tabIndex={-1}
+                className="relative z-10 my-auto w-full max-w-6xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p><h2 id="candidate-details-title" className="mt-1 text-xl font-black text-slate-950">{candidate.name}</h2><p className="mt-1 text-xs text-slate-500">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p></div>
                 <div className="flex flex-wrap items-center gap-2"><StatusPill value={candidate.status} /><Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setError(''); }}>{editingCandidateProfile ? 'Close edit' : 'Edit profile'}</Button><Button size="sm" variant="secondary" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); }}>Close</Button></div>
               </div>
 
@@ -552,7 +576,7 @@ export const CandidatesPage = ({ role }: Props) => {
               </div>
 
               <div className="mt-5"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
-            </Card>
+              </div>
             </div>
           )}
         </>
