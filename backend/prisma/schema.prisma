@@ -168,6 +168,7 @@ model Tenant {
   jobs        Job[]
   interviews  Interview[]
   documents   CandidateDocument[]
+  documentVersions CandidateDocumentVersion[]
   journey     CandidateJourneyEvent[]
   assignments InterviewerAssignment[]
   scorecards  InterviewScorecard[]
@@ -199,6 +200,7 @@ model User {
   ownedCandidates      Candidate[]             @relation("RecruiterOwner")
   uploadedDocuments    CandidateDocument[]     @relation("DocumentUploader")
   verifiedDocuments    CandidateDocument[]     @relation("DocumentVerifier")
+  uploadedDocumentVersions CandidateDocumentVersion[] @relation("DocumentVersionUploader")
   createdInterviews    Interview[]             @relation("InterviewCreator")
   interviewAssignments InterviewerAssignment[]
   decisions            SelectionRecord[]       @relation("SelectionDecider")
@@ -363,6 +365,26 @@ model CandidateDocument {
 
   @@index([tenantId, candidateId, type, version])
   @@index([tenantId, state, expiresAt])
+}
+
+model CandidateDocumentVersion {
+  id            String            @id @default(uuid()) @db.VarChar(36)
+  tenantId      String            @db.VarChar(36)
+  documentId    String            @db.VarChar(36)
+  version       Int
+  fileName      String            @db.VarChar(255)
+  storageKey    String            @unique @db.VarChar(500)
+  mimeType      String            @db.VarChar(120)
+  sizeBytes     BigInt
+  uploadedById  String            @db.VarChar(36)
+  uploadedAt    DateTime          @default(now())
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document      CandidateDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy    User               @relation("DocumentVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, documentId, version])
+  @@index([tenantId, documentId, uploadedAt])
 }
 
 model Job {
