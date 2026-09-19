@@ -21,6 +21,7 @@ export type CandidateWithRelations = Prisma.CandidateGetPayload<{
       };
     };
     recruiterOwner: true;
+    invitation: true;
   };
 }>;
 
@@ -53,6 +54,7 @@ const includeRelations = {
     },
   },
   recruiterOwner: true,
+  invitation: true,
 };
 
 const buildWhere = (filters: CandidateListFilters): Prisma.CandidateWhereInput => {
