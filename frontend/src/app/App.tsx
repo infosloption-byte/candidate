@@ -7,16 +7,16 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
-import { ApplicationsPage } from '../features/applications/ApplicationsPage';
 import { InterviewsPage } from '../features/interviews/InterviewsPage';
 import { AgenciesPage } from '../features/agencies/AgenciesPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaPage';
 
 const roleDefaults: Record<UserRole, AppView> = {
   ADMIN: 'dashboard',
   AGENCY: 'dashboard',
   INTERVIEWER: 'interviews',
-  INTERVIEWEE: 'jobs',
+  INTERVIEWEE: 'interviews',
 };
 
 const AppContent = () => {
@@ -79,9 +79,9 @@ const AuthenticatedApp = ({
     switch (activeView) {
       case 'jobs': return <JobsPage role={role} />;
       case 'candidates': return <CandidatesPage role={role} />;
-      case 'applications': return <ApplicationsPage role={role} />;
       case 'interviews': return <InterviewsPage role={role} />;
       case 'agencies': return <AgenciesPage />;
+      case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
       case 'dashboard':
       default: return <DashboardPage role={role} />;
