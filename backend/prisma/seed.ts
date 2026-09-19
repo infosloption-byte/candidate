@@ -71,12 +71,27 @@ const main = async () => {
   ];
 
   for (const criterion of defaultCriteria) {
-    const id = agency.id + '-' + criterion.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    await prisma.interviewCriterion.upsert({
-      where: { id },
-      update: { description: criterion.description, maxPoints: criterion.maxPoints, active: true },
-      create: { id, agencyId: agency.id, name: criterion.name, description: criterion.description, maxPoints: criterion.maxPoints, active: true },
+    const existing = await prisma.interviewCriterion.findFirst({
+      where: { agencyId: agency.id, name: criterion.name },
+      select: { id: true },
     });
+
+    if (existing) {
+      await prisma.interviewCriterion.update({
+        where: { id: existing.id },
+        data: { description: criterion.description, maxPoints: criterion.maxPoints, active: true },
+      });
+    } else {
+      await prisma.interviewCriterion.create({
+        data: {
+          agencyId: agency.id,
+          name: criterion.name,
+          description: criterion.description,
+          maxPoints: criterion.maxPoints,
+          active: true,
+        },
+      });
+    }
   }
 
   console.log(`Seeded admin=${admin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
