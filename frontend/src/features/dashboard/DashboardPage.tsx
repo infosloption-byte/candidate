@@ -34,6 +34,16 @@ interface ApplicationRecord extends JobApplication {
   };
 }
 
+interface AuditEventRecord {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  summary: string;
+  createdAt: string;
+  actor: { id: string; name: string; email: string; role: UserRole } | null;
+}
+
 interface DashboardData {
   agencies: AgencyRecord[];
   jobs: Job[];
@@ -67,6 +77,7 @@ export const DashboardPage = ({ role }: DashboardPageProps) => {
     : emptyData);
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
+  const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
 
   useEffect(() => {
     if (developmentMode) {
@@ -124,6 +135,26 @@ export const DashboardPage = ({ role }: DashboardPageProps) => {
       cancelled = true;
     };
   }, [developmentMode, role, state.applications, state.candidates, state.interviews, state.jobs, user?.id]);
+
+  useEffect(() => {
+    if (developmentMode || !['ADMIN', 'AGENCY'].includes(role)) {
+      setAuditEvents([]);
+      return;
+    }
+
+    let cancelled = false;
+    apiFetch<AuditEventRecord[]>('/audit-events')
+      .then((result) => {
+        if (!cancelled) setAuditEvents(result.slice(0, 8));
+      })
+      .catch(() => {
+        if (!cancelled) setAuditEvents([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [developmentMode, role, user?.id]);
 
   const upcomingInterviews = useMemo(
     () => data.interviews
@@ -260,6 +291,28 @@ export const DashboardPage = ({ role }: DashboardPageProps) => {
               </div>
             </Card>
           </div>
+
+          {['ADMIN', 'AGENCY'].includes(role) && (
+            <Card>
+              <div>
+                <h2 className="text-sm font-black text-slate-950">Recent activity</h2>
+                <p className="mt-1 text-xs text-slate-400">A small operational history of important workflow changes.</p>
+              </div>
+              <div className="mt-4 divide-y divide-slate-100">
+                {auditEvents.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No activity recorded yet.</p>
+                ) : auditEvents.map((event) => (
+                  <div key={event.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">{event.summary}</p>
+                      <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {event.action.replaceAll('_', ' ').toLowerCase()}</p>
+                    </div>
+                    <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </>
       )}
     </section>
