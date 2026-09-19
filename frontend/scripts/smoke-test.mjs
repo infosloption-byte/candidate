@@ -47,6 +47,8 @@ assert.match(interviewsPage, /Candidates/);
 assert.match(interviewsPage, /View details/);
 assert.match(interviewsPage, /role=\"dialog\"/);
 assert.match(interviewsPage, /interviews\/bulk/);
+assert.match(interviewsPage, /Also schedule for other candidates/);
+assert.match(interviewsPage, /Edit interview/);
 assert.match(settingsPage, /Candidate lifecycle/);
 assert.doesNotMatch(settingsPage, /Applications/);
 
