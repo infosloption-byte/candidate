@@ -14,13 +14,25 @@ test("GET /api/v1/health returns service health", async () => {
   const app = buildApp();
 
   try {
-    const response = await app.inject({ method: "GET", url: "/api/v1/health" });
-    const body = response.json() as { status: string; service: string; timestamp: string };
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/health",
+    });
+
+    const body = response.json() as {
+      success: boolean;
+      data?: {
+        status: string;
+        service: string;
+        timestamp: string;
+      };
+    };
 
     assert.equal(response.statusCode, 200);
-    assert.equal(body.status, "ok");
-    assert.equal(body.service, "candidate-erp-backend");
-    assert.match(body.timestamp, /^\\d{4}-\\d{2}-\\d{2}T/);
+    assert.equal(body.success, true);
+    assert.equal(body.data?.status, "ok");
+    assert.equal(body.data?.service, "candidate-erp-backend");
+    assert.match(body.data?.timestamp ?? "", /^\d{4}-\d{2}-\d{2}T/);
   } finally {
     await app.close();
   }
