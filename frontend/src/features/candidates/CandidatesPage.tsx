@@ -767,7 +767,7 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="grid gap-3 p-4 lg:grid-cols-[minmax(280px,1fr)_220px_200px_48px] lg:items-end">
+            <div className={`grid gap-3 p-4 lg:items-end ${role === 'ADMIN' ? 'lg:grid-cols-[minmax(280px,1fr)_220px_200px_48px]' : 'lg:grid-cols-[minmax(280px,1fr)_200px_48px]'}`}>
               <div className="min-w-0">
                 <label className="field-label">Search candidates</label>
                 <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, passport, contact, location or skill…" />
