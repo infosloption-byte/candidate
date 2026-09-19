@@ -85,7 +85,6 @@ export const InterviewsPage = ({ role }: Props) => {
   const [detailFor, setDetailFor] = useState<string | null>(null);
   const [detail, setDetail] = useState<InterviewDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const scheduleModalRef = useRef<HTMLDivElement | null>(null);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   useEffect(() => {
@@ -554,16 +553,6 @@ export const InterviewsPage = ({ role }: Props) => {
       {success && <StateMessage kind="success" title="Saved" description={success} />}
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
-      {role !== 'INTERVIEWEE' && role !== 'INTERVIEWER' && (
-        <>
-          <input
-            ref={scheduleFormTrapRef}
-            type="hidden"
-            aria-hidden="true"
-          />
-        </>
-      )}
-
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className={`grid gap-3 p-4 md:items-end ${role === 'ADMIN' ? 'md:grid-cols-[minmax(220px,1fr)_200px_180px_190px_40px]' : 'md:grid-cols-[minmax(220px,1fr)_180px_190px_40px]'}`}>
           <div className="min-w-0">
@@ -802,9 +791,9 @@ export const InterviewsPage = ({ role }: Props) => {
                     <Button size="sm" variant="secondary" className="px-3" onClick={() => void openInterviewDetails(interview)}>Open</Button>
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
-                        <Button size="sm" variant="secondary" onClick={() => openReschedule(interview)}>Edit</Button>
-                        <Button size="sm" variant="secondary" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                        <Button size="sm" variant="danger" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                        <Button size="sm" variant="secondary" className="px-3" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
+                        <Button size="sm" variant="secondary" className="px-3" title="Mark as no show" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" className="px-3" title="Cancel interview" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
                       </>
                     )}
                     {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
