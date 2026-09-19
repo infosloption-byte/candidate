@@ -746,7 +746,6 @@ export const InterviewsPage = ({ role }: Props) => {
               </FormField>
             </div>
           </div>
-              </div>
               <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
