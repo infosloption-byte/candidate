@@ -38,13 +38,13 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 
 ## Phase 3 — Jobs
 
-- ⏳ Build Job API and persistence.
-- ⏳ Build agency job list.
-- ⏳ Build create/edit job form.
-- ⏳ Implement publish / close.
-- ⏳ Build published job view.
-- ⏳ Add job validation.
-- ⏳ Add job API tests.
+- ✅ Build Job API and persistence.
+- 🔄 Build agency job list.
+- 🔄 Build create/edit job form.
+- ✅ Implement publish / close.
+- 🔄 Build published job view.
+- ✅ Add job validation.
+- ✅ Add job API validation tests.
 
 ## Phase 4 — Candidates and onboarding
 
