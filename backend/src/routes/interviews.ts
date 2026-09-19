@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import {
   createInterviewBodySchema,
   decisionBodySchema,
-  interviewIdParamsSchema,
+  interviewId{ id: string }Schema,
   listInterviewsQuerySchema,
   rescheduleBodySchema,
   statusBodySchema,
@@ -36,43 +36,43 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     schema: { body: createInterviewBodySchema },
   }, createInterviewController);
 
-  app.post<{ Params: Params; Body: StatusBody }>("/interviews/:id/status", {
+  app.post<{ { id: string }: { id: string }; Body: StatusBody }>("/interviews/:id/status", {
     onRequest: [app.authenticate, app.authorize("interview.schedule")],
-    schema: { params: interviewIdParamsSchema, body: statusBodySchema },
+    schema: { params: interviewId{ id: string }Schema, body: statusBodySchema },
   }, updateInterviewStatusController);
 
-  app.post<{ Params: Params; Body: DecisionBody }>("/interviews/:id/decision", {
+  app.post<{ { id: string }: { id: string }; Body: DecisionBody }>("/interviews/:id/decision", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
-    schema: { params: interviewIdParamsSchema, body: decisionBodySchema },
+    schema: { params: interviewId{ id: string }Schema, body: decisionBodySchema },
   }, recordDecisionController);
 
-  app.patch<{ Params: Params; Body: { note: string } }>("/interviews/:id/note", {
+  app.patch<{ { id: string }: { id: string }; Body: { note: string } }>("/interviews/:id/note", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
-    schema: { params: interviewIdParamsSchema, body: { type: "object", required: ["note"], additionalProperties: false, properties: { note: { type: "string", maxLength: 5000 } } } },
+    schema: { params: interviewId{ id: string }Schema, body: { type: "object", required: ["note"], additionalProperties: false, properties: { note: { type: "string", maxLength: 5000 } } } },
   }, updateInterviewNoteController);
 
-  app.patch<{ Params: Params & { criterionId: string }; Body: { score: number | null } }>("/interviews/:id/scorecard/:criterionId", {
+  app.patch<{ { id: string }: { id: string } & { criterionId: string }; Body: { score: number | null } }>("/interviews/:id/scorecard/:criterionId", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
     schema: { params: { type: "object", required: ["id", "criterionId"], additionalProperties: false, properties: { id: { type: "string", maxLength: 36 }, criterionId: { type: "string", maxLength: 36 } } }, body: { type: "object", required: ["score"], additionalProperties: false, properties: { score: { type: ["integer", "null"], minimum: 1, maximum: 5 } } } },
   }, updateScoreController);
 
-  app.patch<{ Params: Params & { criterionId: string }; Body: { note: string } }>("/interviews/:id/scorecard/:criterionId/note", {
+  app.patch<{ { id: string }: { id: string } & { criterionId: string }; Body: { note: string } }>("/interviews/:id/scorecard/:criterionId/note", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
     schema: { params: { type: "object", required: ["id", "criterionId"], additionalProperties: false, properties: { id: { type: "string", maxLength: 36 }, criterionId: { type: "string", maxLength: 36 } } }, body: { type: "object", required: ["note"], additionalProperties: false, properties: { note: { type: "string", maxLength: 5000 } } } },
   }, updateCriterionNoteController);
 
-  app.patch<{ Params: Params & { itemId: string }; Body: { result: "not-started" | "passed" | "failed" | "pending" } }>("/interviews/:id/practical/:itemId/result", {
+  app.patch<{ { id: string }: { id: string } & { itemId: string }; Body: { result: "not-started" | "passed" | "failed" | "pending" } }>("/interviews/:id/practical/:itemId/result", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
     schema: { params: { type: "object", required: ["id", "itemId"], additionalProperties: false, properties: { id: { type: "string", maxLength: 36 }, itemId: { type: "string", maxLength: 36 } } }, body: { type: "object", required: ["result"], additionalProperties: false, properties: { result: { type: "string", enum: ["not-started", "passed", "failed", "pending"] } } } },
   }, updatePracticalResultController);
 
-  app.patch<{ Params: Params & { itemId: string }; Body: { note: string } }>("/interviews/:id/practical/:itemId/note", {
+  app.patch<{ { id: string }: { id: string } & { itemId: string }; Body: { note: string } }>("/interviews/:id/practical/:itemId/note", {
     onRequest: [app.authenticate, app.authorize("interview.evaluate")],
     schema: { params: { type: "object", required: ["id", "itemId"], additionalProperties: false, properties: { id: { type: "string", maxLength: 36 }, itemId: { type: "string", maxLength: 36 } } }, body: { type: "object", required: ["note"], additionalProperties: false, properties: { note: { type: "string", maxLength: 5000 } } } },
   }, updatePracticalNoteController);
 
-  app.post<{ Params: Params; Body: RescheduleBody }>("/interviews/:id/reschedule", {
+  app.post<{ { id: string }: { id: string }; Body: RescheduleBody }>("/interviews/:id/reschedule", {
     onRequest: [app.authenticate, app.authorize("interview.schedule")],
-    schema: { params: interviewIdParamsSchema, body: rescheduleBodySchema },
+    schema: { params: interviewId{ id: string }Schema, body: rescheduleBodySchema },
   }, rescheduleInterviewController);
 };
