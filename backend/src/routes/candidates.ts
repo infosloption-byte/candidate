@@ -12,10 +12,13 @@ import {
   getCandidateController,
   listCandidatesController,
   updateCandidateController,
+  type CandidateParams,
+  type CandidateQuery,
+  type StatusBody,
 } from "../controllers/candidateController.js";
 
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/candidates", {
+  app.get<{ Querystring: CandidateQuery }>("/candidates", {
     onRequest: [app.authenticate, app.authorize("candidate.view")],
     schema: { querystring: listCandidatesQuerySchema },
   }, listCandidatesController);
@@ -25,12 +28,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     schema: { params: candidateIdParamsSchema },
   }, getCandidateController);
 
-  app.post("/candidates", {
+  app.post<{ Body: import("../services/candidateService.js").CreateCandidateInput }>("/candidates", {
     onRequest: [app.authenticate, app.authorize("candidate.manage")],
     schema: { body: createCandidateBodySchema },
   }, createCandidateController);
 
-  app.patch<{ Params: { id: string } }>("/candidates/:id", {
+  app.patch<{ Params: CandidateParams; Body: import("../services/candidateService.js").UpdateCandidateInput }>("/candidates/:id", {
     onRequest: [app.authenticate, app.authorize("candidate.manage")],
     schema: {
       params: candidateIdParamsSchema,
@@ -38,7 +41,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     },
   }, updateCandidateController);
 
-  app.post<{ Params: { id: string } }>("/candidates/:id/status", {
+  app.post<{ Params: CandidateParams; Body: StatusBody }>("/candidates/:id/status", {
     onRequest: [app.authenticate, app.authorize("candidate.manage")],
     schema: {
       params: candidateIdParamsSchema,
