@@ -42,7 +42,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     setLoading(true);
     setError('');
 
-    const requests = [
+    const requests: [Promise<Job[]>, Promise<Agency[]>] = [
       apiFetch<Job[]>('/jobs'),
       role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
     ];
@@ -152,8 +152,8 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     const nextStatus = job.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
     setError('');
     try {
-      const updated = developmentMode
-        ? { ...job, status: nextStatus, publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt }
+      const updated: Job = developmentMode
+        ? { ...job, status: nextStatus as Job['status'], publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt }
         : await apiFetch<Job>('/jobs/' + job.id, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) });
       if (developmentMode) dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
       setJobs((current) => current.map((item) => item.id === updated.id ? updated : item));
