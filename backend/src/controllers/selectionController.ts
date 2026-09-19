@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { AppError } from "../errors/AppError.js";
-import { getSelectionWorkspace, reassignCandidates, saveDecision, setApproval, setScoringWeights, type SelectionDecisionInput, type SelectionScoringWeights, type ApprovalStatusInput } from "../services/selectionService.js";
+import { bulkSaveDecisions, getSelectionWorkspace, reassignCandidates, saveDecision, setApproval, setScoringWeights, type SelectionDecisionInput, type SelectionScoringWeights, type ApprovalStatusInput } from "../services/selectionService.js";
 
 const auth = (request: FastifyRequest) => {
   if (!request.auth) throw AppError.unauthenticated();
@@ -26,10 +26,17 @@ export const saveDecisionController = async (request: FastifyRequest<{ Body: Dec
 
 export const bulkSaveDecisionController = async (request: FastifyRequest<{ Body: BulkBody; Params: JobParams }>) => {
   const current = auth(request);
-  for (const candidateId of [...new Set(request.body.candidateIds)]) {
-    await saveDecision(current, request.params.jobId, candidateId, request.body.decision, request.body.reason, request.body.note);
-  }
-  return { success: true, data: await getSelectionWorkspace(current.tenantId) };
+  return {
+    success: true,
+    data: await bulkSaveDecisions(
+      current,
+      request.params.jobId,
+      request.body.candidateIds,
+      request.body.decision,
+      request.body.reason,
+      request.body.note,
+    ),
+  };
 };
 
 export const approvalController = async (request: FastifyRequest<{ Body: ApprovalBody; Params: JobParams }>) => {
