@@ -11,7 +11,7 @@ export const AuthPasswordDialog = () => {
 
   const open = state.authView === 'change-password' && state.authenticated;
   const close = () => dispatch({ type: 'COMPLETE_CHANGE_PASSWORD', notice: '' });
-  const dialogRef = useFocusTrap({ enabled: open, onEscape: close });
+  const dialogRef = useFocusTrap<HTMLDivElement>({ enabled: open, onEscape: close });
 
   if (!open) return null;
 
