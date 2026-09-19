@@ -83,6 +83,7 @@ export interface SelectionState {
 
 export type SelectionAction =
   | { type: 'HYDRATE'; jobs: SelectionJob[]; records: SelectionRecord[]; history: SelectionHistoryEntry[]; approvalByJob: Record<string, SelectionApproval>; scoringByJob: Record<string, SelectionScoringWeights> }
+  | { type: 'REFRESH_REMOTE'; jobs: SelectionJob[]; records: SelectionRecord[]; history: SelectionHistoryEntry[]; approvalByJob: Record<string, SelectionApproval>; scoringByJob: Record<string, SelectionScoringWeights> }
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RETRY_LOAD' }
   | { type: 'SET_JOB'; jobId: string }
