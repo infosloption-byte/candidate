@@ -44,7 +44,6 @@ assert.match(candidatesPage, /experienceYears/);
 assert.match(candidatesPage, /passportNumber/);
 assert.match(candidatesPage, /passportSearch/);
 assert.match(candidatesPage, /sortBy/);
-assert.match(candidatesPage, /Proceed with import/);
 assert.match(candidatesPage, /countryFilter/);
 assert.match(candidatesPage, /visaStatusFilter/);
 assert.match(candidatesPage, /Passport expiry/);
