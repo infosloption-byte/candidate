@@ -10,6 +10,7 @@ import { AppError } from "../errors/AppError.js";
 import { withTransaction } from "../lib/db.js";
 import { createAuditEvent } from "../repositories/auditRepository.js";
 import { findActiveUserById } from "../repositories/userRepository.js";
+import { prisma } from "../lib/prisma.js";
 import { findCandidateById } from "../repositories/candidateRepository.js";
 import {
   createInterview,
@@ -139,8 +140,10 @@ const toDto = (interview: InterviewWithRelations) => ({
   interviewers: interview.interviewers.map((item) => ({
     id: item.user.id,
     name: item.user.name,
-    role: item.user.email,
-    specialties: [],
+    role: item.user.title ?? "Interviewer",
+    specialties: Array.isArray(item.user.specialties)
+      ? item.user.specialties.filter((value): value is string => typeof value === "string")
+      : [],
     active: item.user.active,
   })),
   notes: interview.notes,
@@ -441,16 +444,7 @@ export const rescheduleInterview = async (
 };
 
 const findActiveInterviewerUsers = async (tenantId: string) =>
-  (await Promise.all(
-    (["INTERVIEWER"] as const).map(() =>
-      prismaUserFindMany(tenantId),
-    ),
-  )).flat();
-
-const prismaUserFindMany = async (tenantId: string) => {
-  const { prisma } = await import("../lib/prisma.js");
-  return prisma.user.findMany({
+  prisma.user.findMany({
     where: { tenantId, role: UserRole.INTERVIEWER, active: true },
     orderBy: { name: "asc" },
   });
-};
