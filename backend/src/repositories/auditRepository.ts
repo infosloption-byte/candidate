@@ -1,4 +1,4 @@
-import type { JsonValue } from "../generated/prisma/internal/prismaNamespace.js";
+import type { Prisma } from "../generated/prisma/client.js";
 import type { DbClient } from "../lib/db.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -8,7 +8,7 @@ export interface AuditRecord {
   entityType: string;
   entityId: string;
   action: string;
-  metadata: JsonValue;
+  metadata: Prisma.JsonValue;
 }
 
 export const createAuditEvent = async (record: AuditRecord, tx?: DbClient): Promise<void> => {
