@@ -51,6 +51,7 @@ export const JobsPage = () => {
         <label className="text-xs font-bold text-slate-600">Deadline<input value={draft.deadline} onChange={(event)=>actions.setDraft({deadline:event.target.value})} type="date" className="field-input"/></label>
         <label className="text-xs font-bold text-slate-600 sm:col-span-2">Status<select value={draft.status} onChange={(event)=>actions.setDraft({status:event.target.value as typeof draft.status})} className="field-input"><option value="draft">Draft</option><option value="open">Open</option><option value="paused">Paused</option><option value="filled">Filled</option><option value="closed">Closed</option></select></label>
       </div>
+      {actions.editorError && <div role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{actions.editorError}</div>}
       <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4"><button type="button" onClick={actions.closeEditor} title="Cancel job editing" className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={actions.save} disabled={!canManage} title={canManage ? (editingId ? 'Save job changes' : 'Create this job requirement') : 'Job changes are restricted for this role'} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">{editingId ? 'Save changes' : 'Create job'}</button></div>
     </div></div>}
   </section>;
