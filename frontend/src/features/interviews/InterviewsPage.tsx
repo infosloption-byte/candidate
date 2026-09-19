@@ -122,6 +122,18 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     };
   }, [developmentMode, role, state.applications, state.interviews, state.users, user?.agencyId, user?.id, panel.length]);
 
+  const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
+
+  const localCandidate = (interview: InterviewRecord) => {
+    const application = localApplication(interview);
+    return application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined;
+  };
+
+  const localJob = (interview: InterviewRecord) => {
+    const application = localApplication(interview);
+    return application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined;
+  };
+
   const visible = useMemo(() => {
     const base = role === 'INTERVIEWER'
       ? developmentMode
@@ -268,18 +280,6 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
     } finally {
       setEvaluating(null);
     }
-  };
-
-  const localApplication = (interview: InterviewRecord) => state.applications.find((item) => item.id === interview.applicationId) ?? getApplication(interview.applicationId);
-
-  const localCandidate = (interview: InterviewRecord) => {
-    const application = localApplication(interview);
-    return application ? (state.candidates.find((item) => item.id === application.candidateId) ?? getCandidate(application.candidateId)) : undefined;
-  };
-
-  const localJob = (interview: InterviewRecord) => {
-    const application = localApplication(interview);
-    return application ? (state.jobs.find((item) => item.id === application.jobId) ?? getJob(application.jobId)) : undefined;
   };
 
   return (
