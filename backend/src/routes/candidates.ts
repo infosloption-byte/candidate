@@ -126,7 +126,9 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be added to an inactive agency.' } });
 
       const prisma = getPrisma();
-      const candidate = await prisma.$transaction(async (tx) => {
+      let candidate: Awaited<ReturnType<typeof prisma.candidate.update>>;
+      try {
+        candidate = await prisma.$transaction(async (tx) => {
         const created = await tx.candidate.create({
           data: {
             agencyId: agency.id,
@@ -350,14 +352,39 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         }
 
         if (['PASSED', 'REJECTED', 'HIRED'].includes(request.body.status)) {
-          const completedInterview = await getPrisma().interview.findFirst({
-            where: { candidateId: existing.id, status: 'COMPLETED' },
-            select: { id: true },
-          });
+          const [completedInterview, scheduledInterview] = await Promise.all([
+            getPrisma().interview.findFirst({
+              where: { candidateId: existing.id, status: 'COMPLETED' },
+              select: { id: true },
+            }),
+            getPrisma().interview.findFirst({
+              where: { candidateId: existing.id, status: 'SCHEDULED' },
+              select: { id: true },
+            }),
+          ]);
           if (!completedInterview) {
             return reply.code(409).send({
               success: false,
               error: { code: 'INTERVIEW_REQUIRED', message: 'A candidate can only receive a final pass, reject, or hire status after at least one interview is completed.' },
+            });
+          }
+          if (scheduledInterview) {
+            return reply.code(409).send({
+              success: false,
+              error: { code: 'SCHEDULED_INTERVIEW_EXISTS', message: 'A final candidate status cannot be recorded while another interview is still scheduled.' },
+            });
+          }
+        }
+
+        if (request.body.status === 'INACTIVE') {
+          const scheduledInterview = await getPrisma().interview.findFirst({
+            where: { candidateId: existing.id, status: 'SCHEDULED' },
+            select: { id: true },
+          });
+          if (scheduledInterview) {
+            return reply.code(409).send({
+              success: false,
+              error: { code: 'SCHEDULED_INTERVIEW_EXISTS', message: 'Cancel or complete the scheduled interview before marking the candidate inactive.' },
             });
           }
         }
@@ -403,8 +430,17 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             },
           });
         }
-        return updated;
-      });
+          return updated;
+        });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') {
+          return reply.code(409).send({
+            success: false,
+            error: { code: 'USER_EMAIL_EXISTS', message: 'The candidate email is already used by another account.' },
+          });
+        }
+        throw error;
+      }
 
       await recordAuditEvent({
         actorId: user.id,
