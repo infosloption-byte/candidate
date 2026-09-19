@@ -73,6 +73,15 @@ const activeStatuses = new Set<PrismaInterviewStatus>([
   PrismaInterviewStatus.EVALUATION,
 ]);
 
+const statusTransitions: Record<PrismaInterviewStatus, readonly PrismaInterviewStatus[]> = {
+  SCHEDULED: [PrismaInterviewStatus.IN_PROGRESS, PrismaInterviewStatus.NO_SHOW, PrismaInterviewStatus.CANCELLED],
+  IN_PROGRESS: [PrismaInterviewStatus.EVALUATION, PrismaInterviewStatus.NO_SHOW, PrismaInterviewStatus.CANCELLED],
+  EVALUATION: [PrismaInterviewStatus.COMPLETED, PrismaInterviewStatus.CANCELLED],
+  COMPLETED: [],
+  NO_SHOW: [],
+  CANCELLED: [],
+};
+
 const overlaps = (start: Date, durationMinutes: number, other: InterviewWithRelations): boolean => {
   const end = new Date(start.getTime() + durationMinutes * 60_000);
   const otherEnd = new Date(other.startsAt.getTime() + other.durationMinutes * 60_000);
@@ -246,8 +255,10 @@ export const listInterviewers = async (tenantId: string) => {
   return users.map((user) => ({
     id: user.id,
     name: user.name,
-    role: user.email,
-    specialties: [],
+    role: user.title ?? "Interviewer",
+    specialties: Array.isArray(user.specialties)
+      ? user.specialties.filter((value): value is string => typeof value === "string")
+      : [],
     active: user.active,
   }));
 };
@@ -343,6 +354,10 @@ export const updateInterviewStatus = async (auth: AuthContext, id: string, statu
   if (!existing) throw AppError.notFound("Interview not found.");
   const next = statusMap[status];
   if (!next) throw AppError.invalidInput("Invalid interview status.");
+  if (existing.status === next) return toDto(existing);
+  if (!statusTransitions[existing.status].includes(next)) {
+    throw AppError.invalidState(`Interview cannot move from ${existing.status.toLowerCase()} to ${status}.`);
+  }
 
   await withTransaction(async (tx) => {
     await updateInterview(tx, auth.tenantId, id, { status: next });
@@ -370,6 +385,19 @@ export const recordDecision = async (
 ) => {
   const existing = await findInterviewById(auth.tenantId, id);
   if (!existing) throw AppError.notFound("Interview not found.");
+  if (!activeStatuses.has(existing.status) && existing.status !== PrismaInterviewStatus.EVALUATION) {
+    throw AppError.invalidState("A final decision can only be recorded for an active evaluation interview.");
+  }
+
+  const criteria = existing.scorecard?.criteria ?? [];
+  if (criteria.some((criterion) => criterion.score === null)) {
+    throw AppError.invalidState("Complete every scorecard criterion before recording the final decision.");
+  }
+
+  const requiredPractical = existing.practicalItems.filter((item) => item.required);
+  if (requiredPractical.some((item) => item.result !== "passed" && item.result !== "failed")) {
+    throw AppError.invalidState("Complete every required practical-test item before recording the final decision.");
+  }
 
   await withTransaction(async (tx) => {
     await updateInterview(tx, auth.tenantId, id, {
@@ -377,6 +405,18 @@ export const recordDecision = async (
       decisionReason: reason.trim(),
       decisionNote: note.trim(),
       status: PrismaInterviewStatus.COMPLETED,
+    });
+
+    await tx.candidate.updateMany({
+      where: { id: existing.candidateId, tenantId: auth.tenantId },
+      data: {
+        status: decision === "selected"
+          ? "SELECTED"
+          : decision === "reserve"
+            ? "RESERVE"
+            : "REJECTED",
+        rejectionNote: decision === "rejected" ? note.trim() : null,
+      },
     });
 
     await tx.interviewDecisionHistory.create({
