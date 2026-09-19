@@ -9,14 +9,9 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Job, UserRole } from '../../domain/types';
+import type { Agency, Job, UserRole } from '../../domain/types';
 
 interface JobsPageProps { role: UserRole; }
-
-interface ApplicationSummary {
-  id: string;
-  jobId: string;
-}
 
 const emptyForm = { title: '', description: '', location: '', openings: '1' };
 
@@ -24,11 +19,11 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
-  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+  const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
+  const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
   const [showForm, setShowForm] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
-  const [applying, setApplying] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,14 +34,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   useEffect(() => {
     if (developmentMode) {
       setJobs(state.jobs);
-      if (role === 'INTERVIEWEE') {
-        setAppliedJobIds(new Set(
-          state.applications
-            .filter((application) => application.candidateId === user?.candidateId || application.candidateId === 'candidate-1')
-            .map((application) => application.jobId),
-        ));
-      }
-      setLoading(false);
+      setAgencies(state.agencies);
       return;
     }
 
@@ -54,16 +42,19 @@ export const JobsPage = ({ role }: JobsPageProps) => {
     setLoading(true);
     setError('');
 
-    const jobsRequest = apiFetch<Job[]>('/jobs');
-    const applicationsRequest = role === 'INTERVIEWEE'
-      ? apiFetch<ApplicationSummary[]>('/applications')
-      : Promise.resolve([] as ApplicationSummary[]);
+    const requests = [
+      apiFetch<Job[]>('/jobs'),
+      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
+    ];
 
-    Promise.all([jobsRequest, applicationsRequest])
-      .then(([jobResult, applicationResult]) => {
+    Promise.all(requests)
+      .then(([jobResult, agencyResult]) => {
         if (cancelled) return;
         setJobs(jobResult);
-        setAppliedJobIds(new Set(applicationResult.map((application) => application.jobId)));
+        if (role === 'ADMIN') {
+          setAgencies(agencyResult);
+          setAgencyId((current) => current || agencyResult.find((item) => item.status === 'ACTIVE')?.id || '');
+        }
       })
       .catch((requestError: unknown) => {
         if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load jobs.');
@@ -72,10 +63,8 @@ export const JobsPage = ({ role }: JobsPageProps) => {
         if (!cancelled) setLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [developmentMode, role, state.applications, state.jobs, user?.candidateId, user?.id]);
+    return () => { cancelled = true; };
+  }, [developmentMode, role, state.jobs, state.agencies, user?.id]);
 
   const closeForm = () => {
     setShowForm(false);
@@ -85,6 +74,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
 
   const beginEdit = (job: Job) => {
     setEditingJobId(job.id);
+    setAgencyId(job.agencyId);
     setForm({
       title: job.title,
       description: job.description ?? '',
@@ -101,9 +91,8 @@ export const JobsPage = ({ role }: JobsPageProps) => {
       setError('Job title is required.');
       return;
     }
-
-    if (!user?.agencyId && !developmentMode) {
-      setError('Your account is not linked to an agency.');
+    if (!agencyId && !developmentMode) {
+      setError('Select an agency workspace.');
       return;
     }
 
@@ -116,21 +105,10 @@ export const JobsPage = ({ role }: JobsPageProps) => {
         if (!current) throw new Error('The selected job could not be found.');
 
         const updated: Job = developmentMode
-          ? {
-              ...current,
-              title: form.title.trim(),
-              description: form.description.trim() || null,
-              location: form.location.trim() || null,
-              openings: Math.max(1, Number(form.openings) || 1),
-            }
+          ? { ...current, title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, openings: Math.max(1, Number(form.openings) || 1) }
           : await apiFetch<Job>('/jobs/' + editingJobId, {
               method: 'PATCH',
-              body: JSON.stringify({
-                title: form.title.trim(),
-                description: form.description.trim() || null,
-                location: form.location.trim() || null,
-                openings: Math.max(1, Number(form.openings) || 1),
-              }),
+              body: JSON.stringify({ title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, openings: Math.max(1, Number(form.openings) || 1) }),
             });
 
         setJobs((currentJobs) => currentJobs.map((job) => job.id === updated.id ? updated : job));
@@ -142,7 +120,7 @@ export const JobsPage = ({ role }: JobsPageProps) => {
 
       const draft: Job = {
         id: 'job-' + Date.now(),
-        agencyId: user?.agencyId ?? 'agency-1',
+        agencyId: agencyId || 'agency-1',
         title: form.title.trim(),
         description: form.description.trim() || null,
         location: form.location.trim() || null,
@@ -153,14 +131,9 @@ export const JobsPage = ({ role }: JobsPageProps) => {
 
       const created = developmentMode
         ? draft
-        : await apiFetch<Job>('/agencies/' + user!.agencyId + '/jobs', {
+        : await apiFetch<Job>('/agencies/' + agencyId + '/jobs', {
             method: 'POST',
-            body: JSON.stringify({
-              title: draft.title,
-              description: draft.description,
-              location: draft.location,
-              openings: draft.openings,
-            }),
+            body: JSON.stringify({ title: draft.title, description: draft.description, location: draft.location, openings: draft.openings }),
           });
 
       if (developmentMode) dispatch({ type: 'CREATE_JOB', job: draft });
@@ -178,68 +151,16 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   const setStatus = async (job: Job) => {
     const nextStatus = job.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
     setError('');
-
     try {
       const updated = developmentMode
-        ? {
-            ...job,
-            status: nextStatus,
-            publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt,
-          }
-        : await apiFetch<Job>('/jobs/' + job.id, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: nextStatus }),
-          });
-
-      if (developmentMode) {
-        dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
-      }
-
+        ? { ...job, status: nextStatus, publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt }
+        : await apiFetch<Job>('/jobs/' + job.id, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) });
+      if (developmentMode) dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
       setJobs((current) => current.map((item) => item.id === updated.id ? updated : item));
       setSuccessTitle(nextStatus === 'PUBLISHED' ? 'Job published' : 'Job closed');
       setSuccess('"' + job.title + '" is now ' + nextStatus.toLowerCase() + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the job.');
-    }
-  };
-
-  const applyToJob = async (job: Job) => {
-    if (appliedJobIds.has(job.id)) return;
-
-    if (!user?.candidateId && !developmentMode) {
-      setError('Your account is not linked to a candidate profile.');
-      return;
-    }
-
-    setApplying(job.id);
-    setError('');
-
-    try {
-      if (developmentMode) {
-        dispatch({
-          type: 'APPLY_TO_JOB',
-          application: {
-            id: 'app-' + Date.now(),
-            jobId: job.id,
-            candidateId: user?.candidateId ?? 'candidate-1',
-            status: 'APPLIED',
-            appliedAt: new Date().toISOString(),
-          },
-        });
-      } else {
-        await apiFetch('/jobs/' + job.id + '/applications', {
-          method: 'POST',
-          body: JSON.stringify({}),
-        });
-      }
-
-      setAppliedJobIds((current) => new Set(current).add(job.id));
-      setSuccessTitle('Application submitted');
-      setSuccess('Your application for "' + job.title + '" has been submitted.');
-    } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to submit the application.');
-    } finally {
-      setApplying(null);
     }
   };
 
@@ -253,19 +174,30 @@ export const JobsPage = ({ role }: JobsPageProps) => {
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'INTERVIEWEE' ? 'Open positions' : 'Agency workspace'}
+        eyebrow={role === 'ADMIN' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Available positions' : 'Agency workspace'}
         title="Jobs"
-        description={role === 'INTERVIEWEE' ? 'Browse published jobs and apply to the positions that match your profile.' : 'Create, edit, publish, and close job advertisements.'}
-        action={role === 'INTERVIEWEE' ? undefined : (
+        description={role === 'INTERVIEWEE' ? 'Review positions associated with your agency. Interviews are assigned directly from the candidate pool.' : 'Manage internal job openings and positions used when scheduling candidate interviews.'}
+        action={role !== 'INTERVIEWEE' ? (
           <Button onClick={() => { setEditingJobId(null); setForm(emptyForm); setShowForm((value) => !value); setError(''); }}>
             <Icon name="plus" size={16} /> New job
           </Button>
-        )}
+        ) : undefined}
       />
 
-      {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest job advertisements." />}
+      {role === 'ADMIN' && (
+        <Card>
+          <FormField label="Agency workspace" hint="Admin can manage jobs for any agency.">
+            <select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
+              <option value="">Select an agency</option>
+              {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+            </select>
+          </FormField>
+        </Card>
+      )}
+
+      {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest positions." />}
       {error && <StateMessage kind="error" title="Job action failed" description={error} />}
-      {success && <StateMessage kind="success" title={successTitle} description={success} />}
+      {success && <StateMessage kind="success" title={successTitle || 'Saved'} description={success} />}
 
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -281,6 +213,14 @@ export const JobsPage = ({ role }: JobsPageProps) => {
         <Card>
           <h2 className="text-sm font-black text-slate-950">{editingJobId ? 'Edit job' : 'Create job'}</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {role === 'ADMIN' && !editingJobId && (
+              <FormField label="Agency workspace">
+                <select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
+                  <option value="">Select an agency</option>
+                  {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+                </select>
+              </FormField>
+            )}
             <FormField label="Job title">
               <input className="field-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. Mason — Dubai Project" />
             </FormField>
@@ -292,20 +232,18 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                 <textarea className="field-input min-h-24 resize-y" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
               </FormField>
             </div>
-            <FormField label="Openings" hint="At least one opening will be stored.">
+            <FormField label="Openings">
               <input type="number" min="1" className="field-input" value={form.openings} onChange={(event) => setForm({ ...form, openings: event.target.value })} />
             </FormField>
           </div>
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={closeForm}>Cancel</Button>
-            <Button disabled={saving} onClick={() => void saveJob()}>{saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create draft'}</Button>
+            <Button disabled={saving || (!developmentMode && !agencyId)} onClick={() => void saveJob()}>{saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create draft'}</Button>
           </div>
         </Card>
       )}
 
-      {!loading && visibleJobs.length === 0 && (
-        <StateMessage kind="empty" title="No jobs to show" description={role === 'INTERVIEWEE' ? 'Published opportunities will appear here.' : 'Create your first job advertisement to start the recruitment flow.'} />
-      )}
+      {!loading && visibleJobs.length === 0 && <StateMessage kind="empty" title="No jobs to show" description="Create a job position to use when assigning candidates to interviews." />}
 
       {!loading && visibleJobs.length > 0 && (
         <div className="grid gap-4">
@@ -318,12 +256,13 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                     <StatusPill value={job.status} />
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{job.description ?? 'No description provided.'}</p>
+                  {role === 'ADMIN' && (
+                    <p className="mt-2 text-xs font-semibold text-cyan-700">
+                      {agencies.find((agency) => agency.id === job.agencyId)?.name ?? 'Agency workspace'}
+                    </p>
+                  )}
                 </div>
-                {role === 'INTERVIEWEE' ? (
-                  <Button disabled={appliedJobIds.has(job.id) || applying === job.id} onClick={() => void applyToJob(job)}>
-                    {appliedJobIds.has(job.id) ? 'Applied' : applying === job.id ? 'Applying…' : 'Apply'}
-                  </Button>
-                ) : (
+                {role !== 'INTERVIEWEE' && (
                   <div className="flex flex-wrap gap-2">
                     <Button variant="secondary" size="sm" onClick={() => beginEdit(job)}>Edit</Button>
                     <Button variant="secondary" size="sm" onClick={() => void setStatus(job)}>{job.status === 'PUBLISHED' ? 'Close' : 'Publish'}</Button>
