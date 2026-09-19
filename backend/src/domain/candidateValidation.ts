@@ -21,11 +21,21 @@ export const validateCandidateInput = (
   if ((mode === 'create' || mode === 'self') && !input.name?.trim()) {
     errors.push('Candidate name is required.');
   }
-  if (input.name !== undefined && input.name.trim().length < 2) {
-    errors.push('Candidate name must be at least 2 characters.');
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (name.length < 2) errors.push('Candidate name must be at least 2 characters.');
+    if (name.length > 160) errors.push('Candidate name must be 160 characters or fewer.');
   }
-  if (input.email && !emailPattern.test(input.email.trim())) {
-    errors.push('Candidate email is invalid.');
+  if (input.email) {
+    const email = input.email.trim();
+    if (!emailPattern.test(email)) errors.push('Candidate email is invalid.');
+    if (email.length > 191) errors.push('Candidate email must be 191 characters or fewer.');
+  }
+  if (input.phone !== undefined && input.phone !== null && input.phone.trim().length > 60) {
+    errors.push('Candidate phone must be 60 characters or fewer.');
+  }
+  if (input.profession !== undefined && input.profession !== null && input.profession.trim().length > 120) {
+    errors.push('Candidate profession must be 120 characters or fewer.');
   }
   if (
     input.experienceYears !== undefined
