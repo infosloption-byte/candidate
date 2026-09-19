@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import type { User, UserRole } from '../../domain/types';
 
-export type AppView = 'dashboard' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'agencies' | 'settings';
+export type AppView = 'dashboard' | 'jobs' | 'candidates' | 'interviews' | 'criteria' | 'agencies' | 'settings';
 
 interface AppShellProps {
   role: UserRole;
