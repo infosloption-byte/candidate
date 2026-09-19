@@ -44,7 +44,10 @@ export const InterviewPage = () => {
   if (state.loadState === 'error') return <ErrorState title="We could not load interviews" message={state.errorMessage ?? 'Interview data is temporarily unavailable.'} onRetry={actions.retryLoad} />;
 
   const scheduleCandidates = candidateState.candidates.filter((candidate) => candidate.status !== 'rejected');
-  const handleCreateInterview = (interview: Interview) => { actions.createInterview(interview); candidateActions.moveToInterview(interview.candidateId); };
+  const handleCreateInterview = async (interview: Interview) => {
+    await actions.createInterview(interview);
+    await candidateActions.moveToInterview(interview.candidateId);
+  };
   const handleDecisionRecorded = (candidateId: string, decision: Exclude<Decision, 'pending'>, score: number, date: string, interviewer: string, profession: string, reason: string, note: string) => {
     const candidateStatus: Extract<CandidateStatus, 'selected' | 'reserve' | 'rejected'> = decision;
     const candidateReason: RejectionReason | '' = decision === 'rejected' ? mapRejectionReason(reason) : '';
