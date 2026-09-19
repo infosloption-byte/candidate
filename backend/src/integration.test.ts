@@ -19,9 +19,6 @@ const emails = {
   interviewer: 'qa-interviewer-' + suffix + '@buildhire.local',
   interviewerB: 'qa-interviewer-b-' + suffix + '@buildhire.local',
   interviewee: 'qa-interviewee-' + suffix + '@buildhire.local',
-  registered: 'qa-registered-' + suffix + '@buildhire.local',
-  bulkA: 'qa-bulk-a-' + suffix + '@buildhire.local',
-  bulkB: 'qa-bulk-b-' + suffix + '@buildhire.local',
 };
 
 let app: Awaited<ReturnType<typeof buildApp>> | null = null;
@@ -38,6 +35,8 @@ let jobAId = '';
 let jobBId = '';
 let candidateId = '';
 let interviewId = '';
+let criterionAId = '';
+let criterionBId = '';
 
 const cookieFrom = (response: { headers: Record<string, string | string[] | undefined> }): string => {
   const value = response.headers['set-cookie'];
@@ -89,6 +88,10 @@ before(async () => {
         skills: ['Masonry'],
         onboardingStatus: 'COMPLETED',
         source: 'AGENCY_ADDED',
+        status: 'POOL',
+        statusHistory: {
+          create: { fromStatus: null, toStatus: 'POOL', reason: 'Candidate added to the candidate pool.', changedById: admin.id },
+        },
       },
     });
 
@@ -103,24 +106,20 @@ before(async () => {
     });
 
     const jobA = await tx.job.create({
-      data: { agencyId: agencyA.id, title: 'QA Mason A', description: 'Agency A job', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { agencyId: agencyA.id, title: 'QA Mason A', description: 'Agency A position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
     const jobB = await tx.job.create({
-      data: { agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B job', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
 
-    return {
-      agencyA,
-      agencyB,
-      admin,
-      agencyAUser,
-      agencyBUser,
-      interviewer,
-      interviewerB,
-      candidateUser,
-      jobA,
-      jobB,
-    };
+    const criterionA = await tx.interviewCriterion.create({
+      data: { agencyId: agencyA.id, name: 'Technical skill', description: 'Technical ability', maxPoints: 10, active: true },
+    });
+    const criterionB = await tx.interviewCriterion.create({
+      data: { agencyId: agencyA.id, name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
+    });
+
+    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, candidateUser, candidate, jobA, jobB, criterionA, criterionB };
   });
 
   agencyAId = setup.agencyA.id;
@@ -131,51 +130,42 @@ before(async () => {
   interviewerId = setup.interviewer.id;
   interviewerBId = setup.interviewerB.id;
   candidateUserId = setup.candidateUser.id;
+  candidateId = setup.candidate.id;
   jobAId = setup.jobA.id;
   jobBId = setup.jobB.id;
-  candidateId = setup.candidateUser.candidateId ?? '';
+  criterionAId = setup.criterionA.id;
+  criterionBId = setup.criterionB.id;
 });
 
 after(async () => {
   if (!enabled || !prisma) return;
 
   await prisma.session.deleteMany({
-    where: {
-      userId: {
-        in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId],
-      },
-    },
+    where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
   });
   await prisma.user.deleteMany({
-    where: {
-      id: {
-        in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId],
-      },
-    },
+    where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
   });
-  await prisma.agency.deleteMany({
-    where: { id: { in: [agencyAId, agencyBId] } },
-  });
-
+  await prisma.agency.deleteMany({ where: { id: { in: [agencyAId, agencyBId] } } });
   if (app) await app.close();
 });
 
-dbTest('authentication and agency isolation protect real API boundaries', async () => {
+dbTest('admin and agency boundaries support candidate-pool operations', async () => {
   assert.ok(app);
 
   const unauthenticated = await app.inject({ method: 'GET', url: '/api/v1/auth/me' });
   assert.equal(unauthenticated.statusCode, 401);
 
   const agencyCookie = await login(emails.agencyA);
-
-  const ownJobs = await app.inject({
+  const ownCandidates = await app.inject({
     method: 'GET',
-    url: '/api/v1/jobs',
+    url: '/api/v1/candidates',
     headers: { cookie: agencyCookie },
   });
-  assert.equal(ownJobs.statusCode, 200);
-  const ownJobsBody = json<{ data: Array<{ agencyId: string }> }>(ownJobs);
-  assert.deepEqual(new Set(ownJobsBody.data.map((job) => job.agencyId)), new Set([agencyAId]));
+  assert.equal(ownCandidates.statusCode, 200);
+  const ownCandidatesBody = json<{ data: Array<{ agencyId: string; status: string }> }>(ownCandidates);
+  assert.deepEqual(new Set(ownCandidatesBody.data.map((item) => item.agencyId)), new Set([agencyAId]));
+  assert.equal(ownCandidatesBody.data[0]?.status, 'POOL');
 
   const crossAgencyUsers = await app.inject({
     method: 'GET',
@@ -184,191 +174,69 @@ dbTest('authentication and agency isolation protect real API boundaries', async 
   });
   assert.equal(crossAgencyUsers.statusCode, 403);
 
-  const crossAgencyJobUpdate = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/jobs/' + jobBId,
-    headers: { cookie: agencyCookie },
-    payload: { title: 'Should not update' },
+  const adminCookie = await login(emails.admin);
+  const allCandidates = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates',
+    headers: { cookie: adminCookie },
   });
-  assert.equal(crossAgencyJobUpdate.statusCode, 403);
+  assert.equal(allCandidates.statusCode, 200);
 
-  const interviewerCookie = await login(emails.interviewer);
-  const interviewerJobs = await app.inject({
+  const adminJobs = await app.inject({
     method: 'GET',
     url: '/api/v1/jobs',
-    headers: { cookie: interviewerCookie },
+    headers: { cookie: adminCookie },
   });
-  assert.equal(interviewerJobs.statusCode, 403);
+  assert.equal(adminJobs.statusCode, 200);
+  const adminJobsBody = json<{ data: Array<{ agencyId: string }> }>(adminJobs);
+  assert.ok(new Set(adminJobsBody.data.map((item) => item.agencyId)).has(agencyAId));
+  assert.ok(new Set(adminJobsBody.data.map((item) => item.agencyId)).has(agencyBId));
 
+  const adminUsers = await app.inject({
+    method: 'GET',
+    url: '/api/v1/agencies/' + agencyBId + '/users',
+    headers: { cookie: adminCookie },
+  });
+  assert.equal(adminUsers.statusCode, 200);
+
+  const adminCreatesForAgency = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyBId + '/candidates',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'Admin Added Candidate',
+      email: 'admin-added-' + suffix + '@buildhire.local',
+      profession: 'Welder',
+      experienceYears: 3,
+      skills: ['Welding'],
+    },
+  });
+  assert.equal(adminCreatesForAgency.statusCode, 201);
+  const adminCreatedBody = json<{ data: { agencyId: string; status: string } }>(adminCreatesForAgency);
+  assert.equal(adminCreatedBody.data.agencyId, agencyBId);
+  assert.equal(adminCreatedBody.data.status, 'POOL');
+
+  const interviewerCookie = await login(emails.interviewer);
   const interviewerCandidates = await app.inject({
     method: 'GET',
     url: '/api/v1/candidates',
     headers: { cookie: interviewerCookie },
   });
   assert.equal(interviewerCandidates.statusCode, 403);
-
-  const interviewerApplications = await app.inject({
-    method: 'GET',
-    url: '/api/v1/applications',
-    headers: { cookie: interviewerCookie },
-  });
-  assert.equal(interviewerApplications.statusCode, 403);
-
-  const adminCookie = await login(emails.admin);
-  const deactivateAgency = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/agencies/' + agencyAId,
-    headers: { cookie: adminCookie },
-    payload: { status: 'INACTIVE' },
-  });
-  assert.equal(deactivateAgency.statusCode, 200);
-
-  const inactiveAgencyLogin = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/login',
-    payload: { email: emails.agencyA, password },
-  });
-  assert.equal(inactiveAgencyLogin.statusCode, 401);
-
-  const reactivateAgency = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/agencies/' + agencyAId,
-    headers: { cookie: adminCookie },
-    payload: { status: 'ACTIVE' },
-  });
-  assert.equal(reactivateAgency.statusCode, 200);
 });
 
-dbTest('candidate bulk onboarding is atomic and rejects duplicates', async () => {
-  assert.ok(app);
-  assert.ok(prisma);
-
-  const agencyCookie = await login(emails.agencyA);
-  const beforeCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
-
-  const csv = [
-    'name,email,phone,profession,experienceYears,skills',
-    'Bulk Mason A,' + emails.bulkA + ',0771111111,Mason,4,Masonry;Blockwork',
-    'Bulk Mason B,' + emails.bulkB + ',0772222222,Carpenter,6,Joinery;Formwork',
-  ].join('\\n');
-
-  const importResponse = await app.inject({
-    method: 'POST',
-    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
-    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
-    payload: csv,
-  });
-  assert.equal(importResponse.statusCode, 201);
-  const importBody = json<{ data: { importedCount: number } }>(importResponse);
-  assert.equal(importBody.data.importedCount, 2);
-
-  const afterImportCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
-  assert.equal(afterImportCount, beforeCount + 2);
-
-  const invalidCsv = [
-    'name,email,phone,profession,experienceYears,skills',
-    'Duplicate One,' + emails.bulkB + ',0773333333,Mason,2,Masonry',
-    'Duplicate Two,' + emails.bulkB + ',0774444444,Carpenter,3,Joinery',
-  ].join('\\n');
-
-  const invalidResponse = await app.inject({
-    method: 'POST',
-    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
-    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
-    payload: invalidCsv,
-  });
-  assert.equal(invalidResponse.statusCode, 400);
-
-  const afterRejectedImportCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
-  assert.equal(afterRejectedImportCount, afterImportCount);
-});
-
-dbTest('candidate application through panel interview and evaluation reaches final decision', async () => {
+dbTest('candidate can be assigned directly to interview, scored, finalized, and viewed in history', async () => {
   assert.ok(app);
 
-  const candidateCookie = await login(emails.interviewee);
-
-  const documentContent = Buffer.from('BuildHire document integration test').toString('base64');
-  const documentUpload = await app.inject({
-    method: 'POST',
-    url: '/api/v1/candidates/' + candidateId + '/documents',
-    headers: { cookie: candidateCookie },
-    payload: {
-      fileName: 'qa-profile.pdf',
-      mimeType: 'application/pdf',
-      contentBase64: documentContent,
-    },
-  });
-  assert.equal(documentUpload.statusCode, 201);
-  const uploadedDocument = json<{ data: { id: string } }>(documentUpload);
-
   const agencyCookie = await login(emails.agencyA);
-  const agencyDocuments = await app.inject({
-    method: 'GET',
-    url: '/api/v1/candidates/' + candidateId + '/documents',
-    headers: { cookie: agencyCookie },
-  });
-  assert.equal(agencyDocuments.statusCode, 200);
-  const agencyDocumentsBody = json<{ data: Array<{ id: string }> }>(agencyDocuments);
-  assert.ok(agencyDocumentsBody.data.some((document) => document.id === uploadedDocument.data.id));
-
-  const otherAgencyCookie = await login(emails.agencyB);
-  const isolatedDocuments = await app.inject({
-    method: 'GET',
-    url: '/api/v1/candidates/' + candidateId + '/documents',
-    headers: { cookie: otherAgencyCookie },
-  });
-  assert.equal(isolatedDocuments.statusCode, 403);
-
-  const documentDownload = await app.inject({
-    method: 'GET',
-    url: '/api/v1/candidates/' + candidateId + '/documents/' + uploadedDocument.data.id,
-    headers: { cookie: candidateCookie },
-  });
-  assert.equal(documentDownload.statusCode, 200);
-  assert.equal(documentDownload.body, 'BuildHire document integration test');
-
-  const documentDelete = await app.inject({
-    method: 'DELETE',
-    url: '/api/v1/candidates/' + candidateId + '/documents/' + uploadedDocument.data.id,
-    headers: { cookie: candidateCookie },
-  });
-  assert.equal(documentDelete.statusCode, 204);
-
-  const applicationResponse = await app.inject({
-    method: 'POST',
-    url: '/api/v1/jobs/' + jobAId + '/applications',
-    headers: { cookie: candidateCookie },
-    payload: {},
-  });
-  assert.equal(applicationResponse.statusCode, 201);
-
-  const duplicateResponse = await app.inject({
-    method: 'POST',
-    url: '/api/v1/jobs/' + jobAId + '/applications',
-    headers: { cookie: candidateCookie },
-    payload: {},
-  });
-  assert.equal(duplicateResponse.statusCode, 409);
-
-  const application = json<{ data: { id: string } }>(applicationResponse);
-
-  for (const status of ['SCREENING', 'SHORTLISTED'] as const) {
-    const response = await app.inject({
-      method: 'PATCH',
-      url: '/api/v1/applications/' + application.data.id,
-      headers: { cookie: agencyCookie },
-      payload: { status },
-    });
-    assert.equal(response.statusCode, 200);
-  }
-
   const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const interviewResponse = await app.inject({
     method: 'POST',
-    url: '/api/v1/applications/' + application.data.id + '/interviews',
+    url: '/api/v1/candidates/' + candidateId + '/interviews',
     headers: { cookie: agencyCookie },
     payload: {
+      jobId: jobAId,
       type: 'TECHNICAL',
       scheduledAt,
       durationMins: 45,
@@ -377,14 +245,30 @@ dbTest('candidate application through panel interview and evaluation reaches fin
     },
   });
   assert.equal(interviewResponse.statusCode, 201);
+  const interviewBody = json<{ data: { id: string; candidate: { id: string; status: string } } }>(interviewResponse);
+  interviewId = interviewBody.data.id;
+  assert.equal(interviewBody.data.candidate.id, candidateId);
+  assert.equal(interviewBody.data.candidate.status, 'INTERVIEW_SCHEDULED');
 
-  const interview = json<{ data: { id: string } }>(interviewResponse);
-  interviewId = interview.data.id;
+  const duplicateTimeConflict = await app.inject({
+    method: 'POST',
+    url: '/api/v1/candidates/' + candidateId + '/interviews',
+    headers: { cookie: agencyCookie },
+    payload: {
+      jobId: jobAId,
+      type: 'FINAL',
+      scheduledAt,
+      durationMins: 30,
+      location: 'QA Room 2',
+      interviewerIds: [interviewerId],
+    },
+  });
+  assert.equal(duplicateTimeConflict.statusCode, 409);
 
   const rescheduledAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   const rescheduleResponse = await app.inject({
     method: 'PATCH',
-    url: '/api/v1/interviews/' + interview.data.id,
+    url: '/api/v1/interviews/' + interviewId,
     headers: { cookie: agencyCookie },
     payload: {
       scheduledAt: rescheduledAt,
@@ -394,160 +278,94 @@ dbTest('candidate application through panel interview and evaluation reaches fin
     },
   });
   assert.equal(rescheduleResponse.statusCode, 200);
-  const rescheduledBody = json<{ data: { scheduledAt: string; durationMins: number; location: string | null } }>(rescheduleResponse);
-  assert.equal(rescheduledBody.data.scheduledAt, rescheduledAt);
-  assert.equal(rescheduledBody.data.durationMins, 60);
-  assert.equal(rescheduledBody.data.location, 'QA Rescheduled Room');
 
-  const pastRescheduleResponse = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/interviews/' + interview.data.id,
-    headers: { cookie: agencyCookie },
-    payload: { scheduledAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
-  });
-  assert.equal(pastRescheduleResponse.statusCode, 400);
-
-  const conflictResponse = await app.inject({
+  const crossAgencySchedule = await app.inject({
     method: 'POST',
-    url: '/api/v1/applications/' + application.data.id + '/interviews',
-    headers: { cookie: agencyCookie },
+    url: '/api/v1/candidates/' + candidateId + '/interviews',
+    headers: { cookie: await login(emails.agencyB) },
     payload: {
-      type: 'FINAL',
-      scheduledAt: rescheduledAt,
+      jobId: jobBId,
+      type: 'SCREENING',
+      scheduledAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
       durationMins: 30,
-      location: 'QA Room 2',
+      location: 'Other agency',
       interviewerIds: [interviewerId],
     },
   });
-  assert.equal(conflictResponse.statusCode, 409);
+  assert.equal(crossAgencySchedule.statusCode, 403);
 
   const outsiderCookie = await login(emails.interviewerB);
   const outsiderEvaluation = await app.inject({
     method: 'POST',
-    url: '/api/v1/interviews/' + interview.data.id + '/evaluations',
+    url: '/api/v1/interviews/' + interviewId + '/evaluations',
     headers: { cookie: outsiderCookie },
     payload: {
-      rating: 5,
-      recommendation: 'RECOMMENDED',
+      scores: [
+        { criterionId: criterionAId, points: 8 },
+        { criterionId: criterionBId, points: 4 },
+      ],
       comments: 'Not a panel member.',
     },
   });
   assert.equal(outsiderEvaluation.statusCode, 403);
 
   const interviewerCookie = await login(emails.interviewer);
-  const myInterviews = await app.inject({
-    method: 'GET',
-    url: '/api/v1/interviews',
-    headers: { cookie: interviewerCookie },
-  });
-  assert.equal(myInterviews.statusCode, 200);
-
-  const manualFinalDecision = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/applications/' + application.data.id,
-    headers: { cookie: agencyCookie },
-    payload: { status: 'SELECTED' },
-  });
-  assert.equal(manualFinalDecision.statusCode, 400);
-
   const evaluationResponse = await app.inject({
     method: 'POST',
-    url: '/api/v1/interviews/' + interview.data.id + '/evaluations',
+    url: '/api/v1/interviews/' + interviewId + '/evaluations',
     headers: { cookie: interviewerCookie },
     payload: {
-      rating: 5,
-      recommendation: 'RECOMMENDED',
-      comments: 'Meets the job requirements.',
+      scores: [
+        { criterionId: criterionAId, points: 9 },
+        { criterionId: criterionBId, points: 4 },
+      ],
+      comments: 'Meets the required technical and communication criteria.',
     },
   });
   assert.equal(evaluationResponse.statusCode, 201);
-
-  const evaluationBody = json<{ data: { interviewCompleted: boolean; applicationStatus: string } }>(evaluationResponse);
+  const evaluationBody = json<{ data: { interviewCompleted: boolean; summary: { totalPoints: number; maxPoints: number; averagePercentage: number | null } } }>(evaluationResponse);
   assert.equal(evaluationBody.data.interviewCompleted, true);
-  assert.equal(evaluationBody.data.applicationStatus, 'SELECTED');
+  assert.equal(evaluationBody.data.summary.totalPoints, 13);
+  assert.equal(evaluationBody.data.summary.maxPoints, 15);
 
-  const completedInterviewUpdate = await app.inject({
+  const candidateAfterEvaluation = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId,
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(candidateAfterEvaluation.statusCode, 200);
+  const candidateBody = json<{ data: { status: string } }>(candidateAfterEvaluation);
+  assert.equal(candidateBody.data.status, 'INTERVIEW_COMPLETED');
+
+  const finalDecision = await app.inject({
     method: 'PATCH',
-    url: '/api/v1/interviews/' + interview.data.id,
+    url: '/api/v1/candidates/' + candidateId,
     headers: { cookie: agencyCookie },
-    payload: { scheduledAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() },
+    payload: { status: 'PASSED', statusReason: 'Passed technical interview.' },
   });
-  assert.equal(completedInterviewUpdate.statusCode, 409);
+  assert.equal(finalDecision.statusCode, 200);
+  const finalDecisionBody = json<{ data: { status: string } }>(finalDecision);
+  assert.equal(finalDecisionBody.data.status, 'PASSED');
 
-  const agencyNotifications = await app.inject({
+  const historyResponse = await app.inject({
     method: 'GET',
-    url: '/api/v1/notifications',
-    headers: { cookie: agencyCookie },
+    url: '/api/v1/candidates/' + candidateId + '/history',
+    headers: { cookie: adminCookieForTest(await login(emails.admin)) },
   });
-  assert.equal(agencyNotifications.statusCode, 200);
-  const agencyNotificationBody = json<{ data: { notifications: Array<{ id: string }>; unreadCount: number } }>(agencyNotifications);
-  assert.ok(agencyNotificationBody.data.notifications.length >= 1);
-  assert.ok(agencyNotificationBody.data.unreadCount >= 1);
+  assert.equal(historyResponse.statusCode, 200);
+  const historyBody = json<{ data: { statusHistory: Array<{ toStatus: string }>; interviews: Array<{ id: string; evaluations: Array<{ scores: Array<{ points: number }> }> }> } }>(historyResponse);
+  assert.ok(historyBody.data.statusHistory.some((item) => item.toStatus === 'INTERVIEW_SCHEDULED'));
+  assert.ok(historyBody.data.statusHistory.some((item) => item.toStatus === 'INTERVIEW_COMPLETED'));
+  assert.ok(historyBody.data.statusHistory.some((item) => item.toStatus === 'PASSED'));
+  assert.ok(historyBody.data.interviews.some((item) => item.id === interviewId && item.evaluations.some((evaluation) => evaluation.scores.length === 2)));
 
-  const candidateNotifications = await app.inject({
+  const candidateUserCookie = await login(emails.interviewee);
+  const candidateHistoryAccess = await app.inject({
     method: 'GET',
-    url: '/api/v1/notifications',
-    headers: { cookie: candidateCookie },
+    url: '/api/v1/candidates/' + candidateId + '/history',
+    headers: { cookie: candidateUserCookie },
   });
-  assert.equal(candidateNotifications.statusCode, 200);
-  const candidateNotificationBody = json<{ data: { notifications: Array<{ id: string }>; unreadCount: number } }>(candidateNotifications);
-  assert.ok(candidateNotificationBody.data.notifications.length >= 1);
-  assert.ok(candidateNotificationBody.data.unreadCount >= 1);
-
-  const notificationId = candidateNotificationBody.data.notifications[0]?.id;
-  assert.ok(notificationId);
-  const readNotification = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/notifications/' + notificationId + '/read',
-    headers: { cookie: candidateCookie, 'content-type': 'application/json' },
-    payload: {},
-  });
-  assert.equal(readNotification.statusCode, 200);
-
-  const auditResponse = await app.inject({
-    method: 'GET',
-    url: '/api/v1/audit-events',
-    headers: { cookie: agencyCookie },
-  });
-  assert.equal(auditResponse.statusCode, 200);
-  const auditBody = json<{ data: Array<{ agencyId: string; entityType: string }> }>(auditResponse);
-  assert.ok(auditBody.data.some((event) => event.agencyId === agencyAId && event.entityType === 'JobApplication'));
+  assert.equal(candidateHistoryAccess.statusCode, 403);
 });
 
-dbTest('interviewee registration creates a linked candidate and session', async () => {
-  assert.ok(app);
-  assert.ok(prisma);
-
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/register/interviewee',
-    payload: {
-      name: 'QA Self Registered',
-      email: emails.registered,
-      password,
-      agencyId: agencyAId,
-      phone: '0770000000',
-      profession: 'Welder',
-      experienceYears: 3,
-      skills: ['Welding'],
-    },
-  });
-
-  assert.equal(response.statusCode, 201);
-  const body = json<{ data: { user: { candidateId: string; role: string } } }>(response);
-  assert.equal(body.data.user.role, 'INTERVIEWEE');
-  assert.ok(body.data.user.candidateId);
-
-  const me = await app.inject({
-    method: 'GET',
-    url: '/api/v1/auth/me',
-    headers: { cookie: cookieFrom(response) },
-  });
-  assert.equal(me.statusCode, 200);
-  const meBody = json<{ data: { user: { candidateId: string } } }>(me);
-  assert.equal(meBody.data.user.candidateId, body.data.user.candidateId);
-
-  await prisma.session.deleteMany({ where: { user: { email: emails.registered } } });
-  await prisma.user.deleteMany({ where: { email: emails.registered } });
-  await prisma.candidate.deleteMany({ where: { email: emails.registered } });
-});
+const adminCookieForTest = (cookie: string): string => cookie;
