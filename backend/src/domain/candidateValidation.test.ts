@@ -27,3 +27,30 @@ test('candidate validation rejects invalid experience', () => {
     ['Experience years must be a whole number between 0 and 60.'],
   );
 });
+
+test('candidate validation accepts extended identity and work-readiness fields', () => {
+  assert.deepEqual(
+    validateCandidateInput({
+      name: 'Ruwan Fernando',
+      phone: '+94 77 123 4567',
+      alternatePhone: '+94 76 234 5678',
+      country: 'Sri Lanka',
+      passportNumber: 'N9087654',
+      passportExpiry: '2031-06-30',
+      currentLocation: 'Colombo, Sri Lanka',
+      availability: 'Immediately',
+      visaStatus: 'Required',
+      profession: 'Mason',
+      experienceYears: 7,
+      skills: ['Masonry', 'Tile'],
+    }, 'create'),
+    [],
+  );
+});
+
+test('candidate validation rejects malformed passport expiry date', () => {
+  assert.deepEqual(
+    validateCandidateInput({ name: 'Ruwan Fernando', passportExpiry: 'not-a-date' }, 'create'),
+    ['Candidate passport expiry date is invalid.'],
+  );
+});
