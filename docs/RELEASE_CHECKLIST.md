@@ -89,4 +89,4 @@ For an application rollback:
 2. Restore the previous frontend/backend build.
 3. Do not roll back the database past an already-applied destructive migration.
 4. Investigate migration compatibility before retrying the deployment.
-5. Confirm health and core login/application flows after rollback.
+5. Confirm health, login, candidate-pool, interview, and evaluation flows after rollback.
