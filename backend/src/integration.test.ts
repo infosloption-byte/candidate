@@ -237,13 +237,33 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
   assert.ok(app);
 
   const agencyCookie = await login(emails.agencyA);
-  const candidates = await prisma!.candidate.createManyAndReturn({
-    data: [
-      { agencyId: agencyAId, reference: 'BULK-I-' + suffix + '-1', name: 'Bulk Interview Candidate One', profession: 'Mason', status: 'POOL', source: 'AGENCY_ADDED', onboardingStatus: 'COMPLETED', skills: ['Masonry'] },
-      { agencyId: agencyAId, reference: 'BULK-I-' + suffix + '-2', name: 'Bulk Interview Candidate Two', profession: 'Welder', status: 'POOL', source: 'AGENCY_ADDED', onboardingStatus: 'COMPLETED', skills: ['Welding'] },
-    ],
+  const candidateOne = await prisma!.candidate.create({
+    data: {
+      agencyId: agencyAId,
+      reference: 'BULK-I-' + suffix + '-1',
+      name: 'Bulk Interview Candidate One',
+      profession: 'Mason',
+      status: 'POOL',
+      source: 'AGENCY_ADDED',
+      onboardingStatus: 'COMPLETED',
+      skills: ['Masonry'],
+    },
     select: { id: true },
   });
+  const candidateTwo = await prisma!.candidate.create({
+    data: {
+      agencyId: agencyAId,
+      reference: 'BULK-I-' + suffix + '-2',
+      name: 'Bulk Interview Candidate Two',
+      profession: 'Welder',
+      status: 'POOL',
+      source: 'AGENCY_ADDED',
+      onboardingStatus: 'COMPLETED',
+      skills: ['Welding'],
+    },
+    select: { id: true },
+  });
+  const candidates = [candidateOne, candidateTwo];
 
   const start = new Date(Date.now() + 2 * 60 * 60 * 1000);
   const response = await app.inject({
