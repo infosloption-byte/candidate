@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { roleDescription, roleLabel } from '../services/permissions';
 import type { AuthRole } from '../types/auth';
 import type { Candidate } from '../../candidates/types/candidate';
+import { getDemoCandidates } from '../../candidates/services/candidateRepository';
 
 interface AuthPageProps {
   candidates: Candidate[];
@@ -22,14 +23,15 @@ export const AuthPage = ({ candidates }: AuthPageProps) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
 
+  const candidateAccounts = candidates.length > 0 ? candidates : getDemoCandidates();
   const candidateOptions = useMemo(
-    () => candidates.map((candidate) => ({ id: candidate.id, label: candidate.name + ' · ' + candidate.reference })),
-    [candidates],
+    () => candidateAccounts.map((candidate) => ({ id: candidate.id, label: candidate.name + ' · ' + candidate.reference })),
+    [candidateAccounts],
   );
 
   const signIn = async () => {
     if (role === 'candidate') {
-      const candidate = candidates.find((item) => item.id === candidateId);
+      const candidate = candidateAccounts.find((item) => item.id === candidateId);
       if (!candidate) return setError('Choose a candidate account.');
       if (password !== '123456') return setError('Candidate demo access code is 123456.');
       dispatch({
