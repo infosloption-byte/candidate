@@ -17,3 +17,8 @@ test('withdrawal is allowed before interview', () => {
   assert.equal(canTransitionApplication('SCREENING', 'WITHDRAWN'), true);
   assert.equal(canTransitionApplication('INTERVIEW', 'WITHDRAWN'), false);
 });
+
+test('final interview decisions must come from evaluations', () => {
+  assert.equal(canTransitionApplication('INTERVIEW', 'SELECTED'), false);
+  assert.equal(canTransitionApplication('INTERVIEW', 'REJECTED'), false);
+});
