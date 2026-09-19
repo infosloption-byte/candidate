@@ -42,6 +42,7 @@ const sharedFields = {
   drivingLicense: { type: "boolean" },
   availability: { type: "string", enum: ["Available now", "Within 2 weeks", "Within 1 month", "Not available"] },
   source: { type: "string", enum: ["Walk-in", "Referral", "Agency", "Existing database", "Bulk import"] },
+  tags: { type: "array", maxItems: 30, items: { type: "string", minLength: 1, maxLength: 80 } },
   nationality: { type: "string", maxLength: 100 },
   dateOfBirth: { type: "string", format: "date" },
   passportExpiry: { type: "string", format: "date" },
