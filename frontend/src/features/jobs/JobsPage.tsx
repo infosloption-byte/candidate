@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
@@ -7,30 +8,65 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { apiFetch } from '../../shared/lib/api';
 import type { Job, UserRole } from '../../domain/types';
 
 interface JobsPageProps { role: UserRole; }
 
 export const JobsPage = ({ role }: JobsPageProps) => {
+  const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
+  const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
   const [form, setForm] = useState({ title: '', description: '', location: '', openings: '1' });
-  const candidateId = state.users.find((user) => user.role === 'INTERVIEWEE')?.candidateId;
-  const jobs = state.jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
+  const candidateId = user?.candidateId ?? state.users.find((item) => item.role === 'INTERVIEWEE')?.candidateId;
 
-  const createJob = () => {
+  useEffect(() => {
+    if (developmentMode) {
+      setJobs(state.jobs);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+
+    apiFetch<Job[]>('/jobs')
+      .then((result) => {
+        if (!cancelled) setJobs(result);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load jobs.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [developmentMode, state.jobs, user?.id]);
+
+  const createJob = async () => {
     if (!form.title.trim()) {
       setError('Job title is required.');
       setSuccess('');
       return;
     }
 
-    const job: Job = {
-      id: `job-${Date.now()}`,
-      agencyId: 'agency-1',
+    if (!user?.agencyId && !developmentMode) {
+      setError('Your account is not linked to an agency.');
+      return;
+    }
+
+    const draft: Job = {
+      id: 'job-' + Date.now(),
+      agencyId: user?.agencyId ?? 'agency-1',
       title: form.title.trim(),
       description: form.description.trim() || null,
       location: form.location.trim() || null,
@@ -39,13 +75,61 @@ export const JobsPage = ({ role }: JobsPageProps) => {
       publishedAt: null,
     };
 
-    dispatch({ type: 'CREATE_JOB', job });
-    setForm({ title: '', description: '', location: '', openings: '1' });
-    setShowForm(false);
     setError('');
-    setSuccessTitle('Job created');
-    setSuccess(`"${job.title}" was created as a draft.`);
+
+    try {
+      const created = developmentMode
+        ? draft
+        : await apiFetch<Job>('/agencies/' + user!.agencyId + '/jobs', {
+            method: 'POST',
+            body: JSON.stringify({
+              title: draft.title,
+              description: draft.description,
+              location: draft.location,
+              openings: draft.openings,
+            }),
+          });
+
+      if (developmentMode) dispatch({ type: 'CREATE_JOB', job: draft });
+      setJobs((current) => [created, ...current]);
+      setForm({ title: '', description: '', location: '', openings: '1' });
+      setShowForm(false);
+      setSuccessTitle('Job created');
+      setSuccess('"' + created.title + '" was created as a draft.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to create the job.');
+    }
   };
+
+  const setStatus = async (job: Job) => {
+    const nextStatus = job.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
+    setError('');
+
+    try {
+      const updated = developmentMode
+        ? {
+            ...job,
+            status: nextStatus,
+            publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt,
+          }
+        : await apiFetch<Job>('/jobs/' + job.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: nextStatus }),
+          });
+
+      if (developmentMode) {
+        dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
+      }
+
+      setJobs((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSuccessTitle(nextStatus === 'PUBLISHED' ? 'Job published' : 'Job closed');
+      setSuccess('"' + job.title + '" is now ' + nextStatus.toLowerCase() + '.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the job.');
+    }
+  };
+
+  const visibleJobs = jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
 
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -54,44 +138,56 @@ export const JobsPage = ({ role }: JobsPageProps) => {
         title="Jobs"
         description={role === 'INTERVIEWEE' ? 'Browse published jobs and apply to the positions that match your profile.' : 'Create, publish, and close job advertisements.'}
         action={role === 'INTERVIEWEE' ? undefined : (
-          <Button onClick={() => { setShowForm((value) => !value); setError(''); }}>
+          <Button onClick={() => { setShowForm((value) => !value); setError(''); setSuccess(''); }}>
             <Icon name="plus" size={16} /> New job
           </Button>
         )}
       />
 
+      {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest job advertisements." />}
+      {error && <StateMessage kind="error" title="Could not load jobs" description={error} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
+
       {showForm && (
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Job title" error={error}>
-              <input className="field-input" value={form.title} onChange={(e) => { setForm({ ...form, title: e.target.value }); setError(''); }} placeholder="e.g. Mason — Dubai Project" />
+            <FormField label="Job title">
+              <input className="field-input" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. Mason — Dubai Project" />
             </FormField>
             <FormField label="Location">
-              <input className="field-input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Dubai, UAE" />
+              <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Dubai, UAE" />
             </FormField>
             <div className="md:col-span-2">
               <FormField label="Description">
-                <textarea className="field-input min-h-24 resize-y" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <textarea className="field-input min-h-24 resize-y" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
               </FormField>
             </div>
             <FormField label="Openings" hint="At least one opening will be stored.">
-              <input type="number" min="1" className="field-input" value={form.openings} onChange={(e) => setForm({ ...form, openings: e.target.value })} />
+              <input type="number" min="1" className="field-input" value={form.openings} onChange={(event) => setForm({ ...form, openings: event.target.value })} />
             </FormField>
           </div>
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
-            <Button onClick={createJob}>Create draft</Button>
+            <Button onClick={() => void createJob()}>Create draft</Button>
           </div>
         </Card>
       )}
 
-      {jobs.length === 0 ? (
-        <StateMessage kind="empty" title="No jobs to show" description={role === 'INTERVIEWEE' ? 'Published opportunities will appear here.' : 'Create your first job advertisement to start the recruitment flow.'} />
-      ) : (
+      {!loading && visibleJobs.length === 0 && (
+        <StateMessage
+          kind="empty"
+          title="No jobs to show"
+          description={role === 'INTERVIEWEE' ? 'Published opportunities will appear here.' : 'Create your first job advertisement to start the recruitment flow.'}
+        />
+      )}
+
+      {!loading && visibleJobs.length > 0 && (
         <div className="grid gap-4">
-          {jobs.map((job) => {
-            const alreadyApplied = candidateId ? state.applications.some((application) => application.jobId === job.id && application.candidateId === candidateId) : false;
+          {visibleJobs.map((job) => {
+            const alreadyApplied = candidateId
+              ? state.applications.some((application) => application.jobId === job.id && application.candidateId === candidateId)
+              : false;
+
             return (
               <Card key={job.id}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -103,35 +199,11 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                     <p className="mt-2 text-sm text-slate-500">{job.description ?? 'No description provided.'}</p>
                   </div>
                   {role === 'INTERVIEWEE' ? (
-                    <Button
-                      onClick={() => {
-                        if (!candidateId || alreadyApplied) return;
-                        dispatch({
-                          type: 'APPLY_TO_JOB',
-                          application: {
-                            id: `app-${Date.now()}`,
-                            jobId: job.id,
-                            candidateId,
-                            status: 'APPLIED',
-                            appliedAt: new Date().toISOString(),
-                          },
-                        });
-                        setSuccessTitle('Application submitted');
-                        setSuccess(`Application submitted for "${job.title}".`);
-                      }}
-                      disabled={alreadyApplied}
-                    >
-                      {alreadyApplied ? 'Applied' : 'View & apply'}
+                    <Button disabled>
+                      {alreadyApplied ? 'Applied' : 'Applications next'}
                     </Button>
                   ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => dispatch({
-                        type: 'SET_JOB_STATUS',
-                        jobId: job.id,
-                        status: job.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED',
-                      })}
-                    >
+                    <Button variant="secondary" onClick={() => void setStatus(job)}>
                       {job.status === 'PUBLISHED' ? 'Close' : 'Publish'}
                     </Button>
                   )}
