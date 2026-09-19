@@ -7,7 +7,7 @@ import { buildApp } from './app.js';
 const enabled = process.env.RUN_DB_TESTS === '1' && Boolean(process.env.DATABASE_URL);
 const dbTest = enabled
   ? test
-  : ((name: string, fn: () => unknown) => test(name, { skip: 'RUN_DB_TESTS=1 and DATABASE_URL are required.' }, fn));
+  : ((name: string, fn: () => void | Promise<void>) => test(name, { skip: 'RUN_DB_TESTS=1 and DATABASE_URL are required.' }, fn));
 
 const password = 'IntegrationTestPassword123!';
 const suffix = Date.now().toString(36);
@@ -38,7 +38,7 @@ let interviewId = '';
 let criterionAId = '';
 let criterionBId = '';
 
-const cookieFrom = (response: { headers: Record<string, string | string[] | undefined> }): string => {
+const cookieFrom = (response: { headers: { 'set-cookie'?: string | string[] } }): string => {
   const value = response.headers['set-cookie'];
   const first = Array.isArray(value) ? value[0] : value;
   assert.ok(first, 'Expected a session cookie.');
