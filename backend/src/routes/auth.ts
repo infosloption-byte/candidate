@@ -13,6 +13,7 @@ import {
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers } from '../lib/notifications.js';
+import { validateCandidateInput } from '../domain/candidateValidation.js';
 
 interface LoginBody {
   email?: string;
@@ -76,9 +77,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const agencyId = request.body?.agencyId?.trim();
     const experienceYears = request.body?.experienceYears ?? null;
     const skills = (request.body?.skills ?? []).map((skill) => skill.trim()).filter(Boolean);
+    const profileErrors = validateCandidateInput({
+      name,
+      email,
+      phone: request.body?.phone ?? null,
+      profession: request.body?.profession ?? null,
+      experienceYears,
+      skills,
+    }, 'self');
 
-    if (!name || name.length < 2) {
-      return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'Name must be at least 2 characters.' } });
+    if (profileErrors.length) {
+      return reply.code(400).send({
+        success: false,
+        error: { code: 'INVALID_REGISTRATION', message: profileErrors.join(' ') },
+      });
     }
     if (!email || !email.includes('@')) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'A valid email address is required.' } });
@@ -89,13 +101,6 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     if (!agencyId) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'Select an agency.' } });
     }
-    if (
-      experienceYears !== null
-      && (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60)
-    ) {
-      return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'Experience years must be a whole number between 0 and 60.' } });
-    }
-
     const agency = await getPrisma().agency.findFirst({
       where: { id: agencyId, status: 'ACTIVE' },
       select: { id: true },
