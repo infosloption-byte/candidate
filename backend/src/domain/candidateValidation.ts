@@ -7,6 +7,8 @@ export interface CandidateInput {
   skills?: string[];
   onboardingStatus?: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED';
   source?: 'AGENCY_ADDED' | 'SELF_ONBOARDED' | 'BULK_IMPORTED';
+  status?: 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED' | 'INACTIVE';
+  statusReason?: string | null;
   agencyId?: string;
 }
 
@@ -53,6 +55,12 @@ export const validateCandidateInput = (
   }
   if (input.onboardingStatus !== undefined && !['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED'].includes(input.onboardingStatus)) {
     errors.push('Invalid onboarding status.');
+  }
+  if (input.status !== undefined && !['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'].includes(input.status)) {
+    errors.push('Invalid candidate status.');
+  }
+  if (input.statusReason !== undefined && input.statusReason !== null && input.statusReason.trim().length > 500) {
+    errors.push('Candidate status reason must be 500 characters or fewer.');
   }
 
   return errors;
