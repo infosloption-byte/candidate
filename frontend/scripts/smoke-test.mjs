@@ -34,14 +34,17 @@ for (const view of ['dashboard', 'jobs', 'candidates', 'interviews', 'criteria',
   assert.match(app, new RegExp(view));
 }
 
-assert.match(candidatesPage, /Bulk candidate onboarding/);
-assert.match(candidatesPage, /View details/);
+assert.match(candidatesPage, /Import candidates/);
+assert.match(candidatesPage, /Open/);
 assert.match(candidatesPage, /role="dialog"/);
 assert.match(candidatesPage, /useFocusTrap/);
 assert.match(candidatesPage, /Close candidate details/);
-assert.match(candidatesPage, /Review onboarding/);
+assert.match(candidatesPage, /Proceed with import/);
 assert.match(candidatesPage, /experienceYears/);
 assert.match(candidatesPage, /passportNumber/);
+assert.match(candidatesPage, /passportSearch/);
+assert.match(candidatesPage, /sortBy/);
+assert.match(candidatesPage, /Proceed with import/);
 assert.match(candidatesPage, /countryFilter/);
 assert.match(candidatesPage, /visaStatusFilter/);
 assert.match(candidatesPage, /Passport expiry/);
