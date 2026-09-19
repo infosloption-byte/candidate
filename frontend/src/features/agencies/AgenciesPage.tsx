@@ -136,6 +136,22 @@ export const AgenciesPage = () => {
     }
   };
 
+  const toggleUserActive = async (item: User) => {
+    if (!selectedAgencyId || developmentMode) return;
+
+    try {
+      setError('');
+      const updated = await apiFetch<User>('/agencies/' + selectedAgencyId + '/users/' + item.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !item.active }),
+      });
+      setUsers((current) => current.map((userItem) => userItem.id === updated.id ? updated : userItem));
+      setSuccess('User "' + item.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the user.');
+    }
+  };
+
   const createUser = async () => {
     if (!selectedAgencyId) return;
     if (!userForm.name.trim() || !userForm.email.trim() || userForm.password.length < 8) {
@@ -284,7 +300,17 @@ export const AgenciesPage = () => {
               {users.map((item) => (
                 <div key={item.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div><p className="text-sm font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-400">{item.email}</p></div>
-                  <div className="flex items-center gap-2"><StatusPill value={item.role} /><StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} /></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill value={item.role} />
+                    <StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} />
+                    <Button
+                      size="sm"
+                      variant={item.active ? 'danger' : 'secondary'}
+                      onClick={() => void toggleUserActive(item)}
+                    >
+                      {item.active ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
