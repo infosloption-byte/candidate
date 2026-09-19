@@ -1,11 +1,12 @@
 {
   "name": "construction-candidate-erp-frontend",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:smoke": "node scripts/smoke-test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
