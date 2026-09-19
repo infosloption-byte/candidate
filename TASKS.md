@@ -70,20 +70,20 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Implement application status workflow.
 - ✅ Connect application state contract to candidate/job records.
 - ✅ Add application workflow validation tests.
-- 🔄 Connect frontend Applications screen to authenticated Application API.
-- 🔄 Connect published-job Apply action to Application API.
+- ✅ Connect frontend Applications screen to authenticated Application API.
+- ✅ Connect published-job Apply action to Application API.
 
 ## Phase 6 — Interviews
 
-- ⏳ Build Interview API and persistence against JobApplication.
-- ⏳ Schedule single interview.
-- ⏳ Assign one interviewer.
-- ⏳ Assign multiple interviewers as a panel.
-- ⏳ Add basic schedule-conflict validation.
-- ⏳ Add reschedule and cancellation.
-- ⏳ Build interview list/calendar.
-- ⏳ Add interviewer My Interviews view.
-- ⏳ Add interview scheduling tests.
+- ✅ Build Interview API and persistence against JobApplication.
+- ✅ Schedule single interview.
+- ✅ Assign one interviewer.
+- ✅ Assign multiple interviewers as a panel.
+- ✅ Add basic schedule-conflict validation.
+- ✅ Add reschedule and cancellation API.
+- 🔄 Build interview list/calendar UI against Interview API.
+- 🔄 Add interviewer My Interviews view against Interview API.
+- ⏳ Add interview scheduling integration tests.
 
 ## Phase 7 — Evaluations
 
