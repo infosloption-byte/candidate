@@ -52,6 +52,10 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Interviewer “My Interviews” experience.
 - ✅ Admin and Agency interview assignment.
 - ✅ Admin can schedule interviews on behalf of any active agency.
+- ✅ Interview details view with full panel and scorecard history.
+- ✅ Create interview action with multi-candidate selection.
+- ✅ Bulk candidate scheduling using consecutive interview slots.
+- ✅ Edit interview can optionally schedule the same setup for additional selected candidates.
 
 ## Interview criteria and evaluation
 
