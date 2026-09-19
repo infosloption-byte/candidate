@@ -19,6 +19,8 @@ interface UserBody {
   role?: AgencyUserRole;
 }
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const slugify = (value: string): string => value
   .trim()
   .toLowerCase()
@@ -80,6 +82,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     if (!name || !slug) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency name and a valid slug are required.' } });
     }
+    if (name.length < 2 || name.length > 160 || slug.length > 100) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency name must be 2-160 characters and the slug must be 100 characters or fewer.' } });
+    }
 
     try {
       const agency = await getPrisma().agency.create({ data: { name, slug } });
@@ -117,6 +122,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
     if (data.name === '') {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency name cannot be empty.' } });
+    }
+    if (data.name !== undefined && (data.name.length < 2 || data.name.length > 160)) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency name must be 2-160 characters.' } });
     }
     if (data.slug !== undefined && !data.slug) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency slug cannot be empty.' } });
@@ -190,6 +198,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       if (!name || !email || !password || password.length < 8 || !role || !['AGENCY', 'INTERVIEWER'].includes(role)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name, email, password (8+ characters), and role (Agency or Interviewer) are required.' } });
       }
+      if (name.length > 160 || !emailPattern.test(email) || email.length > 191 || password.length > 128) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name must be 160 characters or fewer, email must be valid and 191 characters or fewer, and password must be 8-128 characters.' } });
+      }
 
       const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
       if (!agency) {
@@ -252,6 +263,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
       if (data.name === '') {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'User name cannot be empty.' } });
+      }
+      if (data.name !== undefined && data.name.length > 160) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'User name must be 160 characters or fewer.' } });
       }
 
       const updatedUser = await getPrisma().user.update({
