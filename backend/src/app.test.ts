@@ -6,6 +6,7 @@ process.env.PORT = "4000";
 process.env.HOST = "127.0.0.1";
 process.env.CORS_ORIGIN = "http://localhost:5173";
 process.env.DATABASE_URL = "mysql://candidate_erp:password@127.0.0.1:3306/construction_candidate_erp";
+process.env.JWT_SECRET = "local-development-secret-change-this-to-a-random-32-byte-value";
 
 const { buildApp } = await import("./app.js");
 
