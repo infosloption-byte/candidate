@@ -195,9 +195,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           include: interviewInclude,
         });
 
-        await tx.candidate.update({
+        const updatedCandidate = await tx.candidate.update({
           where: { id: candidate.id },
           data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
+          select: { status: true },
         });
         await addCandidateStatusHistory(
           tx,
@@ -208,7 +209,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           request.authUser!.id,
         );
 
-        return interview;
+        return {
+          ...interview,
+          candidate: {
+            ...interview.candidate,
+            status: updatedCandidate.status,
+          },
+        };
       });
 
       await recordAuditEvent({
