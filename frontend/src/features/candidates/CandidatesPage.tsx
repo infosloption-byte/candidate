@@ -360,14 +360,14 @@ export const CandidatesPage = ({ role }: Props) => {
     URL.revokeObjectURL(url);
   };
 
-  const importCandidates = async (file: File, targetAgencyId: string) => {
+  const importCandidates = async (file: File, targetAgencyId: string): Promise<boolean> => {
     if (!targetAgencyId) {
       setError('Select an agency workspace before importing candidates.');
-      return;
+      return false;
     }
     if (file.size > 2_000_000) {
       setError('CSV must be 2 MB or smaller.');
-      return;
+      return false;
     }
 
     setBulkImporting(true);
@@ -425,8 +425,10 @@ export const CandidatesPage = ({ role }: Props) => {
         setSuccessTitle('Candidates imported');
         setSuccess(result.importedCount + ' candidate(s) were added to the candidate pool.');
       }
+      return true;
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to import the CSV.');
+      return false;
     } finally {
       setBulkImporting(false);
       if (bulkFileRef.current) bulkFileRef.current.value = '';
@@ -458,8 +460,8 @@ export const CandidatesPage = ({ role }: Props) => {
       setError('Select a CSV file before continuing.');
       return;
     }
-    await importCandidates(importFile, importAgencyId);
-    if (!bulkImporting) {
+    const imported = await importCandidates(importFile, importAgencyId);
+    if (imported) {
       setShowImportModal(false);
       setImportFile(null);
       if (bulkFileRef.current) bulkFileRef.current.value = '';
