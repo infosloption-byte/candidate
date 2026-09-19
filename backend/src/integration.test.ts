@@ -337,16 +337,6 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   const candidateBody = json<{ data: { status: string } }>(candidateAfterEvaluation);
   assert.equal(candidateBody.data.status, 'INTERVIEW_COMPLETED');
 
-  const finalDecision = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/candidates/' + candidateId,
-    headers: { cookie: agencyCookie },
-    payload: { status: 'PASSED', statusReason: 'Passed technical interview.' },
-  });
-  assert.equal(finalDecision.statusCode, 200);
-  const finalDecisionBody = json<{ data: { status: string } }>(finalDecision);
-  assert.equal(finalDecisionBody.data.status, 'PASSED');
-
   const secondInterviewResponse = await app.inject({
     method: 'POST',
     url: '/api/v1/candidates/' + candidateId + '/interviews',
@@ -398,6 +388,16 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
     payload: { email: 'qa-interviewee-updated-' + suffix + '@buildhire.local', password },
   });
   assert.equal(updatedIntervieweeLogin.statusCode, 200);
+
+  const finalDecision = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/candidates/' + candidateId,
+    headers: { cookie: agencyCookie },
+    payload: { status: 'PASSED', statusReason: 'Passed technical interview.' },
+  });
+  assert.equal(finalDecision.statusCode, 200);
+  const finalDecisionBody = json<{ data: { status: string } }>(finalDecision);
+  assert.equal(finalDecisionBody.data.status, 'PASSED');
 
   const historyResponse = await app.inject({
     method: 'GET',
