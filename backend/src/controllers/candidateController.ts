@@ -20,8 +20,8 @@ import {
 } from "../services/candidateService.js";
 import type { AuthContext } from "../types/fastify.js";
 
-interface CandidateParams { id: string; }
-interface CandidateQuery {
+export interface CandidateParams { id: string; }
+export interface CandidateQuery {
   search?: string;
   status?: CandidateStatusInput;
   profession?: string;
@@ -35,7 +35,7 @@ interface CandidateQuery {
   page?: number;
   pageSize?: number;
 }
-interface StatusBody {
+export interface StatusBody {
   status: CandidateStatusInput;
   reason?: string;
   note?: string;
