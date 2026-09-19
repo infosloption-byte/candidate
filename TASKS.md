@@ -13,7 +13,9 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 
 - ✅ Admin agency CRUD and activation/deactivation.
 - ✅ Agency user management for Agency and Interviewer accounts.
-- ✅ Admin cross-agency operations for candidate, job, interview, and criteria management.
+- ✅ Admin cross-agency operations for candidate, job, interview, interview criteria, and user management.
+- ✅ Admin agency workspace controls on operational screens.
+- ✅ Admin agency record edit control.
 - ✅ Agency isolation for agency users.
 - ✅ Admin agency workspace selector in operational screens.
 
@@ -22,6 +24,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Candidate creation places candidates directly in the candidate pool.
 - ✅ Candidate self-onboarding creates a linked candidate in the pool.
 - ✅ Bulk CSV onboarding creates candidates in the pool.
+- ✅ Candidate Pool bulk-import UI with CSV template and agency selection.
 - ✅ Candidate profile editing.
 - ✅ Candidate onboarding state tracking.
 - ✅ Candidate lifecycle status.
