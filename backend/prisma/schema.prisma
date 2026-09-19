@@ -486,6 +486,7 @@ model SelectionApproval {
   changedAt   DateTime       @default(now())
   changedById String         @db.VarChar(36)
 
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   job         Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
   changedBy   User           @relation("ApprovalActor", fields: [changedById], references: [id], onDelete: Restrict)
 }
