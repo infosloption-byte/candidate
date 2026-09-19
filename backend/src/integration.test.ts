@@ -140,14 +140,22 @@ before(async () => {
 after(async () => {
   if (!enabled || !prisma) return;
 
-  await prisma.session.deleteMany({
-    where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
-  });
-  await prisma.user.deleteMany({
-    where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
-  });
-  await prisma.agency.deleteMany({ where: { id: { in: [agencyAId, agencyBId] } } });
-  if (app) await app.close();
+  try {
+    await prisma.session.deleteMany({
+      where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
+    });
+    await prisma.agency.deleteMany({ where: { id: { in: [agencyAId, agencyBId] } } });
+  } finally {
+    if (app) {
+      await app.close();
+      app = null;
+    }
+    await prisma.$disconnect();
+    prisma = null;
+  }
 });
 
 dbTest('admin and agency boundaries support candidate-pool operations', async () => {
