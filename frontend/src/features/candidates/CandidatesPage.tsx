@@ -21,6 +21,55 @@ const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERV
 const label = (value: string): string => value.replaceAll('_', ' ');
 const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
 
+const parseCsvRows = (input: string): string[][] => {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let quoted = false;
+
+  const pushField = () => {
+    row.push(field);
+    field = '';
+  };
+
+  const pushRow = () => {
+    if (row.length === 1 && row[0] === '') {
+      row = [];
+      return;
+    }
+    pushField();
+    rows.push(row);
+    row = [];
+  };
+
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    if (char === '"') {
+      if (quoted && input[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+    if (!quoted && char === ',') {
+      pushField();
+      continue;
+    }
+    if (!quoted && (char === '\n' || char === '\r')) {
+      if (char === '\r' && input[index + 1] === '\n') index += 1;
+      pushRow();
+      continue;
+    }
+    field += char;
+  }
+
+  if (quoted) throw new Error('CSV contains an unclosed quoted field.');
+  if (field.length || row.length) pushRow();
+  return rows;
+};
+
 export const CandidatesPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
@@ -253,7 +302,7 @@ export const CandidatesPage = ({ role }: Props) => {
   };
 
   const downloadCsvTemplate = () => {
-    const csv = 'name,email,phone,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,Mason,5,"Masonry,Tile,Plaster"\n';
+    const csv = 'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -279,24 +328,35 @@ export const CandidatesPage = ({ role }: Props) => {
     try {
       const csv = await file.text();
       if (developmentMode) {
-        const lines = csv.split(/\r?\n/).filter((line) => line.trim());
-        if (lines.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
-        const header = lines[0].split(',').map((item) => item.trim().toLowerCase());
-        const nameIndex = header.indexOf('name');
-        if (nameIndex < 0) throw new Error('CSV must contain a name column.');
-        const created: Candidate[] = lines.slice(1).map((line, index) => {
-          const values = line.split(',');
-          const name = values[nameIndex]?.trim() || 'Imported Candidate ' + (index + 1);
+        const rows = parseCsvRows(csv);
+        if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
+        const header = rows[0].map((item, index) => (index === 0 ? item.replace(/^\uFEFF/, '') : item).trim().toLowerCase());
+        const indexOf = (...names: string[]) => names.map((name) => header.indexOf(name)).find((index) => index >= 0) ?? -1;
+        const read = (values: string[], ...names: string[]) => {
+          const index = indexOf(...names);
+          return index >= 0 ? values[index]?.trim() ?? '' : '';
+        };
+        if (indexOf('name') < 0) throw new Error('CSV must contain a name column.');
+        const created: Candidate[] = rows.slice(1).map((values, index) => {
+          const experienceRaw = read(values, 'experienceyears', 'experience');
+          const experienceYears = experienceRaw ? Number(experienceRaw) : null;
           return {
             id: 'candidate-import-' + Date.now() + '-' + index,
             agencyId,
             reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
-            name,
-            email: null,
-            phone: null,
-            profession: null,
-            experienceYears: 0,
-            skills: [],
+            name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
+            email: read(values, 'email') || null,
+            phone: read(values, 'phone', 'contactnumber', 'contact_number') || null,
+            alternatePhone: read(values, 'alternatephone', 'alternate_phone') || null,
+            country: read(values, 'country', 'nationality') || null,
+            passportNumber: read(values, 'passportnumber', 'passport_number') || null,
+            passportExpiry: read(values, 'passportexpiry', 'passport_expiry') || null,
+            currentLocation: read(values, 'currentlocation', 'current_location', 'location') || null,
+            availability: read(values, 'availability') || null,
+            visaStatus: read(values, 'visastatus', 'visa_status') || null,
+            profession: read(values, 'profession') || null,
+            experienceYears: Number.isFinite(experienceYears) ? experienceYears : null,
+            skills: read(values, 'skills').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
             onboardingStatus: 'NOT_STARTED',
             source: 'BULK_IMPORTED',
             status: 'POOL',
