@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { requireAgencyAccess, requireAuth } from '../lib/auth.js';
+import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput } from '../domain/jobValidation.js';
 
@@ -56,7 +56,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: AgencyJobParams; Body: JobInput }>(
     '/agencies/:agencyId/jobs',
-    { preHandler: [requireAuth, requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const errors = validateJobInput(request.body, 'create');
       if (errors.length) {
@@ -72,9 +72,6 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const requestedStatus = request.body.status ?? 'DRAFT';
-      if (requestedStatus === 'PUBLISHED' && errors.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_JOB', message: errors.join(' ') } });
-      }
 
       const job = await getPrisma().job.create({
         data: {
@@ -95,7 +92,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: JobParams; Body: JobInput }>(
     '/jobs/:id',
-    { preHandler: requireAuth },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({ where: { id: request.params.id } });
 
@@ -145,23 +142,27 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  app.delete<{ Params: JobParams }>('/jobs/:id', { preHandler: requireAuth }, async (request, reply) => {
-    const existing = await getPrisma().job.findUnique({ where: { id: request.params.id } });
+  app.delete<{ Params: JobParams }>(
+    '/jobs/:id',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const existing = await getPrisma().job.findUnique({ where: { id: request.params.id } });
 
-    if (!existing) {
-      return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-    }
+      if (!existing) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      }
 
-    if (!canManageJob(request.authUser!, existing.agencyId)) {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
-    }
+      if (!canManageJob(request.authUser!, existing.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      }
 
-    const job = await getPrisma().job.update({
-      where: { id: existing.id },
-      data: { status: 'CLOSED' },
-      include: { agency: { select: { id: true, name: true, slug: true } } },
-    });
+      const job = await getPrisma().job.update({
+        where: { id: existing.id },
+        data: { status: 'CLOSED' },
+        include: { agency: { select: { id: true, name: true, slug: true } } },
+      });
 
-    return reply.send({ success: true, data: job });
-  });
+      return reply.send({ success: true, data: job });
+    },
+  );
 };

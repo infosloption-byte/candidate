@@ -128,58 +128,66 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: agency });
   });
 
-  app.get<{ Params: { agencyId: string } }>('/agencies/:agencyId/users', { preHandler: [requireAuth, requireAgencyAccess()] }, async (request, reply) => {
-    const users = await getPrisma().user.findMany({
-      where: { agencyId: request.params.agencyId },
-      select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return reply.send({ success: true, data: users });
-  });
-
-  app.post<{ Params: { agencyId: string }; Body: UserBody }>('/agencies/:agencyId/users', { preHandler: [requireAuth, requireAgencyAccess()] }, async (request, reply) => {
-    const name = request.body.name?.trim();
-    const email = request.body.email?.trim().toLowerCase();
-    const password = request.body.password ?? '';
-    const role = request.body.role;
-
-    if (!name || !email || !password || password.length < 8 || !role || !['AGENCY', 'INTERVIEWER'].includes(role)) {
-      return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name, email, password (8+ characters), and role (Agency or Interviewer) are required.' } });
-    }
-
-    const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
-    if (!agency) {
-      return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
-    }
-    if (agency.status !== 'ACTIVE') {
-      return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
-    }
-
-    try {
-      const user = await getPrisma().user.create({
-        data: {
-          agencyId: agency.id,
-          name,
-          email,
-          passwordHash: await hashPassword(password),
-          role,
-        },
+  app.get<{ Params: { agencyId: string } }>(
+    '/agencies/:agencyId/users',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    async (request, reply) => {
+      const users = await getPrisma().user.findMany({
+        where: { agencyId: request.params.agencyId },
         select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
+        orderBy: { createdAt: 'desc' },
       });
 
-      return reply.code(201).send({ success: true, data: user });
-    } catch (error) {
-      if ((error as { code?: string }).code === 'P2002') {
-        return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+      return reply.send({ success: true, data: users });
+    },
+  );
+
+  app.post<{ Params: { agencyId: string }; Body: UserBody }>(
+    '/agencies/:agencyId/users',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    async (request, reply) => {
+      const name = request.body.name?.trim();
+      const email = request.body.email?.trim().toLowerCase();
+      const password = request.body.password ?? '';
+      const role = request.body.role;
+
+      if (!name || !email || !password || password.length < 8 || !role || !['AGENCY', 'INTERVIEWER'].includes(role)) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name, email, password (8+ characters), and role (Agency or Interviewer) are required.' } });
       }
-      throw error;
-    }
-  });
+
+      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
+      if (!agency) {
+        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      }
+      if (agency.status !== 'ACTIVE') {
+        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
+      }
+
+      try {
+        const user = await getPrisma().user.create({
+          data: {
+            agencyId: agency.id,
+            name,
+            email,
+            passwordHash: await hashPassword(password),
+            role,
+          },
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
+        });
+
+        return reply.code(201).send({ success: true, data: user });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') {
+          return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        }
+        throw error;
+      }
+    },
+  );
 
   app.patch<{ Params: { agencyId: string; userId: string }; Body: Pick<UserBody, 'name' | 'role'> & { active?: boolean } }>(
     '/agencies/:agencyId/users/:userId',
-    { preHandler: [requireAuth, requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const existing = await getPrisma().user.findFirst({
         where: { id: request.params.userId, agencyId: request.params.agencyId },

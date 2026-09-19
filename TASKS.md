@@ -35,6 +35,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ⏳ Implement Interviewee account linkage.
 - ✅ Add secure password handling and session expiry.
 - 🔄 Add backend authentication/integration tests (password hashing is covered; DB-backed route tests remain for the QA phase).
+- ✅ Add reproducible development database seed for Admin, Agency, and Interviewer accounts.
 
 ## Phase 3 — Jobs
 
@@ -45,6 +46,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - 🔄 Build published job view.
 - ✅ Add job validation.
 - ✅ Add job API validation tests.
+- ✅ Restrict job mutations to Admin/Agency roles.
 
 ## Phase 4 — Candidates and onboarding
 
