@@ -252,6 +252,10 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'USER_NOT_FOUND', message: 'Agency user not found.' } });
       }
 
+      if (existing.id === request.authUser!.id && request.body.active === false) {
+        return reply.code(400).send({ success: false, error: { code: 'CANNOT_DEACTIVATE_SELF', message: 'You cannot deactivate your own account.' } });
+      }
+
       if (request.body.role !== undefined && !['AGENCY', 'INTERVIEWER'].includes(request.body.role)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_ROLE', message: 'Agency users can only have Agency or Interviewer roles.' } });
       }
