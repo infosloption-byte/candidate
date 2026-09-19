@@ -134,7 +134,6 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
 
     try {
       setError('');
-      setSaving(true);
 
       const updated = developmentMode
         ? { ...candidateToUpdate, onboardingStatus: nextStatus }
@@ -170,6 +169,7 @@ export const CandidatesPage = ({ role }: CandidatesPageProps) => {
 
     try {
       setError('');
+      setSaving(true);
 
       const updated = developmentMode
         ? {
