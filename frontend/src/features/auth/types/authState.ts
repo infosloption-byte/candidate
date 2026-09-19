@@ -1,9 +1,9 @@
 import type { AuthState, AuthUser } from './auth';
 
 export type AuthAction =
-  | { type: 'LOGIN'; user: AuthUser }
+  | { type: 'LOGIN'; user: AuthUser; sessionExpiresAt: string }
   | { type: 'LOGIN_CANDIDATE'; user: AuthUser }
-  | { type: 'LOGIN_RECRUITER'; user: AuthUser }
+  | { type: 'RESTORE_SESSION'; user: AuthUser; sessionExpiresAt: string }
   | { type: 'OPEN_FORGOT_PASSWORD' }
   | { type: 'OPEN_RESET_PASSWORD'; email: string }
   | { type: 'COMPLETE_RESET_PASSWORD'; notice: string }
