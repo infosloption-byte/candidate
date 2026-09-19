@@ -351,6 +351,7 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
     },
   });
   assert.equal(secondInterviewResponse.statusCode, 201);
+
   const blockedFinalDecision = await app.inject({
     method: 'PATCH',
     url: '/api/v1/candidates/' + candidateId,
@@ -359,87 +360,14 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   });
   assert.equal(blockedFinalDecision.statusCode, 409);
 
-  const cancelSecondInterview = json<{ data: { id: string } }>(secondInterviewResponse);
-  const cancelled = await app.inject({
+  const secondInterview = json<{ data: { id: string } }>(secondInterviewResponse);
+  const cancelledSecondInterview = await app.inject({
     method: 'PATCH',
-    url: '/api/v1/interviews/' + cancelSecondInterview.data.id,
+    url: '/api/v1/interviews/' + secondInterview.data.id,
     headers: { cookie: agencyCookie },
     payload: { status: 'CANCELLED' },
   });
-  assert.equal(cancelled.statusCode, 200);
-
-  const candidateProfileUpdate = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/candidates/' + candidateId,
-    headers: { cookie: await login(emails.admin) },
-    payload: {
-      name: 'QA Candidate Updated',
-      email: 'qa-interviewee-updated-' + suffix + '@buildhire.local',
-      profession: 'Senior Mason',
-      experienceYears: 6,
-      skills: ['Masonry', 'Finishing'],
-    },
-  });
-  assert.equal(candidateProfileUpdate.statusCode, 200);
-
-  const updatedIntervieweeLogin = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/login',
-    payload: { email: 'qa-interviewee-updated-' + suffix + '@buildhire.local', password },
-  });
-  assert.equal(updatedIntervieweeLogin.statusCode, 200);
-
-  const secondInterviewResponse = await app.inject({
-    method: 'POST',
-    url: '/api/v1/candidates/' + candidateId + '/interviews',
-    headers: { cookie: agencyCookie },
-    payload: {
-      jobId: jobAId,
-      type: 'FINAL',
-      scheduledAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-      durationMins: 30,
-      location: 'QA Final Room',
-      interviewerIds: [interviewerId],
-    },
-  });
-  assert.equal(secondInterviewResponse.statusCode, 201);
-  const blockedFinalDecision = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/candidates/' + candidateId,
-    headers: { cookie: agencyCookie },
-    payload: { status: 'PASSED', statusReason: 'Should be blocked while another interview is scheduled.' },
-  });
-  assert.equal(blockedFinalDecision.statusCode, 409);
-
-  const cancelSecondInterview = json<{ data: { id: string } }>(secondInterviewResponse);
-  const cancelled = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/interviews/' + cancelSecondInterview.data.id,
-    headers: { cookie: agencyCookie },
-    payload: { status: 'CANCELLED' },
-  });
-  assert.equal(cancelled.statusCode, 200);
-
-  const candidateProfileUpdate = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/candidates/' + candidateId,
-    headers: { cookie: await login(emails.admin) },
-    payload: {
-      name: 'QA Candidate Updated',
-      email: 'qa-interviewee-updated-' + suffix + '@buildhire.local',
-      profession: 'Senior Mason',
-      experienceYears: 6,
-      skills: ['Masonry', 'Finishing'],
-    },
-  });
-  assert.equal(candidateProfileUpdate.statusCode, 200);
-
-  const updatedIntervieweeLogin = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/login',
-    payload: { email: 'qa-interviewee-updated-' + suffix + '@buildhire.local', password },
-  });
-  assert.equal(updatedIntervieweeLogin.statusCode, 200);
+  assert.equal(cancelledSecondInterview.statusCode, 200);
 
   const finalDecision = await app.inject({
     method: 'PATCH',
@@ -450,6 +378,27 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   assert.equal(finalDecision.statusCode, 200);
   const finalDecisionBody = json<{ data: { status: string } }>(finalDecision);
   assert.equal(finalDecisionBody.data.status, 'PASSED');
+
+  const candidateProfileUpdate = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/candidates/' + candidateId,
+    headers: { cookie: await login(emails.admin) },
+    payload: {
+      name: 'QA Candidate Updated',
+      email: 'qa-interviewee-updated-' + suffix + '@buildhire.local',
+      profession: 'Senior Mason',
+      experienceYears: 6,
+      skills: ['Masonry', 'Finishing'],
+    },
+  });
+  assert.equal(candidateProfileUpdate.statusCode, 200);
+
+  const updatedIntervieweeLogin = await app.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    payload: { email: 'qa-interviewee-updated-' + suffix + '@buildhire.local', password },
+  });
+  assert.equal(updatedIntervieweeLogin.statusCode, 200);
 
   const historyResponse = await app.inject({
     method: 'GET',
