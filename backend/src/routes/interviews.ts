@@ -279,8 +279,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         }
 
         const interviewers = await getInterviewers(nextPanel, agencyId);
-        if (interviewers.length !== new Set(nextPanel).size) {
-          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the job agency.' } });
+        const activeIds = new Set(interviewers.map((interviewer) => interviewer.id));
+        const existingPanelIds = new Set(existing.panel.map((participant) => participant.userId));
+        const invalidPanelIds = nextPanel.filter((userId) => !activeIds.has(userId) && !existingPanelIds.has(userId));
+        if (invalidPanelIds.length) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every new panel member must be an active interviewer in the job agency.' } });
         }
 
         if (await hasScheduleConflict(nextPanel, existing.application.candidateId, nextScheduledAt, nextDuration, existing.id)) {
