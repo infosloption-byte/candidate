@@ -5,7 +5,7 @@ import { canTransitionApplication, validateApplicationStatus } from './applicati
 test('application workflow allows screening and shortlist progression', () => {
   assert.equal(canTransitionApplication('APPLIED', 'SCREENING'), true);
   assert.equal(canTransitionApplication('SCREENING', 'SHORTLISTED'), true);
-  assert.equal(canTransitionApplication('SHORTLISTED', 'INTERVIEW'), true);
+  assert.equal(canTransitionApplication('SHORTLISTED', 'INTERVIEW'), false);
 });
 
 test('application workflow rejects backward jumps', () => {
@@ -19,6 +19,7 @@ test('withdrawal is allowed before interview', () => {
 });
 
 test('final interview decisions must come from evaluations', () => {
+  assert.equal(canTransitionApplication('SHORTLISTED', 'INTERVIEW'), false);
   assert.equal(canTransitionApplication('INTERVIEW', 'SELECTED'), false);
   assert.equal(canTransitionApplication('INTERVIEW', 'REJECTED'), false);
 });
