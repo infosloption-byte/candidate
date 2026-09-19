@@ -16,7 +16,7 @@ const emptyForm = { name: '', description: '', maxPoints: '5' };
 
 export const InterviewCriteriaPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
-  const { state, dispatch } = useRecruitment();
+  const { state } = useRecruitment();
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [agencyId, setAgencyId] = useState(user?.agencyId ?? 'agency-1');
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria : []);
