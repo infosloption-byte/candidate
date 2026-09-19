@@ -97,29 +97,25 @@ export const DashboardPage = ({ role }: DashboardPageProps) => {
     setLoading(true);
     setError('');
 
-    const requests: Array<Promise<unknown>> = [
-      apiFetch<Job[]>('/jobs'),
-      apiFetch<Candidate[]>('/candidates'),
-      apiFetch<ApplicationRecord[]>('/applications'),
-      apiFetch<Interview[]>('/interviews'),
-    ];
+    const canReadWorkspaceData = ['ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(role);
 
-    if (role === 'ADMIN') {
-      requests.push(apiFetch<AgencyRecord[]>('/agencies'));
-    }
+    const jobsRequest = canReadWorkspaceData
+      ? apiFetch<Job[]>('/jobs')
+      : Promise.resolve([] as Job[]);
+    const candidatesRequest = canReadWorkspaceData
+      ? apiFetch<Candidate[]>('/candidates')
+      : Promise.resolve([] as Candidate[]);
+    const applicationsRequest = canReadWorkspaceData
+      ? apiFetch<ApplicationRecord[]>('/applications')
+      : Promise.resolve([] as ApplicationRecord[]);
+    const interviewsRequest = apiFetch<Interview[]>('/interviews');
+    const agenciesRequest = role === 'ADMIN'
+      ? apiFetch<AgencyRecord[]>('/agencies')
+      : Promise.resolve([] as AgencyRecord[]);
 
-    Promise.all(requests)
-      .then((results) => {
+    Promise.all([jobsRequest, candidatesRequest, applicationsRequest, interviewsRequest, agenciesRequest])
+      .then(([jobs, candidates, applications, interviews, agencies]) => {
         if (cancelled) return;
-
-        const [jobs, candidates, applications, interviews, agencies = []] = results as [
-          Job[],
-          Candidate[],
-          ApplicationRecord[],
-          Interview[],
-          AgencyRecord[]?,
-        ];
-
         setData({ jobs, candidates, applications, interviews, agencies });
       })
       .catch((requestError: unknown) => {
