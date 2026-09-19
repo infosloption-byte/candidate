@@ -3,7 +3,7 @@ import type { ApplicationStatus } from '../generated/prisma/enums.js';
 const transitions: Record<ApplicationStatus, ApplicationStatus[]> = {
   APPLIED: ['SCREENING', 'WITHDRAWN'],
   SCREENING: ['SHORTLISTED', 'REJECTED', 'WITHDRAWN'],
-  SHORTLISTED: ['INTERVIEW', 'REJECTED', 'WITHDRAWN'],
+  SHORTLISTED: ['REJECTED', 'WITHDRAWN'],
   INTERVIEW: [],
   SELECTED: [],
   REJECTED: [],
