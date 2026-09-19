@@ -17,8 +17,11 @@ const emails = {
   agencyA: 'qa-agency-a-' + suffix + '@buildhire.local',
   agencyB: 'qa-agency-b-' + suffix + '@buildhire.local',
   interviewer: 'qa-interviewer-' + suffix + '@buildhire.local',
+  interviewerB: 'qa-interviewer-b-' + suffix + '@buildhire.local',
   interviewee: 'qa-interviewee-' + suffix + '@buildhire.local',
   registered: 'qa-registered-' + suffix + '@buildhire.local',
+  bulkA: 'qa-bulk-a-' + suffix + '@buildhire.local',
+  bulkB: 'qa-bulk-b-' + suffix + '@buildhire.local',
 };
 
 let app: Awaited<ReturnType<typeof buildApp>> | null = null;
@@ -29,9 +32,11 @@ let adminId = '';
 let agencyAUserId = '';
 let agencyBUserId = '';
 let interviewerId = '';
+let interviewerBId = '';
 let candidateUserId = '';
 let jobAId = '';
 let jobBId = '';
+let interviewId = '';
 
 const cookieFrom = (response: { headers: Record<string, string | string[] | undefined> }): string => {
   const value = response.headers['set-cookie'];
@@ -70,6 +75,7 @@ before(async () => {
     const agencyAUser = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Agency A', email: emails.agencyA, passwordHash, role: 'AGENCY' } });
     const agencyBUser = await tx.user.create({ data: { agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
     const interviewer = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
+    const interviewerB = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer B', email: emails.interviewerB, passwordHash, role: 'INTERVIEWER' } });
 
     const candidate = await tx.candidate.create({
       data: {
@@ -102,7 +108,18 @@ before(async () => {
       data: { agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B job', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
 
-    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, candidateUser, jobA, jobB };
+    return {
+      agencyA,
+      agencyB,
+      admin,
+      agencyAUser,
+      agencyBUser,
+      interviewer,
+      interviewerB,
+      candidateUser,
+      jobA,
+      jobB,
+    };
   });
 
   agencyAId = setup.agencyA.id;
@@ -111,6 +128,7 @@ before(async () => {
   agencyAUserId = setup.agencyAUser.id;
   agencyBUserId = setup.agencyBUser.id;
   interviewerId = setup.interviewer.id;
+  interviewerBId = setup.interviewerB.id;
   candidateUserId = setup.candidateUser.id;
   jobAId = setup.jobA.id;
   jobBId = setup.jobB.id;
@@ -120,14 +138,23 @@ after(async () => {
   if (!enabled || !prisma) return;
 
   await prisma.session.deleteMany({
-    where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, candidateUserId] } },
+    where: {
+      userId: {
+        in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId],
+      },
+    },
   });
   await prisma.user.deleteMany({
-    where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, candidateUserId] } },
+    where: {
+      id: {
+        in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId],
+      },
+    },
   });
   await prisma.agency.deleteMany({
     where: { id: { in: [agencyAId, agencyBId] } },
   });
+
   if (app) await app.close();
 });
 
@@ -164,7 +191,51 @@ dbTest('authentication and agency isolation protect real API boundaries', async 
   assert.equal(crossAgencyJobUpdate.statusCode, 403);
 });
 
-dbTest('candidate application to final decision works end to end', async () => {
+dbTest('candidate bulk onboarding is atomic and rejects duplicates', async () => {
+  assert.ok(app);
+  assert.ok(prisma);
+
+  const agencyCookie = await login(emails.agencyA);
+  const beforeCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
+
+  const csv = [
+    'name,email,phone,profession,experienceYears,skills',
+    'Bulk Mason A,' + emails.bulkA + ',0771111111,Mason,4,Masonry;Blockwork',
+    'Bulk Mason B,' + emails.bulkB + ',0772222222,Carpenter,6,Joinery;Formwork',
+  ].join('\\n');
+
+  const importResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
+    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
+    payload: csv,
+  });
+  assert.equal(importResponse.statusCode, 201);
+  const importBody = json<{ data: { importedCount: number } }>(importResponse);
+  assert.equal(importBody.data.importedCount, 2);
+
+  const afterImportCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
+  assert.equal(afterImportCount, beforeCount + 2);
+
+  const invalidCsv = [
+    'name,email,phone,profession,experienceYears,skills',
+    'Duplicate One,' + emails.bulkB + ',0773333333,Mason,2,Masonry',
+    'Duplicate Two,' + emails.bulkB + ',0774444444,Carpenter,3,Joinery',
+  ].join('\\n');
+
+  const invalidResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
+    headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
+    payload: invalidCsv,
+  });
+  assert.equal(invalidResponse.statusCode, 400);
+
+  const afterRejectedImportCount = await prisma.candidate.count({ where: { agencyId: agencyAId } });
+  assert.equal(afterRejectedImportCount, afterImportCount);
+});
+
+dbTest('candidate application through panel interview and evaluation reaches final decision', async () => {
   assert.ok(app);
 
   const candidateCookie = await login(emails.interviewee);
@@ -213,8 +284,36 @@ dbTest('candidate application to final decision works end to end', async () => {
   assert.equal(interviewResponse.statusCode, 201);
 
   const interview = json<{ data: { id: string } }>(interviewResponse);
-  const interviewerCookie = await login(emails.interviewer);
+  interviewId = interview.data.id;
 
+  const conflictResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/applications/' + application.data.id + '/interviews',
+    headers: { cookie: agencyCookie },
+    payload: {
+      type: 'FINAL',
+      scheduledAt,
+      durationMins: 30,
+      location: 'QA Room 2',
+      interviewerIds: [interviewerId],
+    },
+  });
+  assert.equal(conflictResponse.statusCode, 409);
+
+  const outsiderCookie = await login(emails.interviewerB);
+  const outsiderEvaluation = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + interview.data.id + '/evaluations',
+    headers: { cookie: outsiderCookie },
+    payload: {
+      rating: 5,
+      recommendation: 'RECOMMENDED',
+      comments: 'Not a panel member.',
+    },
+  });
+  assert.equal(outsiderEvaluation.statusCode, 403);
+
+  const interviewerCookie = await login(emails.interviewer);
   const myInterviews = await app.inject({
     method: 'GET',
     url: '/api/v1/interviews',
