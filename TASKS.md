@@ -55,7 +55,7 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 - ✅ Build agency-created candidate onboarding API.
 - ✅ Build candidate self-onboarding API and account linkage.
 - ✅ Build onboarding progress/submission states at API level.
-- 🔄 Build frontend candidate list/form against Candidate API.
+- ✅ Build frontend candidate list/form against Candidate API.
 - ⏳ Build agency review of submitted candidate profiles in the production UI.
 - ⏳ Build bulk candidate onboarding via CSV.
 - ⏳ Add row validation and duplicate protection for bulk import.
@@ -63,13 +63,15 @@ Legend: ✅ completed · 🔄 in progress · ⏳ planned
 
 ## Phase 5 — Applications
 
-- ⏳ Build JobApplication API and persistence.
-- ⏳ Allow candidates to apply to published jobs.
-- ⏳ Prevent duplicate job applications.
-- ⏳ Build agency application queue.
-- ⏳ Implement application status workflow.
-- ⏳ Connect application state to candidate/job detail views.
-- ⏳ Add application workflow tests.
+- ✅ Build JobApplication API and persistence.
+- ✅ Allow candidates to apply to published jobs.
+- ✅ Prevent duplicate job applications.
+- ✅ Build agency application queue API.
+- ✅ Implement application status workflow.
+- ✅ Connect application state contract to candidate/job records.
+- ✅ Add application workflow validation tests.
+- 🔄 Connect frontend Applications screen to authenticated Application API.
+- 🔄 Connect published-job Apply action to Application API.
 
 ## Phase 6 — Interviews
 
