@@ -31,6 +31,12 @@ export const validateInterviewInput = (input: InterviewInput, mode: 'create' | '
   ) {
     errors.push('Interview duration must be a whole number between 15 and 480 minutes.');
   }
+  if (input.location !== undefined && input.location !== null && input.location.trim().length > 160) {
+    errors.push('Interview location must be 160 characters or fewer.');
+  }
+  if (input.notes !== undefined && input.notes !== null && input.notes.length > 4000) {
+    errors.push('Interview notes must be 4,000 characters or fewer.');
+  }
   if (mode === 'create' && (!input.interviewerIds?.length)) {
     errors.push('At least one interviewer is required.');
   }
