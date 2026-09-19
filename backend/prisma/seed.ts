@@ -603,6 +603,23 @@ const main = async (): Promise<void> => {
     });
   }
 
+  const selectionSeeds = [
+    { id: "sel-001", candidateId: "cand-001", jobId: "job-dubai-mason", decision: "RECOMMENDED" as const, reason: "Strong technical fit", note: "Passed prior technical interview with strong finish-work evidence." },
+    { id: "sel-002", candidateId: "cand-003", jobId: "job-colombo-shuttering", decision: "SELECTED" as const, reason: "Meets project requirement", note: "Technical and practical interview passed." },
+    { id: "sel-003", candidateId: "cand-004", jobId: "job-dubai-mason", decision: "RESERVE" as const, reason: "Needs document follow-up", note: "Good technical fit; trade certificate needs attention." },
+  ];
+
+  for (const selection of selectionSeeds) {
+    await prisma.selectionRecord.upsert({
+      where: { tenantId_candidateId_jobId: { tenantId: tenant.id, candidateId: selection.candidateId, jobId: selection.jobId } },
+      update: { decision: selection.decision, reason: selection.reason, note: selection.note, decidedById: recruiter.id },
+      create: { id: selection.id, tenantId: tenant.id, candidateId: selection.candidateId, jobId: selection.jobId, decision: selection.decision, reason: selection.reason, note: selection.note, decidedById: recruiter.id },
+    });
+    await prisma.selectionHistory.deleteMany({ where: { tenantId: tenant.id, candidateId: selection.candidateId, jobId: selection.jobId } });
+    await prisma.selectionHistory.create({
+      data: { id: `${selection.id}-history`, tenantId: tenant.id, candidateId: selection.candidateId, jobId: selection.jobId, action: "DECISION_CHANGED", fromDecision: null, toDecision: selection.decision, reason: selection.reason, note: selection.note, occurredById: recruiter.id },
+    });
+  }
   console.log("BuildHire development seed completed.");
   console.log("Staff login password: password");
   console.log("Workspace: buildhire-demo");
