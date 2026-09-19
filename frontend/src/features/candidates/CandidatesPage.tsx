@@ -501,7 +501,19 @@ export const CandidatesPage = ({ role }: Props) => {
                           <div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p><StatusPill value={item.status} /></div>
                           <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min</p>
                           <p className="mt-1 text-xs text-slate-400">{item.job?.title ?? 'General interview'} · {item.location ?? 'Location not specified'}</p>
-                          {item.evaluations.length > 0 && <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>}
+                          {item.evaluations.length > 0 && (
+                            <>
+                              <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>
+                              <div className="mt-3 space-y-2">
+                                {item.evaluations.map((evaluation) => evaluation.scores.map((score) => (
+                                  <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                                    <span className="text-[11px] font-semibold text-slate-600">{score.criterion.name}</span>
+                                    <span className="text-xs font-black text-slate-900">{score.points} / {score.criterion.maxPoints}</span>
+                                  </div>
+                                )))}
+                              </div>
+                            </>
+                          )}
                         </div>;
                       }) : <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-xs text-slate-400">No interview history yet.</p>}
                     </div>
