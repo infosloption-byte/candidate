@@ -156,14 +156,20 @@ export const logout = async (auth: AuthContext): Promise<void> => {
   });
 };
 
-export const currentUser = async (auth: AuthContext): Promise<AuthUserDto> => {
+export const currentUser = async (auth: AuthContext): Promise<{ user: AuthUserDto; sessionExpiresAt: string }> => {
   const user = await findActiveUserById(auth.tenantId, auth.userId);
   if (!user) throw AppError.unauthenticated();
 
+  const session = await findActiveSession(auth.tenantId, auth.userId, auth.jti);
+  if (!session) throw AppError.unauthenticated();
+
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: roleToFrontend(user.role),
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: roleToFrontend(user.role),
+    },
+    sessionExpiresAt: session.expiresAt.toISOString(),
   };
 };
