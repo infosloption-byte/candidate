@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../../shared/services/apiClient';
 import type {
   Availability,
   Candidate,
@@ -12,8 +13,6 @@ import type {
   EnglishLevel,
   RejectionReason,
 } from '../types/candidate';
-
-const STORAGE_KEY = 'buildhire.candidates';
 
 type CandidateRecord = Record<string, unknown>;
 
@@ -174,14 +173,23 @@ const normalizeCandidate = (value: unknown, index: number): Candidate => {
 };
 
 export const loadCandidates = async (): Promise<Candidate[]> => {
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (!saved) return seedCandidates;
+  const response = await fetch(`${API_BASE_URL}/candidates?page=1&pageSize=100`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
 
-  const parsed: unknown = JSON.parse(saved);
-  if (!Array.isArray(parsed)) return seedCandidates;
-  return parsed.map(normalizeCandidate);
-};
+  if (!response.ok) {
+    throw new Error("Candidate data could not be loaded from the backend.");
+  }
 
-export const saveCandidates = async (candidates: Candidate[]): Promise<void> => {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(candidates));
+  const payload = await response.json() as {
+    success: boolean;
+    data?: { items: Candidate[] };
+  };
+
+  if (!payload.success || !payload.data) {
+    throw new Error("The backend returned an invalid candidate response.");
+  }
+
+  return payload.data.items;
 };
