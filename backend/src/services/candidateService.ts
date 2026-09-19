@@ -43,6 +43,7 @@ export interface CreateCandidateInput {
   drivingLicense?: boolean;
   availability: "Available now" | "Within 2 weeks" | "Within 1 month" | "Not available";
   source: "Walk-in" | "Referral" | "Agency" | "Existing database" | "Bulk import";
+  tags?: string[];
   nationality?: string;
   dateOfBirth?: string;
   passportExpiry?: string;
@@ -516,6 +517,7 @@ export const updateCandidate = async (auth: AuthContext, id: string, input: Upda
   if (input.recruiterOwnerId !== undefined) changes.recruiterOwner = { connect: { id: input.recruiterOwnerId } };
   if (input.priority !== undefined) changes.priority = priorityMap[input.priority];
   if (input.sourceCampaign !== undefined) changes.sourceCampaign = input.sourceCampaign.trim() || null;
+  if (input.tags !== undefined) changes.tags = input.tags;
   if (input.tags !== undefined) changes.tags = input.tags;
 
   if (Object.keys(changes).length === 0) return toCandidateDto(existing);
