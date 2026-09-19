@@ -454,16 +454,20 @@ const main = async (): Promise<void> => {
       where: { tenantId: tenant.id, interviewId: interview.id },
     });
 
+    const criterionIds = interview.criteria.map(([id]) => `${interview.id}-${id}`);
     const existingScorecard = await prisma.interviewScorecard.findUnique({
       where: { interviewId: interview.id },
       select: { id: true },
     });
+
+    // Delete deterministic criterion IDs first as a safety net for partial/manual seed runs.
+    await prisma.interviewScoreCriterion.deleteMany({
+      where: { id: { in: criterionIds } },
+    });
+
     if (existingScorecard) {
       await prisma.interviewScoreCriterion.deleteMany({
         where: { tenantId: tenant.id, scorecardId: existingScorecard.id },
-      });
-      await prisma.interviewScorecard.delete({
-        where: { id: existingScorecard.id },
       });
     }
 
@@ -479,23 +483,31 @@ const main = async (): Promise<void> => {
       },
     });
 
-    await prisma.interviewScorecard.create({
-      data: {
+    const scorecard = await prisma.interviewScorecard.upsert({
+      where: { interviewId: interview.id },
+      update: {
+        tenantId: tenant.id,
+        templateId: interview.templateId,
+      },
+      create: {
         id: `${interview.id}-scorecard`,
         tenantId: tenant.id,
         interviewId: interview.id,
         templateId: interview.templateId,
-        criteria: {
-          create: interview.criteria.map(([id, label, weight]) => ({
-            id: `${interview.id}-${id}`,
-            tenantId: tenant.id,
-            label,
-            weight,
-            score: null,
-            note: null,
-          })),
-        },
       },
+      select: { id: true },
+    });
+
+    await prisma.interviewScoreCriterion.createMany({
+      data: interview.criteria.map(([id, label, weight]) => ({
+        id: `${interview.id}-${id}`,
+        tenantId: tenant.id,
+        scorecardId: scorecard.id,
+        label,
+        weight,
+        score: null,
+        note: null,
+      })),
     });
 
     await prisma.practicalTestItem.createMany({
