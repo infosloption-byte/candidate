@@ -9,7 +9,7 @@ import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
 interface Props { role: UserRole; }
@@ -33,7 +33,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
-  const [history, setHistory] = useState<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[] }>({ statusHistory: [], interviews: [] });
+  const [history, setHistory] = useState<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[]; auditEvents: CandidateAuditEvent[] }>({ statusHistory: [], interviews: [], auditEvents: [] });
   const [loading, setLoading] = useState(!developmentMode);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -77,12 +77,12 @@ export const CandidatesPage = ({ role }: Props) => {
     setStatusDraft(candidate.status);
     setStatusReason('');
     if (developmentMode) {
-      setHistory({ statusHistory: [{ id: 'history-' + candidate.id, candidateId: candidate.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate added to the candidate pool.', changedBy: null, createdAt: candidate.statusUpdatedAt }], interviews: state.interviews.filter((item) => item.candidateId === candidate.id).map((item) => ({ id: item.id, type: item.type, status: item.status, scheduledAt: item.scheduledAt, durationMins: item.durationMins, location: item.location, job: item.job ? { id: item.job.id, title: item.job.title, location: item.job.location } : null, panel: [], evaluations: item.evaluations ?? [] })) });
+      setHistory({ statusHistory: [{ id: 'history-' + candidate.id, candidateId: candidate.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate added to the candidate pool.', changedBy: null, createdAt: candidate.statusUpdatedAt }], interviews: state.interviews.filter((item) => item.candidateId === candidate.id).map((item) => ({ id: item.id, type: item.type, status: item.status, scheduledAt: item.scheduledAt, durationMins: item.durationMins, location: item.location, job: item.job ? { id: item.job.id, title: item.job.title, location: item.job.location } : null, panel: [], evaluations: item.evaluations ?? [] })), auditEvents: [] });
       return;
     }
     let cancelled = false;
     setLoadingHistory(true);
-    apiFetch<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[] }>('/candidates/' + candidate.id + '/history')
+    apiFetch<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[]; auditEvents: CandidateAuditEvent[] }>('/candidates/' + candidate.id + '/history')
       .then((result) => { if (!cancelled) setHistory(result); })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidate history.'); })
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
@@ -337,6 +337,21 @@ export const CandidatesPage = ({ role }: Props) => {
                   </div>
                 </div>
               )}
+
+              <div className="mt-5">
+                <h3 className="text-sm font-black text-slate-950">Activity history</h3>
+                <div className="mt-3 divide-y divide-slate-100 rounded-2xl border border-slate-200">
+                  {history.auditEvents.length ? history.auditEvents.map((event) => (
+                    <div key={event.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">{event.summary}</p>
+                        <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {label(event.action)}</p>
+                      </div>
+                      <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                    </div>
+                  )) : <p className="p-5 text-xs text-slate-400">No candidate activity recorded yet.</p>}
+                </div>
+              </div>
 
               <div className="mt-5"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
             </Card>
