@@ -42,4 +42,6 @@ export const env = {
   sessionTtlSeconds: parsePositiveInteger("SESSION_TTL_SECONDS", process.env.SESSION_TTL_SECONDS?.trim() || "28800"),
   accessCookieName: process.env.ACCESS_COOKIE_NAME?.trim() || "buildhire_access",
   csrfCookieName: process.env.CSRF_COOKIE_NAME?.trim() || "buildhire_csrf",
+  documentStorageDir: process.env.DOCUMENT_STORAGE_DIR?.trim() || "./uploads",
+  maxDocumentBytes: parsePositiveInteger("MAX_DOCUMENT_BYTES", process.env.MAX_DOCUMENT_BYTES?.trim() || String(10 * 1024 * 1024)),
 };
