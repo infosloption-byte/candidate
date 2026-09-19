@@ -396,6 +396,14 @@ dbTest('candidate application through panel interview and evaluation reaches fin
   });
   assert.equal(myInterviews.statusCode, 200);
 
+  const manualFinalDecision = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/applications/' + application.data.id,
+    headers: { cookie: agencyCookie },
+    payload: { status: 'SELECTED' },
+  });
+  assert.equal(manualFinalDecision.statusCode, 400);
+
   const evaluationResponse = await app.inject({
     method: 'POST',
     url: '/api/v1/interviews/' + interview.data.id + '/evaluations',
