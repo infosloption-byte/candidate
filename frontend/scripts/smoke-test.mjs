@@ -56,11 +56,17 @@ assert.match(candidatesPage, /alternatePhone/);
 const interviewsPage = read('src/features/interviews/InterviewsPage.tsx');
 assert.match(interviewsPage, /Create interview/);
 assert.match(interviewsPage, /Candidates/);
-assert.match(interviewsPage, /View details/);
+assert.match(interviewsPage, /Open/);
 assert.match(interviewsPage, /role=\"dialog\"/);
 assert.match(interviewsPage, /interviews\/bulk/);
 assert.match(interviewsPage, /Also schedule for other candidates/);
 assert.match(interviewsPage, /Edit interview/);
+assert.match(interviewsPage, /role="dialog"/);
+assert.match(interviewsPage, /scheduleModalOpen/);
+assert.match(interviewsPage, /sortBy/);
+assert.match(interviewsPage, /typeFilter/);
+assert.match(interviewsPage, /statusFilter/);
+assert.match(interviewsPage, /Search interviews/);
 assert.match(settingsPage, /Candidate lifecycle/);
 assert.doesNotMatch(settingsPage, /Applications/);
 
