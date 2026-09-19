@@ -191,6 +191,28 @@ dbTest('authentication and agency isolation protect real API boundaries', async 
     payload: { title: 'Should not update' },
   });
   assert.equal(crossAgencyJobUpdate.statusCode, 403);
+
+  const interviewerCookie = await login(emails.interviewer);
+  const interviewerJobs = await app.inject({
+    method: 'GET',
+    url: '/api/v1/jobs',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(interviewerJobs.statusCode, 403);
+
+  const interviewerCandidates = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(interviewerCandidates.statusCode, 403);
+
+  const interviewerApplications = await app.inject({
+    method: 'GET',
+    url: '/api/v1/applications',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(interviewerApplications.statusCode, 403);
 });
 
 dbTest('candidate bulk onboarding is atomic and rejects duplicates', async () => {
