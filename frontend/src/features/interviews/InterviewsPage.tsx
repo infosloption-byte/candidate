@@ -189,6 +189,12 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
       durationMins: String(interview.durationMins),
       location: interview.location ?? '',
     });
+    const existingPanel = interview.panel ?? [];
+    setInterviewers((current) => {
+      const known = new Set(current.map((item) => item.id));
+      const missing = existingPanel.map((item) => item.user).filter((item) => !known.has(item.id));
+      return [...current, ...missing];
+    });
     setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
     setShowForm(true);
     setError('');
@@ -430,12 +436,14 @@ export const InterviewsPage = ({ role }: InterviewsPageProps) => {
                   <label key={interviewer.id} className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-700">
                     <input
                       type="checkbox"
+                      disabled={!editingInterviewId && !interviewer.active}
                       checked={panel.includes(interviewer.id)}
                       onChange={(event) => setPanel((current) => event.target.checked
                         ? [...new Set([...current, interviewer.id])]
                         : current.filter((id) => id !== interviewer.id))}
                     />
-                    {interviewer.name}
+                    <span className="min-w-0 flex-1">{interviewer.name}</span>
+                    {!interviewer.active && <span className="text-[10px] font-bold text-amber-600">{editingInterviewId ? 'inactive' : 'inactive'}</span>}
                   </label>
                 ))}
               </div>
