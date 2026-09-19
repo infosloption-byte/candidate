@@ -38,16 +38,6 @@ enum JobStatus {
   CLOSED
 }
 
-enum ApplicationStatus {
-  APPLIED
-  SCREENING
-  SHORTLISTED
-  INTERVIEW
-  SELECTED
-  REJECTED
-  WITHDRAWN
-}
-
 enum InterviewType {
   SCREENING
   TECHNICAL
@@ -62,10 +52,16 @@ enum InterviewStatus {
   NO_SHOW
 }
 
-enum Recommendation {
-  RECOMMENDED
-  MAYBE
-  NOT_RECOMMENDED
+enum CandidateStatus {
+  POOL
+  READY_FOR_INTERVIEW
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  PASSED
+  REJECTED
+  ON_HOLD
+  HIRED
+  INACTIVE
 }
 
 model Agency {
@@ -79,6 +75,7 @@ model Agency {
   users      User[]
   jobs       Job[]
   candidates Candidate[]
+  interviewCriteria InterviewCriterion[]
   auditEvents AuditEvent[]
 }
 
@@ -129,13 +126,16 @@ model Candidate {
   skills           Json
   onboardingStatus OnboardingStatus @default(NOT_STARTED)
   source           CandidateSource  @default(AGENCY_ADDED)
+  status           CandidateStatus  @default(POOL)
+  statusUpdatedAt  DateTime         @default(now())
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   account      User?           @relation("CandidateAccount")
-  applications JobApplication[]
   documents    CandidateDocument[]
+  interviews   Interview[]
+  statusHistory CandidateStatusHistory[]
 
   @@unique([agencyId, reference])
   @@index([agencyId, name])
@@ -227,17 +227,60 @@ model InterviewEvaluation {
   id             String         @id @default(uuid()) @db.VarChar(36)
   interviewId    String         @db.VarChar(36)
   interviewerId  String         @db.VarChar(36)
-  rating         Int
-  recommendation Recommendation
   comments       String?        @db.Text
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+  scores      InterviewEvaluationScore[]
 
   @@unique([interviewId, interviewerId])
   @@index([interviewerId, createdAt])
+}
+
+model InterviewCriterion {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  agencyId    String   @db.VarChar(36)
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(500)
+  maxPoints   Int      @default(5)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  scores InterviewEvaluationScore[]
+
+  @@index([agencyId, active, createdAt])
+}
+
+model InterviewEvaluationScore {
+  id           String @id @default(uuid()) @db.VarChar(36)
+  evaluationId String @db.VarChar(36)
+  criterionId  String @db.VarChar(36)
+  points       Int
+
+  evaluation InterviewEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  criterion  InterviewCriterion  @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluationId, criterionId])
+  @@index([criterionId])
+}
+
+model CandidateStatusHistory {
+  id          String         @id @default(uuid()) @db.VarChar(36)
+  candidateId String         @db.VarChar(36)
+  fromStatus  CandidateStatus?
+  toStatus    CandidateStatus
+  reason      String?        @db.VarChar(500)
+  changedById String?        @db.VarChar(36)
+  createdAt   DateTime       @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  changedBy User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, createdAt])
 }
 
 model AuditEvent {
