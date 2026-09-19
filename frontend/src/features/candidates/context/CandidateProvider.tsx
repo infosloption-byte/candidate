@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useReducer, type PropsWithChildren } from 'react';
+import { useAuth } from '../../auth/hooks/useAuth';
 import { CandidateContext } from './CandidateContextObject';
 import type { CandidateAction, CandidateState } from './CandidateContext';
 import type { CandidateSmartFilters, CandidateStatus } from '../types/candidate';
-import { loadCandidates, saveCandidates } from '../services/candidateRepository';
+import { loadCandidates } from '../services/candidateRepository';
 import { loadCandidateWorkspacePreferences, saveCandidateWorkspacePreferences, type CandidateWorkspacePreferences } from '../services/candidatePreferencesRepository';
 
 const defaultSmartFilters: CandidateSmartFilters = { minExperience: null, maxExperience: null, englishLevel: 'all', availability: 'all', overseasExperience: 'all', drivingLicense: 'all', documentReadiness: 'all', skills: [] };
@@ -68,6 +69,16 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
     case 'OPEN_BULK_IMPORT': return { ...state, isBulkImportOpen: true };
     case 'CLOSE_BULK_IMPORT': return { ...state, isBulkImportOpen: false };
     case 'ADD_CANDIDATE': return { ...state, candidates: [{ ...action.candidate, onboarding: action.candidate.onboarding ?? { status: 'not-started', completionPercent: 0, lastActivityAt: new Date().toISOString() } }, ...state.candidates], selectedCandidateId: action.candidate.id, isAddDrawerOpen: false };
+    case 'REPLACE_CANDIDATE': {
+      const exists = state.candidates.some((candidate) => candidate.id === action.candidate.id);
+      return {
+        ...state,
+        candidates: exists
+          ? state.candidates.map((candidate) => candidate.id === action.candidate.id ? action.candidate : candidate)
+          : [action.candidate, ...state.candidates],
+        selectedCandidateId: state.selectedCandidateId === action.candidate.id ? action.candidate.id : state.selectedCandidateId,
+      };
+    }
     case 'BULK_ADD_CANDIDATES': return action.candidates.length === 0 ? state : { ...state, candidates: [...action.candidates, ...state.candidates], selectedCandidateId: action.candidates[0]?.id ?? state.selectedCandidateId, isBulkImportOpen: false };
     case 'UPDATE_ONBOARDING': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, onboarding: action.onboarding, journey: [action.journeyEvent, ...candidate.journey] } : candidate) };
     case 'UPDATE_PROFILE': return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, ...action.changes, id: candidate.id, reference: candidate.reference, journey: [action.journeyEvent, ...candidate.journey] } : candidate) };
@@ -118,11 +129,13 @@ const candidateReducer = (state: CandidateState, action: CandidateAction): Candi
 };
 
 export const CandidateProvider = ({ children }: PropsWithChildren) => {
+  const { state: authState } = useAuth();
   const [state, dispatch] = useReducer(candidateReducer, initialState);
 
   useEffect(() => {
     let cancelled = false;
     const hydrate = async () => {
+      if (!authState.authenticated || authState.user.role === 'candidate') return;
       try {
         const loadedCandidates = await loadCandidates();
         const candidates = loadedCandidates.map((candidate) => ({ ...candidate, tags: candidate.tags ?? [] }));
@@ -135,13 +148,12 @@ export const CandidateProvider = ({ children }: PropsWithChildren) => {
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [state.loadAttempt]);
+  }, [authState.authenticated, authState.user.role, state.loadAttempt]);
 
   useEffect(() => {
-    if (state.loadState !== 'success') return;
-    void saveCandidates(state.candidates).catch(() => undefined);
+    if (!authState.authenticated || state.loadState !== 'success') return;
     void saveCandidateWorkspacePreferences({ savedFilters: state.savedFilters, comparisonMinimized: state.comparisonMinimized, comparisonHeight: state.comparisonHeight }).catch(() => undefined);
-  }, [state.candidates, state.loadState, state.savedFilters, state.comparisonMinimized, state.comparisonHeight]);
+  }, [authState.authenticated, state.loadState, state.savedFilters, state.comparisonMinimized, state.comparisonHeight]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <CandidateContext.Provider value={value}>{children}</CandidateContext.Provider>;
