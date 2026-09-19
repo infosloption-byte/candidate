@@ -199,7 +199,23 @@ export const CandidatesPage = ({ role }: Props) => {
     setError('');
     try {
       const updated = developmentMode
-        ? { ...candidate, name: profileForm.name.trim(), email: profileForm.email.trim() || null, phone: profileForm.phone.trim() || null, profession: profileForm.profession.trim() || null, experienceYears, skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean), onboardingStatus: 'SUBMITTED' as const }
+        ? {
+            ...candidate,
+            name: profileForm.name.trim(),
+            email: profileForm.email.trim() || null,
+            phone: profileForm.phone.trim() || null,
+            alternatePhone: profileForm.alternatePhone.trim() || null,
+            country: profileForm.country.trim() || null,
+            passportNumber: profileForm.passportNumber.trim() || null,
+            passportExpiry: profileForm.passportExpiry.trim() || null,
+            currentLocation: profileForm.currentLocation.trim() || null,
+            availability: profileForm.availability.trim() || null,
+            visaStatus: profileForm.visaStatus.trim() || null,
+            profession: profileForm.profession.trim() || null,
+            experienceYears,
+            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            onboardingStatus: 'SUBMITTED' as const,
+          }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({
@@ -406,6 +422,13 @@ export const CandidatesPage = ({ role }: Props) => {
             name: profileForm.name.trim(),
             email: profileForm.email.trim() || null,
             phone: profileForm.phone.trim() || null,
+            alternatePhone: profileForm.alternatePhone.trim() || null,
+            country: profileForm.country.trim() || null,
+            passportNumber: profileForm.passportNumber.trim() || null,
+            passportExpiry: profileForm.passportExpiry.trim() || null,
+            currentLocation: profileForm.currentLocation.trim() || null,
+            availability: profileForm.availability.trim() || null,
+            visaStatus: profileForm.visaStatus.trim() || null,
             profession: profileForm.profession.trim() || null,
             experienceYears,
             skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
@@ -530,7 +553,7 @@ export const CandidatesPage = ({ role }: Props) => {
             </Card>
             <Card>
               <h2 className="text-sm font-black text-slate-950">Profile details</h2>
-              <p className="mt-1 text-xs text-slate-400">Keep your contact, profession, experience, and skills up to date.</p>
+              <p className="mt-1 text-xs text-slate-400">Keep your contact, passport, location, work status, profession, experience, and skills up to date.</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
                 <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
