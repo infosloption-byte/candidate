@@ -235,7 +235,8 @@ export const AgenciesPage = () => {
       header: 'Actions',
       render: (agency: AgencyRecord) => (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setSelectedAgencyId((current) => current === agency.id ? null : agency.id)}>Manage users</Button>
+          <Button size="sm" variant="secondary" onClick={() => { setSelectedAgencyId((current) => current === agency.id ? null : agency.id); setError(''); }}>Manage users</Button>
+          {!developmentMode && <Button size="sm" variant="secondary" onClick={() => beginEditAgency(agency)}>Edit</Button>}
           <Button size="sm" variant="secondary" onClick={() => void toggleAgency(agency)} disabled={developmentMode}>
             {agency.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
           </Button>
