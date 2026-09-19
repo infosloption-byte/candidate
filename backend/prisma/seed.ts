@@ -508,44 +508,31 @@ const main = async (): Promise<void> => {
         notes: interview.notes,
         decision: interview.decision,
         createdById: recruiter.id,
-        interviewers: {
-          create: [{
-            tenantId: tenant.id,
-            userId: interview.interviewerId,
-          }],
-        },
-        scorecard: {
-          create: {
-            tenantId: tenant.id,
-            templateId: interview.templateId,
-            criteria: {
-              create: interview.criteria.map(([id, label, weight]) => ({
-                id: `${interview.id}-${id}`,
-                tenantId: tenant.id,
-                label,
-                weight,
-                score: null,
-                note: null,
-              })),
-            },
-          },
-        },
-        practicalItems: {
-          create: interview.practical.map(([id, label, required, result]) => ({
-            id: `${interview.id}-${id}`,
-            tenantId: tenant.id,
-            label,
-            required,
-            result,
-            note: null,
-          })),
-        },
       },
     });
 
+    // Rebuild interview children deterministically so the seed is safe to rerun.
     await prisma.interviewerAssignment.deleteMany({
       where: { tenantId: tenant.id, interviewId: interview.id },
     });
+
+    const existingScorecard = await prisma.interviewScorecard.findUnique({
+      where: { interviewId: interview.id },
+      select: { id: true },
+    });
+    if (existingScorecard) {
+      await prisma.interviewScoreCriterion.deleteMany({
+        where: { tenantId: tenant.id, scorecardId: existingScorecard.id },
+      });
+      await prisma.interviewScorecard.delete({
+        where: { id: existingScorecard.id },
+      });
+    }
+
+    await prisma.practicalTestItem.deleteMany({
+      where: { tenantId: tenant.id, interviewId: interview.id },
+    });
+
     await prisma.interviewerAssignment.create({
       data: {
         tenantId: tenant.id,
@@ -554,9 +541,6 @@ const main = async (): Promise<void> => {
       },
     });
 
-    await prisma.interviewScorecard.deleteMany({
-      where: { tenantId: tenant.id, interviewId: interview.id },
-    });
     await prisma.interviewScorecard.create({
       data: {
         id: `${interview.id}-scorecard`,
@@ -576,9 +560,6 @@ const main = async (): Promise<void> => {
       },
     });
 
-    await prisma.practicalTestItem.deleteMany({
-      where: { tenantId: tenant.id, interviewId: interview.id },
-    });
     await prisma.practicalTestItem.createMany({
       data: interview.practical.map(([id, label, required, result]) => ({
         id: `${interview.id}-${id}`,
