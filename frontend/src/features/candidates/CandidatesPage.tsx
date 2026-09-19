@@ -101,6 +101,9 @@ export const CandidatesPage = ({ role }: Props) => {
   const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'documents' | 'activity'>('overview');
   const [bulkImporting, setBulkImporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importAgencyId, setImportAgencyId] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (developmentMode) {
@@ -146,15 +149,19 @@ export const CandidatesPage = ({ role }: Props) => {
     enabled: candidateFormModalOpen,
     onEscape: () => setShowForm(false),
   });
+  const importModalRef = useFocusTrap<HTMLDivElement>({
+    enabled: showImportModal,
+    onEscape: () => setShowImportModal(false),
+  });
 
   useEffect(() => {
-    if (!candidateModalOpen && !candidateFormModalOpen) return;
+    if (!candidateModalOpen && !candidateFormModalOpen && !showImportModal) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [candidateModalOpen, candidateFormModalOpen]);
+  }, [candidateModalOpen, candidateFormModalOpen, showImportModal]);
 
   useEffect(() => {
     if (!candidate || role === 'INTERVIEWEE') return;
@@ -353,8 +360,8 @@ export const CandidatesPage = ({ role }: Props) => {
     URL.revokeObjectURL(url);
   };
 
-  const importCandidates = async (file: File) => {
-    if (!agencyId) {
+  const importCandidates = async (file: File, targetAgencyId: string) => {
+    if (!targetAgencyId) {
       setError('Select an agency workspace before importing candidates.');
       return;
     }
@@ -383,7 +390,7 @@ export const CandidatesPage = ({ role }: Props) => {
           const experienceYears = experienceRaw ? Number(experienceRaw) : null;
           return {
             id: 'candidate-import-' + Date.now() + '-' + index,
-            agencyId,
+            agencyId: targetAgencyId,
             reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
             name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
             email: read(values, 'email') || null,
@@ -409,7 +416,7 @@ export const CandidatesPage = ({ role }: Props) => {
         setSuccessTitle('Candidates imported');
         setSuccess(created.length + ' candidate(s) were added to the candidate pool.');
       } else {
-        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + agencyId + '/candidates/bulk', {
+        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + targetAgencyId + '/candidates/bulk', {
           method: 'POST',
           headers: { 'content-type': 'text/csv' },
           body: csv,
@@ -422,6 +429,39 @@ export const CandidatesPage = ({ role }: Props) => {
       setError(requestError instanceof Error ? requestError.message : 'Unable to import the CSV.');
     } finally {
       setBulkImporting(false);
+      if (bulkFileRef.current) bulkFileRef.current.value = '';
+    }
+  };
+
+  const openImportModal = () => {
+    setImportAgencyId(role === 'ADMIN' ? '' : agencyId);
+    setImportFile(null);
+    setShowImportModal(true);
+    setError('');
+  };
+
+  const closeImportModal = () => {
+    if (bulkImporting) return;
+    setShowImportModal(false);
+    setImportAgencyId('');
+    setImportFile(null);
+    setError('');
+    if (bulkFileRef.current) bulkFileRef.current.value = '';
+  };
+
+  const proceedImport = async () => {
+    if (!importAgencyId) {
+      setError('Select an agency before importing the CSV.');
+      return;
+    }
+    if (!importFile) {
+      setError('Select a CSV file before continuing.');
+      return;
+    }
+    await importCandidates(importFile, importAgencyId);
+    if (!bulkImporting) {
+      setShowImportModal(false);
+      setImportFile(null);
       if (bulkFileRef.current) bulkFileRef.current.value = '';
     }
   };
@@ -520,6 +560,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const columns = [
     { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p></div> },
     { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
+    { key: 'passport', header: 'Passport', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.passportNumber ?? 'Not provided'}</span> },
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
@@ -539,7 +580,7 @@ export const CandidatesPage = ({ role }: Props) => {
                 <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
               </svg>
             </button>
-            <button type="button" title="Import candidates from CSV" aria-label="Import candidates from CSV" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300" disabled={bulkImporting || !agencyId} onClick={() => bulkFileRef.current?.click()}>
+            <button type="button" title="Import candidates from CSV" aria-label="Import candidates from CSV" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300" disabled={bulkImporting} onClick={openImportModal}>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M12 21V10m0 0-4 4m4-4 4 4M5 5h9l5 5v9H5z" />
                 <path d="M14 5v5h5" />
@@ -582,6 +623,70 @@ export const CandidatesPage = ({ role }: Props) => {
         </div>
       )}
 
+      {showImportModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button
+            type="button"
+            aria-label="Close import candidates dialog"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
+            onClick={closeImportModal}
+          />
+          <div
+            ref={importModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-candidates-title"
+            tabIndex={-1}
+            className="relative z-10 w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Bulk onboarding</p>
+                <h2 id="import-candidates-title" className="mt-1 text-lg font-black text-slate-950">Import candidates</h2>
+                <p className="mt-1 text-xs text-slate-500">Choose the agency and CSV file before starting the import.</p>
+              </div>
+              <button type="button" aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={closeImportModal}>×</button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="field-label">Agency</label>
+                <select className="field-input mt-1 w-full" value={importAgencyId} onChange={(event) => setImportAgencyId(event.target.value)} disabled={role !== 'ADMIN'}>
+                  <option value="">Select an agency</option>
+                  {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => (
+                    <option key={agency.id} value={agency.id}>{agency.name}</option>
+                  ))}
+                  {role !== 'ADMIN' && agencyId && !agencies.some((item) => item.id === agencyId) && (
+                    <option value={agencyId}>Current agency</option>
+                  )}
+                </select>
+                {role !== 'ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
+              </div>
+
+              <div>
+                <label className="field-label">CSV file</label>
+                <input
+                  ref={bulkFileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="field-input mt-1 w-full"
+                  onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+                  disabled={bulkImporting}
+                />
+                {importFile && <p className="mt-2 truncate text-xs font-semibold text-slate-600">{importFile.name}</p>}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={closeImportModal} disabled={bulkImporting}>Cancel</Button>
+              <Button onClick={() => void proceedImport()} disabled={bulkImporting || !importAgencyId || !importFile}>
+                {bulkImporting ? 'Importing…' : 'Proceed with import'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {role === 'INTERVIEWEE' ? (
         candidate ? (
           <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
@@ -619,10 +724,19 @@ export const CandidatesPage = ({ role }: Props) => {
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-end">
-              <div className="min-w-0 flex-1">
+              <div className="w-full lg:max-w-xl lg:flex-1">
                 <label className="field-label">Search candidates</label>
                 <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, contact, passport, location or skill…" />
               </div>
+              {role === 'ADMIN' && (
+                <div className="w-full lg:w-56">
+                  <label className="field-label">Agency</label>
+                  <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
+                    <option value="">All agencies</option>
+                    {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="w-full lg:w-52">
                 <label className="field-label">Status</label>
                 <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -650,15 +764,6 @@ export const CandidatesPage = ({ role }: Props) => {
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {role === 'ADMIN' && (
-                    <div>
-                      <label className="field-label">Agency</label>
-                      <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
-                        <option value="">All agencies</option>
-                        {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-                      </select>
-                    </div>
-                  )}
                   <div>
                     <label className="field-label">Country</label>
                     <select className="field-input mt-1 w-full" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}>
@@ -755,18 +860,21 @@ export const CandidatesPage = ({ role }: Props) => {
                       <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
                       <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
-                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
-                        <Button size="sm" variant="secondary" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
+                        <Button size="sm" variant="secondary" className="col-span-2 w-full sm:col-span-1 sm:w-auto" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
                       )}
-                      <Button size="sm" variant="secondary" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
+                      <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
                         {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
                       </Button>
-                      <Button size="sm" variant="secondary" className="px-3" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="sm:hidden text-base leading-none" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+                      <Button size="sm" variant="secondary" className="w-full px-3 sm:w-auto" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
                     </div>
                   </div>
 
-                  <nav className="mt-4 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 sm:mt-5" aria-label="Candidate profile sections">
+                </header>
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6 sm:pb-8">
+                  <nav className="sticky top-0 z-20 -mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6" aria-label="Candidate profile sections">
                     {([
                       ['overview', 'Overview'],
                       ['documents', 'Documents'],
@@ -783,9 +891,6 @@ export const CandidatesPage = ({ role }: Props) => {
                       </button>
                     ))}
                   </nav>
-                </header>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6 sm:pb-8">
                   {editingCandidateProfile && activeDetailTab === 'overview' ? (
                     <div>
                       <div className="flex items-center justify-between gap-3">
