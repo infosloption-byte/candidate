@@ -1,7 +1,7 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { CandidateOnboardingStatus as PrismaOnboardingStatus, InvitationStatus } from "../generated/prisma/enums.js";
 import { AppError } from "../errors/AppError.js";
-import { withTransaction } from "../lib/db.js";
+import { withTransaction, type DbClient } from "../lib/db.js";
 import { prisma } from "../lib/prisma.js";
 import { createAuditEvent } from "../repositories/auditRepository.js";
 import { createJourneyEvent, findCandidateById } from "../repositories/candidateRepository.js";
@@ -13,7 +13,7 @@ const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REMINDER_AFTER_MS = 2 * 24 * 60 * 60 * 1000;
 
 const hashToken = (token: string): string =>
-  Buffer.from(require("node:crypto").createHash("sha256").update(token, "utf8").digest("hex"), "utf8").toString("hex");
+  createHash("sha256").update(token, "utf8").digest("hex");
 
 const onboardingMap: Record<PrismaOnboardingStatus, "not-started" | "invited" | "in-progress" | "submitted" | "needs-changes" | "completed"> = {
   NOT_STARTED: "not-started",
@@ -81,7 +81,7 @@ const validateInvitationTransition = (
 };
 
 const writeJourneyAndAudit = async (
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: DbClient,
   auth: AuthContext,
   candidateId: string,
   title: string,
