@@ -57,9 +57,9 @@ const getInterviewers = async (ids: string[], agencyId: string) => {
   });
 };
 
-const getCriterionGroup = async (groupId: string, agencyId: string) => {
+const getCriterionGroup = async (groupId: string) => {
   const group = await getPrisma().interviewCriterionGroup.findFirst({
-    where: { id: groupId, agencyId, active: true },
+    where: { id: groupId, active: true },
     include: {
       criteria: {
         orderBy: { sortOrder: 'asc' },
@@ -252,7 +252,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!request.body.criterionGroupId) {
         return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
       }
-      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId);
       if (!criterionSetup) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
       }
@@ -391,7 +391,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!request.body.criterionGroupId) {
         return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
       }
-      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId);
       if (!criterionSetup) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
       }
@@ -511,7 +511,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (!request.body.criterionGroupId) {
           return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group.' } });
         }
-        nextCriterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+        nextCriterionSetup = await getCriterionGroup(request.body.criterionGroupId);
         if (!nextCriterionSetup) {
           return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
         }
