@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Candidate } from '../../domain/types';
 import { StatusPill } from '../../shared/components/StatusPill';
 
@@ -13,7 +14,7 @@ interface Props {
 const value = (item: string | number | null | undefined, fallback = 'Not provided') =>
   item === null || item === undefined || item === '' ? fallback : String(item);
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="rounded-2xl bg-slate-50 p-4">
     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
     <div className="mt-2 break-words text-sm font-semibold text-slate-900">{children}</div>
