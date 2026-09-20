@@ -131,6 +131,8 @@ export interface Interview {
   durationMins: number;
   location: string | null;
   panelUserIds: string[];
+  createdAt?: string;
+  updatedAt?: string;
   criterionGroupId?: string | null;
   criterionGroup?: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'> | null;
   criterionAssignments?: InterviewCriterionAssignment[];
