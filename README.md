@@ -121,3 +121,5 @@ Open the frontend without an active session, choose **Create a candidate account
 - Avoid introducing a subsystem until the core workflow needs it.
 
 The detailed tracker is [TASKS.md](./TASKS.md) and release checks are documented in [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md).
+
+Two-project Vercel deployment is documented in [docs/VERCEL_DEPLOYMENT.md](./docs/VERCEL_DEPLOYMENT.md).
