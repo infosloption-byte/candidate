@@ -363,7 +363,7 @@ export const CandidateProfilePanel = ({
   const candidateStatusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
   const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
   const visibleStatusOptions = role === 'INTERVIEWER'
-    ? finalStatusOptions
+    ? Array.from(new Set([displayCandidate.status, ...finalStatusOptions]))
     : candidateStatusOptions.filter((status) => !finalStatusOptions.includes(status) || hasCompletedInterview || status === displayCandidate.status);
   const profileMeta = history.profile;
 
@@ -433,7 +433,7 @@ export const CandidateProfilePanel = ({
         </nav>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {loading && <StateMessage kind="loading" title="Loading displayCandidate history" description="Fetching interviews, scorecards and timeline activity." />}
+          {loading && <StateMessage kind="loading" title="Loading candidate history" description="Fetching interviews, scorecards and timeline activity." />}
           {error && <StateMessage kind="error" title="Candidate history unavailable" description={error} />}
 
           {activeTab === 'overview' && (
@@ -630,7 +630,7 @@ export const CandidateProfilePanel = ({
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-950">Interview history & scorecards</h3>
-                  <p className="mt-1 text-xs text-slate-500">Every interview, panel assignment and available evaluation for this displayCandidate.</p>
+                  <p className="mt-1 text-xs text-slate-500">Every interview, panel assignment and available evaluation for this candidate.</p>
                 </div>
                 <div className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">{totalInterviews} interview(s)</div>
               </div>
@@ -727,7 +727,7 @@ export const CandidateProfilePanel = ({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-950">Candidate timeline</h3>
-                  <p className="mt-1 text-xs text-slate-500">Status changes, interview lifecycle events and recorded displayCandidate activity.</p>
+                  <p className="mt-1 text-xs text-slate-500">Status changes, interview lifecycle events and recorded candidate activity.</p>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{timeline.length} events</span>
               </div>
