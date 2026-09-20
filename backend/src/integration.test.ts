@@ -122,7 +122,6 @@ before(async () => {
 
     const criterionGroup = await tx.interviewCriterionGroup.create({
       data: {
-        agencyId: agencyA.id,
         name: 'QA Technical Group',
         category: 'Masonry',
         description: 'Technical interview QA scorecard.',
