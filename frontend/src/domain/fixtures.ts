@@ -31,9 +31,37 @@ export const interviewCriteria: InterviewCriterion[] = [
   { id: 'criterion-3', agencyId: 'agency-1', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, active: true },
 ];
 
+export const interviewCriterionGroups = [
+  {
+    id: 'criterion-group-1',
+    agencyId: 'agency-1',
+    name: 'Skilled Trades — Technical',
+    category: 'Skilled Trades',
+    description: 'Technical, experience, and communication checks for skilled-trade roles.',
+    active: true,
+    criteria: [
+      { criterionId: 'criterion-1', sortOrder: 0, criterion: interviewCriteria[0]! },
+      { criterionId: 'criterion-2', sortOrder: 1, criterion: interviewCriteria[1]! },
+      { criterionId: 'criterion-3', sortOrder: 2, criterion: interviewCriteria[2]! },
+    ],
+  },
+  {
+    id: 'criterion-group-2',
+    agencyId: 'agency-1',
+    name: 'Initial Screening',
+    category: 'Screening',
+    description: 'Fast screening focused on experience and communication.',
+    active: true,
+    criteria: [
+      { criterionId: 'criterion-2', sortOrder: 0, criterion: interviewCriteria[1]! },
+      { criterionId: 'criterion-3', sortOrder: 1, criterion: interviewCriteria[2]! },
+    ],
+  },
+] as const;
+
 export const interviews: Interview[] = [
-  { id: 'interview-1', candidateId: 'candidate-1', jobId: 'job-1', type: 'TECHNICAL', status: 'SCHEDULED', scheduledAt: '2026-09-22T05:00:00.000Z', durationMins: 45, location: 'Colombo Interview Room 1', panelUserIds: ['user-interviewer-1', 'user-interviewer-2'], candidate: { id: 'candidate-1', name: 'Ruwan Fernando', reference: 'CA-0001', profession: 'Mason', email: 'ruwan@example.com', status: 'INTERVIEW_SCHEDULED' }, job: { id: 'job-1', title: 'Mason — Dubai Tower Project', location: 'Dubai, UAE', status: 'PUBLISHED' } },
-  { id: 'interview-2', candidateId: 'candidate-2', jobId: 'job-2', type: 'SCREENING', status: 'COMPLETED', scheduledAt: '2026-09-20T04:30:00.000Z', durationMins: 30, location: 'Online', panelUserIds: ['user-interviewer-1'], candidate: { id: 'candidate-2', name: 'Dinesh Kumar', reference: 'CA-0002', profession: 'Welder', email: 'dinesh@example.com', status: 'READY_FOR_INTERVIEW' }, job: { id: 'job-2', title: 'Welder — Doha Industrial Expansion', location: 'Doha, Qatar', status: 'PUBLISHED' } },
+  { id: 'interview-1', candidateId: 'candidate-1', jobId: 'job-1', type: 'TECHNICAL', status: 'SCHEDULED', scheduledAt: '2026-09-22T05:00:00.000Z', durationMins: 45, location: 'Colombo Interview Room 1', panelUserIds: ['user-interviewer-1', 'user-interviewer-2'], criterionGroupId: 'criterion-group-1', criterionGroup: { id: 'criterion-group-1', name: 'Skilled Trades — Technical', category: 'Skilled Trades', description: 'Technical, experience, and communication checks for skilled-trade roles.', active: true }, criterionAssignments: [1,2,3].map((index) => ({ id: 'assignment-1-' + index, interviewId: 'interview-1', criterionId: interviewCriteria[index - 1]!.id, groupId: 'criterion-group-1', name: interviewCriteria[index - 1]!.name, description: interviewCriteria[index - 1]!.description, maxPoints: interviewCriteria[index - 1]!.maxPoints, sortOrder: index - 1 })), candidate: { id: 'candidate-1', name: 'Ruwan Fernando', reference: 'CA-0001', profession: 'Mason', email: 'ruwan@example.com', status: 'INTERVIEW_SCHEDULED' }, job: { id: 'job-1', title: 'Mason — Dubai Tower Project', location: 'Dubai, UAE', status: 'PUBLISHED' } },
+  { id: 'interview-2', candidateId: 'candidate-2', jobId: 'job-2', type: 'SCREENING', status: 'COMPLETED', scheduledAt: '2026-09-20T04:30:00.000Z', durationMins: 30, location: 'Online', panelUserIds: ['user-interviewer-1'], criterionGroupId: 'criterion-group-1', criterionGroup: { id: 'criterion-group-1', name: 'Skilled Trades — Technical', category: 'Skilled Trades', description: 'Technical, experience, and communication checks for skilled-trade roles.', active: true }, criterionAssignments: [1,2,3].map((index) => ({ id: 'assignment-2-' + index, interviewId: 'interview-2', criterionId: interviewCriteria[index - 1]!.id, groupId: 'criterion-group-1', name: interviewCriteria[index - 1]!.name, description: interviewCriteria[index - 1]!.description, maxPoints: interviewCriteria[index - 1]!.maxPoints, sortOrder: index - 1 })), candidate: { id: 'candidate-2', name: 'Dinesh Kumar', reference: 'CA-0002', profession: 'Welder', email: 'dinesh@example.com', status: 'READY_FOR_INTERVIEW' }, job: { id: 'job-2', title: 'Welder — Doha Industrial Expansion', location: 'Doha, Qatar', status: 'PUBLISHED' } },
 ];
 
 export const evaluations: InterviewEvaluation[] = [
@@ -41,7 +69,9 @@ export const evaluations: InterviewEvaluation[] = [
     id: 'eval-1',
     interviewId: 'interview-2',
     interviewerId: 'user-interviewer-1',
+    status: 'SUBMITTED',
     comments: 'Strong fabrication background and clear communication.',
+    submittedAt: '2026-09-20T05:00:00.000Z',
     scores: [
       { criterionId: 'criterion-1', points: 9, criterion: interviewCriteria[0] },
       { criterionId: 'criterion-2', points: 8, criterion: interviewCriteria[1] },
