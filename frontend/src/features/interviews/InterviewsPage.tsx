@@ -143,7 +143,6 @@ export const InterviewsPage = ({ role }: Props) => {
           setJobs(jobResult);
         }
         if (role === 'ADMIN') setAgencies(agencyResult);
-        if (role === 'AGENCY') setInterviewers(userResult.filter((item) => item.role === 'INTERVIEWER' && item.active));
         if (role === 'ADMIN') {
           const firstAgency = agencyResult.find((item) => item.status === 'ACTIVE');
           setAgencyId((current) => current || firstAgency?.id || '');
@@ -163,14 +162,14 @@ export const InterviewsPage = ({ role }: Props) => {
     if (!agencyId) return;
 
     if (developmentMode) {
-      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && item.agencyId === agencyId));
+      setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && (item.agencyId === agencyId || item.agencyId === null)));
       setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
       return;
     }
 
     if (role === 'ADMIN' || role === 'AGENCY') {
       Promise.all([
-        apiFetch<User[]>('/agencies/' + agencyId + '/users'),
+        apiFetch<User[]>('/interviewers?agencyId=' + encodeURIComponent(agencyId)),
         apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
       ])
         .then(([users, groupResult]) => {
@@ -326,7 +325,7 @@ export const InterviewsPage = ({ role }: Props) => {
     });
     setInterviewers((current) => {
       const known = new Set(current.map((item) => item.id));
-      const missing = (interview.panel ?? []).filter((item) => item.user).map((item) => ({ id: item.userId, agencyId, candidateId: null, name: item.user!.name, email: item.user!.email, role: 'INTERVIEWER' as const, active: item.user!.active })).filter((item) => !known.has(item.id));
+      const missing = (interview.panel ?? []).filter((item) => item.user).map((item) => ({ id: item.userId, agencyId: item.user!.agencyId, candidateId: null, name: item.user!.name, email: item.user!.email, role: 'INTERVIEWER' as const, active: item.user!.active })).filter((item) => !known.has(item.id));
       return [...current, ...missing];
     });
     setPanel(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
@@ -1095,16 +1094,32 @@ export const InterviewsPage = ({ role }: Props) => {
               </FormField>
             </div>
             <div className="md:col-span-2">
-              <FormField label="Interviewers" hint="Select one or more active interviewers from the candidate's agency.">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {interviewers.map((interviewer) => (
-                    <label key={interviewer.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:bg-slate-50">
-                      <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
-                      <span className="min-w-0"><span className="block text-xs font-bold text-slate-800">{interviewer.name}</span><span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span></span>
-                    </label>
-                  ))}
-                </div>
-                {!interviewers.length && <p className="mt-2 text-xs text-amber-600">No active interviewers are configured for this agency.</p>}
+              <FormField label="Interviewers" hint="Select one or more active interviewers from this agency or the global interviewer pool.">
+                {interviewers.length ? (
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Agency interviewers', items: interviewers.filter((item) => item.agencyId === agencyId) },
+                      { label: 'Global interviewers', items: interviewers.filter((item) => item.agencyId === null) },
+                    ].map((group) => group.items.length ? (
+                      <div key={group.label}>
+                        <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{group.label}</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {group.items.map((interviewer) => (
+                            <label key={interviewer.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:bg-slate-50">
+                              <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-bold text-slate-800">{interviewer.name}</span>
+                                <span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null)}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-600">No active agency or global interviewers are available.</p>
+                )}
               </FormField>
             </div>
           </div>
