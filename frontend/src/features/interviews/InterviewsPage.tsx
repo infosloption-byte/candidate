@@ -11,7 +11,7 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
@@ -62,7 +62,6 @@ export const InterviewsPage = ({ role }: Props) => {
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
-  const [, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups.filter((item) => item.active) : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
@@ -111,8 +110,7 @@ export const InterviewsPage = ({ role }: Props) => {
       setJobs(state.jobs);
       setAgencies(state.agencies);
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active));
-      setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId && item.active));
-      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.agencyId === agencyId && item.active));
+      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
       return;
     }
 
@@ -159,39 +157,29 @@ export const InterviewsPage = ({ role }: Props) => {
       });
 
     return () => { cancelled = true; };
-  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriteria, state.interviewCriterionGroups, user?.agencyId, user?.id, agencyId]);
+  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriterionGroups, user?.agencyId, user?.id, agencyId]);
 
   useEffect(() => {
     if (!agencyId) return;
+
     if (developmentMode) {
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && item.agencyId === agencyId));
-      setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId && item.active));
+      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
       return;
     }
-    if (role === 'ADMIN') {
+
+    if (role === 'ADMIN' || role === 'AGENCY') {
       Promise.all([
         apiFetch<User[]>('/agencies/' + agencyId + '/users'),
-        apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
-        apiFetch<InterviewCriterionGroup[]>('/agencies/' + agencyId + '/interview-criteria-groups'),
+        apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
       ])
-        .then(([users, criterionResult, groupResult]) => {
+        .then(([users, groupResult]) => {
           setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
-          setCriteria(criterionResult.filter((item) => item.active));
-          setCriteriaGroups(groupResult.filter((item) => item.active));
-        })
-        .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load agency interview setup.'));
-    } else if (role === 'AGENCY') {
-      Promise.all([
-        apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
-        apiFetch<InterviewCriterionGroup[]>('/agencies/' + agencyId + '/interview-criteria-groups'),
-      ])
-        .then(([criterionResult, groupResult]) => {
-          setCriteria(criterionResult.filter((item) => item.active));
           setCriteriaGroups(groupResult.filter((item) => item.active));
         })
         .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load interview scoring setup.'));
     }
-  }, [agencyId, developmentMode, role, state.users, state.interviewCriteria, state.interviewCriterionGroups]);
+  }, [agencyId, developmentMode, role, state.users, state.interviewCriterionGroups]);
 
   const isInterviewStartable = (interview: Interview): boolean => {
     if (interview.status !== 'SCHEDULED') return false;
