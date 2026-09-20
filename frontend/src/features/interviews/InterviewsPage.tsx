@@ -294,6 +294,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId('');
+    setCriterionGroupId('');
     setPanel([]);
   };
 
@@ -305,6 +306,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId('');
+    setCriterionGroupId(criteriaGroups[0]?.id ?? '');
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
     setScheduleModalOpen(true);
@@ -319,6 +321,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId(interview.jobId ?? '');
+    setCriterionGroupId(interview.criterionGroupId ?? '');
     setForm({
       scheduledAt: toDateTimeLocal(interview.scheduledAt),
       type: interview.type,
@@ -340,6 +343,10 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const saveSchedule = async () => {
     const createIds = selectedCandidateIds;
+    if (!criterionGroupId) {
+      setError('Select a scoring criteria group before scheduling the interview.');
+      return;
+    }
     if (panel.length === 0) {
       setError('Select at least one interviewer.');
       return;
@@ -368,6 +375,18 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
+              criterionGroupId,
+              criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
+              criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
+                id: 'assignment-' + Date.now() + '-' + criterionIndex,
+                interviewId: editingInterviewId,
+                criterionId: item.criterionId,
+                groupId: criterionGroupId,
+                name: item.criterion.name,
+                description: item.criterion.description,
+                maxPoints: item.criterion.maxPoints,
+                sortOrder: item.sortOrder,
+              })),
             }
           : await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
               method: 'PATCH',
@@ -378,6 +397,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
+                criterionGroupId,
               }),
             });
 
@@ -397,6 +417,18 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
+              criterionGroupId,
+              criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
+              criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
+                id: 'assignment-' + Date.now() + '-' + index + '-' + criterionIndex,
+                interviewId: 'draft',
+                criterionId: item.criterionId,
+                groupId: criterionGroupId,
+                name: item.criterion.name,
+                description: item.criterion.description,
+                maxPoints: item.criterion.maxPoints,
+                sortOrder: item.sortOrder,
+              })),
             }));
             drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
             setInterviews((current) => [...drafts, ...current]);
@@ -412,6 +444,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
+              criterionGroupId,
               }),
             });
             setInterviews((current) => [...result.candidates, ...current]);
