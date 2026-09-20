@@ -325,7 +325,6 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       await ensureInterviewAssignments(interview.id, interview.candidate.agencyId);
       const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
-      const submittedScores = (request as typeof request & { body: EvaluationInput }).body.scores;
       const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
         where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
         include: { scores: { select: { criterionId: true, points: true } } },
