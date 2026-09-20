@@ -1543,6 +1543,12 @@ export const InterviewsPage = ({ role }: Props) => {
         onRestore={() => { setProfileMinimized(false); setProfileMaximized(false); }}
         onMaximize={() => { setProfileMinimized(false); setProfileMaximized((value) => !value); }}
         onClose={() => { setProfileCandidate(null); setProfileMinimized(false); setProfileMaximized(false); }}
+        onCandidateUpdated={(updated) => {
+          setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
+          setInterviews((items) => items.map((item) => item.candidateId === updated.id
+            ? { ...item, candidate: item.candidate ? { ...item.candidate, ...updated } : item.candidate }
+            : item));
+        }}
       />
 
       {detailFor && detail && (
