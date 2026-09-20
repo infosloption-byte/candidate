@@ -11,7 +11,7 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion, InterviewType, Job, User, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterion, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
@@ -38,9 +38,12 @@ const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
 interface InterviewDetail extends Omit<Interview, 'evaluations'> {
   notes?: string | null;
+  criterionAssignments?: InterviewCriterionAssignment[];
   evaluations?: Array<{
     id: string;
     interviewerId: string;
+    status: 'DRAFT' | 'SUBMITTED';
+    submittedAt: string | null;
     comments: string | null;
     interviewer: { id: string; name: string; email: string };
     scores: Array<{
@@ -60,11 +63,13 @@ export const InterviewsPage = ({ role }: Props) => {
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
+  const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups.filter((item) => item.active) : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
   const [jobId, setJobId] = useState('');
+  const [criterionGroupId, setCriterionGroupId] = useState('');
   const [panel, setPanel] = useState<string[]>([]);
   const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
@@ -72,6 +77,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
+  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'upcoming' | 'current' | 'past'>('all');
+  const [now, setNow] = useState(() => Date.now());
   const [sortBy, setSortBy] = useState<'date' | 'candidate' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -80,8 +87,13 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
+  const [evaluationAssignments, setEvaluationAssignments] = useState<InterviewCriterionAssignment[]>([]);
+  const [evaluationSummary, setEvaluationSummary] = useState<{ submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean } | null>(null);
+  const [evaluationStatus, setEvaluationStatus] = useState<'DRAFT' | 'SUBMITTED' | null>(null);
+  const [evaluationLastSaved, setEvaluationLastSaved] = useState<number | null>(null);
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
+  const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
