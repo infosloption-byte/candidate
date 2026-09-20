@@ -193,6 +193,13 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   }, [agencyId, developmentMode, role, state.users, state.interviewCriteria, state.interviewCriterionGroups]);
 
+  const isInterviewStartable = (interview: Interview): boolean => {
+    if (interview.status !== 'SCHEDULED') return false;
+    const start = new Date(interview.scheduledAt).getTime();
+    const end = start + interview.durationMins * 60_000;
+    return now >= start - 15 * 60_000 && now <= end;
+  };
+
   const scheduleBucket = (interview: Interview): 'upcoming' | 'current' | 'past' => {
     const start = new Date(interview.scheduledAt).getTime();
     const end = start + interview.durationMins * 60_000;
@@ -1172,14 +1179,15 @@ export const InterviewsPage = ({ role }: Props) => {
                     )}
 
                     {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
-                      <Button
-                        size="sm"
-                        className="min-h-10 rounded-lg px-2 py-1 text-[9px]"
-                        disabled={now < new Date(interview.scheduledAt).getTime() - 15 * 60_000}
-                        onClick={() => void openEvaluationWorkspace(interview)}
-                      >
-                        {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Start interview'}
-                      </Button>
+                      isInterviewStartable(interview) ? (
+                        <Button size="sm" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
+                          Start interview
+                        </Button>
+                      ) : (
+                        <span className="inline-flex min-h-10 items-center rounded-lg bg-slate-100 px-2.5 text-[9px] font-extrabold text-slate-500">
+                          {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Past — view only'}
+                        </span>
+                      )
                     )}
 
                     {isAssignedInterviewer && interview.status === 'IN_PROGRESS' && (
@@ -1375,14 +1383,15 @@ export const InterviewsPage = ({ role }: Props) => {
                             </>
                           )}
                           {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
-                            <Button
-                              size="sm"
-                              className="min-h-10 rounded-lg px-2 py-1 text-[9px]"
-                              disabled={now < new Date(interview.scheduledAt).getTime() - 15 * 60_000}
-                              onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
-                            >
-                              {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Start interview'}
-                            </Button>
+                            isInterviewStartable(interview) ? (
+                              <Button size="sm" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
+                                Start interview
+                              </Button>
+                            ) : (
+                              <span className="inline-flex min-h-10 items-center rounded-lg bg-slate-100 px-2.5 text-[9px] font-extrabold text-slate-500">
+                                {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Past — view only'}
+                              </span>
+                            )
                           )}
                           {isAssignedInterviewer && interview.status === 'IN_PROGRESS' && (
                             <Button size="sm" variant={alreadyEvaluated ? 'secondary' : 'primary'} className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
