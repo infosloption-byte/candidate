@@ -1,0 +1,46 @@
+import { useEffect, useMemo, useState } from 'react';
+import type { CandidateStatus, InterviewStatus, InterviewType, UserRole } from '../../domain/types';
+import { apiFetch } from '../../shared/lib/api';
+import { Card } from '../../shared/components/Card';
+import { Icon } from '../../shared/components/Icon';
+import { SectionHeading } from '../../shared/components/SectionHeading';
+import { StateMessage } from '../../shared/components/StateMessage';
+import { useAuth } from '../../domain/authContext';
+import { useRecruitment } from '../../domain/recruitmentContext';
+
+interface Props { role: UserRole; }
+interface Analytics {
+  counts: { agencies:number; activeAgencies:number; candidates:number; jobs:number; publishedJobs:number; interviews:number; submittedEvaluations:number; draftEvaluations:number; pendingDecisions:number };
+  candidateStatuses: Record<string,number>; interviewStatuses: Record<string,number>; interviewTypes: Record<string,number>;
+  averageScorePoints:number|null;
+  recentCandidates:Array<{id:string;name:string;reference:string;profession:string|null;status:CandidateStatus;statusUpdatedAt:string}>;
+  recentInterviews:Array<{id:string;status:InterviewStatus;type:InterviewType;scheduledAt:string;candidate:{name:string;reference:string}}>;
+}
+const candidateLabels=['POOL','READY_FOR_INTERVIEW','INTERVIEW_SCHEDULED','INTERVIEW_COMPLETED','PASSED','REJECTED','ON_HOLD','HIRED','INACTIVE'];
+const csvEscape=(value:unknown)=>'"'+String(value??'').replaceAll('"','""')+'"';
+const downloadCsv=(rows:string[][])=>{const blob=new Blob([rows.map(r=>r.map(csvEscape).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='buildhire-report.csv';a.click();URL.revokeObjectURL(url);};
+
+export const ReportsPage=({role}:Props)=>{
+  const {developmentMode}=useAuth(); const {state}=useRecruitment();
+  const [data,setData]=useState<Analytics|null>(null); const [loading,setLoading]=useState(!developmentMode); const [error,setError]=useState('');
+  useEffect(()=>{if(developmentMode){setData({
+    counts:{agencies:state.agencies.length,activeAgencies:state.agencies.filter(x=>x.status==='ACTIVE').length,candidates:role==='INTERVIEWER'?0:state.candidates.length,jobs:role==='INTERVIEWER'?0:state.jobs.length,publishedJobs:role==='INTERVIEWER'?0:state.jobs.filter(x=>x.status==='PUBLISHED').length,interviews:state.interviews.length,submittedEvaluations:state.interviews.filter(x=>x.status==='COMPLETED').length,draftEvaluations:state.interviews.filter(x=>x.status==='IN_PROGRESS').length,pendingDecisions:state.candidates.filter(x=>x.status==='INTERVIEW_COMPLETED').length},
+    candidateStatuses:Object.fromEntries(candidateLabels.map(s=>[s,state.candidates.filter(x=>x.status===s).length])),
+    interviewStatuses:Object.fromEntries(['SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW'].map(s=>[s,state.interviews.filter(x=>x.status===s).length])),
+    interviewTypes:Object.fromEntries(['SCREENING','TECHNICAL','PRACTICAL','FINAL'].map(s=>[s,state.interviews.filter(x=>x.type===s).length])),
+    averageScorePoints:null,recentCandidates:[],recentInterviews:state.interviews.slice(0,10).map(x=>({id:x.id,status:x.status,type:x.type,scheduledAt:x.scheduledAt,candidate:{name:x.candidate?.name??x.candidateId,reference:x.candidate?.reference??x.candidateId}}))
+  });setLoading(false);return;} let cancelled=false;apiFetch<Analytics>('/analytics/summary').then(x=>{if(!cancelled)setData(x);}).catch(e=>{if(!cancelled)setError(e instanceof Error?e.message:'Unable to load reports.');}).finally(()=>{if(!cancelled)setLoading(false);});return()=>{cancelled=true;};},[developmentMode,role,state]);
+  const rows=useMemo(()=>{if(!data)return[];return [['Metric','Value'],['Generated at',new Date().toISOString()],['Role',role],['Agencies',data.counts.agencies.toString()],['Active agencies',data.counts.activeAgencies.toString()],['Candidates',data.counts.candidates.toString()],['Jobs',data.counts.jobs.toString()],['Published jobs',data.counts.publishedJobs.toString()],['Interviews',data.counts.interviews.toString()],['Submitted evaluations',data.counts.submittedEvaluations.toString()],['Draft evaluations',data.counts.draftEvaluations.toString()],['Pending decisions',data.counts.pendingDecisions.toString()],['Average criterion score',data.averageScorePoints?.toFixed(2)??''],[],['Candidate status','Count'],...candidateLabels.map(s=>[s,String(data.candidateStatuses[s]??0)]),[],['Interview status','Count'],...['SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW'].map(s=>[s,String(data.interviewStatuses[s]??0)]),[],['Interview type','Count'],...['SCREENING','TECHNICAL','PRACTICAL','FINAL'].map(s=>[s,String(data.interviewTypes[s]??0)])];},[data,role]);
+  if(loading)return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="loading" title="Loading reports" description="Preparing the latest recruitment statistics." /></section>;
+  if(error||!data)return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="error" title="Reports unavailable" description={error||'No report data was returned.'} /></section>;
+  const completion=data.counts.interviews?Math.round(((data.interviewStatuses.COMPLETED??0)/data.counts.interviews)*100):0;
+  const finalised=(data.candidateStatuses.PASSED??0)+(data.candidateStatuses.REJECTED??0)+(data.candidateStatuses.HIRED??0);
+  return <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><SectionHeading eyebrow="Business intelligence" title="Reports & exports" description="Operational statistics for candidate flow, interviews, evaluations and decisions."/><div className="flex gap-2 print:hidden"><button onClick={()=>downloadCsv(rows)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-black text-white"><Icon name="download" size={16}/>Download CSV</button><button onClick={()=>window.print()} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-800"><Icon name="file" size={16}/>Print / Save PDF</button></div></div>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{[['Candidates',data.counts.candidates],['Jobs',data.counts.jobs],['Interviews',data.counts.interviews],['Completion',completion+'%'],['Finalised',finalised]].map(([l,v])=><Card key={String(l)}><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{l}</p><p className="mt-2 text-3xl font-black text-slate-950">{v}</p></Card>)}</div>
+    <div className="grid gap-6 lg:grid-cols-2"><Card><h2 className="text-base font-black text-slate-950">Candidate lifecycle</h2><p className="mt-1 text-xs text-slate-400">Current candidate distribution.</p><div className="mt-5 divide-y divide-slate-100">{candidateLabels.map(s=><div key={s} className="flex justify-between px-3 py-3"><span className="text-xs font-bold text-slate-600">{s.replaceAll('_',' ')}</span><span className="font-black">{data.candidateStatuses[s]??0}</span></div>)}</div></Card>
+    <Card><h2 className="text-base font-black text-slate-950">Interview performance</h2><p className="mt-1 text-xs text-slate-400">Status and type breakdown.</p><div className="mt-5 grid grid-cols-2 gap-3">{['SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED','NO_SHOW'].map(s=><div key={s} className="rounded-2xl bg-slate-50 p-4"><p className="text-[9px] font-black uppercase text-slate-400">{s.replaceAll('_',' ')}</p><p className="mt-1 text-2xl font-black">{data.interviewStatuses[s]??0}</p></div>)}</div><div className="mt-4 grid grid-cols-2 gap-3">{['SCREENING','TECHNICAL','PRACTICAL','FINAL'].map(s=><div key={s} className="flex justify-between rounded-2xl border border-slate-100 px-4 py-3 text-xs font-bold"><span>{s}</span><span>{data.interviewTypes[s]??0}</span></div>)}</div></Card></div>
+    <Card><h2 className="text-base font-black text-slate-950">Recent interviews</h2><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[680px] text-left"><thead><tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400"><th className="px-3 py-3">Candidate</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Scheduled</th></tr></thead><tbody>{data.recentInterviews.map(x=><tr key={x.id} className="border-b border-slate-50"><td className="px-3 py-3"><p className="text-xs font-bold">{x.candidate.name}</p><p className="text-[10px] text-slate-400">{x.candidate.reference}</p></td><td className="px-3 py-3 text-xs">{x.type}</td><td className="px-3 py-3 text-xs">{x.status.replaceAll('_',' ')}</td><td className="px-3 py-3 text-xs text-slate-500">{new Date(x.scheduledAt).toLocaleString()}</td></tr>)}</tbody></table></div></Card>
+    <p className="text-[11px] text-slate-400 print:hidden">CSV downloads the complete metric breakdown. Print / Save PDF uses the browser's native PDF printing.</p>
+  </section>;
+};
