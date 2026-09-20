@@ -67,6 +67,10 @@ assert.match(interviewsPage, /sortBy/);
 assert.match(interviewsPage, /typeFilter/);
 assert.match(interviewsPage, /statusFilter/);
 assert.match(interviewsPage, /Search interviews/);
+assert.match(interviewsPage, /mobileFiltersOpen/);
+assert.match(interviewsPage, /listView/);
+assert.match(interviewsPage, /Table view/);
+assert.match(interviewsPage, /Card view/);
 assert.match(settingsPage, /Candidate lifecycle/);
 assert.doesNotMatch(settingsPage, /Applications/);
 
