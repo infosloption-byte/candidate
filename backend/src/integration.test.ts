@@ -114,10 +114,10 @@ before(async () => {
     });
 
     const criterionA = await tx.interviewCriterion.create({
-      data: { agencyId: agencyA.id, name: 'Technical skill', description: 'Technical ability', maxPoints: 10, active: true },
+      data: { name: 'Technical skill', description: 'Technical ability', maxPoints: 10, active: true },
     });
     const criterionB = await tx.interviewCriterion.create({
-      data: { agencyId: agencyA.id, name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
+      data: { name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
     });
 
     const criterionGroup = await tx.interviewCriterionGroup.create({
