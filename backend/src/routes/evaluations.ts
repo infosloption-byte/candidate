@@ -307,6 +307,18 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       });
 
       const summary = toSummary(result.allEvaluations, assignments, interview.panel.length);
+
+      if (!existingEvaluation) {
+        await recordAuditEvent({
+          actorId: user.id,
+          agencyId: interview.candidate.agencyId,
+          action: 'EVALUATION_STARTED',
+          entityType: 'InterviewEvaluation',
+          entityId: result.evaluation.id,
+          summary: 'Started interview scorecard for "' + interview.candidate.name + '".',
+        });
+      }
+
       return reply.send({ success: true, data: { evaluation: result.evaluation, assignments, summary } });
     },
   );
