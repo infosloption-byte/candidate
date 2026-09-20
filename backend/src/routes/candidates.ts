@@ -82,7 +82,11 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.id },
-        select: { id: true, agencyId: true },
+        select: {
+          ...candidateSelect,
+          agency: { select: { id: true, name: true, slug: true, status: true } },
+          account: { select: { id: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true } },
+        },
       });
       if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
@@ -98,7 +102,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate history.' } });
       }
 
-      const [statusHistory, interviews, auditEvents] = await Promise.all([
+      const [statusHistory, interviews, documents] = await Promise.all([
         getPrisma().candidateStatusHistory.findMany({
           where: { candidateId: candidate.id },
           include: { changedBy: { select: { id: true, name: true, role: true } } },
@@ -119,21 +123,48 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
                 submittedAt: true,
                 createdAt: true,
                 updatedAt: true,
+                interviewer: { select: { id: true, name: true, email: true } },
                 scores: { select: { criterionId: true, points: true, criterion: { select: { id: true, name: true, maxPoints: true } } } },
               },
             },
           },
           orderBy: { scheduledAt: 'desc' },
         }),
-        getPrisma().auditEvent.findMany({
-          where: { entityType: 'Candidate', entityId: candidate.id },
-          include: { actor: { select: { id: true, name: true, role: true } } },
-          orderBy: { createdAt: 'desc' },
-          take: 100,
+        getPrisma().candidateDocument.findMany({
+          where: { candidateId: candidate.id },
+          select: { id: true },
         }),
       ]);
 
-      return reply.send({ success: true, data: { statusHistory, interviews, auditEvents } });
+      const relatedAuditFilters = [
+        { entityType: 'Candidate', entityId: candidate.id },
+        ...interviews.map((item) => ({ entityType: 'Interview', entityId: item.id })),
+        ...interviews.flatMap((item) => item.evaluations.map((evaluation) => ({ entityType: 'InterviewEvaluation', entityId: evaluation.id }))),
+        ...documents.map((item) => ({ entityType: 'CandidateDocument', entityId: item.id })),
+      ];
+
+      const auditEvents = relatedAuditFilters.length
+        ? await getPrisma().auditEvent.findMany({
+            where: { OR: relatedAuditFilters },
+            include: { actor: { select: { id: true, name: true, role: true } } },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
+
+      return reply.send({
+        success: true,
+        data: {
+          profile: {
+            agency: candidate.agency,
+            account: candidate.account,
+            createdAt: candidate.createdAt,
+            updatedAt: candidate.updatedAt,
+          },
+          statusHistory,
+          interviews,
+          auditEvents,
+        },
+      });
     },
   );
 
