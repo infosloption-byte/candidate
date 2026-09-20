@@ -60,10 +60,17 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Create interview action with multi-candidate selection.
 - ✅ Bulk candidate scheduling using consecutive interview slots.
 - ✅ Edit interview can optionally schedule the same setup for additional selected candidates.
+- ✅ Interviewer schedule buckets for past, current, and upcoming assigned interviews.
+- ✅ Explicit interview IN_PROGRESS lifecycle with start time and completion time.
+- ✅ Interview-level criteria group selection with a frozen scoring snapshot.
 
 ## Interview criteria and evaluation
 
 - ✅ Agency-configurable interview criteria.
+- ✅ Reusable criteria groups by job / trade category.
+- ✅ Interview scheduling selects an active criteria group and copies its criteria into the interview scorecard.
+- ✅ Interviewer start / continue workspace with score progress and live total / percentage.
+- ✅ Draft scorecard autosave with notes and final submission lock.
 - ✅ Criterion maximum points.
 - ✅ Activate/deactivate criteria without deleting history.
 - ✅ One evaluation per panel interviewer per interview.
