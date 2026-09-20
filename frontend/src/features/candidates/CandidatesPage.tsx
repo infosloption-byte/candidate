@@ -794,19 +794,21 @@ export const CandidatesPage = ({ role }: Props) => {
                 </svg>
               </button>
 
-              <div id="mobile-candidate-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-                <label className="field-label">Agency</label>
-                <SelectMenu
-                  value={agencyId}
-                  onChange={setAgencyId}
-                  options={[
-                    { value: '', label: 'All agencies' },
-                    ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
-                  ]}
-                  ariaLabel="Filter by agency"
-                  className="mt-1"
+              {role === 'ADMIN' && (
+                <div id="mobile-candidate-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+                  <label className="field-label">Agency</label>
+                  <SelectMenu
+                    value={agencyId}
+                    onChange={setAgencyId}
+                    options={[
+                      { value: '', label: 'All agencies' },
+                      ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                    ]}
+                    ariaLabel="Filter by agency"
+                    className="mt-1"
                   />
-              </div>
+                </div>
+              )}
 
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Status</label>
