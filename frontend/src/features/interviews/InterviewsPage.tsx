@@ -557,7 +557,13 @@ export const InterviewsPage = ({ role }: Props) => {
     setEvaluationLastSaved(null);
 
     try {
-      if (role !== 'INTERVIEWER') return;
+      if (role !== 'INTERVIEWER') {
+        if (interview.status !== 'COMPLETED') {
+          setEvaluationFor(null);
+          setError('Only assigned interviewers can open an active interview workspace.');
+        }
+        return;
+      }
 
       if (developmentMode) {
         let current = interviews.find((item) => item.id === interview.id) ?? interview;
@@ -1210,29 +1216,16 @@ export const InterviewsPage = ({ role }: Props) => {
                         {alreadyEvaluated ? 'View scorecard' : 'Continue interview'}
                       </Button>
                     )}
+
+                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && candidate && !candidateFinalStatuses.includes(candidate.status) && (
+                      <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
+                        Open interview panel
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
-                    <div>
-                      <h3 className="text-sm font-black text-slate-950">Final candidate decision</h3>
-                      <p className="mt-1 text-xs text-slate-400">Review the completed interviewer comparison, then record the final candidate status.</p>
-                    </div>
-                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
-                      <FormField label="Status">
-                        <select className="field-input" value={statusDrafts[candidate.id] ?? ''} onChange={(event) => setStatusDrafts((current) => ({ ...current, [candidate.id]: event.target.value as CandidateStatus }))}>
-                          <option value="">Select final status</option>
-                          {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
-                        </select>
-                      </FormField>
-                      <FormField label="Reason" hint="Optional">
-                        <input className="field-input" value={statusReasons[candidate.id] ?? ''} onChange={(event) => setStatusReasons((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="Reason or decision note" />
-                      </FormField>
-                      <Button disabled={!statusDrafts[candidate.id]} onClick={() => void updateCandidateStatus(candidate)}>Update status</Button>
-                    </div>
-                  </div>
-                )}
+
               </Card>
             );
           })}
@@ -1365,7 +1358,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 <div className="flex h-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
                   <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Ongoing interview</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{activeInterview.status === 'COMPLETED' ? 'Completed interview panel' : 'Ongoing interview'}</p>
                       <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? activeInterview.candidateId}</h3>
                       <p className="truncate text-[10px] text-slate-400">{activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
                     </div>
@@ -1376,6 +1369,8 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+                    {activeInterview.status !== 'COMPLETED' || role === 'INTERVIEWER' ? (
+                    <>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p><p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((item) => scoreDrafts[item.criterionId] !== '').length} / {evaluationAssignments.length} scored</p></div>
                       <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My total</p><p className="mt-1 text-sm font-black text-cyan-700">{evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)} / {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}</p></div>
@@ -1394,7 +1389,49 @@ export const InterviewsPage = ({ role }: Props) => {
                     <FormField label="Interview notes" hint="Add your interview observations before submitting.">
                       <textarea className="field-input min-h-28 resize-y" disabled={evaluationStatus === 'SUBMITTED' || evaluating} value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Enter interview observations, strengths, concerns and final notes…" />
                     </FormField>
+                    </>
+                    ) : (
+                      <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                        <div>
+                          <p className="text-sm font-black text-slate-900">Interview completed</p>
+                          <p className="mt-1 text-xs text-slate-500">The interviewer score comparison is available in View details. Use this panel to record the final candidate decision.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  {activeInterview.status === 'COMPLETED' && activeCandidate && !candidateFinalStatuses.includes(activeCandidate.status) && (
+                    <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Final candidate decision</p>
+                        <h4 className="mt-1 text-sm font-black text-slate-950">Record the candidate outcome</h4>
+                        <p className="mt-1 text-[10px] leading-4 text-slate-500">The final score is calculated from the interviewer panel. Record the decision here so the system keeps who made it.</p>
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+                        <FormField label="Status">
+                          <select
+                            className="field-input"
+                            value={statusDrafts[activeCandidate.id] ?? ''}
+                            onChange={(event) => setStatusDrafts((current) => ({ ...current, [activeCandidate.id]: event.target.value as CandidateStatus }))}
+                          >
+                            <option value="">Select final status</option>
+                            {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+                          </select>
+                        </FormField>
+                        <FormField label="Reason" hint="Optional">
+                          <input
+                            className="field-input"
+                            value={statusReasons[activeCandidate.id] ?? ''}
+                            onChange={(event) => setStatusReasons((current) => ({ ...current, [activeCandidate.id]: event.target.value }))}
+                            placeholder="Reason or decision note"
+                          />
+                        </FormField>
+                        <Button disabled={!statusDrafts[activeCandidate.id]} onClick={() => void updateCandidateStatus(activeCandidate)}>
+                          Update status
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All scores and notes are submitted together.'}</p>
