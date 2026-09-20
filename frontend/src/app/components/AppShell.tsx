@@ -66,7 +66,7 @@ export const AppShell = ({
           onRoleChange={onRoleChange}
           onLogout={onLogout}
         />
-        <main className="scrollbar-thin min-h-0 flex-1 overflow-auto">{children}</main>
+        <main className="scrollbar-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
       </div>
     </div>
   );
