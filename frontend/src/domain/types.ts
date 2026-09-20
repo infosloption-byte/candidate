@@ -130,6 +130,7 @@ export interface Interview {
   scheduledAt: string;
   durationMins: number;
   location: string | null;
+  notes?: string | null;
   panelUserIds: string[];
   createdAt?: string;
   updatedAt?: string;
