@@ -78,7 +78,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: CandidateParams }>(
     '/candidates/:id/history',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: requireAuth },
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.id },
@@ -86,7 +86,15 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
-      if (!canManageCandidate(request.authUser!.role, request.authUser!.agencyId, candidate.agencyId)) {
+      const user = request.authUser!;
+      const isInterviewerAssigned = user.role === 'INTERVIEWER'
+        ? await getPrisma().interviewParticipant.findFirst({
+            where: { interview: { candidateId: candidate.id }, userId: user.id },
+            select: { interviewId: true },
+          })
+        : null;
+      const allowed = canManageCandidate(user.role, user.agencyId, candidate.agencyId) || Boolean(isInterviewerAssigned);
+      if (!allowed) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate history.' } });
       }
 
@@ -100,13 +108,18 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           where: { candidateId: candidate.id },
           include: {
             job: { select: { id: true, title: true, location: true } },
-            panel: { select: { userId: true, user: { select: { id: true, name: true, email: true, active: true } } } },
+            panel: { select: { userId: true, assignedAt: true, user: { select: { id: true, name: true, email: true, active: true } } } },
             evaluations: {
+              where: user.role === 'INTERVIEWER' ? { interviewerId: user.id } : undefined,
               select: {
                 id: true,
                 interviewerId: true,
+                status: true,
+                comments: true,
+                submittedAt: true,
                 createdAt: true,
-                scores: { select: { points: true, criterion: { select: { id: true, name: true, maxPoints: true } } } },
+                updatedAt: true,
+                scores: { select: { criterionId: true, points: true, criterion: { select: { id: true, name: true, maxPoints: true } } } },
               },
             },
           },
@@ -116,7 +129,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           where: { entityType: 'Candidate', entityId: candidate.id },
           include: { actor: { select: { id: true, name: true, role: true } } },
           orderBy: { createdAt: 'desc' },
-          take: 50,
+          take: 100,
         }),
       ]);
 
