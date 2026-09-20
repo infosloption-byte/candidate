@@ -62,7 +62,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
-  const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
+  const [, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria.filter((item) => item.active) : []);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups.filter((item) => item.active) : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
@@ -604,15 +604,15 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const saveEvaluationDraft = async (interviewId: string, silent = false) => {
-    if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return;
+  const saveEvaluationDraft = async (interviewId: string, silent = false): Promise<boolean> => {
+    if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return false;
     const scores = evaluationAssignments
       .filter((assignment) => scoreDrafts[assignment.criterionId] !== '')
       .map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
 
     if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > (evaluationAssignments.find((item) => item.criterionId === score.criterionId)?.maxPoints ?? 0))) {
       if (!silent) setError('Every score must be a whole number within the criterion maximum.');
-      return;
+      return false;
     }
 
     setEvaluationSaving(true);
@@ -648,9 +648,11 @@ export const InterviewsPage = ({ role }: Props) => {
       if (!silent) setSuccess('Scorecard saved.');
     } catch (requestError: unknown) {
       if (!silent) setError(requestError instanceof Error ? requestError.message : 'Unable to save the scorecard.');
+      return false;
     } finally {
       setEvaluationSaving(false);
     }
+    return true;
   };
 
   useEffect(() => {
@@ -673,7 +675,8 @@ export const InterviewsPage = ({ role }: Props) => {
     setEvaluating(true);
     setError('');
     try {
-      await saveEvaluationDraft(interview.id);
+      const saved = await saveEvaluationDraft(interview.id);
+      if (!saved) return;
       if (developmentMode) {
         const ownId = user?.id ?? 'dev-interviewer';
         const updated = interviews.find((item) => item.id === interview.id);
