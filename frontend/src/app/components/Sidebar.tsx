@@ -48,6 +48,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   ],
   INTERVIEWEE: [
     { label: 'My recruitment', items: [
+      { view: 'calendar', label: 'Calendar', icon: 'calendar' },
       { view: 'interviews', label: 'My Interviews', icon: 'calendar' },
       { view: 'candidates', label: 'My Profile', icon: 'users' },
     ]},
