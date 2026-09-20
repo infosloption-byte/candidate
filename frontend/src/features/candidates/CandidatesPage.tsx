@@ -1129,6 +1129,7 @@ export const CandidatesPage = ({ role }: Props) => {
             minimized={profilePanelMinimized}
             maximized={profilePanelMaximized}
             onMinimize={() => setProfilePanelMinimized(true)}
+            onRestore={() => { setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}
             onMaximize={() => { setProfilePanelMinimized(false); setProfilePanelMaximized((value) => !value); }}
             onClose={() => { setProfilePanelOpen(false); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}
           />
