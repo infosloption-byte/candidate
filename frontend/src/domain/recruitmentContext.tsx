@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useReducer, type PropsWithChildren } from 'react';
-import { agencies as initialAgencies, candidates as initialCandidates, interviewCriteria as initialInterviewCriteria, interviews as initialInterviews, jobs as initialJobs, users as initialUsers } from './fixtures';
-import type { Agency, Candidate, Interview, InterviewCriterion, Job, User } from './types';
+import { agencies as initialAgencies, candidates as initialCandidates, interviewCriteria as initialInterviewCriteria, interviewCriterionGroups as initialInterviewCriterionGroups, interviews as initialInterviews, jobs as initialJobs, users as initialUsers } from './fixtures';
+import type { Agency, Candidate, Interview, InterviewCriterion, InterviewCriterionGroup, Job, User } from './types';
 
 interface RecruitmentState {
   agencies: Agency[];
@@ -8,6 +8,7 @@ interface RecruitmentState {
   candidates: Candidate[];
   jobs: Job[];
   interviewCriteria: InterviewCriterion[];
+  interviewCriterionGroups: InterviewCriterionGroup[];
   interviews: Interview[];
 }
 
@@ -22,7 +23,9 @@ type RecruitmentAction =
   | { type: 'SET_INTERVIEW_STATUS'; interviewId: string; status: Interview['status'] }
   | { type: 'UPDATE_INTERVIEW'; interview: Interview }
   | { type: 'CREATE_CRITERION'; criterion: InterviewCriterion }
-  | { type: 'UPDATE_CRITERION'; criterion: InterviewCriterion };
+  | { type: 'UPDATE_CRITERION'; criterion: InterviewCriterion }
+  | { type: 'CREATE_CRITERION_GROUP'; group: InterviewCriterionGroup }
+  | { type: 'UPDATE_CRITERION_GROUP'; group: InterviewCriterionGroup };
 
 const initialState: RecruitmentState = {
   agencies: initialAgencies,
@@ -30,6 +33,7 @@ const initialState: RecruitmentState = {
   candidates: initialCandidates,
   jobs: initialJobs,
   interviewCriteria: initialInterviewCriteria,
+  interviewCriterionGroups: initialInterviewCriterionGroups,
   interviews: initialInterviews,
 };
 
@@ -61,6 +65,10 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
       return { ...state, interviewCriteria: [action.criterion, ...state.interviewCriteria] };
     case 'UPDATE_CRITERION':
       return { ...state, interviewCriteria: state.interviewCriteria.map((criterion) => criterion.id === action.criterion.id ? action.criterion : criterion) };
+    case 'CREATE_CRITERION_GROUP':
+      return { ...state, interviewCriterionGroups: [action.group, ...state.interviewCriterionGroups] };
+    case 'UPDATE_CRITERION_GROUP':
+      return { ...state, interviewCriterionGroups: state.interviewCriterionGroups.map((group) => group.id === action.group.id ? action.group : group) };
     default:
       return state;
   }
