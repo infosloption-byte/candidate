@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import type { Candidate } from '../../domain/types';
 import { StatusPill } from '../../shared/components/StatusPill';
 
+export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
+
 interface Props {
-  candidate: Candidate | null;
+  candidate: CandidateProfileData | null;
   minimized: boolean;
   maximized: boolean;
   onMinimize: () => void;
