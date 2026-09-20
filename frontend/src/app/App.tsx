@@ -67,10 +67,16 @@ const AuthenticatedApp = ({
   onLogout,
 }: AuthenticatedAppProps) => {
   const [activeView, setActiveView] = useState<AppView>(roleDefaults[role]);
+  const [calendarInterviewId, setCalendarInterviewId] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveView(roleDefaults[role]);
   }, [role]);
+
+  const openInterviewFromCalendar = (interviewId: string) => {
+    setCalendarInterviewId(interviewId);
+    setActiveView('interviews');
+  };
 
   const changeRole = (nextRole: UserRole) => {
     if (!developmentMode) return;
@@ -79,11 +85,11 @@ const AuthenticatedApp = ({
 
   const content = (() => {
     switch (activeView) {
-      case 'calendar': return <CalendarPage role={role} />;
+      case 'calendar': return <CalendarPage role={role} onOpenInterview={openInterviewFromCalendar} />;
       case 'reports': return <ReportsPage role={role} />;
       case 'jobs': return <JobsPage role={role} />;
       case 'candidates': return <CandidatesPage role={role} />;
-      case 'interviews': return <InterviewsPage role={role} />;
+      case 'interviews': return <InterviewsPage role={role} initialInterviewId={calendarInterviewId} onInitialInterviewHandled={() => setCalendarInterviewId(null)} />;
       case 'agencies': return <AgenciesPage />;
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
