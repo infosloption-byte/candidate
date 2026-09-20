@@ -419,6 +419,15 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       });
 
       if (result.interviewCompleted) {
+        await recordAuditEvent({
+          actorId: user.id,
+          agencyId: interview.candidate.agencyId,
+          action: 'INTERVIEW_COMPLETED',
+          entityType: 'Interview',
+          entityId: interview.id,
+          summary: 'Completed interview for "' + interview.candidate.name + '".',
+        });
+
         await notifyCandidateAccount(
           interview.candidate.id,
           { type: 'INTERVIEW_COMPLETED', title: 'Interview completed', message: 'Your interview has been completed. The recruitment team will update your candidate status after review.' },
