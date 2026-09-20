@@ -348,6 +348,11 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'EVALUATION_ALREADY_SUBMITTED', message: 'You have already submitted this interview scorecard.' } });
       }
 
+      const note = existingEvaluation.comments?.trim() ?? '';
+      if (!note) {
+        return reply.code(400).send({ success: false, error: { code: 'INTERVIEW_NOTE_REQUIRED', message: 'Add interview notes before submitting your scorecard.' } });
+      }
+
       const currentScores = existingEvaluation.scores;
       const submittedScoreErrors = validateScores(currentScores, assignments);
       if (submittedScoreErrors.length || currentScores.length !== assignments.length) {
