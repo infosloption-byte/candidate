@@ -1,68 +1,100 @@
-# BuildHire — Two-Project Vercel Deployment
+# BuildHire — Single-Project Vercel Deployment
 
-BuildHire is deployed as two independent Vercel projects from the same GitHub repository:
+BuildHire is deployed as a single Vercel project using Vercel Services. The React frontend and Fastify backend are built together from the same repository and served from the same Vercel domain. Vercel Services supports multiple frontends and backends in one project and routes them by path.
 
 ~~~text
 infosloption-byte/candidate
-├── frontend/  → Vercel project: BuildHire Web
-└── backend/   → Vercel project: BuildHire API
+├── frontend/  → frontend service → /
+└── backend/   → backend service  → /api/*
 ~~~
 
-Vercel supports deploying multiple projects from one repository by giving each project its own Root Directory and deployment settings. The backend is Fastify; Vercel currently supports Fastify as a Vercel Function with zero-configuration detection when a supported entry point such as server.ts exists at the project root or under src/.
+## 1. Vercel project settings
 
-## 1. Frontend Vercel project
-
-Create/import a Vercel project using the same repository.
-
-Set:
-
-- Root Directory: frontend
-- Framework Preset: Vite
-- Install Command: npm install
-- Build Command: npm run build
-- Output Directory: dist
-
-The repository contains frontend/vercel.json with the same build settings.
-
-Production environment variable:
+Create or use one Vercel project connected to:
 
 ~~~text
-VITE_API_BASE_URL=https://<your-backend-project>.vercel.app/api/v1
+infosloption-byte/candidate
 ~~~
 
-Replace the placeholder with the actual production API project URL.
+Set the project's Framework Preset to Services.
 
-## 2. Backend Vercel project
+Use the repository root as the Vercel project Root Directory. Do not set the root directory to frontend or backend.
 
-Create a second Vercel project using the same repository.
+## 2. Repository routing
 
-Set:
+The root vercel.json defines two services and routes API requests before the frontend catch-all:
 
-- Root Directory: backend
-- Framework Preset: let Vercel detect Fastify
-- Do not set a frontend output directory
+~~~json
+{
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend/",
+      "framework": "fastify",
+      "entrypoint": "src/server.ts"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
+  ]
+}
+~~~
 
-The backend already has the supported src/server.ts Fastify entry point. Vercel's current Fastify deployment model runs the application as a Vercel Function.
+Vercel evaluates the top-level rewrites in order. API requests reach the backend service and every other browser path reaches the frontend service. The backend receives the original /api/... request path, matching this application's existing Fastify route prefixes.
 
-Backend Production environment variables:
+## 3. Frontend API configuration
+
+No production API hostname is required.
+
+The frontend already defaults to:
+
+~~~text
+VITE_API_BASE_URL=/api/v1
+~~~
+
+Therefore:
+
+~~~text
+Browser
+   ↓
+https://<your-vercel-domain>/api/v1/*
+   ↓
+Vercel routing
+   ↓
+Fastify backend service
+~~~
+
+Browser traffic remains same-origin.
+
+## 4. Backend environment variables
+
+Set these in the single Vercel project for Production:
 
 ~~~text
 NODE_ENV=production
-CORS_ORIGIN=https://<your-frontend-project>.vercel.app
 DATABASE_URL=mysql://<user>:<password>@<host>:<port>/<database>
+CORS_ORIGIN=https://<your-vercel-domain>
 ~~~
 
-Keep database credentials in Vercel environment variables, not Git.
+Keep database credentials in Vercel environment variables, not in Git.
 
-BUILDHIRE_SEED_PASSWORD should only be configured when you intentionally need the seed process.
+## 5. Database
 
-## 3. Database
+Vercel hosts the application runtime, not the existing MariaDB database.
 
-Vercel does not replace the application's MariaDB database.
+The production MariaDB server must be reachable by the backend service.
 
-The production MariaDB server must be reachable from Vercel and have the BuildHire schema migrated before production use.
-
-Run the migration from a trusted environment using the production DATABASE_URL:
+Prepare the schema before using the production app:
 
 ~~~bash
 cd backend
@@ -71,70 +103,80 @@ npm run prisma:generate
 npm run prisma:migrate:deploy
 ~~~
 
-Do not run prisma migrate dev against production.
+Use prisma migrate deploy for production. Do not run prisma migrate dev against production.
 
-## 4. Frontend → API requests
+## 6. Prisma build
 
-The frontend uses VITE_API_BASE_URL and sends authenticated requests with credentials included because BuildHire uses an HTTP-only session cookie.
+The backend package includes:
 
-Example:
-
-~~~text
-Frontend: https://buildhire-web.vercel.app
-Backend:  https://buildhire-api.vercel.app
-
-VITE_API_BASE_URL=https://buildhire-api.vercel.app/api/v1
-CORS_ORIGIN=https://buildhire-web.vercel.app
+~~~json
+{
+  "postinstall": "prisma generate",
+  "build": "prisma generate && tsc -p tsconfig.json"
+}
 ~~~
 
-The CORS origin must match the real frontend HTTPS origin.
+This ensures the generated Prisma client exists during the backend service build.
 
-The current session cookie is scoped to the API host and uses Secure in production. The default SameSite=Strict policy works when the frontend and API remain on the same site, such as separate Vercel subdomains. For unrelated custom domains, cookie policy and CSRF protection must be reviewed before production use.
+## 7. Authentication
 
-## 5. Candidate documents
+BuildHire uses an HTTP-only session cookie.
 
-The current document implementation stores uploaded files on the backend filesystem.
-
-That is suitable for local development but should not be treated as durable production storage on Vercel's serverless runtime. Before production document usage, move document bytes to persistent object storage and keep only the storage key in MariaDB.
-
-## 6. Deployment order
-
-Deploy the backend project first so its URL is known.
-
-Then configure the frontend project's VITE_API_BASE_URL to the backend URL and deploy the frontend.
-
-Finally test:
+With both services under one Vercel domain:
 
 ~~~text
-GET  <backend>/api/v1/health
-POST <backend>/api/v1/auth/login
-GET  <backend>/api/v1/auth/me
+https://<your-vercel-domain>
 ~~~
 
-Then test an authenticated frontend operation such as Candidates, Interviews, Calendar, or Reports.
+the browser communicates with the API on the same site. The production cookie remains Secure and SameSite=Strict.
 
-## 7. Git workflow
+## 8. Candidate documents
 
-Both Vercel projects can point to the same main branch. Each project builds only its configured Root Directory.
+The current candidate document implementation writes files to the backend filesystem.
+
+Do not treat that filesystem as durable production storage on Vercel. Before relying on document uploads in production, move file contents to persistent object storage and keep the storage key in MariaDB.
+
+## 9. Deployment behavior
+
+A push to main creates one Vercel deployment containing both frontend and backend services. Vercel builds each service independently inside the same deployment and serves both through the same domain.
+
+## 10. Deployment verification
+
+After deployment, check:
+
+~~~text
+https://<your-vercel-domain>/
+https://<your-vercel-domain>/api/v1/health
+~~~
+
+Then verify:
+
+~~~text
+Login
+Candidates
+Interviews
+Calendar
+Reports
+Candidate documents
+~~~
+
+For authentication, confirm login succeeds and a subsequent /api/v1/auth/me request returns the current user.
+
+## 11. Local Vercel-style testing
+
+Vercel Services supports local multi-service development using:
 
 ~~~bash
-git add .
-git commit -m "..."
-git push origin main
+vercel dev
 ~~~
 
-Check the frontend and backend deployments separately in Vercel after pushing.
+or:
 
-## 8. Local verification
-
-Before production deployment:
-
-~~~powershell
-cd C:\wamp\www\html\candidate\frontend
-npm run build
-
-cd ..\backend
-npm run build
+~~~bash
+vercel dev -L
 ~~~
 
-The repository's CI history has had unrelated failures, so local build results should be checked before treating a Vercel deployment as verified.
+## 12. Vercel dashboard requirement
+
+The repository configuration is not sufficient by itself. In the Vercel project's Build and Deployment settings, set the Framework Preset to Services and keep the project Root Directory at the repository root.
+
