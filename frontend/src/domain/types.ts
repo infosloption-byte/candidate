@@ -58,6 +58,8 @@ export interface Candidate {
   source: CandidateSource;
   status: CandidateStatus;
   statusUpdatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Job {
