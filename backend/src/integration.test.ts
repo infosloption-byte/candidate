@@ -18,6 +18,7 @@ const emails = {
   agencyB: 'qa-agency-b-' + suffix + '@buildhire.local',
   interviewer: 'qa-interviewer-' + suffix + '@buildhire.local',
   interviewerB: 'qa-interviewer-b-' + suffix + '@buildhire.local',
+  globalInterviewer: 'qa-global-interviewer-' + suffix + '@buildhire.local',
   interviewee: 'qa-interviewee-' + suffix + '@buildhire.local',
 };
 
@@ -30,6 +31,7 @@ let agencyAUserId = '';
 let agencyBUserId = '';
 let interviewerId = '';
 let interviewerBId = '';
+let globalInterviewerId = '';
 let candidateUserId = '';
 let jobAId = '';
 let jobBId = '';
@@ -77,6 +79,7 @@ before(async () => {
     const agencyBUser = await tx.user.create({ data: { agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
     const interviewer = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
     const interviewerB = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer B', email: emails.interviewerB, passwordHash, role: 'INTERVIEWER' } });
+    const globalInterviewer = await tx.user.create({ data: { agencyId: null, name: 'QA Global Interviewer', email: emails.globalInterviewer, passwordHash, role: 'INTERVIEWER' } });
 
     const candidate = await tx.candidate.create({
       data: {
@@ -134,7 +137,7 @@ before(async () => {
       },
     });
 
-    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, candidateUser, candidate, jobA, jobB, criterionA, criterionB, criterionGroup };
+    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, globalInterviewer, candidateUser, candidate, jobA, jobB, criterionA, criterionB, criterionGroup };
   });
 
   agencyAId = setup.agencyA.id;
@@ -144,6 +147,7 @@ before(async () => {
   agencyBUserId = setup.agencyBUser.id;
   interviewerId = setup.interviewer.id;
   interviewerBId = setup.interviewerB.id;
+  globalInterviewerId = setup.globalInterviewer.id;
   candidateUserId = setup.candidateUser.id;
   candidateId = setup.candidate.id;
   jobAId = setup.jobA.id;
@@ -158,10 +162,10 @@ after(async () => {
 
   try {
     await prisma.session.deleteMany({
-      where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
+      where: { userId: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, globalInterviewerId, candidateUserId] } },
     });
     await prisma.user.deleteMany({
-      where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, candidateUserId] } },
+      where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, globalInterviewerId, candidateUserId] } },
     });
     await prisma.agency.deleteMany({ where: { id: { in: [agencyAId, agencyBId] } } });
   } finally {
@@ -247,6 +251,53 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
     headers: { cookie: interviewerCookie },
   });
   assert.equal(interviewerCandidates.statusCode, 403);
+});
+
+dbTest('interviewer pool includes own agency and global interviewers without cross-agency leakage', async () => {
+  assert.ok(app);
+
+  const agencyCookie = await login(emails.agencyA);
+  const agencyPool = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviewers?agencyId=' + agencyAId,
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(agencyPool.statusCode, 200);
+  const agencyPoolBody = json<{ data: Array<{ id: string; agencyId: string | null; role: string; active: boolean }> }>(agencyPool);
+  const agencyPoolIds = new Set(agencyPoolBody.data.map((item) => item.id));
+  assert.ok(agencyPoolIds.has(interviewerId));
+  assert.ok(agencyPoolIds.has(globalInterviewerId));
+  assert.equal(agencyPoolIds.has(interviewerBId), true);
+
+  const agencyBCookie = await login(emails.agencyB);
+  const agencyBPool = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviewers?agencyId=' + agencyBId,
+    headers: { cookie: agencyBCookie },
+  });
+  assert.equal(agencyBPool.statusCode, 200);
+  const agencyBPoolBody = json<{ data: Array<{ id: string; agencyId: string | null }> }>(agencyBPool);
+  const agencyBPoolIds = new Set(agencyBPoolBody.data.map((item) => item.id));
+  assert.ok(agencyBPoolIds.has(globalInterviewerId));
+  assert.equal(agencyBPoolIds.has(interviewerBId), false);
+
+  const adminCookie = await login(emails.admin);
+  const createdGlobal = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviewers',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Created Global Interviewer',
+      email: 'qa-created-global-' + suffix + '@buildhire.local',
+      password,
+    },
+  });
+  assert.equal(createdGlobal.statusCode, 201);
+  const createdGlobalBody = json<{ data: { id: string; agencyId: string | null; role: string; active: boolean } }>(createdGlobal);
+  assert.equal(createdGlobalBody.data.agencyId, null);
+  assert.equal(createdGlobalBody.data.role, 'INTERVIEWER');
+  assert.equal(createdGlobalBody.data.active, true);
+  await prisma!.user.delete({ where: { id: createdGlobalBody.data.id } });
 });
 
 dbTest('bulk interview scheduling creates consecutive interview slots for selected candidates', async () => {
