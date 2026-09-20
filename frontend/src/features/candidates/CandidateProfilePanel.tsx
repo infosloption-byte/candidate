@@ -330,7 +330,7 @@ export const CandidateProfilePanel = ({
             actor: 'Interview workflow',
           });
         }
-        if (interview.completedAt) {
+        if (interview.completedAt && !auditFor('Interview', interview.id, 'INTERVIEW_COMPLETED')) {
           events.push({
             id: 'interview-completed-' + interview.id,
             date: interview.completedAt,
