@@ -923,18 +923,33 @@ export const InterviewsPage = ({ role }: Props) => {
         </div>
       )}
       {!loading && visible.length > 0 && listView === 'table' && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-[980px] w-full text-left">
-              <thead className="bg-slate-50">
-                <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-4 py-3">Candidate</th>
-                  <th className="px-4 py-3">Schedule</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Location</th>
-                  <th className="px-4 py-3">Panel</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-cyan-600">Interview schedule</p>
+              <h2 className="mt-1 text-sm font-black text-slate-950">All interviews</h2>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1">
+                <span className="font-black text-slate-900">{visible.length}</span>
+                <span className="ml-1">interview{visible.length === 1 ? '' : 's'}</span>
+              </span>
+              <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" aria-hidden="true" />
+              <span className="hidden sm:inline">Swipe-free mobile layout</span>
+            </div>
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1120px] text-left">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/80 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400">
+                  <th scope="col" className="w-[25%] px-5 py-3.5">Candidate</th>
+                  <th scope="col" className="w-[15%] px-4 py-3.5">Schedule</th>
+                  <th scope="col" className="w-[11%] px-4 py-3.5">Type</th>
+                  <th scope="col" className="w-[14%] px-4 py-3.5">Status</th>
+                  <th scope="col" className="w-[13%] px-4 py-3.5">Location</th>
+                  <th scope="col" className="w-[13%] px-4 py-3.5">Panel</th>
+                  <th scope="col" className="w-[180px] px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -943,43 +958,91 @@ export const InterviewsPage = ({ role }: Props) => {
                   const job = jobFor(interview);
                   const alreadyEvaluated = Boolean(interview.evaluations?.length);
                   const isAssignedInterviewer = role === 'INTERVIEWER';
+                  const candidateName = candidate?.name ?? interview.candidateId;
+                  const candidateInitial = candidateName.trim().charAt(0).toUpperCase() || '?';
+
                   return (
-                    <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
-                      <td className="px-4 py-3">
-                        <p className="font-extrabold text-slate-900">{candidate?.name ?? interview.candidateId}</p>
-                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'}{job ? ' · ' + job.title : ''}</p>
+                    <tr key={interview.id} className="group align-top text-xs text-slate-700 transition-colors hover:bg-slate-50/80">
+                      <td className="px-5 py-4">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-50 text-xs font-black text-cyan-700 ring-1 ring-inset ring-cyan-100">
+                            {candidateInitial}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-extrabold text-slate-950">{candidateName}</p>
+                            <p className="mt-0.5 truncate text-[10px] font-bold text-cyan-700">{candidate?.reference ?? 'Candidate'}</p>
+                            <p className="mt-0.5 truncate text-[10px] text-slate-400">{job?.title ?? 'General interview'}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <p className="font-semibold text-slate-700">{new Date(interview.scheduledAt).toLocaleDateString()}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-400">{new Date(interview.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {interview.durationMins} min</p>
+
+                      <td className="px-4 py-4">
+                        <div className="space-y-1">
+                          <p className="font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          <p className="text-[10px] font-semibold text-slate-400">{new Date(interview.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {interview.durationMins} min</p>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700">{statusLabel(interview.type)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1.5">
+
+                      <td className="px-4 py-4">
+                        <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-extrabold text-slate-700">
+                          {statusLabel(interview.type)}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col items-start gap-1.5">
                           <StatusPill value={interview.status} />
                           {candidate?.status && <StatusPill value={candidate.status} />}
                         </div>
                       </td>
-                      <td className="max-w-40 px-4 py-3 text-slate-500">{interview.location ?? 'Not specified'}</td>
-                      <td className="max-w-44 px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {interview.panel?.length ? interview.panel.map((participant) => (
-                            <span key={participant.userId} className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-600">{participant.user?.name ?? 'Unavailable'}</span>
-                          )) : <span className="text-[10px] text-slate-400">No panel</span>}
-                        </div>
+
+                      <td className="px-4 py-4">
+                        {interview.location ? (
+                          <div className="flex min-w-0 items-start gap-2 text-slate-500">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7">
+                              <path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11Z" />
+                              <circle cx="12" cy="10" r="2.2" />
+                            </svg>
+                            <span className="line-clamp-2 text-[11px] leading-4">{interview.location}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-400">Not specified</span>
+                        )}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap justify-end gap-1.5">
+
+                      <td className="px-4 py-4">
+                        {interview.panel?.length ? (
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap gap-1.5">
+                              {interview.panel.slice(0, 2).map((participant) => (
+                                <span key={participant.userId} className="max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                                  {participant.user?.name ?? 'Unavailable'}
+                                </span>
+                              ))}
+                              {interview.panel.length > 2 && (
+                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-extrabold text-slate-400 ring-1 ring-inset ring-slate-200">
+                                  +{interview.panel.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-400">No panel</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap justify-end gap-1.5 opacity-90 transition-opacity group-hover:opacity-100">
                           <Button size="sm" variant="primary" className="min-h-8 rounded-lg px-2.5 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                             <>
-                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
-                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                              <Button size="sm" variant="danger" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
+                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                              <Button size="sm" variant="danger" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
                             </>
                           )}
                           {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
-                            <Button size="sm" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => { setListView('cards'); startEvaluation(interview); }}>Evaluate</Button>
+                            <Button size="sm" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); startEvaluation(interview); }}>Evaluate</Button>
                           )}
                         </div>
                       </td>
@@ -989,9 +1052,99 @@ export const InterviewsPage = ({ role }: Props) => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
 
+          <div className="divide-y divide-slate-100 md:hidden">
+            {visible.map((interview) => {
+              const candidate = candidateFor(interview);
+              const job = jobFor(interview);
+              const alreadyEvaluated = Boolean(interview.evaluations?.length);
+              const isAssignedInterviewer = role === 'INTERVIEWER';
+              const candidateName = candidate?.name ?? interview.candidateId;
+              const candidateInitial = candidateName.trim().charAt(0).toUpperCase() || '?';
+
+              return (
+                <article key={interview.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-cyan-50 text-sm font-black text-cyan-700 ring-1 ring-inset ring-cyan-100">
+                      {candidateInitial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-black text-slate-950">{candidateName}</h3>
+                          <p className="mt-0.5 truncate text-[10px] font-bold text-cyan-700">{candidate?.reference ?? 'Candidate'}</p>
+                        </div>
+                        <StatusPill value={interview.status} />
+                      </div>
+                      <p className="mt-1 truncate text-[10px] text-slate-400">{job?.title ?? 'General interview'}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Date</p>
+                      <p className="mt-1 text-[11px] font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Time</p>
+                      <p className="mt-1 text-[11px] font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {interview.durationMins} min</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 grid gap-2.5">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                      <span className="text-[10px] font-bold text-slate-400">Interview type</span>
+                      <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-extrabold text-slate-700">{statusLabel(interview.type)}</span>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                      <span className="pt-0.5 text-[10px] font-bold text-slate-400">Location</span>
+                      <span className="max-w-[65%] text-right text-[10px] font-semibold leading-4 text-slate-600">{interview.location ?? 'Not specified'}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-bold text-slate-400">Panel</span>
+                        {!interview.panel?.length && <span className="text-[10px] font-semibold text-slate-400">No panel</span>}
+                      </div>
+                      {interview.panel?.length ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {interview.panel.map((participant) => (
+                            <span key={participant.userId} className="max-w-full truncate rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-200">
+                              {participant.user?.name ?? 'Unavailable'}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {candidate?.status && (
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                        <span className="text-[10px] font-bold text-slate-400">Candidate status</span>
+                        <StatusPill value={candidate.status} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+                    <Button size="sm" variant="primary" className="min-h-9 rounded-lg px-2 py-1 text-[10px]" onClick={() => void openInterviewDetails(interview)}>View details</Button>
+                    {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                      <>
+                        <Button size="sm" variant="secondary" className="min-h-9 rounded-lg px-2 py-1 text-[10px]" onClick={() => openReschedule(interview)}>Edit</Button>
+                        <Button size="sm" variant="secondary" className="min-h-9 rounded-lg px-2 py-1 text-[10px]" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" className="min-h-9 rounded-lg px-2 py-1 text-[10px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                      </>
+                    )}
+                    {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
+                      <Button size="sm" className="min-h-9 rounded-lg px-2 py-1 text-[10px]" onClick={() => { setListView('cards'); startEvaluation(interview); }}>Evaluate</Button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {detailFor && detail && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
