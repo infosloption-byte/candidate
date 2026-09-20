@@ -7,7 +7,7 @@ import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
 import { apiFetch } from '../../shared/lib/api';
-import type { CandidateStatus, InterviewStatus, InterviewType, UserRole } from '../../domain/types';
+import type { CandidateStatus, Interview, InterviewStatus, InterviewType, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
@@ -30,7 +30,7 @@ interface Analytics {
   averageScorePoints: number | null;
   recentCandidates: Array<{ id: string; name: string; reference: string; profession: string | null; status: CandidateStatus; statusUpdatedAt: string }>;
   recentInterviews: Array<{ id: string; status: InterviewStatus; type: InterviewType; scheduledAt: string; candidate: { name: string; reference: string } }>;
-  upcomingInterviews: Array<{ id: string; scheduledAt: string; type: InterviewType; candidate: { name: string; reference: string } }>;
+  upcomingInterviews: Array<{ id: string; scheduledAt: string; type: InterviewType; candidate: { name: string; reference: string; passportNumber: string | null } }>;
 }
 
 const statusLabel = (value: string) => value.replaceAll('_', ' ');
@@ -110,7 +110,7 @@ export const DashboardPage = ({ role }: Props) => {
       interviewTypes,
       averageScorePoints: null,
       recentCandidates: state.candidates.slice(0, 8).map((item) => ({ id: item.id, name: item.name, reference: item.reference, profession: item.profession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
-      recentInterviews: state.interviews.slice(0, 8).map((item) => ({ id: item.id, status: item.status, type: item.type, scheduledAt: item.scheduledAt, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId } })),
+      recentInterviews: state.interviews.slice(0, 8).map((item) => ({ id: item.id, status: item.status, type: item.type, scheduledAt: item.scheduledAt, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId, passportNumber: item.candidate?.passportNumber ?? state.candidates.find(candidate => candidate.id === item.candidateId)?.passportNumber ?? null } })),
       upcomingInterviews: state.interviews.filter((item) => item.status === 'SCHEDULED' && new Date(item.scheduledAt).getTime() >= Date.now()).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).slice(0, 8).map((item) => ({ id: item.id, scheduledAt: item.scheduledAt, type: item.type, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId } })),
     };
   }, [role, state]);
@@ -124,8 +124,21 @@ export const DashboardPage = ({ role }: Props) => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    apiFetch<Analytics>('/analytics/summary')
-      .then((result) => { if (!cancelled) setAnalytics(result); })
+    Promise.all([apiFetch<Analytics>('/analytics/summary'), apiFetch<Interview[]>('/interviews')])
+      .then(([result, interviews]) => {
+        if (cancelled) return;
+        const byId = new Map(interviews.map((interview) => [interview.id, interview]));
+        setAnalytics({
+          ...result,
+          upcomingInterviews: result.upcomingInterviews.map((item) => ({
+            ...item,
+            candidate: {
+              ...item.candidate,
+              passportNumber: byId.get(item.id)?.candidate?.passportNumber ?? null,
+            },
+          })),
+        });
+      })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load dashboard analytics.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -198,7 +211,7 @@ export const DashboardPage = ({ role }: Props) => {
           <div className="mt-5 divide-y divide-slate-100">
             {upcomingInterviews.length ? upcomingInterviews.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 text-xs text-slate-400">{item.candidate.reference} · {statusLabel(item.type)}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 text-xs text-slate-400">{item.candidate.reference} · Passport: {item.candidate.passportNumber ?? 'Not provided'} · {statusLabel(item.type)}</p></div>
                 <div className="shrink-0 text-right"><p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString()}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(item.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
               </div>
             )) : <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-xs text-slate-400">No upcoming interviews.</p>}
