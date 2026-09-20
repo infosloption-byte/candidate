@@ -643,11 +643,6 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
-            {(search || statusFilter || typeFilter || (role === 'ADMIN' && agencyId)) && (
-              <button type="button" title="Clear filters" aria-label="Clear filters" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter(''); if (role === 'ADMIN') setAgencyId(''); }}>
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M6 12h12M10 18h4" /><path d="M7 6l1-2h8l1 2" /></svg>
-              </button>
-            )}
           </div>
         </div>
       </div>
