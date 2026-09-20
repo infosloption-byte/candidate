@@ -1,6 +1,5 @@
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { Button } from '../../shared/components/Button';
-import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import type { Interview, InterviewCriterionAssignment } from '../../domain/types';
 
