@@ -591,7 +591,7 @@ export const CandidatesPage = ({ role }: Props) => {
     } catch (requestError: unknown) { setError(requestError instanceof Error ? requestError.message : 'Unable to update onboarding status.'); }
   };
 
-  const maskPassport = (value: string | null) => value ? (value.length <= 4 ? value : '••••' + value.slice(-4)) : 'Not provided';
+  const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
     { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p></div> },
@@ -1083,7 +1083,7 @@ export const CandidatesPage = ({ role }: Props) => {
                       </div>
                       <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
                         <span className="text-[10px] font-bold text-slate-400">Passport</span>
-                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{maskPassport(item.passportNumber)}</span>
+                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{displayPassport(item.passportNumber)}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
                         <span className="text-[10px] font-bold text-slate-400">Onboarding</span>
@@ -1215,7 +1215,7 @@ export const CandidatesPage = ({ role }: Props) => {
                             <div><p className="field-label">Email</p><p className="mt-1 text-sm font-semibold break-words text-slate-800">{candidate.email ?? 'No email'}</p></div>
                             <div><p className="field-label">Country</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.country ?? 'Not set'}</p></div>
                             <div><p className="field-label">Location</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.currentLocation ?? 'Not set'}</p></div>
-                            <div><p className="field-label">Passport</p><p className="mt-1 text-sm font-semibold text-slate-800">{maskPassport(candidate.passportNumber)}</p><p className="mt-0.5 text-xs text-slate-400">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                            <div><p className="field-label">Passport</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p><p className="mt-0.5 text-xs text-slate-400">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
                             <div><p className="field-label">Work readiness</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
                             <div><p className="field-label">Skills</p><p className="mt-1 text-sm leading-6 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
                             <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
