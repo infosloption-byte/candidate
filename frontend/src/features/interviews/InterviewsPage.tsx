@@ -671,6 +671,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
     setEvaluating(true);
     setError('');
+    let interviewCompleted = false;
     try {
       const saved = await saveEvaluationDraft(interview.id);
       if (!saved) return;
@@ -702,9 +703,15 @@ export const InterviewsPage = ({ role }: Props) => {
         const result = await apiFetch<{ interviewCompleted: boolean; evaluation: { status: 'SUBMITTED' }; summary: typeof evaluationSummary }>('/interviews/' + interview.id + '/evaluation/submit', { method: 'POST' });
         setEvaluationStatus('SUBMITTED');
         if (result.summary) setEvaluationSummary(result.summary);
+        interviewCompleted = result.interviewCompleted;
         setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: result.interviewCompleted ? 'COMPLETED' : item.status, completedAt: result.interviewCompleted ? new Date().toISOString() : item.completedAt } : item));
       }
       setEvaluationLastSaved(Date.now());
+      if (interviewCompleted || (developmentMode && interviews.find((item) => item.id === interview.id)?.status === 'COMPLETED')) {
+        setEvaluationFor(null);
+        setEvaluationMinimized(false);
+        setEvaluationMaximized(false);
+      }
       setSuccess('Interview scorecard submitted.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to submit the interview scorecard.');
@@ -1206,11 +1213,11 @@ export const InterviewsPage = ({ role }: Props) => {
                   </div>
                 </div>
 
-                {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
+                {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
                     <div>
-                      <h3 className="text-sm font-black text-slate-950">Final candidate status</h3>
-                      <p className="mt-1 text-xs text-slate-400">Review the completed scorecard, then update the candidate's lifecycle status.</p>
+                      <h3 className="text-sm font-black text-slate-950">Final candidate decision</h3>
+                      <p className="mt-1 text-xs text-slate-400">Review the completed interviewer comparison, then record the final candidate status.</p>
                     </div>
                     <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
                       <FormField label="Status">
@@ -1458,6 +1465,64 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-1 text-[10px] font-bold text-slate-500">{participant.user?.active === false ? 'Inactive' : 'Active'}</p>
                   </div>
                 )) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No panel information available.</p>}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <h3 className="text-sm font-black text-slate-950">Final score & interviewer comparison</h3>
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                {detail.evaluations?.filter((evaluation) => evaluation.status === 'SUBMITTED').length ? (
+                  <>
+                    {(() => {
+                      const submitted = detail.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED');
+                      const max = detail.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0;
+                      const totals = submitted.map((evaluation) => ({
+                        evaluation,
+                        total: evaluation.scores.reduce((sum, score) => sum + score.points, 0),
+                        percentage: max ? Math.round((evaluation.scores.reduce((sum, score) => sum + score.points, 0) / max) * 10000) / 100 : 0,
+                      }));
+                      const average = totals.length ? Math.round((totals.reduce((sum, item) => sum + item.percentage, 0) / totals.length) * 100) / 100 : 0;
+                      return (
+                        <>
+                          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average final score</p>
+                              <p className="mt-1 text-2xl font-black text-cyan-700">{average}%</p>
+                            </div>
+                            <p className="text-xs text-slate-500">{submitted.length} of {detail.panel?.length ?? 0} interviewers submitted</p>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="min-w-[760px] w-full text-left text-xs">
+                              <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                <tr>
+                                  <th className="px-3 py-2.5">Criterion</th>
+                                  {totals.map(({ evaluation }) => <th key={evaluation.id} className="px-3 py-2.5">{evaluation.interviewer.name}</th>)}
+                                  <th className="px-3 py-2.5">Average</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {(detail.criterionAssignments ?? []).map((assignment) => {
+                                  const values = totals.map(({ evaluation }) => evaluation.scores.find((score) => score.criterionId === assignment.criterionId)?.points ?? 0);
+                                  const rowAverage = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+                                  return <tr key={assignment.id}>
+                                    <td className="px-3 py-2.5 font-bold text-slate-700">{assignment.name} <span className="font-normal text-slate-400">/ {assignment.maxPoints}</span></td>
+                                    {values.map((value, index) => <td key={totals[index]!.evaluation.id} className="px-3 py-2.5 font-black text-slate-900">{value}</td>)}
+                                    <td className="px-3 py-2.5 font-black text-cyan-700">{rowAverage.toFixed(1)}</td>
+                                  </tr>;
+                                })}
+                                <tr className="bg-slate-50">
+                                  <td className="px-3 py-2.5 font-black text-slate-900">Total</td>
+                                  {totals.map(({ evaluation, total }) => <td key={evaluation.id} className="px-3 py-2.5 font-black text-slate-900">{total} / {max}</td>)}
+                                  <td className="px-3 py-2.5 font-black text-cyan-700">{average}%</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </>
+                ) : <p className="text-xs text-slate-400">No submitted interviewer scorecards yet.</p>}
               </div>
             </div>
 
