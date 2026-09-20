@@ -12,6 +12,7 @@ import { InterviewsPage } from '../features/interviews/InterviewsPage';
 import { AgenciesPage } from '../features/agencies/AgenciesPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaPage';
+import { CalendarPage } from '../features/calendar/CalendarPage';
 
 const roleDefaults: Record<UserRole, AppView> = {
   ADMIN: 'dashboard',
@@ -78,6 +79,7 @@ const AuthenticatedApp = ({
 
   const content = (() => {
     switch (activeView) {
+      case 'calendar': return <CalendarPage role={role} />;
       case 'reports': return <ReportsPage role={role} />;
       case 'jobs': return <JobsPage role={role} />;
       case 'candidates': return <CandidatesPage role={role} />;
