@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, UserRole } from '../../domain/types';
 
@@ -15,6 +16,53 @@ interface Props { role: UserRole; }
 const emptyCriterionForm = { name: '', description: '', maxPoints: '5' };
 const emptyGroupForm = { name: '', category: '', description: '', criterionIds: [] as string[] };
 
+
+type ModalMode = 'CREATE_CRITERION' | 'EDIT_CRITERION' | 'VIEW_CRITERION' | 'CREATE_GROUP' | 'EDIT_GROUP' | 'VIEW_GROUP' | null;
+
+const CriteriaModal = ({
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: ReactNode;
+}) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5" role="presentation">
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="criteria-dialog-title"
+        tabIndex={-1}
+        className="relative z-10 my-auto w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2.5rem)]"
+      >
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview setup</p>
+            <h2 id="criteria-dialog-title" className="mt-1 text-lg font-black text-slate-950">{title}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+        <div className="p-4 sm:p-5">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+
 export const InterviewCriteriaPage = ({ role }: Props) => {
   const { developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
@@ -22,8 +70,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const [groups, setGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups : []);
   const [criterionForm, setCriterionForm] = useState(emptyCriterionForm);
   const [groupForm, setGroupForm] = useState(emptyGroupForm);
-  const [showCriterionForm, setShowCriterionForm] = useState(false);
-  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [selectedCriterionId, setSelectedCriterionId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -62,7 +111,83 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
 
   const activeCriteria = useMemo(() => criteria.filter((item) => item.active), [criteria]);
 
+
+  const canManage = role === 'ADMIN' || role === 'AGENCY';
+  const criterionFormOpen = modalMode === 'CREATE_CRITERION' || modalMode === 'EDIT_CRITERION';
+  const groupFormOpen = modalMode === 'CREATE_GROUP' || modalMode === 'EDIT_GROUP';
+
+  const selectedCriterion = selectedCriterionId
+    ? criteria.find((item) => item.id === selectedCriterionId) ?? null
+    : null;
+  const selectedGroup = selectedGroupId
+    ? groups.find((item) => item.id === selectedGroupId) ?? null
+    : null;
+
+  const closeModal = () => {
+    setModalMode(null);
+    setSelectedCriterionId(null);
+    setSelectedGroupId(null);
+    setSaving(false);
+    setError('');
+  };
+
+  const openCreateCriterion = () => {
+    setCriterionForm({ ...emptyCriterionForm });
+    setSelectedCriterionId(null);
+    setSelectedGroupId(null);
+    setError('');
+    setModalMode('CREATE_CRITERION');
+  };
+
+  const openEditCriterion = (criterion: InterviewCriterion) => {
+    setCriterionForm({
+      name: criterion.name,
+      description: criterion.description ?? '',
+      maxPoints: String(criterion.maxPoints),
+    });
+    setSelectedCriterionId(criterion.id);
+    setSelectedGroupId(null);
+    setError('');
+    setModalMode('EDIT_CRITERION');
+  };
+
+  const openViewCriterion = (criterion: InterviewCriterion) => {
+    setSelectedCriterionId(criterion.id);
+    setSelectedGroupId(null);
+    setError('');
+    setModalMode('VIEW_CRITERION');
+  };
+
+  const openCreateGroup = () => {
+    setGroupForm({ ...emptyGroupForm, criterionIds: [] });
+    setSelectedCriterionId(null);
+    setSelectedGroupId(null);
+    setError('');
+    setModalMode('CREATE_GROUP');
+  };
+
+  const openEditGroup = (group: InterviewCriterionGroup) => {
+    setGroupForm({
+      name: group.name,
+      category: group.category ?? '',
+      description: group.description ?? '',
+      criterionIds: group.criteria.map((item) => item.criterionId),
+    });
+    setSelectedCriterionId(null);
+    setSelectedGroupId(group.id);
+    setError('');
+    setModalMode('EDIT_GROUP');
+  };
+
+  const openViewGroup = (group: InterviewCriterionGroup) => {
+    setSelectedCriterionId(null);
+    setSelectedGroupId(group.id);
+    setError('');
+    setModalMode('VIEW_GROUP');
+  };
+
   const createCriterion = async () => {
+    if (!canManage) return;
     if (criterionForm.name.trim().length < 2) {
       setError('Enter a criterion name with at least 2 characters.');
       return;
@@ -73,23 +198,61 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
+    const editing = modalMode === 'EDIT_CRITERION' && selectedCriterion;
     setSaving(true);
     setError('');
-    try {
-      const created = developmentMode
-        ? { id: 'criterion-' + Date.now(), name: criterionForm.name.trim(), description: criterionForm.description.trim() || null, maxPoints, active: true }
-        : await apiFetch<InterviewCriterion>('/interview-criteria', {
-            method: 'POST',
-            body: JSON.stringify({ name: criterionForm.name.trim(), description: criterionForm.description.trim() || null, maxPoints }),
-          });
 
-      setCriteria((current) => [created, ...current]);
-      if (developmentMode) dispatch({ type: 'CREATE_CRITERION', criterion: created });
-      setCriterionForm(emptyCriterionForm);
-      setShowCriterionForm(false);
-      setSuccess('Criterion "' + created.name + '" was added.');
+    try {
+      let saved: InterviewCriterion;
+
+      if (developmentMode) {
+        saved = editing
+          ? {
+              ...selectedCriterion,
+              name: criterionForm.name.trim(),
+              description: criterionForm.description.trim() || null,
+              maxPoints,
+            }
+          : {
+              id: 'criterion-' + Date.now(),
+              name: criterionForm.name.trim(),
+              description: criterionForm.description.trim() || null,
+              maxPoints,
+              active: true,
+            };
+
+        setCriteria((current) => editing
+          ? current.map((item) => item.id === saved.id ? saved : item)
+          : [saved, ...current]);
+        dispatch({ type: editing ? 'UPDATE_CRITERION' : 'CREATE_CRITERION', criterion: saved });
+      } else if (editing) {
+        saved = await apiFetch<InterviewCriterion>('/interview-criteria/' + selectedCriterion.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: criterionForm.name.trim(),
+            description: criterionForm.description.trim() || null,
+            maxPoints,
+          }),
+        });
+        setCriteria((current) => current.map((item) => item.id === saved.id ? saved : item));
+      } else {
+        saved = await apiFetch<InterviewCriterion>('/interview-criteria', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: criterionForm.name.trim(),
+            description: criterionForm.description.trim() || null,
+            maxPoints,
+          }),
+        });
+        setCriteria((current) => [saved, ...current]);
+      }
+
+      setCriterionForm({ ...emptyCriterionForm });
+      setModalMode(null);
+      setSelectedCriterionId(null);
+      setSuccess(editing ? 'Criterion updated successfully.' : 'Criterion created successfully.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to create the criterion.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save the criterion.');
     } finally {
       setSaving(false);
     }
@@ -122,6 +285,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   };
 
   const createGroup = async () => {
+    if (!canManage) return;
     if (groupForm.name.trim().length < 2) {
       setError('Enter a criteria group name with at least 2 characters.');
       return;
@@ -131,36 +295,79 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
+    const selected = activeCriteria.filter((criterion) => groupForm.criterionIds.includes(criterion.id));
+    if (selected.length !== groupForm.criterionIds.length) {
+      setError('Every selected criterion must be active.');
+      return;
+    }
+
+    const editing = modalMode === 'EDIT_GROUP' && selectedGroup;
     setSaving(true);
     setError('');
+
     try {
-      const selected = activeCriteria.filter((criterion) => groupForm.criterionIds.includes(criterion.id));
-      const created = developmentMode
-        ? {
-            id: 'criterion-group-' + Date.now(),
-            name: groupForm.name.trim(),
-            category: groupForm.category.trim() || null,
-            description: groupForm.description.trim() || null,
-            active: true,
-            criteria: selected.map((criterion, index) => ({ criterionId: criterion.id, sortOrder: index, criterion })),
-          }
-        : await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups', {
-            method: 'POST',
-            body: JSON.stringify({
+      let saved: InterviewCriterionGroup;
+
+      if (developmentMode) {
+        saved = editing
+          ? {
+              ...selectedGroup,
               name: groupForm.name.trim(),
               category: groupForm.category.trim() || null,
               description: groupForm.description.trim() || null,
-              criterionIds: groupForm.criterionIds,
-            }),
-          });
+              criteria: selected.map((criterion, index) => ({
+                criterionId: criterion.id,
+                sortOrder: index,
+                criterion,
+              })),
+            }
+          : {
+              id: 'criterion-group-' + Date.now(),
+              name: groupForm.name.trim(),
+              category: groupForm.category.trim() || null,
+              description: groupForm.description.trim() || null,
+              active: true,
+              criteria: selected.map((criterion, index) => ({
+                criterionId: criterion.id,
+                sortOrder: index,
+                criterion,
+              })),
+            };
 
-      setGroups((current) => [created, ...current]);
-      if (developmentMode) dispatch({ type: 'CREATE_CRITERION_GROUP', group: created });
-      setGroupForm(emptyGroupForm);
-      setShowGroupForm(false);
-      setSuccess('Criteria group "' + created.name + '" was created with ' + created.criteria.length + ' criteria.');
+        setGroups((current) => editing
+          ? current.map((item) => item.id === saved.id ? saved : item)
+          : [saved, ...current]);
+        dispatch({ type: editing ? 'UPDATE_CRITERION_GROUP' : 'CREATE_CRITERION_GROUP', group: saved });
+      } else if (editing) {
+        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups/' + selectedGroup.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: groupForm.name.trim(),
+            category: groupForm.category.trim() || null,
+            description: groupForm.description.trim() || null,
+            criterionIds: groupForm.criterionIds,
+          }),
+        });
+        setGroups((current) => current.map((item) => item.id === saved.id ? saved : item));
+      } else {
+        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: groupForm.name.trim(),
+            category: groupForm.category.trim() || null,
+            description: groupForm.description.trim() || null,
+            criterionIds: groupForm.criterionIds,
+          }),
+        });
+        setGroups((current) => [saved, ...current]);
+      }
+
+      setGroupForm({ ...emptyGroupForm, criterionIds: [] });
+      setModalMode(null);
+      setSelectedGroupId(null);
+      setSuccess(editing ? 'Criteria group updated successfully.' : 'Criteria group created successfully.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to create the criteria group.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save the criteria group.');
     } finally {
       setSaving(false);
     }
@@ -191,12 +398,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
         description="Build reusable scoring criteria and group them by job type or trade category. Select a group when scheduling an interview so interviewers only score the criteria assigned to that interview."
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => { setShowGroupForm((value) => !value); setShowCriterionForm(false); setError(''); }}>
-              {showGroupForm ? 'Close group' : 'New group'}
-            </Button>
-            <Button onClick={() => { setShowCriterionForm((value) => !value); setShowGroupForm(false); setError(''); }}>
-              {showCriterionForm ? 'Close criterion' : 'New criterion'}
-            </Button>
+            <Button variant="secondary" onClick={openCreateCriterion}>New criterion</Button>
+            <Button onClick={openCreateGroup}>New group</Button>
           </div>
         }
       />
@@ -205,17 +408,21 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       {success && <StateMessage kind="success" title="Saved" description={success} />}
       {loading && <StateMessage kind="loading" title="Loading interview setup" description="Fetching criteria and reusable scoring groups." />}
 
-      {!loading && (showGroupForm || showCriterionForm) && (
-        <Card>
+      {!loading && (criterionFormOpen || groupFormOpen) && (
+        <CriteriaModal
+          title={groupFormOpen ? (modalMode === 'EDIT_GROUP' ? 'Edit criteria group' : 'New criteria group') : (modalMode === 'EDIT_CRITERION' ? 'Edit criterion' : 'New criterion')}
+          description={groupFormOpen ? 'Define the reusable scorecard and choose the criteria interviewers should score.' : 'Define one reusable scoring item for the shared interview library.'}
+          onClose={closeModal}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{showGroupForm ? 'Reusable scorecard' : 'Scoring library'}</p>
-              <h2 className="mt-1 text-base font-black text-slate-950">{showGroupForm ? 'Create criteria group' : 'Create scoring criterion'}</h2>
-              <p className="mt-1 text-xs text-slate-500">{showGroupForm ? 'Group the criteria that belong to a job type, trade, or interview stage.' : 'Create a criterion once and reuse it in multiple groups.'}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{groupFormOpen ? 'Reusable scorecard' : 'Scoring library'}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950">{groupFormOpen ? (modalMode === 'EDIT_GROUP' ? 'Edit criteria group' : 'Create criteria group') : (modalMode === 'EDIT_CRITERION' ? 'Edit scoring criterion' : 'Create scoring criterion')}</h2>
+              <p className="mt-1 text-xs text-slate-500">{groupFormOpen ? 'Group the criteria that belong to a job type, trade, or interview stage.' : 'Create a reusable criterion for scoring.'}</p>
             </div>
           </div>
 
-          {showCriterionForm && (
+          {criterionFormOpen && (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <FormField label="Criterion name">
                 <input className="field-input" value={criterionForm.name} onChange={(event) => setCriterionForm({ ...criterionForm, name: event.target.value })} placeholder="Technical skill" />
@@ -229,13 +436,13 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 </FormField>
               </div>
               <div className="md:col-span-2 flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setShowCriterionForm(false)}>Cancel</Button>
-                <Button disabled={saving} onClick={() => void createCriterion()}>{saving ? 'Saving…' : 'Create criterion'}</Button>
+                <Button variant="secondary" onClick={closeModal}>Cancel</Button>
+                <Button disabled={saving} onClick={() => void createCriterion()}>{saving ? 'Saving…' : modalMode === 'EDIT_CRITERION' ? 'Save changes' : 'Create criterion'}</Button>
               </div>
             </div>
           )}
 
-          {showGroupForm && (
+          {groupFormOpen && (
             <div className="mt-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField label="Group name">
@@ -282,12 +489,11 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setShowGroupForm(false)}>Cancel</Button>
-                <Button disabled={saving || !groupForm.criterionIds.length} onClick={() => void createGroup()}>{saving ? 'Saving…' : 'Create group'}</Button>
+                <Button variant="secondary" onClick={closeModal}>Cancel</Button>
+                <Button disabled={saving || !groupForm.criterionIds.length} onClick={() => void createGroup()}>{saving ? 'Saving…' : modalMode === 'EDIT_GROUP' ? 'Save changes' : 'Create group'}</Button>
               </div>
             </div>
           )}
-        </Card>
       )}
 
       {!loading && groups.length > 0 && (
@@ -319,17 +525,26 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p>
                         <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
                       </div>
-                      <Button size="sm" variant={group.active ? 'danger' : 'secondary'} onClick={() => void toggleGroup(group)}>
-                        {group.active ? 'Deactivate' : 'Activate'}
-                      </Button>
+                      {canManage && (
+                        <Button size="sm" variant={group.active ? 'danger' : 'secondary'} onClick={() => void toggleGroup(group)}>
+                          {group.active ? 'Deactivate' : 'Activate'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
-                    {group.criteria.map((item) => (
+                    {group.criteria.slice(0, 4).map((item) => (
                       <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
                         {item.criterion.name} · {item.criterion.maxPoints}
                       </span>
                     ))}
+                    {group.criteria.length > 4 && (
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">+{group.criteria.length - 4} more</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                    <Button size="sm" variant="ghost" onClick={() => openViewGroup(group)}>View details</Button>
+                    {canManage && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit</Button>}
                   </div>
                 </Card>
               );
@@ -352,7 +567,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             </div>
             <p className="text-xs text-slate-400">{criteria.length} criterion/criteria</p>
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {criteria.map((criterion) => (
               <Card key={criterion.id}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -379,8 +594,112 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
         </section>
       )}
 
-      {!loading && criteria.length === 0 && !showCriterionForm && (
+      {!loading && criteria.length === 0 && (
         <StateMessage kind="empty" title="No criteria configured" description="Add at least one active criterion before creating criteria groups or scoring interviews." />
+      )}
+
+
+      {modalMode === 'VIEW_CRITERION' && selectedCriterion && (
+        <CriteriaModal
+          title="Criterion details"
+          description="Review this reusable scoring item and the scorecards that currently use it."
+          onClose={closeModal}
+        >
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-black text-slate-950">{selectedCriterion.name}</h3>
+                <StatusPill value={selectedCriterion.active ? 'ACTIVE' : 'INACTIVE'} />
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-600">{selectedCriterion.description ?? 'No description provided.'}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Maximum score</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{selectedCriterion.maxPoints}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Used in scorecards</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{groups.filter((group) => group.criteria.some((item) => item.criterionId === selectedCriterion.id)).length}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-black text-slate-900">Scorecards using this criterion</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {groups.filter((group) => group.criteria.some((item) => item.criterionId === selectedCriterion.id)).map((group) => (
+                  <span key={group.id} className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600">{group.name}</span>
+                ))}
+              </div>
+            </div>
+
+            {canManage && (
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="secondary" onClick={closeModal}>Close</Button>
+                <Button onClick={() => openEditCriterion(selectedCriterion)}>Edit criterion</Button>
+              </div>
+            )}
+          </div>
+        </CriteriaModal>
+      )}
+
+      {modalMode === 'VIEW_GROUP' && selectedGroup && (
+        <CriteriaModal
+          title="Criteria group details"
+          description="Review the complete scorecard before assigning it to an interview."
+          onClose={closeModal}
+        >
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-black text-slate-950">{selectedGroup.name}</h3>
+                <StatusPill value={selectedGroup.active ? 'ACTIVE' : 'INACTIVE'} />
+              </div>
+              {selectedGroup.category && (
+                <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{selectedGroup.category}</p>
+              )}
+              <p className="mt-2 text-xs leading-5 text-slate-600">{selectedGroup.description ?? 'No description provided.'}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Criteria</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.criteria.length}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Maximum score</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0)}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.active ? 'Ready' : 'Inactive'}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-black text-slate-900">Criteria in this scorecard</p>
+              <div className="mt-2 space-y-2">
+                {selectedGroup.criteria.map((item, index) => (
+                  <div key={item.criterionId} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-extrabold text-slate-900">{index + 1}. {item.criterion.name}</p>
+                      <p className="mt-1 text-[10px] leading-4 text-slate-400">{item.criterion.description ?? 'No description.'}</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-black text-slate-700">{item.criterion.maxPoints} pts</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {canManage && (
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="secondary" onClick={closeModal}>Close</Button>
+                <Button onClick={() => openEditGroup(selectedGroup)}>Edit group</Button>
+              </div>
+            )}
+          </div>
+        </CriteriaModal>
       )}
     </section>
   );
