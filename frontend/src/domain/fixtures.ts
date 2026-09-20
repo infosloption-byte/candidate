@@ -26,15 +26,14 @@ export const jobs: Job[] = [
 ];
 
 export const interviewCriteria: InterviewCriterion[] = [
-  { id: 'criterion-1', agencyId: 'agency-1', name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, active: true },
-  { id: 'criterion-2', agencyId: 'agency-1', name: 'Experience', description: 'Relevant experience and project exposure.', maxPoints: 10, active: true },
-  { id: 'criterion-3', agencyId: 'agency-1', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, active: true },
+  { id: 'criterion-1', name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, active: true },
+  { id: 'criterion-2', name: 'Experience', description: 'Relevant experience and project exposure.', maxPoints: 10, active: true },
+  { id: 'criterion-3', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, active: true },
 ];
 
 export const interviewCriterionGroups = [
   {
     id: 'criterion-group-1',
-    agencyId: 'agency-1',
     name: 'Skilled Trades — Technical',
     category: 'Skilled Trades',
     description: 'Technical, experience, and communication checks for skilled-trade roles.',
@@ -47,7 +46,6 @@ export const interviewCriterionGroups = [
   },
   {
     id: 'criterion-group-2',
-    agencyId: 'agency-1',
     name: 'Initial Screening',
     category: 'Screening',
     description: 'Fast screening focused on experience and communication.',
