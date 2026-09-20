@@ -1110,7 +1110,8 @@ export const InterviewsPage = ({ role }: Props) => {
           {paginatedInterviews.map((interview) => {
             const candidate = candidateFor(interview);
             const job = jobFor(interview);
-            const alreadyEvaluated = Boolean(interview.evaluations?.length);
+            const ownEvaluation = interview.evaluations?.find((item) => item.interviewerId === user?.id);
+            const alreadyEvaluated = ownEvaluation?.status === 'SUBMITTED';
             const isAssignedInterviewer = role === 'INTERVIEWER';
             const currentStatus = candidate?.status;
 
@@ -1314,7 +1315,8 @@ export const InterviewsPage = ({ role }: Props) => {
                 {paginatedInterviews.map((interview) => {
                   const candidate = candidateFor(interview);
                   const job = jobFor(interview);
-                  const alreadyEvaluated = Boolean(interview.evaluations?.length);
+                  const ownEvaluation = interview.evaluations?.find((item) => item.interviewerId === user?.id);
+                  const alreadyEvaluated = ownEvaluation?.status === 'SUBMITTED';
                   const isAssignedInterviewer = role === 'INTERVIEWER';
                   return (
                     <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
