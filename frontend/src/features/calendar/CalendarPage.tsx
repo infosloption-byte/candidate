@@ -136,7 +136,7 @@ export const CalendarPage = ({ role }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [developmentMode, role, user.id, state.interviews, state.candidates, state.jobs, state.users]);
+  }, [developmentMode, role, user?.id, state.interviews, state.candidates, state.jobs, state.users]);
 
   const events = useMemo<CalendarEvent[]>(() => {
     const query = search.trim().toLowerCase();
