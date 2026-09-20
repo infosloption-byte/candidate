@@ -11,7 +11,7 @@ import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, User, UserRole } from '../../domain/types';
+import type { Agency, User } from '../../domain/types';
 
 interface AgencyRecord extends Agency {
   counts?: { users: number; jobs: number; candidates: number };
