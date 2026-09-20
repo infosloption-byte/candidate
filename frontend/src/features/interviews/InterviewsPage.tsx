@@ -761,7 +761,7 @@ export const InterviewsPage = ({ role }: Props) => {
       {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
 
       {!loading && visible.length > 0 && (
-        <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((interview) => {
             const candidate = candidateFor(interview);
             const job = jobFor(interview);
@@ -771,7 +771,8 @@ export const InterviewsPage = ({ role }: Props) => {
 
             return (
               <Card key={interview.id}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex h-full flex-col">
+                  <div className="flex flex-col gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
@@ -782,17 +783,18 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" className="px-3" onClick={() => void openInterviewDetails(interview)}>Open</Button>
+                  </div>
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-4">
+                    <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
-                        <Button size="sm" variant="secondary" className="px-3" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
-                        <Button size="sm" variant="secondary" className="px-3" title="Mark as no show" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                        <Button size="sm" variant="danger" className="px-3" title="Cancel interview" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                        <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
+                        <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" title="Mark as no show" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" title="Cancel interview" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
                       </>
                     )}
                     {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
-                      <Button size="sm" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                      <Button size="sm" className="min-h-8 rounded-lg px-2 py-1 text-[9px]" onClick={() => startEvaluation(interview)}>Evaluate</Button>
                     )}
                   </div>
                 </div>
