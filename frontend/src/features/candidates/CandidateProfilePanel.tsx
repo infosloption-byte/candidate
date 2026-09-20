@@ -19,6 +19,7 @@ interface Props {
   role: UserRole;
   apiEnabled: boolean;
   initialHistory?: CandidateProfileHistory;
+  initialHistoryLoading?: boolean;
   minimized: boolean;
   maximized: boolean;
   onMinimize: () => void;
@@ -63,6 +64,7 @@ export const CandidateProfilePanel = ({
   role,
   apiEnabled,
   initialHistory,
+  initialHistoryLoading = false,
   minimized,
   maximized,
   onMinimize,
@@ -72,17 +74,18 @@ export const CandidateProfilePanel = ({
 }: Props) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [history, setHistory] = useState<CandidateProfileHistory>(initialHistory ?? { statusHistory: [], interviews: [], auditEvents: [] });
-  const [loading, setLoading] = useState(Boolean(candidate && apiEnabled && !initialHistory));
+  const [loading, setLoading] = useState(Boolean(candidate && apiEnabled && (!initialHistory || initialHistoryLoading)));
   const [error, setError] = useState('');
 
   useEffect(() => {
     setActiveTab('overview');
     setError('');
     setHistory(initialHistory ?? { statusHistory: [], interviews: [], auditEvents: [] });
-  }, [candidate?.id, initialHistory]);
+    setLoading(Boolean(candidate && apiEnabled && (!initialHistory || initialHistoryLoading)));
+  }, [apiEnabled, candidate?.id, initialHistory, initialHistoryLoading]);
 
   useEffect(() => {
-    if (!candidate || !apiEnabled || initialHistory) return;
+    if (!candidate || !apiEnabled || initialHistoryLoading || initialHistory) return;
     let cancelled = false;
     setLoading(true);
     setError('');
@@ -99,7 +102,7 @@ export const CandidateProfilePanel = ({
     return () => {
       cancelled = true;
     };
-  }, [apiEnabled, candidate?.id, initialHistory]);
+  }, [apiEnabled, candidate?.id, initialHistory, initialHistoryLoading]);
 
   const timeline = useMemo(() => {
     if (!candidate) return [];
@@ -121,6 +124,16 @@ export const CandidateProfilePanel = ({
         actor: item.actor?.name ?? 'System',
       })),
       ...history.interviews.flatMap((interview) => {
+        const evaluationEvents = interview.evaluations
+          .filter((evaluation) => evaluation.status === 'SUBMITTED' && evaluation.submittedAt)
+          .map((evaluation) => ({
+            id: 'evaluation-submitted-' + evaluation.id,
+            date: evaluation.submittedAt!,
+            kind: 'evaluation' as const,
+            title: 'Interview scorecard submitted',
+            detail: label(interview.type) + ' interview · ' + (evaluation.interviewer?.name ?? 'Interviewer'),
+            actor: evaluation.interviewer?.name ?? 'Interviewer',
+          }));
         const events = [{
           id: 'interview-created-' + interview.id,
           date: interview.createdAt ?? interview.scheduledAt,
@@ -149,7 +162,7 @@ export const CandidateProfilePanel = ({
             actor: 'Interview workflow',
           });
         }
-        return events;
+        return [...events, ...evaluationEvents];
       }),
     ];
     return items.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
@@ -330,12 +343,15 @@ export const CandidateProfilePanel = ({
                     {score.evaluations.length > 0 ? (
                       <div className="mt-4 space-y-3">
                         <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Evaluator scorecards</p>
-                        {score.totals.map(({ evaluation, total, max }) => (
+                        {interview.evaluations.map((evaluation) => {
+                          const total = evaluation.scores.reduce((sum, item) => sum + item.points, 0);
+                          const max = evaluation.scores.reduce((sum, item) => sum + (item.criterion?.maxPoints ?? 0), 0);
+                          return (
                           <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
-                                <p className="text-xs font-black text-slate-950">{evaluation.interviewer?.name ?? 'Interviewer'}</p>
-                                <p className="mt-1 text-[10px] text-slate-400">{evaluation.interviewer?.email ?? evaluation.interviewerId} · Submitted {formatDate(evaluation.submittedAt)}</p>
+                                <div className="flex items-center gap-2"><p className="text-xs font-black text-slate-950">{evaluation.interviewer?.name ?? 'Interviewer'}</p><StatusPill value={evaluation.status} /></div>
+                                <p className="mt-1 text-[10px] text-slate-400">{evaluation.interviewer?.email ?? evaluation.interviewerId} · {evaluation.status === 'SUBMITTED' ? 'Submitted ' + formatDate(evaluation.submittedAt) : 'Last updated ' + formatDate(evaluation.updatedAt)}</p>
                               </div>
                               <p className="text-sm font-black text-cyan-700">{total} / {max} {max ? '(' + Math.round((total / max) * 100) + '%)' : ''}</p>
                             </div>
@@ -351,10 +367,11 @@ export const CandidateProfilePanel = ({
 
                             {evaluation.comments && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{evaluation.comments}</p>}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
-                      <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No submitted scorecard is available for this interview.</div>
+                      <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No evaluator scorecard is available for this interview.</div>
                     )}
                   </Card>
                 );
