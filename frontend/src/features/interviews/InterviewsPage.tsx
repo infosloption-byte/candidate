@@ -14,7 +14,11 @@ import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
-interface Props { role: UserRole; }
+interface Props {
+  role: UserRole;
+  initialInterviewId?: string | null;
+  onInitialInterviewHandled?: () => void;
+}
 
 type InterviewRecord = Interview;
 
@@ -55,7 +59,7 @@ interface InterviewDetail extends Omit<Interview, 'evaluations'> {
   }>;
 }
 
-export const InterviewsPage = ({ role }: Props) => {
+export const InterviewsPage = ({ role, initialInterviewId = null, onInitialInterviewHandled }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
@@ -791,6 +795,14 @@ export const InterviewsPage = ({ role }: Props) => {
       setDetailLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialInterviewId || detailFor || showScheduleForm) return;
+    const target = interviews.find((item) => item.id === initialInterviewId);
+    if (!target) return;
+    void openInterviewDetails(target);
+    onInitialInterviewHandled?.();
+  }, [initialInterviewId, interviews, detailFor, showScheduleForm, developmentMode, onInitialInterviewHandled]);
 
   const closeInterviewDetails = () => {
     setDetailFor(null);
