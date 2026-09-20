@@ -193,6 +193,19 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   }, [agencyId, developmentMode, role, state.users, state.interviewCriteria, state.interviewCriterionGroups]);
 
+  const scheduleBucket = (interview: Interview): 'upcoming' | 'current' | 'past' => {
+    const start = new Date(interview.scheduledAt).getTime();
+    const end = start + interview.durationMins * 60_000;
+    if ((interview.status === 'SCHEDULED' || interview.status === 'IN_PROGRESS') && now >= start && now <= end) return 'current';
+    return now < start ? 'upcoming' : 'past';
+  };
+
+  useEffect(() => {
+    if (role !== 'INTERVIEWER') return;
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [role]);
+
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     const base = interviews.filter((interview) => {
@@ -214,7 +227,8 @@ export const InterviewsPage = ({ role }: Props) => {
       ].some((value) => value.toLowerCase().includes(query));
       const matchesStatus = !statusFilter || interview.status === statusFilter;
       const matchesType = !typeFilter || interview.type === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesSchedule = scheduleFilter === 'all' || role !== 'INTERVIEWER' || scheduleBucket(interview) === scheduleFilter;
+      return matchesSearch && matchesStatus && matchesType && matchesSchedule;
     });
 
     return [...base].sort((left, right) => {
@@ -226,7 +240,7 @@ export const InterviewsPage = ({ role }: Props) => {
       if (sortBy === 'status') result = left.status.localeCompare(right.status, undefined, { sensitivity: 'base' });
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [candidates, interviews, jobs, role, search, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [candidates, interviews, jobs, now, role, scheduleFilter, search, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const interviewTotalPages = Math.max(1, Math.ceil(visible.length / INTERVIEWS_PAGE_SIZE));
   const activeInterviewPage = Math.min(interviewPage, interviewTotalPages);
@@ -237,7 +251,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
   useEffect(() => {
     setInterviewPage(1);
-  }, [search, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
