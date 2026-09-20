@@ -188,9 +188,34 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
     if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this interview.' } });
 
-    const safeInterview = user.role === 'INTERVIEWER'
-      ? { ...interview, evaluations: interview.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED' || evaluation.interviewerId === user.id) }
-      : interview;
+    const visibleEvaluations = user.role === 'INTERVIEWER'
+      ? interview.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED' || evaluation.interviewerId === user.id)
+      : interview.evaluations;
+    const submittedEvaluations = interview.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED');
+    const maxPoints = interview.criterionAssignments.reduce((sum, assignment) => sum + assignment.maxPoints, 0);
+    const interviewerTotals = submittedEvaluations.map((evaluation) => ({
+      interviewerId: evaluation.interviewerId,
+      interviewer: evaluation.interviewer,
+      totalPoints: evaluation.scores.reduce((sum, score) => sum + score.points, 0),
+      maxPoints,
+      percentage: maxPoints
+        ? Math.round((evaluation.scores.reduce((sum, score) => sum + score.points, 0) / maxPoints) * 10000) / 100
+        : 0,
+    }));
+    const averagePercentage = interviewerTotals.length
+      ? Math.round((interviewerTotals.reduce((sum, item) => sum + item.percentage, 0) / interviewerTotals.length) * 100) / 100
+      : null;
+    const safeInterview = {
+      ...interview,
+      evaluations: visibleEvaluations,
+      finalScore: {
+        averagePercentage,
+        submittedInterviewers: submittedEvaluations.length,
+        requiredInterviewers: interview.panel.length,
+        complete: interview.status === 'COMPLETED',
+        interviewerTotals,
+      },
+    };
 
     return reply.send({ success: true, data: safeInterview });
   });
