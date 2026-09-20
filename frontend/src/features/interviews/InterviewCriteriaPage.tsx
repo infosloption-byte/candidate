@@ -205,6 +205,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       setError('The selected criterion is no longer available.');
       return;
     }
+    const existingCriterion = editingCriterion;
     setSaving(true);
     setError('');
 
@@ -212,27 +213,37 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       let saved: InterviewCriterion;
 
       if (developmentMode) {
-        saved = editing
-          ? {
-              ...editingCriterion,
-              name: criterionForm.name.trim(),
-              description: criterionForm.description.trim() || null,
-              maxPoints,
-            }
-          : {
-              id: 'criterion-' + Date.now(),
-              name: criterionForm.name.trim(),
-              description: criterionForm.description.trim() || null,
-              maxPoints,
-              active: true,
-            };
+        if (editing) {
+          if (!existingCriterion) {
+            setError('The selected criterion is no longer available.');
+            return;
+          }
+          saved = {
+            ...existingCriterion,
+            name: criterionForm.name.trim(),
+            description: criterionForm.description.trim() || null,
+            maxPoints,
+          };
+        } else {
+          saved = {
+            id: 'criterion-' + Date.now(),
+            name: criterionForm.name.trim(),
+            description: criterionForm.description.trim() || null,
+            maxPoints,
+            active: true,
+          };
+        }
 
         setCriteria((current) => editing
           ? current.map((item) => item.id === saved.id ? saved : item)
           : [saved, ...current]);
         dispatch({ type: editing ? 'UPDATE_CRITERION' : 'CREATE_CRITERION', criterion: saved });
       } else if (editing) {
-        saved = await apiFetch<InterviewCriterion>('/interview-criteria/' + editingCriterion.id, {
+        if (!existingCriterion) {
+          setError('The selected criterion is no longer available.');
+          return;
+        }
+        saved = await apiFetch<InterviewCriterion>('/interview-criteria/' + existingCriterion.id, {
           method: 'PATCH',
           body: JSON.stringify({
             name: criterionForm.name.trim(),
@@ -313,6 +324,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       setError('The selected criteria group is no longer available.');
       return;
     }
+    const existingGroup = editingGroup;
     setSaving(true);
     setError('');
 
@@ -320,37 +332,47 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       let saved: InterviewCriterionGroup;
 
       if (developmentMode) {
-        saved = editing
-          ? {
-              ...editingGroup,
-              name: groupForm.name.trim(),
-              category: groupForm.category.trim() || null,
-              description: groupForm.description.trim() || null,
-              criteria: selected.map((criterion, index) => ({
-                criterionId: criterion.id,
-                sortOrder: index,
-                criterion,
-              })),
-            }
-          : {
-              id: 'criterion-group-' + Date.now(),
-              name: groupForm.name.trim(),
-              category: groupForm.category.trim() || null,
-              description: groupForm.description.trim() || null,
-              active: true,
-              criteria: selected.map((criterion, index) => ({
-                criterionId: criterion.id,
-                sortOrder: index,
-                criterion,
-              })),
-            };
+        if (editing) {
+          if (!existingGroup) {
+            setError('The selected criteria group is no longer available.');
+            return;
+          }
+          saved = {
+            ...existingGroup,
+            name: groupForm.name.trim(),
+            category: groupForm.category.trim() || null,
+            description: groupForm.description.trim() || null,
+            criteria: selected.map((criterion, index) => ({
+              criterionId: criterion.id,
+              sortOrder: index,
+              criterion,
+            })),
+          };
+        } else {
+          saved = {
+            id: 'criterion-group-' + Date.now(),
+            name: groupForm.name.trim(),
+            category: groupForm.category.trim() || null,
+            description: groupForm.description.trim() || null,
+            active: true,
+            criteria: selected.map((criterion, index) => ({
+              criterionId: criterion.id,
+              sortOrder: index,
+              criterion,
+            })),
+          };
+        }
 
         setGroups((current) => editing
           ? current.map((item) => item.id === saved.id ? saved : item)
           : [saved, ...current]);
         dispatch({ type: editing ? 'UPDATE_CRITERION_GROUP' : 'CREATE_CRITERION_GROUP', group: saved });
       } else if (editing) {
-        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups/' + editingGroup.id, {
+        if (!existingGroup) {
+          setError('The selected criteria group is no longer available.');
+          return;
+        }
+        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups/' + existingGroup.id, {
           method: 'PATCH',
           body: JSON.stringify({
             name: groupForm.name.trim(),
