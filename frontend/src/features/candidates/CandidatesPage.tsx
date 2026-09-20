@@ -13,7 +13,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
-import { CandidateProfilePanel } from './CandidateProfilePanel';
+import { CandidateProfilePanel, type CandidateProfileHistory } from './CandidateProfilePanel';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface Props { role: UserRole; }
@@ -100,7 +100,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
-  const [history, setHistory] = useState<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[]; auditEvents: CandidateAuditEvent[] }>({ statusHistory: [], interviews: [], auditEvents: [] });
+  const [history, setHistory] = useState<CandidateProfileHistory>({ statusHistory: [], interviews: [], auditEvents: [] });
   const [loading, setLoading] = useState(!developmentMode);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1136,6 +1136,9 @@ export const CandidatesPage = ({ role }: Props) => {
             onRestore={() => { setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}
             onMaximize={() => { setProfilePanelMinimized(false); setProfilePanelMaximized((value) => !value); }}
             onClose={() => { setProfilePanelOpen(false); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}
+            onCandidateUpdated={(updated) => {
+              setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
+            }}
           />
 
           {candidate && selectedCandidateId && (
