@@ -23,13 +23,12 @@ export interface InterviewDetail extends Omit<Interview, 'evaluations'> {
 }
 
 interface Props {
-  detail: InterviewDetail | null;
-  loading?: boolean;
+  detail: InterviewDetail;
   open: boolean;
   onClose: () => void;
 }
 
-export const InterviewDetailsModal = ({ detail, loading = false, open, onClose }: Props) => {
+export const InterviewDetailsModal = ({ detail, open, onClose }: Props) => {
   const modalRef = useFocusTrap<HTMLDivElement>({
     enabled: open,
     onEscape: onClose,
@@ -49,8 +48,6 @@ export const InterviewDetailsModal = ({ detail, loading = false, open, onClose }
               </div>
               <div className="flex flex-wrap items-center gap-2"><StatusPill value={detail.status} /><Button size="sm" variant="secondary" onClick={onClose}>Close</Button></div>
             </div>
-
-            {loading && <div className="mt-5"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
 
             <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Passport number</p><p className="mt-2 break-all text-sm font-bold text-slate-900">{detail.candidate?.passportNumber ?? 'Not provided'}</p></div>
