@@ -528,7 +528,18 @@ export const InterviewsPage = ({ role }: Props) => {
     if (developmentMode) dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
   };
 
-  const initialiseEvaluation = (interview: InterviewRecord, assignments: InterviewCriterionAssignment[], evaluation?: InterviewRecord['evaluations'] extends Array<infer E> ? E : never | null) => {
+  const initialiseEvaluation = (
+    interview: InterviewRecord,
+    assignments: InterviewCriterionAssignment[],
+    evaluation?: {
+      id: string;
+      interviewerId: string;
+      status: 'DRAFT' | 'SUBMITTED';
+      comments: string | null;
+      submittedAt: string | null;
+      scores: Array<{ criterionId: string; points: number }>;
+    } | null,
+  ) => {
     const own = evaluation ?? interview.evaluations?.find((item) => item.interviewerId === user?.id);
     const drafts: Record<string, string> = {};
     for (const assignment of assignments) {
@@ -748,6 +759,18 @@ export const InterviewsPage = ({ role }: Props) => {
       document.body.style.overflow = previousOverflow;
     };
   }, [interviewDetailModalOpen, scheduleModalOpen]);
+
+  const scheduleCounts = useMemo(() => {
+    if (role !== 'INTERVIEWER') return { upcoming: 0, current: 0, past: 0 };
+    return interviews.reduce(
+      (counts, interview) => {
+        const bucket = scheduleBucket(interview);
+        counts[bucket] += 1;
+        return counts;
+      },
+      { upcoming: 0, current: 0, past: 0 },
+    );
+  }, [interviews, now, role]);
 
   const candidateFor = (interview: InterviewRecord) =>
     interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
