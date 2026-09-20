@@ -589,7 +589,7 @@ export const InterviewsPage = ({ role }: Props) => {
         </div>
 
         <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex min-w-0 items-center gap-1.5">
+          <div className="relative flex min-w-0 items-center gap-2">
             <span className="field-label shrink-0">Sort</span>
             <button
               type="button"
@@ -597,7 +597,7 @@ export const InterviewsPage = ({ role }: Props) => {
               aria-label="Choose sort field"
               aria-haspopup="menu"
               aria-expanded={sortMenuOpen}
-              className="field-input flex min-w-0 items-center gap-2 py-2 text-left"
+              className="flex h-10 min-w-32 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100"
               onClick={() => setSortMenuOpen((value) => !value)}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -606,7 +606,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 <path d="M17 20V4" />
                 <path d="m14 17 3 3 3-3" />
               </svg>
-              <span className="min-w-0 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
+              <span className="min-w-0 flex-1 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
             </button>
             {sortMenuOpen && (
@@ -633,7 +633,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 ))}
               </div>
             )}
-            <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
+            <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
                 {sortDirection === 'asc'
                   ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
