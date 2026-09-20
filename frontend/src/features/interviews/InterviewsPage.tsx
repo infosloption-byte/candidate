@@ -1406,10 +1406,10 @@ export const InterviewsPage = ({ role }: Props) => {
                         <h4 className="mt-1 text-sm font-black text-slate-950">Record the candidate outcome</h4>
                         <p className="mt-1 text-[10px] leading-4 text-slate-500">The final score is calculated from the interviewer panel. Record the decision here so the system keeps who made it.</p>
                       </div>
-                      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <FormField label="Status">
                           <select
-                            className="field-input"
+                            className="field-input h-11"
                             value={statusDrafts[activeCandidate.id] ?? ''}
                             onChange={(event) => setStatusDrafts((current) => ({ ...current, [activeCandidate.id]: event.target.value as CandidateStatus }))}
                           >
@@ -1419,15 +1419,21 @@ export const InterviewsPage = ({ role }: Props) => {
                         </FormField>
                         <FormField label="Reason" hint="Optional">
                           <input
-                            className="field-input"
+                            className="field-input h-11"
                             value={statusReasons[activeCandidate.id] ?? ''}
                             onChange={(event) => setStatusReasons((current) => ({ ...current, [activeCandidate.id]: event.target.value }))}
                             placeholder="Reason or decision note"
                           />
                         </FormField>
-                        <Button disabled={!statusDrafts[activeCandidate.id]} onClick={() => void updateCandidateStatus(activeCandidate)}>
-                          Update status
-                        </Button>
+                        <div className="sm:col-span-2">
+                          <Button
+                            className="min-h-11 w-full sm:w-auto"
+                            disabled={!statusDrafts[activeCandidate.id]}
+                            onClick={() => void updateCandidateStatus(activeCandidate)}
+                          >
+                            Update status
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
