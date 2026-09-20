@@ -4,7 +4,8 @@ export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 export type OnboardingStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED';
 export type CandidateSource = 'AGENCY_ADDED' | 'SELF_ONBOARDED' | 'BULK_IMPORTED';
 export type CandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED' | 'INACTIVE';
-export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+export type InterviewStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+export type InterviewEvaluationStatus = 'DRAFT' | 'SUBMITTED';
 export type InterviewType = 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
 
 export interface Agency {
@@ -79,6 +80,20 @@ export interface InterviewCriterion {
   active: boolean;
 }
 
+export interface InterviewCriterionGroup {
+  id: string;
+  agencyId: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  active: boolean;
+  criteria: Array<{
+    criterionId: string;
+    sortOrder: number;
+    criterion: InterviewCriterion;
+  }>;
+}
+
 export interface InterviewScore {
   criterionId: string;
   criterion?: InterviewCriterion;
@@ -89,8 +104,21 @@ export interface InterviewEvaluation {
   id: string;
   interviewId: string;
   interviewerId: string;
+  status: InterviewEvaluationStatus;
   comments: string | null;
+  submittedAt: string | null;
   scores: InterviewScore[];
+}
+
+export interface InterviewCriterionAssignment {
+  id: string;
+  interviewId?: string;
+  criterionId: string;
+  groupId: string | null;
+  name: string;
+  description: string | null;
+  maxPoints: number;
+  sortOrder: number;
 }
 
 export interface Interview {
@@ -103,6 +131,11 @@ export interface Interview {
   durationMins: number;
   location: string | null;
   panelUserIds: string[];
+  criterionGroupId?: string | null;
+  criterionGroup?: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'> | null;
+  criterionAssignments?: InterviewCriterionAssignment[];
+  startedAt?: string | null;
+  completedAt?: string | null;
   candidate?: Pick<Candidate, 'id' | 'name' | 'reference' | 'profession' | 'email' | 'status'>;
   job?: Pick<Job, 'id' | 'title' | 'location' | 'status'> | null;
   panel?: Array<{
@@ -110,7 +143,7 @@ export interface Interview {
     assignedAt: string;
     user: Pick<User, 'id' | 'name' | 'email' | 'active'>;
   }>;
-  evaluations?: InterviewEvaluation[];
+  evaluations?: Array<InterviewEvaluation & { interviewer?: Pick<User, 'id' | 'name' | 'email'> }>;
 }
 
 export interface CandidateStatusHistory {
