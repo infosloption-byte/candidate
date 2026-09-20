@@ -198,7 +198,12 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
-    const editing = modalMode === 'EDIT_CRITERION' && selectedCriterion !== null;
+    const editing = modalMode === 'EDIT_CRITERION';
+    const editingCriterion = editing ? selectedCriterion : null;
+    if (editing && !editingCriterion) {
+      setError('The selected criterion is no longer available.');
+      return;
+    }
     setSaving(true);
     setError('');
 
@@ -208,7 +213,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       if (developmentMode) {
         saved = editing
           ? {
-              ...selectedCriterion,
+              ...editingCriterion,
               name: criterionForm.name.trim(),
               description: criterionForm.description.trim() || null,
               maxPoints,
@@ -226,7 +231,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           : [saved, ...current]);
         dispatch({ type: editing ? 'UPDATE_CRITERION' : 'CREATE_CRITERION', criterion: saved });
       } else if (editing) {
-        saved = await apiFetch<InterviewCriterion>('/interview-criteria/' + selectedCriterion.id, {
+        saved = await apiFetch<InterviewCriterion>('/interview-criteria/' + editingCriterion.id, {
           method: 'PATCH',
           body: JSON.stringify({
             name: criterionForm.name.trim(),
@@ -301,7 +306,12 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
-    const editing = modalMode === 'EDIT_GROUP' && selectedGroup !== null;
+    const editing = modalMode === 'EDIT_GROUP';
+    const editingGroup = editing ? selectedGroup : null;
+    if (editing && !editingGroup) {
+      setError('The selected criteria group is no longer available.');
+      return;
+    }
     setSaving(true);
     setError('');
 
@@ -311,7 +321,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       if (developmentMode) {
         saved = editing
           ? {
-              ...selectedGroup,
+              ...editingGroup,
               name: groupForm.name.trim(),
               category: groupForm.category.trim() || null,
               description: groupForm.description.trim() || null,
@@ -339,7 +349,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           : [saved, ...current]);
         dispatch({ type: editing ? 'UPDATE_CRITERION_GROUP' : 'CREATE_CRITERION_GROUP', group: saved });
       } else if (editing) {
-        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups/' + selectedGroup.id, {
+        saved = await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups/' + editingGroup.id, {
           method: 'PATCH',
           body: JSON.stringify({
             name: groupForm.name.trim(),
