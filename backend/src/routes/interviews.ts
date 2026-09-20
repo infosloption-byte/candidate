@@ -29,6 +29,21 @@ const interviewInclude = {
       user: { select: { id: true, name: true, email: true, role: true, active: true } },
     },
   },
+  criterionGroup: {
+    select: { id: true, name: true, category: true, description: true, active: true },
+  },
+  criterionAssignments: {
+    orderBy: { sortOrder: 'asc' as const },
+    select: {
+      id: true,
+      criterionId: true,
+      groupId: true,
+      name: true,
+      description: true,
+      maxPoints: true,
+      sortOrder: true,
+    },
+  },
 } as const;
 
 const canManage = (role: string, agencyId: string | null, interviewAgencyId: string): boolean =>
@@ -41,6 +56,42 @@ const getInterviewers = async (ids: string[], agencyId: string) => {
     select: { id: true },
   });
 };
+
+const getCriterionGroup = async (groupId: string, agencyId: string) => {
+  const group = await getPrisma().interviewCriterionGroup.findFirst({
+    where: { id: groupId, agencyId, active: true },
+    include: {
+      criteria: {
+        orderBy: { sortOrder: 'asc' },
+        include: {
+          criterion: {
+            select: { id: true, name: true, description: true, maxPoints: true, active: true },
+          },
+        },
+      },
+    },
+  });
+  if (!group) return null;
+  const activeCriteria = group.criteria.filter((item) => item.criterion.active);
+  if (!activeCriteria.length) return null;
+  return { group, criteria: activeCriteria };
+};
+
+const criterionAssignmentData = (
+  criteria: Array<{
+    criterionId: string;
+    sortOrder: number;
+    criterion: { id: string; name: string; description: string | null; maxPoints: number };
+  }>,
+  groupId: string,
+) => criteria.map((item) => ({
+  criterionId: item.criterion.id,
+  groupId,
+  name: item.criterion.name,
+  description: item.criterion.description,
+  maxPoints: item.criterion.maxPoints,
+  sortOrder: item.sortOrder,
+}));
 
 const hasScheduleConflict = async (
   interviewerIds: string[],
@@ -194,6 +245,14 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the candidate agency.' } });
       }
 
+      if (!request.body.criterionGroupId) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
+      }
+      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+      if (!criterionSetup) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
+      }
+
       const scheduledAt = new Date(request.body.scheduledAt!);
       const durationMins = request.body.durationMins ?? 30;
       if (scheduledAt.getTime() <= Date.now()) {
@@ -232,7 +291,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
               durationMins,
               location: request.body.location?.trim() || null,
               notes: request.body.notes?.trim() || null,
+              criterionGroupId: criterionSetup.group.id,
               panel: { create: interviewerIds.map((userId) => ({ userId })) },
+              criterionAssignments: {
+                create: criterionAssignmentData(criterionSetup.criteria, criterionSetup.group.id),
+              },
             },
             include: interviewInclude,
           });
@@ -321,6 +384,14 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the candidate agency.' } });
       }
 
+      if (!request.body.criterionGroupId) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
+      }
+      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+      if (!criterionSetup) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
+      }
+
       const scheduledAt = new Date(request.body.scheduledAt!);
       const durationMins = request.body.durationMins ?? 30;
       if (scheduledAt.getTime() <= Date.now()) {
@@ -340,7 +411,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             durationMins,
             location: request.body.location?.trim() || null,
             notes: request.body.notes?.trim() || null,
+            criterionGroupId: criterionSetup.group.id,
             panel: { create: interviewerIds.map((userId) => ({ userId })) },
+            criterionAssignments: {
+              create: criterionAssignmentData(criterionSetup.criteria, criterionSetup.group.id),
+            },
           },
           include: interviewInclude,
         });
@@ -419,10 +494,22 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const nextDuration = request.body.durationMins ?? existing.durationMins;
       const nextPanel = request.body.interviewerIds ?? existing.panel.map((item) => item.userId);
       const nextStatus = request.body.status ?? existing.status;
+      const nextCriterionGroupId = request.body.criterionGroupId ?? null;
 
       if (request.body.status !== undefined && !['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(request.body.status)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview can only be scheduled, cancelled, or marked as a no-show from the scheduler.' } });
       }
+      let nextCriterionSetup = null;
+      if (request.body.criterionGroupId !== undefined) {
+        if (!request.body.criterionGroupId) {
+          return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group.' } });
+        }
+        nextCriterionSetup = await getCriterionGroup(request.body.criterionGroupId, agencyId);
+        if (!nextCriterionSetup) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
+        }
+      }
+
       if (nextStatus === 'SCHEDULED') {
         if (!nextPanel.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'At least one interviewer is required.' } });
         if (nextScheduledAt.getTime() <= Date.now()) return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
@@ -442,6 +529,9 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (request.body.interviewerIds !== undefined) {
           await tx.interviewParticipant.deleteMany({ where: { interviewId: existing.id } });
         }
+        if (request.body.criterionGroupId !== undefined) {
+          await tx.interviewCriterionAssignment.deleteMany({ where: { interviewId: existing.id } });
+        }
 
         const updated = await tx.interview.update({
           where: { id: existing.id },
@@ -452,6 +542,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             ...(request.body.durationMins !== undefined ? { durationMins: nextDuration } : {}),
             ...(request.body.location !== undefined ? { location: request.body.location?.trim() || null } : {}),
             ...(request.body.notes !== undefined ? { notes: request.body.notes?.trim() || null } : {}),
+            ...(request.body.criterionGroupId !== undefined ? {
+              criterionGroupId: nextCriterionSetup!.group.id,
+              criterionAssignments: { create: criterionAssignmentData(nextCriterionSetup!.criteria, nextCriterionSetup!.group.id) },
+            } : {}),
             ...(request.body.interviewerIds !== undefined ? { panel: { create: [...new Set(nextPanel)].map((userId) => ({ userId })) } } : {}),
           },
           include: interviewInclude,
