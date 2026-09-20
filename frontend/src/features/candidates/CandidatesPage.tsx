@@ -1171,7 +1171,7 @@ export const CandidatesPage = ({ role }: Props) => {
           )}
 
           <CandidateProfilePanel
-            candidate={profilePanelOpen ? candidate : null}
+            candidate={profilePanelOpen ? candidate ?? null : null}
             role={role}
             apiEnabled={!developmentMode}
             initialHistory={history}
