@@ -502,6 +502,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.status !== undefined && !['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(request.body.status)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview can only be scheduled, cancelled, or marked as a no-show from the scheduler.' } });
       }
+      if (request.body.criterionGroupId !== undefined && existing.status !== 'SCHEDULED') {
+        return reply.code(409).send({ success: false, error: { code: 'CRITERION_GROUP_LOCKED', message: 'The scoring criteria group cannot be changed after the interview has started or completed.' } });
+      }
+
       let nextCriterionSetup = null;
       if (request.body.criterionGroupId !== undefined) {
         if (!request.body.criterionGroupId) {
