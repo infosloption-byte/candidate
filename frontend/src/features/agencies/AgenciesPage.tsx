@@ -27,9 +27,14 @@ const emptyUser: UserForm = { name: '', email: '', password: '', role: 'AGENCY' 
 
 export const AgenciesPage = () => {
   const { user, developmentMode } = useAuth();
+  const { state } = useRecruitment();
   const [agencies, setAgencies] = useState<AgencyRecord[]>(developmentMode ? fixtureAgencies : []);
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [globalInterviewers, setGlobalInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.agencyId === null) : []);
+  const [showGlobalInterviewerForm, setShowGlobalInterviewerForm] = useState(false);
+  const [globalInterviewerForm, setGlobalInterviewerForm] = useState({ name: '', email: '', password: '' });
+  const [loadingGlobalInterviewers, setLoadingGlobalInterviewers] = useState(false);
   const [showAgencyForm, setShowAgencyForm] = useState(false);
   const [editingAgencyId, setEditingAgencyId] = useState<string | null>(null);
   const [showUserForm, setShowUserForm] = useState(false);
@@ -68,6 +73,30 @@ export const AgenciesPage = () => {
       cancelled = true;
     };
   }, [developmentMode, user?.id]);
+
+  useEffect(() => {
+    if (developmentMode) {
+      setGlobalInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.agencyId === null));
+      setLoadingGlobalInterviewers(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingGlobalInterviewers(true);
+
+    apiFetch<User[]>('/interviewers/global')
+      .then((result) => {
+        if (!cancelled) setGlobalInterviewers(result);
+      })
+      .catch((requestError: unknown) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load global interviewers.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingGlobalInterviewers(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [developmentMode, state.users]);
 
   useEffect(() => {
     if (!selectedAgencyId || developmentMode) {
@@ -168,6 +197,69 @@ export const AgenciesPage = () => {
       setSuccess('User "' + item.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the user.');
+    }
+  };
+
+  const createGlobalInterviewer = async () => {
+    if (!globalInterviewerForm.name.trim() || !globalInterviewerForm.email.trim() || globalInterviewerForm.password.length < 8) {
+      setError('Global interviewer name, email, and an 8+ character password are required.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      if (developmentMode) {
+        const created: User = {
+          id: 'dev-global-interviewer-' + Date.now(),
+          agencyId: null,
+          candidateId: null,
+          name: globalInterviewerForm.name.trim(),
+          email: globalInterviewerForm.email.trim(),
+          role: 'INTERVIEWER',
+          active: true,
+        };
+        setGlobalInterviewers((current) => [created, ...current]);
+      } else {
+        const created = await apiFetch<User>('/interviewers', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: globalInterviewerForm.name.trim(),
+            email: globalInterviewerForm.email.trim(),
+            password: globalInterviewerForm.password,
+          }),
+        });
+        setGlobalInterviewers((current) => [created, ...current]);
+      }
+
+      setGlobalInterviewerForm({ name: '', email: '', password: '' });
+      setShowGlobalInterviewerForm(false);
+      setSuccess('Global interviewer was created.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to create the global interviewer.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleGlobalInterviewer = async (item: User) => {
+    if (developmentMode) {
+      setGlobalInterviewers((current) => current.map((userItem) => userItem.id === item.id ? { ...userItem, active: !userItem.active } : userItem));
+      setSuccess('Global interviewer "' + item.name + '" is now ' + (item.active ? 'inactive' : 'active') + '.');
+      return;
+    }
+
+    try {
+      setError('');
+      const updated = await apiFetch<User>('/interviewers/' + item.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !item.active }),
+      });
+      setGlobalInterviewers((current) => current.map((userItem) => userItem.id === updated.id ? updated : userItem));
+      setSuccess('Global interviewer "' + item.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the global interviewer.');
     }
   };
 
@@ -286,6 +378,68 @@ export const AgenciesPage = () => {
       {!loading && agencies.length === 0 && <StateMessage kind="empty" title="No agencies yet" description="Create the first agency workspace to begin onboarding agency users." />}
 
       {!loading && agencies.length > 0 && <DataTable columns={columns} rows={agencies} getRowKey={(agency) => agency.id} />}
+
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Shared interviewer pool</p>
+            <h2 className="text-sm font-black text-slate-950">Global interviewers</h2>
+            <p className="mt-1 text-xs text-slate-400">Available to every agency when assigned to an interview.</p>
+          </div>
+          {!developmentMode && (
+            <Button onClick={() => { setShowGlobalInterviewerForm((value) => !value); setError(''); }}>
+              Add global interviewer
+            </Button>
+          )}
+        </div>
+
+        {showGlobalInterviewerForm && !developmentMode && (
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <FormField label="Name">
+              <input className="field-input" value={globalInterviewerForm.name} onChange={(event) => setGlobalInterviewerForm({ ...globalInterviewerForm, name: event.target.value })} placeholder="David Perera" />
+            </FormField>
+            <FormField label="Email">
+              <input type="email" className="field-input" value={globalInterviewerForm.email} onChange={(event) => setGlobalInterviewerForm({ ...globalInterviewerForm, email: event.target.value })} placeholder="interviewer@example.com" />
+            </FormField>
+            <FormField label="Password" hint="Minimum 8 characters.">
+              <input type="password" className="field-input" value={globalInterviewerForm.password} onChange={(event) => setGlobalInterviewerForm({ ...globalInterviewerForm, password: event.target.value })} />
+            </FormField>
+            <div className="md:col-span-3 flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowGlobalInterviewerForm(false)}>Cancel</Button>
+              <Button disabled={saving} onClick={() => void createGlobalInterviewer()}>{saving ? 'Saving…' : 'Create global interviewer'}</Button>
+            </div>
+          </div>
+        )}
+
+        {loadingGlobalInterviewers ? (
+          <div className="mt-5"><StateMessage kind="loading" title="Loading global interviewers" /></div>
+        ) : globalInterviewers.length === 0 ? (
+          <div className="mt-5"><StateMessage kind="empty" title="No global interviewers" description="Create an interviewer without an agency when you need a shared interviewer available across agencies." /></div>
+        ) : (
+          <div className="mt-5 grid gap-2 md:grid-cols-2">
+            {globalInterviewers.map((item) => (
+              <div key={item.id} className="flex flex-col gap-2 rounded-2xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900">{item.name}</p>
+                  <p className="mt-1 truncate text-xs text-slate-400">{item.email}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <StatusPill value="GLOBAL" />
+                  <StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} />
+                  <Button
+                    size="sm"
+                    variant={item.active ? 'danger' : 'secondary'}
+                    onClick={() => void toggleGlobalInterviewer(item)}
+                    disabled={item.id === user?.id}
+                  >
+                    {item.active ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {selectedAgencyId && !developmentMode && (
         <Card>
