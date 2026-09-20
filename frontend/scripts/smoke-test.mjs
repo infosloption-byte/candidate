@@ -56,7 +56,7 @@ assert.match(candidatesPage, /alternatePhone/);
 const interviewsPage = read('src/features/interviews/InterviewsPage.tsx');
 assert.match(interviewsPage, /Create interview/);
 assert.match(interviewsPage, /Candidates/);
-assert.match(interviewsPage, /Open/);
+assert.match(interviewsPage, /View/);
 assert.match(interviewsPage, /role=\"dialog\"/);
 assert.match(interviewsPage, /interviews\/bulk/);
 assert.match(interviewsPage, /Also schedule for other candidates/);
