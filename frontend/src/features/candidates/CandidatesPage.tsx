@@ -13,6 +13,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
+import { CandidateProfilePanel } from './CandidateProfilePanel';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface Props { role: UserRole; }
@@ -108,6 +109,9 @@ export const CandidatesPage = ({ role }: Props) => {
   const [successTitle, setSuccessTitle] = useState('');
   const [editingCandidateProfile, setEditingCandidateProfile] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'documents' | 'activity'>('overview');
+  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const [profilePanelMinimized, setProfilePanelMinimized] = useState(false);
+  const [profilePanelMaximized, setProfilePanelMaximized] = useState(false);
   const [bulkImporting, setBulkImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importAgencyId, setImportAgencyId] = useState('');
@@ -1120,6 +1124,15 @@ export const CandidatesPage = ({ role }: Props) => {
             />
           )}
 
+          <CandidateProfilePanel
+            candidate={profilePanelOpen ? candidate : null}
+            minimized={profilePanelMinimized}
+            maximized={profilePanelMaximized}
+            onMinimize={() => setProfilePanelMinimized(true)}
+            onMaximize={() => { setProfilePanelMinimized(false); setProfilePanelMaximized((value) => !value); }}
+            onClose={() => { setProfilePanelOpen(false); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}
+          />
+
           {candidate && selectedCandidateId && (
             <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
               <button
@@ -1151,6 +1164,9 @@ export const CandidatesPage = ({ role }: Props) => {
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
                         <Button size="sm" variant="secondary" className="col-span-2 w-full sm:col-span-1 sm:w-auto" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
                       )}
+                      <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setProfilePanelOpen(true); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}>
+                        Full profile
+                      </Button>
                       <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
                         {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
                       </Button>
