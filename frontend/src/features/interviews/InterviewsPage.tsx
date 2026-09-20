@@ -555,7 +555,7 @@ export const InterviewsPage = ({ role }: Props) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className={`grid gap-3 p-4 md:items-end ${role === 'ADMIN' ? 'md:grid-cols-[minmax(220px,1fr)_200px_180px_190px_40px]' : 'md:grid-cols-[minmax(220px,1fr)_180px_190px_40px]'}`}>
+        <div className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:items-end ${role === 'ADMIN' ? 'lg:grid-cols-[minmax(220px,1fr)_180px_180px_190px_40px]' : 'lg:grid-cols-[minmax(220px,1fr)_180px_190px_40px]'}`}>
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
