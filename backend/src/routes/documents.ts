@@ -27,15 +27,23 @@ const documentSelect = {
   createdAt: true,
 } as const;
 
-const allowedToAccessCandidate = (
+const allowedToAccessCandidate = async (
   user: NonNullable<FastifyRequest['authUser']>,
   agencyId: string,
   candidateId: string,
-): boolean =>
-  user.role === 'ADMIN'
-  || (user.role === 'INTERVIEWEE' && user.candidateId === candidateId)
-  || (user.role === 'AGENCY' && user.agencyId === agencyId)
-  || (user.role === 'INTERVIEWER' && Boolean(user.id && candidateId));
+): Promise<boolean> => {
+  if (user.role === 'ADMIN') return true;
+  if (user.role === 'INTERVIEWEE') return user.candidateId === candidateId;
+  if (user.role === 'AGENCY') return user.agencyId === agencyId;
+  if (user.role === 'INTERVIEWER') {
+    const assignment = await getPrisma().interviewParticipant.findFirst({
+      where: { userId: user.id, interview: { candidateId } },
+      select: { interviewId: true },
+    });
+    return Boolean(assignment);
+  }
+  return false;
+};
 
 const sanitizeDownloadName = (fileName: string): string => fileName.replace(/[\r\n"]/g, '_');
 
@@ -56,7 +64,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (!allowedToAccessCandidate(request.authUser!, candidate.agencyId, candidate.id)) {
+      if (!(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, candidate.id))) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' },
@@ -177,7 +185,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         select: { agencyId: true },
       });
 
-      if (!candidate || !allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId)) {
+      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId))) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'You do not have access to this document.' },
