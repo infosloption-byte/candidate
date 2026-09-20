@@ -7,7 +7,6 @@
     },
     "backend": {
       "root": "backend/",
-      "framework": "fastify",
       "entrypoint": "src/server.ts"
     }
   },
