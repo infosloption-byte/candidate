@@ -14,29 +14,28 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   ADMIN: [
     { label: 'Operations', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
-      { view: 'calendar', label: 'Calendar', icon: 'calendar' },
-      { view: 'reports', label: 'Reports', icon: 'chart' },
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
       { view: 'interviews', label: 'Interviews', icon: 'calendar' },
-      { view: 'criteria', label: 'Interview criteria', icon: 'target' },
+      { view: 'reports', label: 'Reports', icon: 'chart' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
     ]},
     { label: 'Administration', items: [
-      { view: 'agencies', label: 'Agencies & Users', icon: 'users' },
+      { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
+      { view: 'agencies', label: 'Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
   AGENCY: [
-    { label: 'Recruitment', items: [
+    { label: 'Operations', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
-      { view: 'calendar', label: 'Calendar', icon: 'calendar' },
-      { view: 'reports', label: 'Reports', icon: 'chart' },
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
       { view: 'interviews', label: 'Interviews', icon: 'calendar' },
-      { view: 'criteria', label: 'Interview criteria', icon: 'target' },
+      { view: 'reports', label: 'Reports', icon: 'chart' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
     ]},
     { label: 'Administration', items: [
+      { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
+      { view: 'agencies', label: 'Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
