@@ -678,8 +678,20 @@ export const InterviewsPage = ({ role }: Props) => {
         const ownId = user?.id ?? 'dev-interviewer';
         const updated = interviews.find((item) => item.id === interview.id);
         if (updated) {
-          const ownEvaluation = updated.evaluations?.find((item) => item.interviewerId === ownId);
-          mergeInterview({ ...updated, status: 'COMPLETED', completedAt: new Date().toISOString(), evaluations: ownEvaluation ? [{ ...ownEvaluation, status: 'SUBMITTED', submittedAt: new Date().toISOString() }] : updated.evaluations });
+          const submittedAt = new Date().toISOString();
+          const ownEvaluation = {
+            id: updated.evaluations?.find((item) => item.interviewerId === ownId)?.id ?? 'evaluation-' + Date.now(),
+            interviewId: interview.id,
+            interviewerId: ownId,
+            status: 'SUBMITTED' as const,
+            comments: evaluationComments.trim() || null,
+            submittedAt,
+            scores,
+          };
+          mergeInterview({
+            ...updated,
+            evaluations: [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluation],
+          });
         }
         setEvaluationStatus('SUBMITTED');
       } else {
@@ -1403,6 +1415,27 @@ export const InterviewsPage = ({ role }: Props) => {
             {detail.notes && <div className="mt-4 rounded-2xl border border-slate-200 p-4"><h3 className="text-sm font-black text-slate-950">Notes</h3><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{detail.notes}</p></div>}
 
             <div className="mt-5">
+              <h3 className="text-sm font-black text-slate-950">Assigned scorecard</h3>
+              <div className="mt-3 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-950">{detail.criterionGroup?.name ?? 'Interview criteria'}</p>
+                    {detail.criterionGroup?.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{detail.criterionGroup.category}</p>}
+                    <p className="mt-1 text-xs text-slate-500">{detail.criterionGroup?.description ?? 'Criteria assigned to this interview.'}</p>
+                  </div>
+                  <p className="text-xs font-black text-cyan-700">{detail.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0} max points</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(detail.criterionAssignments ?? []).map((assignment) => (
+                    <span key={assignment.id} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                      {assignment.name} · {assignment.maxPoints}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5">
               <h3 className="text-sm font-black text-slate-950">Interview panel</h3>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {detail.panel?.length ? detail.panel.map((participant) => (
@@ -1422,7 +1455,7 @@ export const InterviewsPage = ({ role }: Props) => {
                   const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
                   const max = evaluation.scores.reduce((sum, score) => sum + (score.criterion?.maxPoints ?? 0), 0);
                   return <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p><p className="text-xs text-slate-400">{evaluation.interviewer.email}</p></div><p className="text-sm font-black text-cyan-700">{total} / {max} {max ? '(' + Math.round((total / max) * 100) + '%)' : ''}</p></div>
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p><p className="text-xs text-slate-400">{evaluation.interviewer.email}</p></div><div className="text-right"><StatusPill value={evaluation.status} /><p className="mt-1 text-sm font-black text-cyan-700">{total} / {max} {max ? '(' + Math.round((total / max) * 100) + '%)' : ''}</p></div></div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">{evaluation.scores.map((score) => <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[11px] font-semibold text-slate-600">{score.criterion?.name ?? 'Criterion'}</span><span className="text-xs font-black text-slate-900">{score.points} / {score.criterion?.maxPoints ?? 0}</span></div>)}</div>
                     {evaluation.comments && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{evaluation.comments}</p>}
                   </div>;
