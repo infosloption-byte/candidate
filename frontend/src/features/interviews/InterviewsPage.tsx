@@ -864,9 +864,9 @@ export const InterviewsPage = ({ role }: Props) => {
                 onChange={(value) => setScheduleFilter(value as typeof scheduleFilter)}
                 options={[
                   { value: 'all', label: 'All interviews' },
-                  { value: 'upcoming', label: 'Upcoming' },
-                  { value: 'current', label: 'Current' },
-                  { value: 'past', label: 'Past' },
+                  { value: 'upcoming', label: 'Upcoming (' + scheduleCounts.upcoming + ')' },
+                  { value: 'current', label: 'Current (' + scheduleCounts.current + ')' },
+                  { value: 'past', label: 'Past (' + scheduleCounts.past + ')' },
                 ]}
                 ariaLabel="Filter interviewer schedule"
                 className="mt-1"
