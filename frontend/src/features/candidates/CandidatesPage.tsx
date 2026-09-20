@@ -1129,6 +1129,7 @@ export const CandidatesPage = ({ role }: Props) => {
             role={role}
             apiEnabled={!developmentMode}
             initialHistory={history}
+            initialHistoryLoading={loadingHistory}
             minimized={profilePanelMinimized}
             maximized={profilePanelMaximized}
             onMinimize={() => setProfilePanelMinimized(true)}
