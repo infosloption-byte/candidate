@@ -134,7 +134,7 @@ export interface Interview {
   criterionAssignments?: InterviewCriterionAssignment[];
   startedAt?: string | null;
   completedAt?: string | null;
-  candidate?: Pick<Candidate, 'id' | 'name' | 'reference' | 'profession' | 'email' | 'status'>;
+  candidate?: Pick<Candidate, 'id' | 'name' | 'reference' | 'profession' | 'email' | 'passportNumber' | 'status'>;
   job?: Pick<Job, 'id' | 'title' | 'location' | 'status'> | null;
   panel?: Array<{
     userId: string;
