@@ -73,7 +73,6 @@ export interface Job {
 
 export interface InterviewCriterion {
   id: string;
-  agencyId: string;
   name: string;
   description: string | null;
   maxPoints: number;
@@ -82,7 +81,6 @@ export interface InterviewCriterion {
 
 export interface InterviewCriterionGroup {
   id: string;
-  agencyId: string;
   name: string;
   category: string | null;
   description: string | null;
