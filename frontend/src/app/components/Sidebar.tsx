@@ -29,6 +29,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   AGENCY: [
     { label: 'Recruitment', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'calendar', label: 'Calendar', icon: 'calendar' },
       { view: 'reports', label: 'Reports', icon: 'chart' },
       { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
@@ -42,6 +43,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   INTERVIEWER: [
     { label: 'Interview desk', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'calendar', label: 'Calendar', icon: 'calendar' },
       { view: 'reports', label: 'Reports', icon: 'chart' },
       { view: 'interviews', label: 'My Interviews', icon: 'calendar' },
     ]},
