@@ -5,6 +5,7 @@ import { AuthProvider, developmentUser, useAuth } from '../domain/authContext';
 import { RecruitmentProvider } from '../domain/recruitmentContext';
 import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { ReportsPage } from '../features/reports/ReportsPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
 import { InterviewsPage } from '../features/interviews/InterviewsPage';
@@ -15,7 +16,7 @@ import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaP
 const roleDefaults: Record<UserRole, AppView> = {
   ADMIN: 'dashboard',
   AGENCY: 'dashboard',
-  INTERVIEWER: 'interviews',
+  INTERVIEWER: 'dashboard',
   INTERVIEWEE: 'interviews',
 };
 
@@ -77,6 +78,7 @@ const AuthenticatedApp = ({
 
   const content = (() => {
     switch (activeView) {
+      case 'reports': return <ReportsPage role={role} />;
       case 'jobs': return <JobsPage role={role} />;
       case 'candidates': return <CandidatesPage role={role} />;
       case 'interviews': return <InterviewsPage role={role} />;
