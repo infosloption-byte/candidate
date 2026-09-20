@@ -150,8 +150,12 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const earliestStart = interview.scheduledAt.getTime() - 15 * 60_000;
+      const latestStart = interview.scheduledAt.getTime() + interview.durationMins * 60_000;
       if (Date.now() < earliestStart) {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_TOO_EARLY', message: 'This interview can be started 15 minutes before the scheduled time.' } });
+      }
+      if (Date.now() > latestStart) {
+        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_START_WINDOW_PASSED', message: 'The scheduled start window has passed. Review the interview instead of starting a new session.' } });
       }
 
       await ensureInterviewAssignments(interview.id, interview.candidate.agencyId);
@@ -263,6 +267,14 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
       const scoreErrors = validateScores(request.body.scores, assignments);
       if (scoreErrors.length) return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: scoreErrors.join(' ') } });
+
+      const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
+        where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
+        select: { id: true, status: true },
+      });
+      if (existingEvaluation?.status === 'SUBMITTED') {
+        return reply.code(409).send({ success: false, error: { code: 'EVALUATION_LOCKED', message: 'Your submitted interview scorecard is locked and cannot be edited.' } });
+      }
 
       const result = await getPrisma().$transaction(async (tx) => {
         const evaluation = await tx.interviewEvaluation.upsert({
