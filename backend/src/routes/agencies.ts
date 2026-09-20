@@ -188,19 +188,21 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const actor = request.authUser!;
-      const agencyId = actor.role === 'AGENCY' ? actor.agencyId : request.query.agencyId;
+      const requestedAgencyId = request.query.agencyId;
+
+      if (actor.role === 'AGENCY' && requestedAgencyId && requestedAgencyId !== actor.agencyId) {
+        return reply.code(403).send({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only load interviewers for your own agency.' },
+        });
+      }
+
+      const agencyId = actor.role === 'AGENCY' ? actor.agencyId : requestedAgencyId;
 
       if (!agencyId) {
         return reply.code(400).send({
           success: false,
           error: { code: 'AGENCY_REQUIRED', message: 'An agencyId is required when loading available interviewers.' },
-        });
-      }
-
-      if (actor.role === 'AGENCY' && actor.agencyId !== agencyId) {
-        return reply.code(403).send({
-          success: false,
-          error: { code: 'FORBIDDEN', message: 'You can only load interviewers for your own agency.' },
         });
       }
 
