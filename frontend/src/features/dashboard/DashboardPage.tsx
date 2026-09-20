@@ -110,7 +110,7 @@ export const DashboardPage = ({ role }: Props) => {
       interviewTypes,
       averageScorePoints: null,
       recentCandidates: state.candidates.slice(0, 8).map((item) => ({ id: item.id, name: item.name, reference: item.reference, profession: item.profession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
-      recentInterviews: state.interviews.slice(0, 8).map((item) => ({ id: item.id, status: item.status, type: item.type, scheduledAt: item.scheduledAt, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId, passportNumber: item.candidate?.passportNumber ?? state.candidates.find(candidate => candidate.id === item.candidateId)?.passportNumber ?? null } })),
+      recentInterviews: state.interviews.slice(0, 8).map((item) => ({ id: item.id, status: item.status, type: item.type, scheduledAt: item.scheduledAt, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId } })),
       upcomingInterviews: state.interviews.filter((item) => item.status === 'SCHEDULED' && new Date(item.scheduledAt).getTime() >= Date.now()).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).slice(0, 8).map((item) => ({ id: item.id, scheduledAt: item.scheduledAt, type: item.type, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId, passportNumber: item.candidate?.passportNumber ?? state.candidates.find(candidate => candidate.id === item.candidateId)?.passportNumber ?? null } })),
     };
   }, [role, state]);
