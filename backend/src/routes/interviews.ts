@@ -26,7 +26,7 @@ const interviewInclude = {
     select: {
       userId: true,
       assignedAt: true,
-      user: { select: { id: true, name: true, email: true, role: true, active: true } },
+      user: { select: { id: true, agencyId: true, name: true, email: true, role: true, active: true } },
     },
   },
   criterionGroup: {
@@ -52,7 +52,12 @@ const canManage = (role: string, agencyId: string | null, interviewAgencyId: str
 const getInterviewers = async (ids: string[], agencyId: string) => {
   const uniqueIds = [...new Set(ids)];
   return getPrisma().user.findMany({
-    where: { id: { in: uniqueIds }, agencyId, role: 'INTERVIEWER', active: true },
+    where: {
+      id: { in: uniqueIds },
+      role: 'INTERVIEWER',
+      active: true,
+      OR: [{ agencyId }, { agencyId: null }],
+    },
     select: { id: true },
   });
 };
@@ -246,7 +251,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
       const interviewers = await getInterviewers(interviewerIds, agencyId);
       if (interviewers.length !== interviewerIds.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the candidate agency.' } });
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
 
       if (!request.body.criterionGroupId) {
@@ -385,7 +390,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
       const interviewers = await getInterviewers(interviewerIds, candidate.agencyId);
       if (interviewers.length !== interviewerIds.length) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer in the candidate agency.' } });
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
 
       if (!request.body.criterionGroupId) {
@@ -525,7 +530,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         const activeIds = new Set(interviewers.map((item) => item.id));
         const existingPanelIds = new Set(existing.panel.map((item) => item.userId));
         if (nextPanel.some((userId) => !activeIds.has(userId) && !existingPanelIds.has(userId))) {
-          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every new panel member must be an active interviewer in the candidate agency.' } });
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every new panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
         }
         if (await hasScheduleConflict(nextPanel, existing.candidateId, nextScheduledAt, nextDuration, existing.id)) {
           return reply.code(409).send({ success: false, error: { code: 'SCHEDULE_CONFLICT', message: 'The selected interviewer or candidate already has an overlapping scheduled interview.' } });
