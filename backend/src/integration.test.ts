@@ -37,6 +37,7 @@ let candidateId = '';
 let interviewId = '';
 let criterionAId = '';
 let criterionBId = '';
+let criterionGroupId = '';
 
 const cookieFrom = (response: { headers: { 'set-cookie'?: string | string[] } }): string => {
   const value = response.headers['set-cookie'];
@@ -119,7 +120,22 @@ before(async () => {
       data: { agencyId: agencyA.id, name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
     });
 
-    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, candidateUser, candidate, jobA, jobB, criterionA, criterionB };
+    const criterionGroup = await tx.interviewCriterionGroup.create({
+      data: {
+        agencyId: agencyA.id,
+        name: 'QA Technical Group',
+        category: 'Masonry',
+        description: 'Technical interview QA scorecard.',
+        criteria: {
+          create: [
+            { criterionId: criterionA.id, sortOrder: 0 },
+            { criterionId: criterionB.id, sortOrder: 1 },
+          ],
+        },
+      },
+    });
+
+    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, candidateUser, candidate, jobA, jobB, criterionA, criterionB, criterionGroup };
   });
 
   agencyAId = setup.agencyA.id;
@@ -135,6 +151,7 @@ before(async () => {
   jobBId = setup.jobB.id;
   criterionAId = setup.criterionA.id;
   criterionBId = setup.criterionB.id;
+  criterionGroupId = setup.criterionGroup.id;
 });
 
 after(async () => {
@@ -277,6 +294,7 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
       durationMins: 30,
       location: 'QA Interview Room',
       interviewerIds: [interviewerId],
+      criterionGroupId,
     },
   });
 
@@ -356,6 +374,7 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
       durationMins: 45,
       location: 'QA Room',
       interviewerIds: [interviewerId],
+      criterionGroupId,
     },
   });
   assert.equal(interviewResponse.statusCode, 201);
@@ -375,11 +394,12 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
       durationMins: 30,
       location: 'QA Room 2',
       interviewerIds: [interviewerId],
+      criterionGroupId,
     },
   });
   assert.equal(duplicateTimeConflict.statusCode, 409);
 
-  const rescheduledAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  const rescheduledAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const rescheduleResponse = await app.inject({
     method: 'PATCH',
     url: '/api/v1/interviews/' + interviewId,
@@ -404,6 +424,7 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
       durationMins: 30,
       location: 'Other agency',
       interviewerIds: [interviewerId],
+      criterionGroupId,
     },
   });
   assert.equal(crossAgencySchedule.statusCode, 403);
@@ -411,22 +432,50 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   const outsiderCookie = await login(emails.interviewerB);
   const outsiderEvaluation = await app.inject({
     method: 'POST',
-    url: '/api/v1/interviews/' + interviewId + '/evaluations',
+    url: '/api/v1/interviews/' + interviewId + '/start',
     headers: { cookie: outsiderCookie },
-    payload: {
-      scores: [
-        { criterionId: criterionAId, points: 8 },
-        { criterionId: criterionBId, points: 4 },
-      ],
-      comments: 'Not a panel member.',
-    },
   });
   assert.equal(outsiderEvaluation.statusCode, 403);
 
   const interviewerCookie = await login(emails.interviewer);
-  const evaluationResponse = await app.inject({
+  const startResponse = await app.inject({
     method: 'POST',
-    url: '/api/v1/interviews/' + interviewId + '/evaluations',
+    url: '/api/v1/interviews/' + interviewId + '/start',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(startResponse.statusCode, 200);
+  const startBody = json<{ data: { status: string; criterionAssignments: Array<{ criterionId: string; maxPoints: number }> } }>(startResponse);
+  assert.equal(startBody.data.status, 'IN_PROGRESS');
+  assert.equal(startBody.data.criterionAssignments.length, 2);
+
+  const draftResponse = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + interviewId + '/evaluation',
+    headers: { cookie: interviewerCookie },
+    payload: {
+      scores: [
+        { criterionId: criterionAId, points: 9 },
+      ],
+      comments: 'Draft notes while the interview is in progress.',
+    },
+  });
+  assert.equal(draftResponse.statusCode, 200);
+  const draftBody = json<{ data: { evaluation: { status: string }; summary: { drafts: number; submitted: number; totalPoints: number } } }>(draftResponse);
+  assert.equal(draftBody.data.evaluation.status, 'DRAFT');
+  assert.equal(draftBody.data.summary.drafts, 1);
+  assert.equal(draftBody.data.summary.submitted, 0);
+  assert.equal(draftBody.data.summary.totalPoints, 0);
+
+  const submitIncomplete = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + interviewId + '/evaluation/submit',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(submitIncomplete.statusCode, 400);
+
+  const completeDraft = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + interviewId + '/evaluation',
     headers: { cookie: interviewerCookie },
     payload: {
       scores: [
@@ -436,9 +485,17 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
       comments: 'Meets the required technical and communication criteria.',
     },
   });
+  assert.equal(completeDraft.statusCode, 200);
+
+  const evaluationResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + interviewId + '/evaluation/submit',
+    headers: { cookie: interviewerCookie },
+  });
   assert.equal(evaluationResponse.statusCode, 201);
-  const evaluationBody = json<{ data: { interviewCompleted: boolean; summary: { totalPoints: number; maxPoints: number; averagePercentage: number | null } } }>(evaluationResponse);
+  const evaluationBody = json<{ data: { interviewCompleted: boolean; summary: { totalPoints: number; maxPoints: number; averagePercentage: number | null; submitted: number } } }>(evaluationResponse);
   assert.equal(evaluationBody.data.interviewCompleted, true);
+  assert.equal(evaluationBody.data.summary.submitted, 1);
   assert.equal(evaluationBody.data.summary.totalPoints, 13);
   assert.equal(evaluationBody.data.summary.maxPoints, 15);
 
@@ -462,6 +519,7 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
       durationMins: 30,
       location: 'QA Final Room',
       interviewerIds: [interviewerId],
+      criterionGroupId,
     },
   });
   assert.equal(secondInterviewResponse.statusCode, 201);
