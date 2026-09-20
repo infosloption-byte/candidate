@@ -885,7 +885,7 @@ export const InterviewsPage = ({ role }: Props) => {
                         <div key={criterion.id} className="rounded-xl border border-white bg-white p-3">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div><p className="text-xs font-extrabold text-slate-900">{criterion.name}</p><p className="mt-1 text-[10px] text-slate-400">{criterion.description ?? 'No description.'}</p></div>
-                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-400">/ {criterion.maxPoints}</span><input type="number" min="0" max={criterion.maxPoints} className="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-bold outline-none focus:border-cyan-500" value={scoreDrafts[criterion.id] ?? '0'} onChange={(event) => setScoreDrafts((current) => ({ ...current, [criterion.id]: event.target.value }))} /></div>
+                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-400">/ {criterion.maxPoints}</span><input type="number" min="0" max={criterion.maxPoints} className="field-input !mt-0 w-20 px-2 text-sm font-bold" value={scoreDrafts[criterion.id] ?? '0'} onChange={(event) => setScoreDrafts((current) => ({ ...current, [criterion.id]: event.target.value }))} /></div>
                           </div>
                         </div>
                       ))}
