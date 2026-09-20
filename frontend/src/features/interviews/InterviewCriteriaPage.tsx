@@ -9,7 +9,7 @@ import { FormField } from '../../shared/components/FormField';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, InterviewCriterion, InterviewCriterionGroup, UserRole } from '../../domain/types';
+import type { InterviewCriterion, InterviewCriterionGroup, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
@@ -17,10 +17,8 @@ const emptyCriterionForm = { name: '', description: '', maxPoints: '5' };
 const emptyGroupForm = { name: '', category: '', description: '', criterionIds: [] as string[] };
 
 export const InterviewCriteriaPage = ({ role }: Props) => {
-  const { user, developmentMode } = useAuth();
+  const { developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
-  const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
-  const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria : []);
   const [groups, setGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups : []);
   const [criterionForm, setCriterionForm] = useState(emptyCriterionForm);
@@ -33,11 +31,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (!agencyId) return;
     if (developmentMode) {
-      setAgencies(state.agencies);
-      setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId));
-      setGroups(state.interviewCriterionGroups.filter((item) => item.agencyId === agencyId));
+      setCriteria(state.interviewCriteria);
+      setGroups(state.interviewCriterionGroups);
       setLoading(false);
       return;
     }
@@ -45,18 +41,15 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    const requests: [Promise<InterviewCriterion[]>, Promise<InterviewCriterionGroup[]>, Promise<Agency[]>] = [
-      apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
-      apiFetch<InterviewCriterionGroup[]>('/agencies/' + agencyId + '/interview-criteria-groups'),
-      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
-    ];
 
-    Promise.all(requests)
-      .then(([criterionResult, groupResult, agencyResult]) => {
+    Promise.all([
+      apiFetch<InterviewCriterion[]>('/interview-criteria'),
+      apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
+    ])
+      .then(([criterionResult, groupResult]) => {
         if (cancelled) return;
         setCriteria(criterionResult);
         setGroups(groupResult);
-        if (role === 'ADMIN') setAgencies(agencyResult);
       })
       .catch((requestError: unknown) => {
         if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load interview scoring setup.');
@@ -66,13 +59,13 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       });
 
     return () => { cancelled = true; };
-  }, [agencyId, developmentMode, role, state.agencies, state.interviewCriteria, state.interviewCriterionGroups]);
+  }, [developmentMode, state.interviewCriteria, state.interviewCriterionGroups]);
 
   const activeCriteria = useMemo(() => criteria.filter((item) => item.active), [criteria]);
 
   const createCriterion = async () => {
-    if (!agencyId || criterionForm.name.trim().length < 2) {
-      setError('Select an agency and enter a criterion name.');
+    if (criterionForm.name.trim().length < 2) {
+      setError('Enter a criterion name with at least 2 characters.');
       return;
     }
     const maxPoints = Number(criterionForm.maxPoints);
@@ -85,8 +78,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
     setError('');
     try {
       const created = developmentMode
-        ? { id: 'criterion-' + Date.now(), agencyId, name: criterionForm.name.trim(), description: criterionForm.description.trim() || null, maxPoints, active: true }
-        : await apiFetch<InterviewCriterion>('/agencies/' + agencyId + '/interview-criteria', {
+        ? { id: 'criterion-' + Date.now(), name: criterionForm.name.trim(), description: criterionForm.description.trim() || null, maxPoints, active: true }
+        : await apiFetch<InterviewCriterion>('/interview-criteria', {
             method: 'POST',
             body: JSON.stringify({ name: criterionForm.name.trim(), description: criterionForm.description.trim() || null, maxPoints }),
           });
@@ -130,8 +123,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   };
 
   const createGroup = async () => {
-    if (!agencyId || groupForm.name.trim().length < 2) {
-      setError('Select an agency and enter a criteria group name.');
+    if (groupForm.name.trim().length < 2) {
+      setError('Enter a criteria group name with at least 2 characters.');
       return;
     }
     if (!groupForm.criterionIds.length) {
@@ -146,14 +139,13 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       const created = developmentMode
         ? {
             id: 'criterion-group-' + Date.now(),
-            agencyId,
             name: groupForm.name.trim(),
             category: groupForm.category.trim() || null,
             description: groupForm.description.trim() || null,
             active: true,
             criteria: selected.map((criterion, index) => ({ criterionId: criterion.id, sortOrder: index, criterion })),
           }
-        : await apiFetch<InterviewCriterionGroup>('/agencies/' + agencyId + '/interview-criteria-groups', {
+        : await apiFetch<InterviewCriterionGroup>('/interview-criteria-groups', {
             method: 'POST',
             body: JSON.stringify({
               name: groupForm.name.trim(),
@@ -192,11 +184,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
     }
   };
 
-  const agencyOptions = [
-    { value: '', label: 'Select an agency' },
-    ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
-  ];
-
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
@@ -214,14 +201,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           </div>
         }
       />
-
-      {role === 'ADMIN' && (
-        <Card>
-          <FormField label="Agency workspace" hint="Admin can configure criteria for any active agency.">
-            <SelectMenu value={agencyId} onChange={setAgencyId} options={agencyOptions} ariaLabel="Select agency workspace" />
-          </FormField>
-        </Card>
-      )}
 
       {error && <StateMessage kind="error" title="Interview setup action failed" description={error} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
@@ -252,7 +231,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               </div>
               <div className="md:col-span-2 flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setShowCriterionForm(false)}>Cancel</Button>
-                <Button disabled={saving || !agencyId} onClick={() => void createCriterion()}>{saving ? 'Saving…' : 'Create criterion'}</Button>
+                <Button disabled={saving} onClick={() => void createCriterion()}>{saving ? 'Saving…' : 'Create criterion'}</Button>
               </div>
             </div>
           )}
@@ -305,7 +284,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
 
               <div className="flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setShowGroupForm(false)}>Cancel</Button>
-                <Button disabled={saving || !agencyId || !groupForm.criterionIds.length} onClick={() => void createGroup()}>{saving ? 'Saving…' : 'Create group'}</Button>
+                <Button disabled={saving || !groupForm.criterionIds.length} onClick={() => void createGroup()}>{saving ? 'Saving…' : 'Create group'}</Button>
               </div>
             </div>
           )}
