@@ -263,7 +263,7 @@ export const InterviewsPage = ({ role }: Props) => {
     return availableCandidates.filter((candidate) => {
       if (editingInterviewId && candidate.id === candidateId) return false;
       if (!query) return true;
-      return [candidate.name, candidate.reference, candidate.profession ?? '', candidate.email ?? '', candidate.phone ?? '']
+      return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.profession ?? '', candidate.email ?? '', candidate.phone ?? '']
         .some((value) => value.toLowerCase().includes(query));
     });
   }, [availableCandidates, candidateSearch, candidateId, editingInterviewId]);
@@ -1015,7 +1015,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 <FormField label="Current candidate">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                     <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? candidateId}</p>
-                    <p className="mt-1 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
                   </div>
                 </FormField>
                 <div className="md:col-span-2">
@@ -1034,7 +1034,7 @@ export const InterviewsPage = ({ role }: Props) => {
                             <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
                             <span className="min-w-0 flex-1">
                               <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
-                              <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
+                              <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · Passport: {candidate.passportNumber ?? 'Not provided'} · {statusLabel(candidate.status)}</span>
                             </span>
                           </label>
                         ))}
@@ -1195,7 +1195,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       <StatusPill value={interview.status} />
                       {candidate?.status && <StatusPill value={candidate.status} />}
                     </div>
-                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} {job ? '· ' + job.title : '· General interview'}</p>
+                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Passport: {candidate?.passportNumber ?? 'Not provided'} {job ? '· ' + job.title : '· General interview'}</p>
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
@@ -1279,7 +1279,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
                       <td className="px-4 py-3">
                         <p className="font-extrabold text-slate-900">{candidate?.name ?? interview.candidateId}</p>
-                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'}{job ? ' · ' + job.title : ''}</p>
+                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Passport: {candidate?.passportNumber ?? 'Not provided'}{job ? ' · ' + job.title : ''}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <p className="font-semibold text-slate-700">{new Date(interview.scheduledAt).toLocaleDateString()}</p>
@@ -1368,7 +1368,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="flex items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-slate-900">Interview — {activeCandidate?.name ?? activeInterview.candidateId}</p>
-                        <p className="text-[10px] text-slate-400">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading scorecard…'}</p>
+                        <p className="text-[10px] text-slate-400">{activeCandidate?.passportNumber ? 'Passport: ' + activeCandidate.passportNumber + ' · ' : 'Passport: Not provided · '}{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading scorecard…'}</p>
                       </div>
                       <Button size="sm" variant="secondary" className="min-h-9 px-2 text-[10px]" onClick={() => setEvaluationMinimized(false)}>Open</Button>
                       <button type="button" aria-label="Close interview workspace" className="text-lg font-bold text-slate-400 hover:text-slate-700" onClick={() => setEvaluationFor(null)}>×</button>
@@ -1382,7 +1382,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{activeInterview.status === 'COMPLETED' ? 'Completed interview panel' : 'Ongoing interview'}</p>
                       <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? activeInterview.candidateId}</h3>
-                      <p className="truncate text-[10px] text-slate-400">{activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
+                      <p className="truncate text-[10px] text-slate-400">Passport: {activeCandidate?.passportNumber ?? 'Not provided'} · {activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button type="button" aria-label="Minimize interview workspace" title="Minimize" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMinimized(true)}>−</button>
@@ -1537,14 +1537,15 @@ export const InterviewsPage = ({ role }: Props) => {
               <div className="min-w-0">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
                 <h2 id="interview-details-title" className="mt-1 text-xl font-black text-slate-950">{detail.candidate?.name ?? detail.candidateId}</h2>
-                <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · {detail.type} interview · {statusLabel(detail.status)}</p>
+                <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · Passport: {detail.candidate?.passportNumber ?? 'Not provided'} · {detail.type} interview · {statusLabel(detail.status)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2"><StatusPill value={detail.status} /><Button size="sm" variant="secondary" onClick={closeInterviewDetails}>Close</Button></div>
             </div>
 
             {detailLoading && <div className="mt-5"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Passport number</p><p className="mt-2 break-all text-sm font-bold text-slate-900">{detail.candidate?.passportNumber ?? 'Not provided'}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date & time</p><p className="mt-2 text-sm font-bold text-slate-900">{new Date(detail.scheduledAt).toLocaleString()}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.durationMins} minutes</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Job</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.job?.title ?? 'General interview'}</p></div>
