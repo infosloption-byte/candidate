@@ -40,6 +40,9 @@ const getReference = (): string => 'CA-' + randomBytes(5).toString('hex').toUppe
 const canManageCandidate = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
   role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId);
 
+const canSetFinalCandidateStatus = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
+  role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId) || role === 'INTERVIEWER';
+
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
   app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => done(null, body));
 
@@ -359,7 +362,8 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       const user = request.authUser!;
       const isSelf = user.role === 'INTERVIEWEE' && user.candidateId === existing.id;
       const canManage = canManageCandidate(user.role, user.agencyId, existing.agencyId);
-      if (!isSelf && !canManage) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to update this candidate.' } });
+      const canSetFinalStatus = canSetFinalCandidateStatus(user.role, user.agencyId, existing.agencyId);
+      if (!isSelf && !canManage && !(canSetFinalStatus && request.body.status !== undefined)) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to update this candidate.' } });
 
       const errors = validateCandidateInput(request.body, 'update');
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
@@ -382,7 +386,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (request.body.status !== undefined && canManage) {
+      if (request.body.status !== undefined && (canManage || canSetFinalStatus)) {
         const lifecycleManagedByWorkflow = ['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED'].includes(request.body.status);
         if (lifecycleManagedByWorkflow) {
           return reply.code(409).send({
@@ -447,7 +451,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.onboardingStatus !== undefined && canManage) data.onboardingStatus = request.body.onboardingStatus;
       if (isSelf) data.onboardingStatus = 'SUBMITTED';
 
-      if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
+      if (request.body.status !== undefined && (canManage || canSetFinalStatus) && request.body.status !== existing.status) {
         data.status = request.body.status;
         data.statusUpdatedAt = new Date();
       }
@@ -470,7 +474,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           });
         }
 
-        if (request.body.status !== undefined && canManage && request.body.status !== existing.status) {
+        if (request.body.status !== undefined && (canManage || canSetFinalStatus) && request.body.status !== existing.status) {
           await tx.candidateStatusHistory.create({
             data: {
               candidateId: existing.id,
