@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
@@ -88,6 +89,8 @@ export const CandidatesPage = ({ role }: Props) => {
   const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [listView, setListView] = useState<'cards' | 'table'>('table');
   const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
@@ -767,43 +770,79 @@ export const CandidatesPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className={`grid gap-3 p-4 md:items-end ${role === 'ADMIN' ? 'md:grid-cols-[minmax(180px,1fr)_minmax(150px,0.75fr)_minmax(140px,0.7fr)_minmax(165px,0.8fr)_40px]' : 'md:grid-cols-[minmax(180px,1fr)_minmax(150px,0.75fr)_minmax(165px,0.8fr)_40px]'}`}>
+            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="min-w-0">
                 <label className="field-label">Search candidates</label>
-                <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reference, passport, contact, location or skill…" />
+                <input
+                  className="field-input mt-1 w-full"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Name, reference, passport, contact, location or skill…"
+                />
               </div>
-              {role === 'ADMIN' && (
-                <div className="min-w-0">
-                  <label className="field-label">Agency</label>
-                  <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}>
-                    <option value="">All agencies</option>
-                    {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-                  </select>
-                </div>
-              )}
-              <div className="min-w-0">
+
+              <button
+                type="button"
+                className="flex min-h-10 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm md:hidden"
+                aria-expanded={mobileFiltersOpen}
+                aria-controls="mobile-candidate-filters"
+                onClick={() => setMobileFiltersOpen((value) => !value)}
+              >
+                <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+                </svg>
+              </button>
+
+              <div id="mobile-candidate-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+                <label className="field-label">Agency</label>
+                <SelectMenu
+                  value={agencyId}
+                  onChange={setAgencyId}
+                  options={[
+                    { value: '', label: 'All agencies' },
+                    ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                  ]}
+                  ariaLabel="Filter by agency"
+                  className="mt-1"
+                  />
+              </div>
+
+              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Status</label>
-                <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                  <option value="">All statuses</option>
-                  {statusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
-                </select>
+                <SelectMenu
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={[
+                    { value: '', label: 'All statuses' },
+                    ...statusOptions.map((status) => ({ value: status, label: label(status) })),
+                  ]}
+                  ariaLabel="Filter by candidate status"
+                  className="mt-1"
+                />
               </div>
-              <div className="min-w-0">
+
+              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Sort</label>
                 <div className="mt-1 flex min-w-0 gap-1.5">
-                  <label className="sr-only" htmlFor="candidate-sort">Sort candidates</label>
-                  <select id="candidate-sort" className="field-input min-w-0 flex-1 py-2" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
-                    <option value="name">Name</option>
-                    <option value="profession">Profession</option>
-                    <option value="experience">Experience</option>
-                    <option value="passport">Passport</option>
-                    <option value="status">Status</option>
-                  </select>
+                  <SelectMenu
+                    value={sortBy}
+                    onChange={(value) => setSortBy(value as typeof sortBy)}
+                    options={[
+                      { value: 'name', label: 'Name' },
+                      { value: 'profession', label: 'Profession' },
+                      { value: 'experience', label: 'Experience' },
+                      { value: 'passport', label: 'Passport' },
+                      { value: 'status', label: 'Status' },
+                    ]}
+                    ariaLabel="Sort candidates by"
+                    className="min-w-0 flex-1"
+                  />
                   <button
                     type="button"
                     title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
                     aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
-                    className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                    className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
                     onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
@@ -814,11 +853,103 @@ export const CandidatesPage = ({ role }: Props) => {
                   </button>
                 </div>
               </div>
-              <div className="flex items-end md:justify-end">
+            </div>
+
+            {showAdvancedFilters && (
+              <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  <div>
+                    <label className="field-label">Country</label>
+                    <SelectMenu
+                      value={countryFilter}
+                      onChange={setCountryFilter}
+                      options={[
+                        { value: '', label: 'All countries' },
+                        ...filterOptions.countries.map((value) => ({ value, label: value })),
+                      ]}
+                      ariaLabel="Filter by country"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Profession</label>
+                    <SelectMenu
+                      value={professionFilter}
+                      onChange={setProfessionFilter}
+                      options={[
+                        { value: '', label: 'All professions' },
+                        ...filterOptions.professions.map((value) => ({ value, label: value })),
+                      ]}
+                      ariaLabel="Filter by profession"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Availability</label>
+                    <SelectMenu
+                      value={availabilityFilter}
+                      onChange={setAvailabilityFilter}
+                      options={[
+                        { value: '', label: 'Any availability' },
+                        ...filterOptions.availabilities.map((value) => ({ value, label: value })),
+                      ]}
+                      ariaLabel="Filter by availability"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Visa / work status</label>
+                    <SelectMenu
+                      value={visaStatusFilter}
+                      onChange={setVisaStatusFilter}
+                      options={[
+                        { value: '', label: 'Any visa status' },
+                        ...filterOptions.visaStatuses.map((value) => ({ value, label: value })),
+                      ]}
+                      ariaLabel="Filter by visa or work status"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Location</label>
+                    <SelectMenu
+                      value={locationFilter}
+                      onChange={setLocationFilter}
+                      options={[
+                        { value: '', label: 'All locations' },
+                        ...filterOptions.locations.map((value) => ({ value, label: value })),
+                      ]}
+                      ariaLabel="Filter by location"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Passport expiry</label>
+                    <SelectMenu
+                      value={passportFilter}
+                      onChange={setPassportFilter}
+                      options={[
+                        { value: '', label: 'Any passport status' },
+                        { value: 'expired', label: 'Expired' },
+                        { value: '30d', label: 'Expires in 30 days' },
+                        { value: '90d', label: 'Expires in 90 days' },
+                        { value: 'valid', label: 'Valid beyond 90 days' },
+                        { value: 'missing', label: 'Missing expiry' },
+                      ]}
+                      ariaLabel="Filter by passport expiry"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
                 <button
                   type="button"
-                  title={showAdvancedFilters ? 'Hide filters' : 'More filters'}
-                  aria-label={showAdvancedFilters ? 'Hide filters' : 'More filters'}
+                  title={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
+                  aria-label={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
                   className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                   onClick={() => setShowAdvancedFilters((value) => !value)}
                 >
@@ -826,90 +957,143 @@ export const CandidatesPage = ({ role }: Props) => {
                     <path d="M4 6h16M7 12h10M10 18h4" />
                   </svg>
                 </button>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {showAdvancedFilters ? 'Advanced filters' : 'More filters'}
+                </span>
               </div>
-            </div>
-            {showAdvancedFilters && (
-              <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  <div>
-                    <label className="field-label">Country</label>
-                    <select className="field-input mt-1 w-full" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)}>
-                      <option value="">All countries</option>
-                      {filterOptions.countries.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="field-label">Profession</label>
-                    <select className="field-input mt-1 w-full" value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}>
-                      <option value="">All professions</option>
-                      {filterOptions.professions.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="field-label">Availability</label>
-                    <select className="field-input mt-1 w-full" value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value)}>
-                      <option value="">Any availability</option>
-                      {filterOptions.availabilities.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="field-label">Visa / work status</label>
-                    <select className="field-input mt-1 w-full" value={visaStatusFilter} onChange={(event) => setVisaStatusFilter(event.target.value)}>
-                      <option value="">Any visa status</option>
-                      {filterOptions.visaStatuses.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="field-label">Location</label>
-                    <select className="field-input mt-1 w-full" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}>
-                      <option value="">All locations</option>
-                      {filterOptions.locations.map((value) => <option key={value} value={value}>{value}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="field-label">Passport expiry</label>
-                    <select className="field-input mt-1 w-full" value={passportFilter} onChange={(event) => setPassportFilter(event.target.value)}>
-                      <option value="">Any passport status</option>
-                      <option value="expired">Expired</option>
-                      <option value="30d">Expires in 30 days</option>
-                      <option value="90d">Expires in 90 days</option>
-                      <option value="valid">Valid beyond 90 days</option>
-                      <option value="missing">Missing expiry</option>
-                    </select>
-                  </div>
+
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
+
+                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                  <button
+                    type="button"
+                    title="Clear filters"
+                    aria-label="Clear filters"
+                    className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    onClick={() => {
+                      setSearch('');
+                      setStatusFilter('');
+                      setCountryFilter('');
+                      setProfessionFilter('');
+                      setAvailabilityFilter('');
+                      setVisaStatusFilter('');
+                      setLocationFilter('');
+                      setPassportFilter('');
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M3 6h18M6 12h12M10 18h4" />
+                      <path d="M7 6l1-2h8l1 2" />
+                    </svg>
+                  </button>
+                )}
+
+                <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Candidate list view">
+                  <button
+                    type="button"
+                    aria-label="Card view"
+                    aria-pressed={listView === 'cards'}
+                    title="Card view"
+                    className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                    onClick={() => setListView('cards')}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="4" y="4" width="6" height="6" rx="1" />
+                      <rect x="14" y="4" width="6" height="6" rx="1" />
+                      <rect x="4" y="14" width="6" height="6" rx="1" />
+                      <rect x="14" y="14" width="6" height="6" rx="1" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Table view"
+                    aria-pressed={listView === 'table'}
+                    title="Table view"
+                    className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                    onClick={() => setListView('table')}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <rect x="4" y="5" width="16" height="14" rx="1" />
+                      <path d="M4 10h16M10 5v14" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-            )}
-
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-              <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
-              {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
-                <button
-                  type="button"
-                  title="Clear filters"
-                  aria-label="Clear filters"
-                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-                  onClick={() => {
-                    setSearch('');
-                    setStatusFilter('');
-                    setCountryFilter('');
-                    setProfessionFilter('');
-                    setAvailabilityFilter('');
-                    setVisaStatusFilter('');
-                    setLocationFilter('');
-                    setPassportFilter('');
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M3 6h18M6 12h12M10 18h4" />
-                    <path d="M7 6l1-2h8l1 2" />
-                  </svg>
-                </button>
-              )}
             </div>
           </div>
 
-                    {!loading && <DataTable columns={columns} rows={sortedCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />}
+          {!loading && listView === 'cards' && sortedCandidates.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {sortedCandidates.map((item) => {
+                const candidateInitial = item.name.trim().charAt(0).toUpperCase() || '?';
+                return (
+                  <Card key={item.id} padded={false} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-cyan-50 text-sm font-black text-cyan-700 ring-1 ring-inset ring-cyan-100">
+                        {candidateInitial}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h2 className="truncate text-sm font-black text-slate-950">{item.name}</h2>
+                            <p className="mt-0.5 truncate text-[10px] font-bold text-cyan-700">{item.reference}</p>
+                          </div>
+                          <StatusPill value={item.status} />
+                        </div>
+                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.profession ?? 'Profession not set'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Experience</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.experienceYears ?? 0} years</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Availability</p>
+                        <p className="mt-1 truncate text-[11px] font-bold text-slate-800">{item.availability ?? 'Not set'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 space-y-2">
+                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                        <span className="text-[10px] font-bold text-slate-400">Contact</span>
+                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{item.phone ?? 'No contact number'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                        <span className="text-[10px] font-bold text-slate-400">Location</span>
+                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{item.currentLocation ?? item.country ?? 'Not set'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                        <span className="text-[10px] font-bold text-slate-400">Passport</span>
+                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{maskPassport(item.passportNumber)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+                        <span className="text-[10px] font-bold text-slate-400">Onboarding</span>
+                        <StatusPill value={item.onboardingStatus} />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="min-h-9 rounded-lg px-3 text-[10px]"
+                        onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
+                      >
+                        Open candidate
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {!loading && listView === 'table' && (
+            <DataTable columns={columns} rows={sortedCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />
+          )}
 
           {candidate && selectedCandidateId && (
             <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
