@@ -183,6 +183,144 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: agency });
   });
 
+  app.get(
+    '/system-users',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (_request, reply) => {
+      const users = await getPrisma().user.findMany({
+        where: { role: { in: ['ADMIN', 'AGENCY'] } },
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        orderBy: [{ role: 'asc' }, { name: 'asc' }],
+      });
+
+      return reply.send({ success: true, data: users });
+    },
+  );
+
+  app.post<{
+    Body: { name?: string; email?: string; password?: string; role?: 'ADMIN' | 'AGENCY'; agencyId?: string | null };
+  }>(
+    '/system-users',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (request, reply) => {
+      const name = request.body.name?.trim();
+      const email = request.body.email?.trim().toLowerCase();
+      const password = request.body.password ?? '';
+      const role = request.body.role;
+      const agencyId = role === 'AGENCY' ? request.body.agencyId ?? null : null;
+
+      if (!name || !email || !password || password.length < 8 || !role || !['ADMIN', 'AGENCY'].includes(role)) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'INVALID_SYSTEM_USER', message: 'Name, email, password (8+ characters), and a valid system user role are required.' },
+        });
+      }
+      if (name.length > 160 || !emailPattern.test(email) || email.length > 191 || password.length > 128) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'INVALID_SYSTEM_USER', message: 'Name must be 160 characters or fewer, email must be valid and 191 characters or fewer, and password must be 8-128 characters.' },
+        });
+      }
+
+      if (role === 'AGENCY') {
+        if (!agencyId) {
+          return reply.code(400).send({
+            success: false,
+            error: { code: 'AGENCY_REQUIRED', message: 'An agency is required for an Agency user.' },
+          });
+        }
+        const agency = await getPrisma().agency.findUnique({ where: { id: agencyId }, select: { id: true, status: true } });
+        if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+        if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
+      }
+
+      try {
+        const user = await getPrisma().user.create({
+          data: {
+            agencyId,
+            name,
+            email,
+            passwordHash: await hashPassword(password),
+            role,
+          },
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        });
+
+        await recordAuditEvent({
+          actorId: request.authUser!.id,
+          agencyId: user.agencyId,
+          action: 'SYSTEM_USER_CREATED',
+          entityType: 'User',
+          entityId: user.id,
+          summary: 'Created ' + user.role.toLowerCase() + ' user "' + user.name + '".',
+        });
+
+        return reply.code(201).send({ success: true, data: user });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') {
+          return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.patch<{
+    Params: { id: string };
+    Body: { name?: string; active?: boolean };
+  }>(
+    '/system-users/:id',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (request, reply) => {
+      const existing = await getPrisma().user.findFirst({
+        where: { id: request.params.id, role: { in: ['ADMIN', 'AGENCY'] } },
+      });
+      if (!existing) return reply.code(404).send({ success: false, error: { code: 'SYSTEM_USER_NOT_FOUND', message: 'System user not found.' } });
+      if (existing.id === request.authUser!.id && request.body.active === false) {
+        return reply.code(400).send({ success: false, error: { code: 'CANNOT_DEACTIVATE_SELF', message: 'You cannot deactivate your own account.' } });
+      }
+
+      const data: { name?: string; active?: boolean } = {};
+      if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.active !== undefined) data.active = request.body.active;
+      if (data.name === '') return reply.code(400).send({ success: false, error: { code: 'INVALID_SYSTEM_USER', message: 'User name cannot be empty.' } });
+      if (data.name !== undefined && (data.name.length < 2 || data.name.length > 160)) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_SYSTEM_USER', message: 'User name must be 2-160 characters.' } });
+      }
+
+      const user = await getPrisma().user.update({
+        where: { id: existing.id },
+        data,
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+      });
+
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: user.agencyId,
+        action: 'SYSTEM_USER_UPDATED',
+        entityType: 'User',
+        entityId: user.id,
+        summary: 'Updated system user "' + user.name + '".',
+      });
+
+      return reply.send({ success: true, data: user });
+    },
+  );
+
+  app.get(
+    '/interviewers/all',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (_request, reply) => {
+      const interviewers = await getPrisma().user.findMany({
+        where: { role: 'INTERVIEWER' },
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        orderBy: [{ agencyId: 'asc' }, { active: 'desc' }, { name: 'asc' }],
+      });
+
+      return reply.send({ success: true, data: interviewers });
+    },
+  );
+
   app.get<{ Querystring: InterviewerQuery }>(
     '/interviewers',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
