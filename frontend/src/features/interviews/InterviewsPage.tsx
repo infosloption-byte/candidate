@@ -582,27 +582,20 @@ export const InterviewsPage = ({ role }: Props) => {
             <div className="relative mt-1 flex min-w-0 gap-1.5">
               <button
                 type="button"
-                title={'Sort by ' + (sortBy === 'date' ? 'date' : sortBy === 'candidate' ? 'candidate' : 'status')}
+                title="Choose sort field"
                 aria-label="Choose sort field"
                 aria-haspopup="menu"
                 aria-expanded={sortMenuOpen}
-                className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                className="field-input flex min-w-0 flex-1 items-center gap-2 py-2 text-left"
                 onClick={() => setSortMenuOpen((value) => !value)}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M7 4v16" />
                   <path d="m4 7 3-3 3 3" />
                   <path d="M17 20V4" />
                   <path d="m14 17 3 3 3-3" />
                 </svg>
-              </button>
-              <button
-                type="button"
-                title={'Sort by ' + (sortBy === 'date' ? 'date' : sortBy === 'candidate' ? 'candidate' : 'status')}
-                className="field-input flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left"
-                onClick={() => setSortMenuOpen((value) => !value)}
-              >
-                <span className="truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
+                <span className="min-w-0 flex-1 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
               </button>
               {sortMenuOpen && (
