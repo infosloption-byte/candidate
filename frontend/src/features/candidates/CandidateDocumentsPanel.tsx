@@ -152,7 +152,7 @@ export const CandidateDocumentsPanel = ({ candidateId, apiEnabled, readOnly = fa
             if (file) void upload(file);
           }}
         />
-      )
+      )}
 
       {!apiEnabled && (
         <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-xs font-semibold text-slate-500">
