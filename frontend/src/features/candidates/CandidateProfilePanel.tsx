@@ -346,8 +346,6 @@ export const CandidateProfilePanel = ({
     return items.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
   }, [candidate, history]);
 
-  const latestInterview
-
   const latestInterview = history.interviews[0];
   const latestScore = latestInterview ? interviewScore(latestInterview) : null;
   const totalInterviews = history.interviews.length;
