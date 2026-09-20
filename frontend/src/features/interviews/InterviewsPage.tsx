@@ -6,6 +6,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
@@ -577,29 +578,47 @@ export const InterviewsPage = ({ role }: Props) => {
             {role === 'ADMIN' ? (
               <>
                 <label className="field-label">Agency</label>
-                <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
-                  <option value="">All agencies</option>
-                  {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-                </select>
+                <SelectMenu
+                  value={agencyId}
+                  onChange={(value) => { setAgencyId(value); setPanel([]); }}
+                  options={[
+                    { value: '', label: 'All agencies' },
+                    ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                  ]}
+                  ariaLabel="Filter by agency"
+                  className="mt-1"
+                />
               </>
             ) : null}
           </div>
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Status</label>
-            <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="">All statuses</option>
-              {['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
-            </select>
+            <SelectMenu
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: '', label: 'All statuses' },
+                ...['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => ({ value: status, label: statusLabel(status) })),
+              ]}
+              ariaLabel="Filter by interview status"
+              className="mt-1"
+            />
           </div>
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Interview type</label>
-            <select className="field-input mt-1 w-full" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
-              <option value="">All interview types</option>
-              <option value="SCREENING">Screening</option>
-              <option value="TECHNICAL">Technical</option>
-              <option value="PRACTICAL">Practical</option>
-              <option value="FINAL">Final</option>
-            </select>
+            <SelectMenu
+              value={typeFilter}
+              onChange={(value) => setTypeFilter(value as InterviewType | '')}
+              options={[
+                { value: '', label: 'All interview types' },
+                { value: 'SCREENING', label: 'Screening' },
+                { value: 'TECHNICAL', label: 'Technical' },
+                { value: 'PRACTICAL', label: 'Practical' },
+                { value: 'FINAL', label: 'Final' },
+              ]}
+              ariaLabel="Filter by interview type"
+              className="mt-1"
+            />
           </div>
         </div>
 
@@ -763,18 +782,28 @@ export const InterviewsPage = ({ role }: Props) => {
               </div>
             )}
             <FormField label="Job / position" hint="Optional">
-              <select className="field-input" value={jobId} onChange={(event) => setJobId(event.target.value)}>
-                <option value="">No specific job</option>
-                {availableJobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
-              </select>
+              <SelectMenu
+                value={jobId}
+                onChange={setJobId}
+                options={[
+                  { value: '', label: 'No specific job' },
+                  ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
+                ]}
+                ariaLabel="Select job"
+              />
             </FormField>
             <FormField label="Interview type">
-              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}>
-                <option value="SCREENING">Screening</option>
-                <option value="TECHNICAL">Technical</option>
-                <option value="PRACTICAL">Practical</option>
-                <option value="FINAL">Final</option>
-              </select>
+              <SelectMenu
+                value={form.type}
+                onChange={(value) => setForm({ ...form, type: value as InterviewType })}
+                options={[
+                  { value: 'SCREENING', label: 'Screening' },
+                  { value: 'TECHNICAL', label: 'Technical' },
+                  { value: 'PRACTICAL', label: 'Practical' },
+                  { value: 'FINAL', label: 'Final' },
+                ]}
+                ariaLabel="Select interview type"
+              />
             </FormField>
             <FormField label="Date & time">
               <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
@@ -903,10 +932,15 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                     <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
                       <FormField label="Status">
-                        <select className="field-input" value={statusDrafts[candidate.id] ?? ''} onChange={(event) => setStatusDrafts((current) => ({ ...current, [candidate.id]: event.target.value as CandidateStatus }))}>
-                          <option value="">Select final status</option>
-                          {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
-                        </select>
+                        <SelectMenu
+                          value={statusDrafts[candidate.id] ?? ''}
+                          onChange={(value) => setStatusDrafts((current) => ({ ...current, [candidate.id]: value as CandidateStatus }))}
+                          options={[
+                            { value: '', label: 'Select final status' },
+                            ...candidateFinalStatuses.map((status) => ({ value: status, label: statusLabel(status) })),
+                          ]}
+                          ariaLabel="Select final candidate status"
+                        />
                       </FormField>
                       <FormField label="Reason" hint="Optional">
                         <input className="field-input" value={statusReasons[candidate.id] ?? ''} onChange={(event) => setStatusReasons((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="Reason or decision note" />
