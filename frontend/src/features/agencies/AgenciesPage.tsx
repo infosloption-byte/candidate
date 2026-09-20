@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
+import { useRecruitment } from '../../domain/recruitmentContext';
 import { agencies as fixtureAgencies } from '../../domain/fixtures';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
