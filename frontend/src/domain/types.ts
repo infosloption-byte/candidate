@@ -166,22 +166,22 @@ export interface CandidateAuditEvent {
 
 export interface CandidateHistoryInterview {
   id: string;
-  candidateId: string;
+  candidateId?: string;
   type: InterviewType;
   status: InterviewStatus;
   scheduledAt: string;
   durationMins: number;
   location: string | null;
-  notes: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  notes?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   job: { id: string; title: string; location: string | null } | null;
   panel: Array<{ userId: string; assignedAt: string; user: { id: string; name: string; email: string; active: boolean } }>;
   evaluations: Array<InterviewEvaluation & {
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
     interviewer?: { id: string; name: string; email: string };
   }>;
 }
