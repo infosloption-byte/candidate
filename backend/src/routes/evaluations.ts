@@ -30,7 +30,7 @@ const assignmentSelect = {
   sortOrder: true,
 } as const;
 
-const getAssignments = async (interviewId: string, agencyId: string): Promise<Assignment[]> => {
+const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
   const existing = await getPrisma().interviewCriterionAssignment.findMany({
     where: { interviewId },
     select: assignmentSelect,
@@ -39,7 +39,7 @@ const getAssignments = async (interviewId: string, agencyId: string): Promise<As
   if (existing.length) return existing;
 
   const criteria = await getPrisma().interviewCriterion.findMany({
-    where: { agencyId, active: true },
+    where: { active: true },
     select: { id: true, name: true, description: true, maxPoints: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -101,12 +101,12 @@ const validateScores = (scores: EvaluationInput['scores'], assignments: Assignme
   return errors;
 };
 
-const ensureInterviewAssignments = async (interviewId: string, agencyId: string) => {
+const ensureInterviewAssignments = async (interviewId: string) => {
   const existing = await getPrisma().interviewCriterionAssignment.count({ where: { interviewId } });
   if (existing > 0) return;
 
   const criteria = await getPrisma().interviewCriterion.findMany({
-    where: { agencyId, active: true },
+    where: { active: true },
     select: { id: true, name: true, description: true, maxPoints: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -158,7 +158,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_START_WINDOW_PASSED', message: 'The scheduled start window has passed. Review the interview instead of starting a new session.' } });
       }
 
-      await ensureInterviewAssignments(interview.id, interview.candidate.agencyId);
+      await ensureInterviewAssignments(interview.id);
 
       const updated = await getPrisma().interview.update({
         where: { id: interview.id },
@@ -212,7 +212,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'PANEL_ACCESS_DENIED', message: 'You are not assigned to this interview panel.' } });
       }
 
-      const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
+      const assignments = await getAssignments(interview.id);
       const ownEvaluation = interview.evaluations.find((item) => item.interviewerId === user.id) ?? null;
       return reply.send({
         success: true,
@@ -263,8 +263,8 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_IN_PROGRESS', message: 'Start the interview before saving the scorecard.' } });
       }
 
-      await ensureInterviewAssignments(interview.id, interview.candidate.agencyId);
-      const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
+      await ensureInterviewAssignments(interview.id);
+      const assignments = await getAssignments(interview.id);
       const scoreErrors = validateScores(request.body.scores, assignments);
       if (scoreErrors.length) return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: scoreErrors.join(' ') } });
 
@@ -335,8 +335,8 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_IN_PROGRESS', message: 'The interview is not currently in progress.' } });
       }
 
-      await ensureInterviewAssignments(interview.id, interview.candidate.agencyId);
-      const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
+      await ensureInterviewAssignments(interview.id);
+      const assignments = await getAssignments(interview.id);
       const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
         where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
         include: { scores: { select: { criterionId: true, points: true } } },
@@ -459,7 +459,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to these evaluations.' } });
 
-      const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
+      const assignments = await getAssignments(interview.id);
       const evaluations = user.role === 'INTERVIEWER'
         ? interview.evaluations.filter((item) => item.status === 'SUBMITTED' || item.interviewerId === user.id)
         : interview.evaluations.filter((item) => item.status === 'SUBMITTED');
