@@ -467,6 +467,18 @@ export const InterviewsPage = ({ role }: Props) => {
           durationMins,
           location: form.location.trim() || null,
           panelUserIds: panel,
+          criterionGroupId,
+          criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
+          criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
+            id: 'assignment-' + Date.now() + '-' + index + '-' + criterionIndex,
+            interviewId: 'draft',
+            criterionId: item.criterionId,
+            groupId: criterionGroupId,
+            name: item.criterion.name,
+            description: item.criterion.description,
+            maxPoints: item.criterion.maxPoints,
+            sortOrder: item.sortOrder,
+          })),
         }));
         drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
         setInterviews((current) => [...drafts, ...current]);
@@ -511,45 +523,163 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const startEvaluation = (interview: InterviewRecord) => {
-    setEvaluationFor(interview.id);
-    const drafts: Record<string, string> = {};
-    for (const criterion of criteria) drafts[criterion.id] = '0';
-    setScoreDrafts(drafts);
-    setEvaluationComments('');
-    setError('');
+  const mergeInterview = (updated: InterviewRecord) => {
+    setInterviews((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+    if (developmentMode) dispatch({ type: 'UPDATE_INTERVIEW', interview: updated });
   };
 
-  const submitEvaluation = async (interview: InterviewRecord) => {
-    if (!criteria.length) {
-      setError('No active interview criteria are configured for this agency. Ask an administrator to add criteria.');
+  const initialiseEvaluation = (interview: InterviewRecord, assignments: InterviewCriterionAssignment[], evaluation?: InterviewRecord['evaluations'] extends Array<infer E> ? E : never | null) => {
+    const own = evaluation ?? interview.evaluations?.find((item) => item.interviewerId === user?.id);
+    const drafts: Record<string, string> = {};
+    for (const assignment of assignments) {
+      const existingScore = own?.scores.find((score) => score.criterionId === assignment.criterionId);
+      drafts[assignment.criterionId] = existingScore ? String(existingScore.points) : '';
+    }
+    setEvaluationAssignments(assignments);
+    setScoreDrafts(drafts);
+    setEvaluationComments(own?.comments ?? '');
+    setEvaluationStatus(own?.status ?? 'DRAFT');
+  };
+
+  const openEvaluationWorkspace = async (interview: InterviewRecord) => {
+    setError('');
+    setSuccess('');
+    setEvaluationFor(interview.id);
+    setEvaluationSummary(null);
+    setEvaluationLastSaved(null);
+
+    try {
+      if (role !== 'INTERVIEWER') return;
+
+      if (developmentMode) {
+        let current = interviews.find((item) => item.id === interview.id) ?? interview;
+        if (current.status === 'SCHEDULED') {
+          current = { ...current, status: 'IN_PROGRESS', startedAt: new Date().toISOString() };
+          mergeInterview(current);
+        }
+        const assignments = current.criterionAssignments ?? (criteriaGroups.find((group) => group.id === current.criterionGroupId)?.criteria ?? []).map((item, index) => ({
+          id: current.id + '-assignment-' + index,
+          interviewId: current.id,
+          criterionId: item.criterionId,
+          groupId: current.criterionGroupId ?? null,
+          name: item.criterion.name,
+          description: item.criterion.description,
+          maxPoints: item.criterion.maxPoints,
+          sortOrder: item.sortOrder,
+        }));
+        initialiseEvaluation(current, assignments);
+        const total = assignments.reduce((sum, item) => sum + Number((scoreDrafts[item.criterionId] ?? '0')), 0);
+        setEvaluationSummary({ submitted: 0, drafts: 1, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
+        return;
+      }
+
+      let current = interview;
+      if (current.status === 'SCHEDULED') {
+        current = await apiFetch<InterviewRecord>('/interviews/' + interview.id + '/start', { method: 'POST' });
+        mergeInterview(current);
+      }
+      const result = await apiFetch<{
+        interview: InterviewRecord;
+        assignments: InterviewCriterionAssignment[];
+        evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }> } | null;
+        summary: { submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean };
+      }>('/interviews/' + interview.id + '/evaluation');
+      initialiseEvaluation(result.interview, result.assignments, result.evaluation as never);
+      setEvaluationSummary(result.summary);
+    } catch (requestError: unknown) {
+      setEvaluationFor(null);
+      setError(requestError instanceof Error ? requestError.message : 'Unable to open the interview scorecard.');
+    }
+  };
+
+  const saveEvaluationDraft = async (interviewId: string, silent = false) => {
+    if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return;
+    const scores = evaluationAssignments
+      .filter((assignment) => scoreDrafts[assignment.criterionId] !== '')
+      .map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
+
+    if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > (evaluationAssignments.find((item) => item.criterionId === score.criterionId)?.maxPoints ?? 0))) {
+      if (!silent) setError('Every score must be a whole number within the criterion maximum.');
       return;
     }
-    const scores = criteria.map((criterion) => ({ criterionId: criterion.id, points: Number(scoreDrafts[criterion.id] ?? 0) }));
-    if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > (criteria.find((item) => item.id === score.criterionId)?.maxPoints ?? 0))) {
-      setError('Every score must be a whole number within the criterion maximum.');
+
+    setEvaluationSaving(true);
+    try {
+      if (developmentMode) {
+        const interview = interviews.find((item) => item.id === interviewId);
+        if (interview) {
+          const ownId = user?.id ?? 'dev-interviewer';
+          const draftEvaluation = {
+            id: interview.evaluations?.find((item) => item.interviewerId === ownId)?.id ?? 'evaluation-' + Date.now(),
+            interviewId,
+            interviewerId: ownId,
+            status: 'DRAFT' as const,
+            comments: evaluationComments.trim() || null,
+            submittedAt: null,
+            scores,
+          };
+          mergeInterview({ ...interview, evaluations: [...(interview.evaluations ?? []).filter((item) => item.interviewerId !== ownId), draftEvaluation] });
+        }
+      } else {
+        const result = await apiFetch<{
+          evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }> };
+          assignments: InterviewCriterionAssignment[];
+          summary: { submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean };
+        }>('/interviews/' + interviewId + '/evaluation', {
+          method: 'PUT',
+          body: JSON.stringify({ scores, comments: evaluationComments.trim() || null }),
+        });
+        setEvaluationStatus(result.evaluation.status);
+        setEvaluationSummary(result.summary);
+      }
+      setEvaluationLastSaved(Date.now());
+      if (!silent) setSuccess('Scorecard saved.');
+    } catch (requestError: unknown) {
+      if (!silent) setError(requestError instanceof Error ? requestError.message : 'Unable to save the scorecard.');
+    } finally {
+      setEvaluationSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!evaluationFor || role !== 'INTERVIEWER' || evaluationStatus !== 'DRAFT' || !evaluationAssignments.length) return;
+    const timer = window.setTimeout(() => { void saveEvaluationDraft(evaluationFor, true); }, 800);
+    return () => window.clearTimeout(timer);
+  }, [evaluationAssignments, evaluationComments, evaluationFor, evaluationStatus, scoreDrafts]);
+
+  const submitEvaluation = async (interview: InterviewRecord) => {
+    if (!evaluationAssignments.length) {
+      setError('This interview has no criteria assigned. Ask the scheduler to select a criteria group.');
+      return;
+    }
+    const scores = evaluationAssignments.map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
+    if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > evaluationAssignments.find((item) => item.criterionId === score.criterionId)!.maxPoints || scoreDrafts[score.criterionId] === '')) {
+      setError('Score every assigned criterion before submitting the interview.');
       return;
     }
 
     setEvaluating(true);
     setError('');
     try {
+      await saveEvaluationDraft(interview.id);
       if (developmentMode) {
-        dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status: 'COMPLETED' });
-        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
-      } else {
-        const result = await apiFetch<{ interviewCompleted: boolean }>('/interviews/' + interview.id + '/evaluations', {
-          method: 'POST',
-          body: JSON.stringify({ scores, comments: evaluationComments.trim() || null }),
-        });
-        if (result.interviewCompleted) {
-          setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: 'COMPLETED' } : item));
+        const ownId = user?.id ?? 'dev-interviewer';
+        const updated = interviews.find((item) => item.id === interview.id);
+        if (updated) {
+          const ownEvaluation = updated.evaluations?.find((item) => item.interviewerId === ownId);
+          mergeInterview({ ...updated, status: 'COMPLETED', completedAt: new Date().toISOString(), evaluations: ownEvaluation ? [{ ...ownEvaluation, status: 'SUBMITTED', submittedAt: new Date().toISOString() }] : updated.evaluations });
         }
+        setEvaluationStatus('SUBMITTED');
+      } else {
+        const result = await apiFetch<{ interviewCompleted: boolean; evaluation: { status: 'SUBMITTED' }; summary: typeof evaluationSummary }>('/interviews/' + interview.id + '/evaluation/submit', { method: 'POST' });
+        setEvaluationStatus('SUBMITTED');
+        if (result.summary) setEvaluationSummary(result.summary);
+        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: result.interviewCompleted ? 'COMPLETED' : item.status, completedAt: result.interviewCompleted ? new Date().toISOString() : item.completedAt } : item));
       }
-      setEvaluationFor(null);
-      setSuccess('Interview criteria scores submitted.');
+      setEvaluationLastSaved(Date.now());
+      setSuccess('Interview scorecard submitted.');
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to submit interview evaluation.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to submit the interview scorecard.');
     } finally {
       setEvaluating(false);
     }
