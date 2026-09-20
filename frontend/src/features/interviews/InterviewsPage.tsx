@@ -496,6 +496,7 @@ export const InterviewsPage = ({ role }: Props) => {
             location: form.location.trim() || null,
             notes: form.notes.trim() || null,
             interviewerIds: panel,
+            criterionGroupId,
           }),
         });
         setInterviews((current) => [...result.candidates, ...current]);
