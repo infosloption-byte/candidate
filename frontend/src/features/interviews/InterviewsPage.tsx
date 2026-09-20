@@ -1217,7 +1217,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       </Button>
                     )}
 
-                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && candidate && !candidateFinalStatuses.includes(candidate.status) && (
+                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && interview.status === 'COMPLETED') && (
                       <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
                         Open interview panel
                       </Button>
@@ -1325,7 +1325,7 @@ export const InterviewsPage = ({ role }: Props) => {
         />
       )}
 
-      {evaluationFor && role === 'INTERVIEWER' && (
+      {evaluationFor && ['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (
         <div className="fixed inset-0 z-40 pointer-events-none">
           <div
             className={
@@ -1438,14 +1438,16 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                   )}
 
-                  <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All scores and notes are submitted together.'}</p>
-                      <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => scoreDrafts[assignment.criterionId] === '') || !evaluationComments.trim()}>
-                        {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
-                      </Button>
+                  {role === 'INTERVIEWER' && (
+                    <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All scores and notes are submitted together.'}</p>
+                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => scoreDrafts[assignment.criterionId] === '') || !evaluationComments.trim()}>
+                          {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })()}
