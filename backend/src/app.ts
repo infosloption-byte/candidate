@@ -10,6 +10,7 @@ import { evaluationRoutes } from './routes/evaluations.js';
 import { healthRoutes } from './routes/health.js';
 import { interviewRoutes } from './routes/interviews.js';
 import { interviewCriterionRoutes } from './routes/interviewCriteria.js';
+import { interviewCriterionGroupRoutes } from './routes/interviewCriterionGroups.js';
 import { jobRoutes } from './routes/jobs.js';
 import { operationalRoutes } from './routes/operational.js';
 
@@ -39,6 +40,7 @@ export const buildApp = (): FastifyInstance => {
   void app.register(interviewRoutes, { prefix: '/api/v1' });
   void app.register(evaluationRoutes, { prefix: '/api/v1' });
   void app.register(interviewCriterionRoutes, { prefix: '/api/v1' });
+  void app.register(interviewCriterionGroupRoutes, { prefix: '/api/v1' });
 
   return app;
 };
