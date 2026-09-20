@@ -198,7 +198,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
-    const editing = modalMode === 'EDIT_CRITERION' && selectedCriterion;
+    const editing = modalMode === 'EDIT_CRITERION' && selectedCriterion !== null;
     setSaving(true);
     setError('');
 
@@ -301,7 +301,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
 
-    const editing = modalMode === 'EDIT_GROUP' && selectedGroup;
+    const editing = modalMode === 'EDIT_GROUP' && selectedGroup !== null;
     setSaving(true);
     setError('');
 
@@ -414,14 +414,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           description={groupFormOpen ? 'Define the reusable scorecard and choose the criteria interviewers should score.' : 'Define one reusable scoring item for the shared interview library.'}
           onClose={closeModal}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{groupFormOpen ? 'Reusable scorecard' : 'Scoring library'}</p>
-              <h2 className="mt-1 text-base font-black text-slate-950">{groupFormOpen ? (modalMode === 'EDIT_GROUP' ? 'Edit criteria group' : 'Create criteria group') : (modalMode === 'EDIT_CRITERION' ? 'Edit scoring criterion' : 'Create scoring criterion')}</h2>
-              <p className="mt-1 text-xs text-slate-500">{groupFormOpen ? 'Group the criteria that belong to a job type, trade, or interview stage.' : 'Create a reusable criterion for scoring.'}</p>
-            </div>
-          </div>
-
           {criterionFormOpen && (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <FormField label="Criterion name">
@@ -494,6 +486,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               </div>
             </div>
           )}
+        </CriteriaModal>
       )}
 
       {!loading && groups.length > 0 && (
@@ -578,14 +571,20 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description ?? 'No description provided.'}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max</p>
-                      <p className="text-sm font-black text-slate-900">{criterion.maxPoints}</p>
+                  <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
+                    <div className="mr-auto flex items-center gap-3">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max</p>
+                        <p className="text-sm font-black text-slate-900">{criterion.maxPoints}</p>
+                      </div>
                     </div>
-                    <Button size="sm" variant={criterion.active ? 'danger' : 'secondary'} onClick={() => void toggleCriterion(criterion)}>
-                      {criterion.active ? 'Deactivate' : 'Activate'}
-                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
+                    {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
+                    {canManage && (
+                      <Button size="sm" variant={criterion.active ? 'danger' : 'secondary'} onClick={() => void toggleCriterion(criterion)}>
+                        {criterion.active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
