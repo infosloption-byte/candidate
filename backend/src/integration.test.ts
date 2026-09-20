@@ -387,6 +387,23 @@ dbTest('interviewer pool includes own agency and global interviewers without cro
   await prisma!.user.delete({ where: { id: createdGlobalBody.data.id } });
 });
 
+dbTest('global interviewer login keeps an authenticated session without an agency', async () => {
+  assert.ok(app);
+
+  const cookie = await login(emails.globalInterviewer);
+  const meResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: { cookie },
+  });
+
+  assert.equal(meResponse.statusCode, 200);
+  const meBody = json<{ data: { user: { id: string; role: string; agencyId: string | null } } }>(meResponse);
+  assert.equal(meBody.data.user.id, globalInterviewerId);
+  assert.equal(meBody.data.user.role, 'INTERVIEWER');
+  assert.equal(meBody.data.user.agencyId, null);
+});
+
 dbTest('global interviewer can be assigned to an agency interview and sees the assignment', async () => {
   assert.ok(app);
   assert.ok(prisma);
