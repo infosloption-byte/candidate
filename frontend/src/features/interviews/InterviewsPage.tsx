@@ -817,7 +817,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
       {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
 
-      {!loading && visible.length > 0 && (
+      {!loading && visible.length > 0 && listView === 'cards' && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((interview) => {
             const candidate = candidateFor(interview);
@@ -918,6 +918,76 @@ export const InterviewsPage = ({ role }: Props) => {
               </Card>
             );
           })}
+        </div>
+      )}
+      {!loading && visible.length > 0 && listView === 'table' && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[980px] w-full text-left">
+              <thead className="bg-slate-50">
+                <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-4 py-3">Candidate</th>
+                  <th className="px-4 py-3">Schedule</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Panel</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visible.map((interview) => {
+                  const candidate = candidateFor(interview);
+                  const job = jobFor(interview);
+                  const alreadyEvaluated = Boolean(interview.evaluations?.length);
+                  const isAssignedInterviewer = role === 'INTERVIEWER';
+
+                  return (
+                    <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
+                      <td className="px-4 py-3">
+                        <p className="font-extrabold text-slate-900">{candidate?.name ?? interview.candidateId}</p>
+                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'}{job ? ' · ' + job.title : ''}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <p className="font-semibold text-slate-700">{new Date(interview.scheduledAt).toLocaleDateString()}</p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">{new Date(interview.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {interview.durationMins} min</p>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{statusLabel(interview.type)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          <StatusPill value={interview.status} />
+                          {candidate?.status && <StatusPill value={candidate.status} />}
+                        </div>
+                      </td>
+                      <td className="max-w-40 px-4 py-3"><span className="line-clamp-2 text-slate-500">{interview.location ?? 'Not specified'}</span></td>
+                      <td className="max-w-44 px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {interview.panel?.length ? interview.panel.map((participant) => (
+                            <span key={participant.userId} className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-600">{participant.user?.name ?? 'Unavailable'}</span>
+                          )) : <span className="text-[10px] text-slate-400">No panel</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          <Button size="sm" variant="primary" className="min-h-8 rounded-lg px-2.5 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
+                          {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                            <>
+                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
+                              <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                              <Button size="sm" variant="danger" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                            </>
+                          )}
+                          {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
+                            <Button size="sm" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => { setListView('cards'); startEvaluation(interview); }}>Evaluate</Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
