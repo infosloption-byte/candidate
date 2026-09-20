@@ -6,7 +6,6 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
-import { SelectMenu } from '../../shared/components/SelectMenu';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, UserRole } from '../../domain/types';
