@@ -8,6 +8,7 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { SelectMenu } from '../../shared/components/SelectMenu';
+import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
@@ -21,6 +22,7 @@ const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERV
 
 const label = (value: string): string => value.replaceAll('_', ' ');
 const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
+const CANDIDATES_PAGE_SIZE = 10;
 
 const parseCsvRows = (input: string): string[][] => {
   const rows: string[][] = [];
@@ -91,6 +93,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [listView, setListView] = useState<'cards' | 'table'>('table');
+  const [candidatePage, setCandidatePage] = useState(1);
   const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
@@ -334,6 +337,17 @@ export const CandidatesPage = ({ role }: Props) => {
     });
     return sorted;
   }, [filteredCandidates, sortBy, sortDirection]);
+
+  const candidateTotalPages = Math.max(1, Math.ceil(sortedCandidates.length / CANDIDATES_PAGE_SIZE));
+  const activeCandidatePage = Math.min(candidatePage, candidateTotalPages);
+  const paginatedCandidates = useMemo(
+    () => sortedCandidates.slice((activeCandidatePage - 1) * CANDIDATES_PAGE_SIZE, activeCandidatePage * CANDIDATES_PAGE_SIZE),
+    [activeCandidatePage, sortedCandidates],
+  );
+
+  useEffect(() => {
+    setCandidatePage(1);
+  }, [agencyId, availabilityFilter, countryFilter, locationFilter, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter, visaStatusFilter]);
 
   const createCandidate = async () => {
     if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
@@ -1027,7 +1041,7 @@ export const CandidatesPage = ({ role }: Props) => {
 
           {!loading && listView === 'cards' && sortedCandidates.length > 0 && (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {sortedCandidates.map((item) => {
+              {paginatedCandidates.map((item) => {
                 const candidateInitial = item.name.trim().charAt(0).toUpperCase() || '?';
                 return (
                   <Card key={item.id} padded={false} className="p-4">
@@ -1094,7 +1108,16 @@ export const CandidatesPage = ({ role }: Props) => {
           )}
 
           {!loading && listView === 'table' && (
-            <DataTable columns={columns} rows={sortedCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />
+            <DataTable columns={columns} rows={paginatedCandidates} getRowKey={(item) => item.id} emptyMessage="No candidates match the current filters." />
+          )}
+
+          {!loading && (
+            <Pagination
+              page={activeCandidatePage}
+              pageSize={CANDIDATES_PAGE_SIZE}
+              total={sortedCandidates.length}
+              onPageChange={setCandidatePage}
+            />
           )}
 
           {candidate && selectedCandidateId && (
