@@ -253,6 +253,64 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
   assert.equal(interviewerCandidates.statusCode, 403);
 });
 
+dbTest('admin can manage unified system users and interviewer types', async () => {
+  assert.ok(app);
+  assert.ok(prisma);
+
+  const adminCookie = await login(emails.admin);
+
+  const systemUsersResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/system-users',
+    headers: { cookie: adminCookie },
+  });
+  assert.equal(systemUsersResponse.statusCode, 200);
+  const systemUsersBody = json<{ data: Array<{ id: string; role: string; agencyId: string | null }> }>(systemUsersResponse);
+  assert.ok(systemUsersBody.data.some((item) => item.id === adminId && item.role === 'ADMIN'));
+  assert.ok(systemUsersBody.data.some((item) => item.id === agencyAUserId && item.role === 'AGENCY' && item.agencyId === agencyAId));
+
+  const interviewerListResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviewers/all',
+    headers: { cookie: adminCookie },
+  });
+  assert.equal(interviewerListResponse.statusCode, 200);
+  const interviewerListBody = json<{ data: Array<{ id: string; role: string; agencyId: string | null }> }>(interviewerListResponse);
+  assert.ok(interviewerListBody.data.some((item) => item.id === interviewerId && item.agencyId === agencyAId));
+  assert.ok(interviewerListBody.data.some((item) => item.id === globalInterviewerId && item.agencyId === null));
+
+  const createdAgencyUser = await app.inject({
+    method: 'POST',
+    url: '/api/v1/system-users',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Created Agency User',
+      email: 'qa-created-agency-' + suffix + '@buildhire.local',
+      password,
+      role: 'AGENCY',
+      agencyId: agencyBId,
+    },
+  });
+  assert.equal(createdAgencyUser.statusCode, 201);
+  const createdAgencyUserBody = json<{ data: { id: string; role: string; agencyId: string | null } }>(createdAgencyUser);
+  assert.equal(createdAgencyUserBody.data.role, 'AGENCY');
+  assert.equal(createdAgencyUserBody.data.agencyId, agencyBId);
+  await prisma.user.delete({ where: { id: createdAgencyUserBody.data.id } });
+
+  const agencyCreateSystemUser = await app.inject({
+    method: 'POST',
+    url: '/api/v1/system-users',
+    headers: { cookie: await login(emails.agencyA) },
+    payload: {
+      name: 'Should Not Be Created',
+      email: 'qa-forbidden-system-' + suffix + '@buildhire.local',
+      password,
+      role: 'ADMIN',
+    },
+  });
+  assert.equal(agencyCreateSystemUser.statusCode, 403);
+});
+
 dbTest('interviewer pool includes own agency and global interviewers without cross-agency leakage', async () => {
   assert.ok(app);
 
