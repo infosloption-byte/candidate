@@ -84,6 +84,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [listView, setListView] = useState<'cards' | 'table'>('cards');
   const [interviewPage, setInterviewPage] = useState(1);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
+  const [evaluationMinimized, setEvaluationMinimized] = useState(false);
+  const [evaluationMaximized, setEvaluationMaximized] = useState(false);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
   const [evaluationAssignments, setEvaluationAssignments] = useState<InterviewCriterionAssignment[]>([]);
@@ -549,6 +551,8 @@ export const InterviewsPage = ({ role }: Props) => {
     setError('');
     setSuccess('');
     setEvaluationFor(interview.id);
+    setEvaluationMinimized(false);
+    setEvaluationMaximized(false);
     setEvaluationSummary(null);
     setEvaluationLastSaved(null);
 
@@ -733,10 +737,13 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const openInterviewDetails = async (interview: InterviewRecord) => {
     setDetailFor(interview.id);
-    setDetail(interview as InterviewDetail);
+    setDetail(null);
     setDetailLoading(!developmentMode);
     setError('');
-    if (developmentMode) return;
+    if (developmentMode) {
+      setDetail(interview as InterviewDetail);
+      return;
+    }
 
     try {
       const result = await apiFetch<InterviewDetail>('/interviews/' + interview.id);
@@ -1199,108 +1206,6 @@ export const InterviewsPage = ({ role }: Props) => {
                   </div>
                 </div>
 
-                {evaluationFor === interview.id && role === 'INTERVIEWER' && (
-                  <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
-                    <div className="flex flex-col gap-3 border-b border-cyan-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Live interview workspace</p>
-                        <h3 className="mt-1 text-sm font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {interview.criterionGroup?.name ?? 'Assigned scorecard'} · {evaluationAssignments.length} criteria
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live total</p>
-                        <p className="text-lg font-black text-cyan-700">
-                          {evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
-                          <span className="text-xs font-bold text-slate-400"> / {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-white p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">
-                          {evaluationAssignments.filter((item) => scoreDrafts[item.criterionId] !== '').length} / {evaluationAssignments.length} scored
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Percentage</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">
-                          {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)
-                            ? Math.round(
-                                evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)
-                                / evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0) * 100,
-                              ) + '%'
-                            : '—'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">
-                          {evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-2.5">
-                      {evaluationAssignments.map((assignment) => (
-                        <div key={assignment.id} className="rounded-2xl border border-white bg-white p-3.5">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0">
-                              <p className="text-xs font-extrabold text-slate-900">{assignment.name}</p>
-                              <p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description ?? 'No description provided.'}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-slate-400">/ {assignment.maxPoints}</span>
-                              <input
-                                type="number"
-                                min="0"
-                                max={assignment.maxPoints}
-                                disabled={evaluationStatus === 'SUBMITTED' || evaluating}
-                                className="field-input !mt-0 w-20 px-2 text-sm font-bold"
-                                value={scoreDrafts[assignment.criterionId] ?? ''}
-                                onChange={(event) => setScoreDrafts((current) => ({ ...current, [assignment.criterionId]: event.target.value }))}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <FormField label="Interview notes" hint="Saved automatically while you work.">
-                      <textarea
-                        className="field-input min-h-24 resize-y"
-                        disabled={evaluationStatus === 'SUBMITTED' || evaluating}
-                        value={evaluationComments}
-                        onChange={(event) => setEvaluationComments(event.target.value)}
-                        placeholder="Observations, strengths, concerns, practical comments…"
-                      />
-                    </FormField>
-
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="text-[10px] text-slate-400">
-                        {evaluationStatus === 'SUBMITTED'
-                          ? 'Scorecard submitted. Editing is locked.'
-                          : evaluationSaving
-                            ? 'Saving draft…'
-                            : evaluationLastSaved
-                              ? 'Draft saved at ' + new Date(evaluationLastSaved).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-                              : 'Draft will save automatically.'}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => void saveEvaluationDraft(interview.id)} disabled={evaluationStatus === 'SUBMITTED' || evaluationSaving}>Save now</Button>
-                        <Button size="sm" onClick={() => void submitEvaluation(interview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => scoreDrafts[assignment.criterionId] === '')}>
-                          {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit scorecard'}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-
-
                 {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
                     <div>
@@ -1418,6 +1323,84 @@ export const InterviewsPage = ({ role }: Props) => {
           total={visible.length}
           onPageChange={setInterviewPage}
         />
+      )}
+
+      {evaluationFor && role === 'INTERVIEWER' && (
+        <div className="fixed inset-0 z-40 pointer-events-none">
+          <div
+            className={
+              evaluationMinimized
+                ? 'pointer-events-auto fixed bottom-4 right-4 w-[min(360px,calc(100vw-2rem))]'
+                : evaluationMaximized
+                  ? 'pointer-events-auto fixed inset-3 sm:inset-5'
+                  : 'pointer-events-auto fixed bottom-4 right-4 w-[min(620px,calc(100vw-2rem))]'
+            }
+          >
+            {(() => {
+              const activeInterview = interviews.find((item) => item.id === evaluationFor);
+              const activeCandidate = activeInterview ? candidateFor(activeInterview) : null;
+              if (!activeInterview) return null;
+              if (evaluationMinimized) {
+                return (
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-black text-slate-900">Interview — {activeCandidate?.name ?? activeInterview.candidateId}</p>
+                        <p className="text-[10px] text-slate-400">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading scorecard…'}</p>
+                      </div>
+                      <Button size="sm" variant="secondary" className="min-h-9 px-2 text-[10px]" onClick={() => setEvaluationMinimized(false)}>Open</Button>
+                      <button type="button" aria-label="Close interview workspace" className="text-lg font-bold text-slate-400 hover:text-slate-700" onClick={() => setEvaluationFor(null)}>×</button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex h-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Ongoing interview</p>
+                      <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? activeInterview.candidateId}</h3>
+                      <p className="truncate text-[10px] text-slate-400">{activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button type="button" aria-label="Minimize interview workspace" title="Minimize" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMinimized(true)}>−</button>
+                      <button type="button" aria-label={evaluationMaximized ? 'Restore interview workspace' : 'Maximize interview workspace'} title={evaluationMaximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMaximized((value) => !value)}>{evaluationMaximized ? '❐' : '□'}</button>
+                      <button type="button" aria-label="Close interview workspace" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationFor(null)}>×</button>
+                    </div>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p><p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((item) => scoreDrafts[item.criterionId] !== '').length} / {evaluationAssignments.length} scored</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My total</p><p className="mt-1 text-sm font-black text-cyan-700">{evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)} / {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p><p className="mt-1 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p></div>
+                    </div>
+                    <div className="mt-4 space-y-2.5">
+                      {evaluationAssignments.map((assignment) => (
+                        <div key={assignment.id} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{assignment.name}</p><p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description ?? 'No description provided.'}</p></div>
+                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-400">/ {assignment.maxPoints}</span><input type="number" min="0" max={assignment.maxPoints} disabled={evaluationStatus === 'SUBMITTED' || evaluating} className="field-input !mt-0 w-20 px-2 text-sm font-bold" value={scoreDrafts[assignment.criterionId] ?? ''} onChange={(event) => setScoreDrafts((current) => ({ ...current, [assignment.criterionId]: event.target.value }))} /></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <FormField label="Interview notes" hint="Add your interview observations before submitting.">
+                      <textarea className="field-input min-h-28 resize-y" disabled={evaluationStatus === 'SUBMITTED' || evaluating} value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Enter interview observations, strengths, concerns and final notes…" />
+                    </FormField>
+                  </div>
+                  <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All scores and notes are submitted together.'}</p>
+                      <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => scoreDrafts[assignment.criterionId] === '') || !evaluationComments.trim()}>
+                        {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       )}
 
       {detailFor && detail && (
