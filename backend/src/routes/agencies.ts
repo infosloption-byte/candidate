@@ -19,6 +19,17 @@ interface UserBody {
   role?: AgencyUserRole;
 }
 
+interface InterviewerQuery {
+  agencyId?: string;
+}
+
+interface GlobalInterviewerBody {
+  name?: string;
+  email?: string;
+  password?: string;
+  active?: boolean;
+}
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const slugify = (value: string): string => value
@@ -171,6 +182,157 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
     return reply.send({ success: true, data: agency });
   });
+
+  app.get<{ Querystring: InterviewerQuery }>(
+    '/interviewers',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const actor = request.authUser!;
+      const agencyId = actor.role === 'AGENCY' ? actor.agencyId : request.query.agencyId;
+
+      if (!agencyId) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'AGENCY_REQUIRED', message: 'An agencyId is required when loading available interviewers.' },
+        });
+      }
+
+      if (actor.role === 'AGENCY' && actor.agencyId !== agencyId) {
+        return reply.code(403).send({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only load interviewers for your own agency.' },
+        });
+      }
+
+      const agency = await getPrisma().agency.findUnique({
+        where: { id: agencyId },
+        select: { id: true, status: true },
+      });
+      if (!agency) {
+        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+      }
+
+      const interviewers = await getPrisma().user.findMany({
+        where: {
+          role: 'INTERVIEWER',
+          active: true,
+          OR: [{ agencyId }, { agencyId: null }],
+        },
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        orderBy: [{ agencyId: 'asc' }, { name: 'asc' }],
+      });
+
+      return reply.send({ success: true, data: interviewers });
+    },
+  );
+
+  app.get(
+    '/interviewers/global',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (_request, reply) => {
+      const interviewers = await getPrisma().user.findMany({
+        where: { role: 'INTERVIEWER', agencyId: null },
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        orderBy: [{ active: 'desc' }, { name: 'asc' }],
+      });
+
+      return reply.send({ success: true, data: interviewers });
+    },
+  );
+
+  app.post<{ Body: GlobalInterviewerBody }>(
+    '/interviewers',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (request, reply) => {
+      const name = request.body.name?.trim();
+      const email = request.body.email?.trim().toLowerCase();
+      const password = request.body.password ?? '';
+
+      if (!name || !email || !password || password.length < 8) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'INVALID_INTERVIEWER', message: 'Name, email, and an 8+ character password are required.' },
+        });
+      }
+      if (name.length > 160 || !emailPattern.test(email) || email.length > 191 || password.length > 128) {
+        return reply.code(400).send({
+          success: false,
+          error: { code: 'INVALID_INTERVIEWER', message: 'Name must be 160 characters or fewer, email must be valid and 191 characters or fewer, and password must be 8-128 characters.' },
+        });
+      }
+
+      try {
+        const user = await getPrisma().user.create({
+          data: {
+            agencyId: null,
+            name,
+            email,
+            passwordHash: await hashPassword(password),
+            role: 'INTERVIEWER',
+          },
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        });
+
+        await recordAuditEvent({
+          actorId: request.authUser!.id,
+          agencyId: null,
+          action: 'GLOBAL_INTERVIEWER_CREATED',
+          entityType: 'User',
+          entityId: user.id,
+          summary: 'Created global interviewer "' + user.name + '".',
+        });
+
+        return reply.code(201).send({ success: true, data: user });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') {
+          return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        }
+        throw error;
+      }
+    },
+  );
+
+  app.patch<{ Params: { id: string }; Body: Pick<GlobalInterviewerBody, 'name' | 'active'> }>(
+    '/interviewers/:id',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (request, reply) => {
+      const existing = await getPrisma().user.findFirst({
+        where: { id: request.params.id, agencyId: null, role: 'INTERVIEWER' },
+      });
+
+      if (!existing) {
+        return reply.code(404).send({ success: false, error: { code: 'INTERVIEWER_NOT_FOUND', message: 'Global interviewer not found.' } });
+      }
+
+      const data: { name?: string; active?: boolean } = {};
+      if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.active !== undefined) data.active = request.body.active;
+
+      if (data.name === '') {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER', message: 'Interviewer name cannot be empty.' } });
+      }
+      if (data.name !== undefined && (data.name.length < 2 || data.name.length > 160)) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER', message: 'Interviewer name must be 2-160 characters.' } });
+      }
+
+      const user = await getPrisma().user.update({
+        where: { id: existing.id },
+        data,
+        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+      });
+
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: null,
+        action: 'GLOBAL_INTERVIEWER_UPDATED',
+        entityType: 'User',
+        entityId: user.id,
+        summary: 'Updated global interviewer "' + user.name + '".',
+      });
+
+      return reply.send({ success: true, data: user });
+    },
+  );
 
   app.get<{ Params: { agencyId: string } }>(
     '/agencies/:agencyId/users',
