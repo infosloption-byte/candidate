@@ -269,6 +269,13 @@ dbTest('interviewer pool includes own agency and global interviewers without cro
   assert.ok(agencyPoolIds.has(globalInterviewerId));
   assert.equal(agencyPoolIds.has(interviewerBId), true);
 
+  const agencyCrossPool = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviewers?agencyId=' + agencyBId,
+    headers: { cookie: agencyCookie },
+  });
+  assert.equal(agencyCrossPool.statusCode, 403);
+
   const agencyBCookie = await login(emails.agencyB);
   const agencyBPool = await app.inject({
     method: 'GET',
