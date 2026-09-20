@@ -580,8 +580,9 @@ export const InterviewsPage = ({ role }: Props) => {
           sortOrder: item.sortOrder,
         }));
         initialiseEvaluation(current, assignments);
-        const total = assignments.reduce((sum, item) => sum + Number((scoreDrafts[item.criterionId] ?? '0')), 0);
-        setEvaluationSummary({ submitted: 0, drafts: 1, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
+        const ownEvaluation = current.evaluations?.find((item) => item.interviewerId === user?.id);
+        const total = assignments.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
+        setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
         return;
       }
 
@@ -691,9 +692,13 @@ export const InterviewsPage = ({ role }: Props) => {
             submittedAt,
             scores,
           };
+          const allEvaluations = [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluation];
+          const requiredPanelSize = updated.panel?.length ?? updated.panelUserIds.length;
           mergeInterview({
             ...updated,
-            evaluations: [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluation],
+            status: allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize ? 'COMPLETED' : 'IN_PROGRESS',
+            completedAt: allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize ? submittedAt : updated.completedAt,
+            evaluations: allEvaluations,
           });
         }
         setEvaluationStatus('SUBMITTED');
