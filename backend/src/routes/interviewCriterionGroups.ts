@@ -22,7 +22,6 @@ const groupInclude = {
   },
 } as const;
 
-const buildGroup = (group: Awaited<ReturnType<typeof getPrisma>['interviewCriterionGroup']['findFirst']>) => group;
 
 export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: AgencyParams }>(
