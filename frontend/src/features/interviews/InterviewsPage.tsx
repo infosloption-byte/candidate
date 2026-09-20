@@ -604,7 +604,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 <path d="M7 4v16" />
                 <path d="m4 7 3-3 3 3" />
                 <path d="M17 20V4" />
-                <path d="m14 17 3 3 3 3" />
+                <path d="m14 17 3 3 3-3" />
               </svg>
               <span className="min-w-0 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
