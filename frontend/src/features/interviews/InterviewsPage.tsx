@@ -112,6 +112,7 @@ export const InterviewsPage = ({ role }: Props) => {
       setAgencies(state.agencies);
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active));
       setCriteria(state.interviewCriteria.filter((item) => item.agencyId === agencyId && item.active));
+      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.agencyId === agencyId && item.active));
       return;
     }
 
@@ -158,7 +159,7 @@ export const InterviewsPage = ({ role }: Props) => {
       });
 
     return () => { cancelled = true; };
-  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriteria, user?.agencyId, user?.id, agencyId]);
+  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriteria, state.interviewCriterionGroups, user?.agencyId, user?.id, agencyId]);
 
   useEffect(() => {
     if (!agencyId) return;
@@ -171,18 +172,26 @@ export const InterviewsPage = ({ role }: Props) => {
       Promise.all([
         apiFetch<User[]>('/agencies/' + agencyId + '/users'),
         apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
+        apiFetch<InterviewCriterionGroup[]>('/agencies/' + agencyId + '/interview-criteria-groups'),
       ])
-        .then(([users, criterionResult]) => {
+        .then(([users, criterionResult, groupResult]) => {
           setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
           setCriteria(criterionResult.filter((item) => item.active));
+          setCriteriaGroups(groupResult.filter((item) => item.active));
         })
         .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load agency interview setup.'));
     } else if (role === 'AGENCY') {
-      apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria')
-        .then((result) => setCriteria(result.filter((item) => item.active)))
-        .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load interview criteria.'));
+      Promise.all([
+        apiFetch<InterviewCriterion[]>('/agencies/' + agencyId + '/interview-criteria'),
+        apiFetch<InterviewCriterionGroup[]>('/agencies/' + agencyId + '/interview-criteria-groups'),
+      ])
+        .then(([criterionResult, groupResult]) => {
+          setCriteria(criterionResult.filter((item) => item.active));
+          setCriteriaGroups(groupResult.filter((item) => item.active));
+        })
+        .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load interview scoring setup.'));
     }
-  }, [agencyId, developmentMode, role, state.users, state.interviewCriteria]);
+  }, [agencyId, developmentMode, role, state.users, state.interviewCriteria, state.interviewCriterionGroups]);
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
