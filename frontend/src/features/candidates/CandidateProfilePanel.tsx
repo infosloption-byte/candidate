@@ -346,7 +346,7 @@ export const CandidateProfilePanel = ({
     return items.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
   }, [candidate, history]);
 
-  const latestInterviewy]);
+  const latestInterview
 
   const latestInterview = history.interviews[0];
   const latestScore = latestInterview ? interviewScore(latestInterview) : null;
@@ -383,7 +383,7 @@ export const CandidateProfilePanel = ({
               <p className="truncate text-[10px] text-slate-400">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {label(displayCandidate.status)}</p>
             </div>
             <button type="button" className="rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100" onClick={onRestore}>Open</button>
-            <button type="button" aria-label="Close displayCandidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
+            <button type="button" aria-label="Close candidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
           </div>
         </div>
       </div>
@@ -405,9 +405,9 @@ export const CandidateProfilePanel = ({
               <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.profession ?? 'Profession not set'}</p>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" aria-label="Minimize displayCandidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
-              <button type="button" aria-label={maximized ? 'Restore displayCandidate profile' : 'Maximize displayCandidate profile'} title={maximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1.5 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMaximize}>{maximized ? '❐' : '□'}</button>
-              <button type="button" aria-label="Close displayCandidate profile" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
+              <button type="button" aria-label="Minimize candidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
+              <button type="button" aria-label={maximized ? 'Restore candidate profile' : 'Maximize candidate profile'} title={maximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1.5 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMaximize}>{maximized ? '❐' : '□'}</button>
+              <button type="button" aria-label="Close candidate profile" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
             </div>
           </div>
         </header>
