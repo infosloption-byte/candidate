@@ -9,6 +9,7 @@ interface Props {
   minimized: boolean;
   maximized: boolean;
   onMinimize: () => void;
+  onRestore: () => void;
   onMaximize: () => void;
   onClose: () => void;
 }
@@ -41,7 +42,7 @@ export const CandidateProfilePanel = ({ candidate, minimized, maximized, onMinim
               <p className="truncate text-xs font-black text-slate-950">{candidate.name}</p>
               <p className="truncate text-[10px] text-slate-400">{candidate.reference} · Passport: {value(candidate.passportNumber)}</p>
             </div>
-            <button type="button" className="rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100" onClick={onMaximize}>Open</button>
+            <button type="button" className="rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100" onClick={onRestore}>Open</button>
             <button type="button" aria-label="Close candidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
           </div>
         </div>
