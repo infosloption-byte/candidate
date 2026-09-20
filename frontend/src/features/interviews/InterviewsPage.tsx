@@ -1538,6 +1538,7 @@ export const InterviewsPage = ({ role }: Props) => {
         minimized={profileMinimized}
         maximized={profileMaximized}
         onMinimize={() => setProfileMinimized(true)}
+        onRestore={() => { setProfileMinimized(false); setProfileMaximized(false); }}
         onMaximize={() => { setProfileMinimized(false); setProfileMaximized((value) => !value); }}
         onClose={() => { setProfileCandidate(null); setProfileMinimized(false); setProfileMaximized(false); }}
       />
