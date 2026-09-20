@@ -11,6 +11,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 
 interface Props {
   role: UserRole;
+  onOpenInterview?: (interviewId: string) => void;
 }
 
 type CalendarMode = 'month' | 'agenda';
@@ -99,7 +100,7 @@ const buildDevInterviews = (
     }).filter((item): item is NonNullable<typeof item> => Boolean(item)),
   }));
 
-export const CalendarPage = ({ role }: Props) => {
+export const CalendarPage = ({ role, onOpenInterview }: Props) => {
   const { developmentMode, user } = useAuth();
   const { state } = useRecruitment();
   const [interviews, setInterviews] = useState<Interview[]>(developmentMode ? buildDevInterviews(state.interviews, state.candidates, state.jobs, state.users) : []);
@@ -110,7 +111,6 @@ export const CalendarPage = ({ role }: Props) => {
   const [statusFilter, setStatusFilter] = useState<InterviewStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
   const [search, setSearch] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (developmentMode) {
@@ -176,8 +176,6 @@ export const CalendarPage = ({ role }: Props) => {
     }
     return days;
   }, [calendarStart, visibleMonth]);
-
-  const selectedEvent = selectedEventId ? events.find((event) => event.id === selectedEventId) ?? null : null;
 
   const today = startOfDay(new Date());
   const summary = useMemo(() => {
@@ -319,7 +317,7 @@ export const CalendarPage = ({ role }: Props) => {
                         key={event.id}
                         type="button"
                         title={event.title}
-                        onClick={() => setSelectedEventId(event.id)}
+                        onClick={() => onOpenInterview?.(event.interview.id)}
                         className={'w-full rounded-lg border px-1.5 py-1 text-left transition hover:-translate-y-px hover:shadow-sm ' + statusTone(event.interview.status)}
                       >
                         <p className="truncate text-[9px] font-black">{formatTime(event.date)} · {event.title}</p>
@@ -378,52 +376,7 @@ export const CalendarPage = ({ role }: Props) => {
         </Card>
       )}
 
-      {selectedEvent && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6">
-          <button type="button" aria-label="Close calendar event details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setSelectedEventId(null)} />
-          <div className="relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Calendar event</p>
-                <h2 className="mt-1 text-xl font-black text-slate-950">{selectedEvent.title}</h2>
-                <p className="mt-1 text-xs text-slate-500">{statusLabel(selectedEvent.interview.type)} interview · {statusLabel(selectedEvent.interview.status)}</p>
-              </div>
-              <button type="button" aria-label="Close event details" className="rounded-xl px-2 py-1 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setSelectedEventId(null)}>×</button>
-            </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Candidate</p><p className="mt-2 text-sm font-bold text-slate-900">{selectedEvent.interview.candidate?.name ?? selectedEvent.interview.candidateId}</p><p className="mt-1 text-[10px] text-cyan-700">Passport: {selectedEvent.interview.candidate?.passportNumber ?? 'Not provided'}</p><p className="mt-1 text-[10px] text-slate-400">{selectedEvent.interview.candidate?.reference ?? 'No reference'}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Date & time</p><p className="mt-2 text-sm font-bold text-slate-900">{selectedEvent.date.toLocaleString()}</p><p className="mt-1 text-[10px] text-slate-400">{selectedEvent.interview.durationMins} minutes</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Location</p><p className="mt-2 text-sm font-bold text-slate-900">{selectedEvent.interview.location ?? 'Not specified'}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Job</p><p className="mt-2 text-sm font-bold text-slate-900">{selectedEvent.interview.job?.title ?? 'General interview'}</p><p className="mt-1 text-[10px] text-slate-400">{selectedEvent.interview.job?.location ?? 'No job location'}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Interview ID</p><p className="mt-2 break-all text-[11px] font-bold text-slate-900">{selectedEvent.interview.id}</p></div>
-              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Lifecycle</p><p className="mt-2 text-sm font-bold text-slate-900">Created {selectedEvent.interview.createdAt ? new Date(selectedEvent.interview.createdAt).toLocaleString() : 'Not available'}</p><p className="mt-1 text-[10px] text-slate-400">Started {selectedEvent.interview.startedAt ? new Date(selectedEvent.interview.startedAt).toLocaleString() : 'Not started'}</p><p className="mt-1 text-[10px] text-slate-400">Completed {selectedEvent.interview.completedAt ? new Date(selectedEvent.interview.completedAt).toLocaleString() : 'Not completed'}</p></div>
-            </div>
-
-            {selectedEvent.interview.panel && selectedEvent.interview.panel.length > 0 && (
-              <div className="mt-4 rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Assigned interviewers</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedEvent.interview.panel.map((participant) => (
-                    <span key={participant.userId} className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600">{participant.user.name}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {selectedEvent.interview.notes && (
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Interview notes</p>
-                <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{selectedEvent.interview.notes}</p>
-              </div>
-            )}
-
-            <div className="mt-5 flex justify-end">
-              <Button variant="secondary" onClick={() => setSelectedEventId(null)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
