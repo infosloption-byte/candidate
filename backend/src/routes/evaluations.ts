@@ -241,7 +241,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Only interviewers can save interview evaluations.' } });
       }
 
-      const errors = validateEvaluationInput({ ...request.body, scores: request.body.scores ?? [] });
+      const errors = validateEvaluationInput({ ...request.body, scores: request.body.scores ?? [] }, { allowEmptyScores: true });
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_EVALUATION', message: errors.join(' ') } });
 
       const interview = await getPrisma().interview.findUnique({
