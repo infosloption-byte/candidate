@@ -148,7 +148,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         ...interviewInclude,
         evaluations: {
           where: { interviewerId: user.id },
-          select: { id: true },
+          select: { id: true, status: true, submittedAt: true },
         },
       },
       orderBy: { scheduledAt: 'asc' },
@@ -494,7 +494,6 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const nextDuration = request.body.durationMins ?? existing.durationMins;
       const nextPanel = request.body.interviewerIds ?? existing.panel.map((item) => item.userId);
       const nextStatus = request.body.status ?? existing.status;
-      const nextCriterionGroupId = request.body.criterionGroupId ?? null;
 
       if (request.body.status !== undefined && !['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(request.body.status)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview can only be scheduled, cancelled, or marked as a no-show from the scheduler.' } });
