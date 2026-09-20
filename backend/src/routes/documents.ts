@@ -46,6 +46,12 @@ const allowedToAccessCandidate = async (
 };
 
 const sanitizeDownloadName = (fileName: string): string => fileName.replace(/[\r\n"]/g, '_');
+const canManageCandidateDocuments = (
+  user: NonNullable<FastifyRequest['authUser']>,
+  agencyId: string,
+): boolean =>
+  user.role === 'ADMIN' || (user.role === 'AGENCY' && user.agencyId === agencyId);
+
 
 export const documentRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: CandidateParams }>(
@@ -97,10 +103,10 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (!allowedToAccessCandidate(request.authUser!, candidate.agencyId, candidate.id)) {
+      if (!canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
         return reply.code(403).send({
           success: false,
-          error: { code: 'FORBIDDEN', message: 'You do not have permission to upload documents for this candidate.' },
+          error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can upload candidate documents.' },
         });
       }
 
@@ -229,7 +235,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         select: { agencyId: true, name: true },
       });
 
-      if (!candidate || !allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId)) {
+      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId))) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'You do not have access to this document.' },
