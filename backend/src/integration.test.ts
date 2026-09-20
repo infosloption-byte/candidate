@@ -307,6 +307,55 @@ dbTest('interviewer pool includes own agency and global interviewers without cro
   await prisma!.user.delete({ where: { id: createdGlobalBody.data.id } });
 });
 
+dbTest('global interviewer can be assigned to an agency interview and sees the assignment', async () => {
+  assert.ok(app);
+  assert.ok(prisma);
+
+  const candidate = await prisma.candidate.create({
+    data: {
+      agencyId: agencyAId,
+      reference: 'GLOBAL-I-' + suffix,
+      name: 'Global Interviewer Candidate',
+      profession: 'Welder',
+      status: 'POOL',
+      source: 'AGENCY_ADDED',
+      onboardingStatus: 'COMPLETED',
+      skills: ['Welding'],
+    },
+    select: { id: true },
+  });
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/candidates/' + candidate.id + '/interviews',
+    headers: { cookie: await login(emails.agencyA) },
+    payload: {
+      type: 'TECHNICAL',
+      scheduledAt: new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString(),
+      durationMins: 30,
+      location: 'Global interviewer QA',
+      interviewerIds: [globalInterviewerId],
+      criterionGroupId,
+    },
+  });
+
+  assert.equal(response.statusCode, 201);
+  const body = json<{ data: { id: string; panel: Array<{ userId: string; user: { agencyId: string | null } }> } }>(response);
+  assert.equal(body.data.panel.length, 1);
+  assert.equal(body.data.panel[0]!.userId, globalInterviewerId);
+  assert.equal(body.data.panel[0]!.user.agencyId, null);
+
+  const globalCookie = await login(emails.globalInterviewer);
+  const listResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews',
+    headers: { cookie: globalCookie },
+  });
+  assert.equal(listResponse.statusCode, 200);
+  const listBody = json<{ data: Array<{ id: string }> }>(listResponse);
+  assert.ok(listBody.data.some((item) => item.id === body.data.id));
+});
+
 dbTest('bulk interview scheduling creates consecutive interview slots for selected candidates', async () => {
   assert.ok(app);
 
