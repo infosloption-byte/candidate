@@ -8,10 +8,11 @@ export interface EvaluationInput {
   comments?: string | null;
 }
 
-export const validateEvaluationInput = (input: EvaluationInput): string[] => {
+export const validateEvaluationInput = (input: EvaluationInput, options?: { allowEmptyScores?: boolean }): string[] => {
+  const allowEmptyScores = options?.allowEmptyScores ?? false;
   const errors: string[] = [];
 
-  if (!Array.isArray(input.scores) || input.scores.length === 0) {
+  if (!Array.isArray(input.scores) || (!allowEmptyScores && input.scores.length === 0)) {
     errors.push('At least one interview criterion score is required.');
   } else {
     if (input.scores.length > 50) errors.push('An evaluation can contain at most 50 criterion scores.');
