@@ -10,6 +10,7 @@ import { SelectMenu } from '../../shared/components/SelectMenu';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
@@ -105,6 +106,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const [detail, setDetail] = useState<InterviewDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null);
+  const [profileMinimized, setProfileMinimized] = useState(false);
+  const [profileMaximized, setProfileMaximized] = useState(false);
 
   useEffect(() => {
     if (developmentMode) {
@@ -207,19 +211,17 @@ export const InterviewsPage = ({ role }: Props) => {
       const linkedCandidate = candidates.find((item) => item.id === interview.candidateId);
       const candidate = interview.candidate ?? linkedCandidate;
       const job = interview.job ?? jobs.find((item) => item.id === interview.jobId);
-      const panelNames = interview.panel?.map((item) => item.user?.name ?? '') ?? [];
-      const matchesSearch = !query || [
-        candidate?.name ?? '',
-        candidate?.reference ?? '',
-        candidate?.profession ?? '',
-        candidate?.email ?? '',
-        linkedCandidate?.phone ?? '',
-        job?.title ?? '',
-        job?.location ?? '',
-        interview.type,
-        interview.status,
-        ...panelNames,
-      ].some((value) => value.toLowerCase().includes(query));
+      const searchableRecord = {
+        interview,
+        candidate,
+        linkedCandidate,
+        job,
+        panel: interview.panel?.map((item) => item.user ?? item),
+        evaluations: interview.evaluations,
+        criterionGroup: interview.criterionGroup,
+        criterionAssignments: interview.criterionAssignments,
+      };
+      const matchesSearch = !query || JSON.stringify(searchableRecord).toLowerCase().includes(query);
       const matchesStatus = !statusFilter || interview.status === statusFilter;
       const matchesType = !typeFilter || interview.type === typeFilter;
       const matchesSchedule = scheduleFilter === 'all' || role !== 'INTERVIEWER' || scheduleBucket(interview) === scheduleFilter;
@@ -1212,6 +1214,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
                     <Button size="sm" variant="primary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
+                    {candidate && <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>Full profile</Button>}
 
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
@@ -1303,6 +1306,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
                           <Button size="sm" variant="primary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
+                          {candidate && <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>Full profile</Button>}
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                             <>
                               <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
@@ -1528,6 +1532,15 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
         </div>
       )}
+
+      <CandidateProfilePanel
+        candidate={profileCandidate}
+        minimized={profileMinimized}
+        maximized={profileMaximized}
+        onMinimize={() => setProfileMinimized(true)}
+        onMaximize={() => { setProfileMinimized(false); setProfileMaximized((value) => !value); }}
+        onClose={() => { setProfileCandidate(null); setProfileMinimized(false); setProfileMaximized(false); }}
+      />
 
       {detailFor && detail && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
