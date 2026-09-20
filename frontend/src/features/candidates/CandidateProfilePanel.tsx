@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatusHistory, UserRole } from '../../domain/types';
+import type { Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
 import { apiFetch } from '../../shared/lib/api';
 import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
-export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
+export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt'>;
 
 export interface CandidateProfileHistory {
+  profile?: {
+    agency: { id: string; name: string; slug: string; status: 'ACTIVE' | 'INACTIVE' } | null;
+    account: { id: string; name: string; email: string; role: UserRole; active: boolean; createdAt: string; updatedAt: string } | null;
+    createdAt: string;
+    updatedAt: string;
+  };
   statusHistory: CandidateStatusHistory[];
   interviews: CandidateHistoryInterview[];
   auditEvents: CandidateAuditEvent[];
@@ -26,6 +32,7 @@ interface Props {
   onRestore: () => void;
   onMaximize: () => void;
   onClose: () => void;
+  onCandidateUpdated?: (candidate: CandidateProfileData) => void;
 }
 
 type ProfileTab = 'overview' | 'interviews' | 'timeline' | 'documents';
@@ -71,18 +78,63 @@ export const CandidateProfilePanel = ({
   onRestore,
   onMaximize,
   onClose,
+  onCandidateUpdated,
 }: Props) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [history, setHistory] = useState<CandidateProfileHistory>(initialHistory ?? { statusHistory: [], interviews: [], auditEvents: [] });
   const [loading, setLoading] = useState(Boolean(candidate && apiEnabled && (!initialHistory || initialHistoryLoading)));
   const [error, setError] = useState('');
+  const [candidateOverride, setCandidateOverride] = useState<CandidateProfileData | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    alternatePhone: '',
+    country: '',
+    passportNumber: '',
+    passportExpiry: '',
+    currentLocation: '',
+    availability: '',
+    visaStatus: '',
+    profession: '',
+    experienceYears: '0',
+    skills: '',
+  });
+  const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
+  const [statusReason, setStatusReason] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
 
   useEffect(() => {
     setActiveTab('overview');
     setError('');
     setHistory(initialHistory ?? { statusHistory: [], interviews: [], auditEvents: [] });
+    setCandidateOverride(null);
+    setEditingProfile(false);
+    setStatusReason('');
     setLoading(Boolean(candidate && apiEnabled && (!initialHistory || initialHistoryLoading)));
   }, [apiEnabled, candidate?.id, initialHistory, initialHistoryLoading]);
+
+  useEffect(() => {
+    if (!candidate) return;
+    setProfileForm({
+      name: candidate.name,
+      email: candidate.email ?? '',
+      phone: candidate.phone ?? '',
+      alternatePhone: candidate.alternatePhone ?? '',
+      country: candidate.country ?? '',
+      passportNumber: candidate.passportNumber ?? '',
+      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
+      currentLocation: candidate.currentLocation ?? '',
+      availability: candidate.availability ?? '',
+      visaStatus: candidate.visaStatus ?? '',
+      profession: candidate.profession ?? '',
+      experienceYears: String(candidate.experienceYears ?? 0),
+      skills: candidate.skills.join(', '),
+    });
+    setStatusDraft(candidate.status);
+  }, [candidate?.id]);
 
   useEffect(() => {
     if (!candidate || !apiEnabled || initialHistoryLoading || initialHistory) return;
@@ -104,8 +156,136 @@ export const CandidateProfilePanel = ({
     };
   }, [apiEnabled, candidate?.id, initialHistory, initialHistoryLoading]);
 
+  const currentCandidate = candidateOverride ?? candidate;
+
+  const refreshHistory = async () => {
+    if (!currentCandidate || !apiEnabled) return;
+    try {
+      const result = await apiFetch<CandidateProfileHistory>('/candidates/' + currentCandidate.id + '/history');
+      setHistory(result);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to refresh candidate history.');
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!currentCandidate || (role !== 'ADMIN' && role !== 'AGENCY')) return;
+    const experienceYears = Number(profileForm.experienceYears);
+    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
+      setError('Experience years must be a whole number between 0 and 60.');
+      return;
+    }
+    if (profileForm.name.trim().length < 2) {
+      setError('Full name must be at least 2 characters.');
+      return;
+    }
+
+    setSavingProfile(true);
+    setError('');
+    try {
+      const updated = apiEnabled
+        ? await apiFetch<CandidateProfileData>('/candidates/' + currentCandidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: profileForm.name.trim(),
+              email: profileForm.email.trim() || null,
+              phone: profileForm.phone.trim() || null,
+              alternatePhone: profileForm.alternatePhone.trim() || null,
+              country: profileForm.country.trim() || null,
+              passportNumber: profileForm.passportNumber.trim() || null,
+              passportExpiry: profileForm.passportExpiry.trim() || null,
+              currentLocation: profileForm.currentLocation.trim() || null,
+              availability: profileForm.availability.trim() || null,
+              visaStatus: profileForm.visaStatus.trim() || null,
+              profession: profileForm.profession.trim() || null,
+              experienceYears,
+              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            }),
+          })
+        : {
+            ...currentCandidate,
+            name: profileForm.name.trim(),
+            email: profileForm.email.trim() || null,
+            phone: profileForm.phone.trim() || null,
+            alternatePhone: profileForm.alternatePhone.trim() || null,
+            country: profileForm.country.trim() || null,
+            passportNumber: profileForm.passportNumber.trim() || null,
+            passportExpiry: profileForm.passportExpiry.trim() || null,
+            currentLocation: profileForm.currentLocation.trim() || null,
+            availability: profileForm.availability.trim() || null,
+            visaStatus: profileForm.visaStatus.trim() || null,
+            profession: profileForm.profession.trim() || null,
+            experienceYears,
+            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+          };
+      setCandidateOverride(updated);
+      setEditingProfile(false);
+      onCandidateUpdated?.(updated);
+      await refreshHistory();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save the candidate profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const updateOnboarding = async () => {
+    if (!currentCandidate || (role !== 'ADMIN' && role !== 'AGENCY') || currentCandidate.onboardingStatus === 'COMPLETED') return;
+    setSavingOnboarding(true);
+    setError('');
+    try {
+      const updated = apiEnabled
+        ? await apiFetch<CandidateProfileData>('/candidates/' + currentCandidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ onboardingStatus: 'COMPLETED' as OnboardingStatus }),
+          })
+        : { ...currentCandidate, onboardingStatus: 'COMPLETED' as const };
+      setCandidateOverride(updated);
+      onCandidateUpdated?.(updated);
+      await refreshHistory();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update onboarding status.');
+    } finally {
+      setSavingOnboarding(false);
+    }
+  };
+
+  const updateStatus = async () => {
+    if (!currentCandidate || !statusDraft || statusDraft === currentCandidate.status) return;
+    const canManageAllStatuses = role === 'ADMIN' || role === 'AGENCY';
+    const allowedForInterviewer: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
+    if (!canManageAllStatuses && role !== 'INTERVIEWER') return;
+    if (!canManageAllStatuses && !allowedForInterviewer.includes(statusDraft)) {
+      setError('Interviewers may only record a final candidate decision.');
+      return;
+    }
+
+    setSavingProfile(true);
+    setError('');
+    try {
+      const updated = apiEnabled
+        ? await apiFetch<CandidateProfileData>('/candidates/' + currentCandidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: statusDraft, statusReason: statusReason.trim() || null }),
+          })
+        : { ...currentCandidate, status: statusDraft, statusUpdatedAt: new Date().toISOString() };
+      setCandidateOverride(updated);
+      setStatusDraft(updated.status);
+      setStatusReason('');
+      onCandidateUpdated?.(updated);
+      await refreshHistory();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update candidate status.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const timeline = useMemo(() => {
     if (!candidate) return [];
+    const auditFor = (entityType: string, entityId: string, action: string) =>
+      history.auditEvents.some((event) => event.entityType === entityType && event.entityId === entityId && event.action === action);
+
     const items = [
       ...history.statusHistory.map((item) => ({
         id: 'status-' + item.id,
@@ -120,29 +300,27 @@ export const CandidateProfilePanel = ({
         date: item.createdAt,
         kind: 'activity' as const,
         title: item.summary,
-        detail: label(item.action),
+        detail: label(item.action) + ' · ' + item.entityType,
         actor: item.actor?.name ?? 'System',
       })),
       ...history.interviews.flatMap((interview) => {
-        const evaluationEvents = interview.evaluations
-          .filter((evaluation) => evaluation.status === 'SUBMITTED' && evaluation.submittedAt)
-          .map((evaluation) => ({
-            id: 'evaluation-submitted-' + evaluation.id,
-            date: evaluation.submittedAt!,
-            kind: 'evaluation' as const,
-            title: 'Interview scorecard submitted',
-            detail: label(interview.type) + ' interview · ' + (evaluation.interviewer?.name ?? 'Interviewer'),
-            actor: evaluation.interviewer?.name ?? 'Interviewer',
-          }));
-        const events = [{
+        const events: Array<{
+          id: string;
+          date: string;
+          kind: 'interview';
+          title: string;
+          detail: string;
+          actor: string;
+        }> = [{
           id: 'interview-created-' + interview.id,
           date: interview.createdAt ?? interview.scheduledAt,
-          kind: 'interview' as const,
+          kind: 'interview',
           title: label(interview.type) + ' interview created',
           detail: (interview.job?.title ?? 'General interview') + ' · ' + label(interview.status),
           actor: 'Interview workflow',
         }];
-        if (interview.startedAt) {
+
+        if (interview.startedAt && !auditFor('Interview', interview.id, 'INTERVIEW_STARTED')) {
           events.push({
             id: 'interview-started-' + interview.id,
             date: interview.startedAt,
@@ -162,11 +340,13 @@ export const CandidateProfilePanel = ({
             actor: 'Interview workflow',
           });
         }
-        return [...events, ...evaluationEvents];
+        return events;
       }),
     ];
     return items.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
   }, [candidate, history]);
+
+  const latestInterviewy]);
 
   const latestInterview = history.interviews[0];
   const latestScore = latestInterview ? interviewScore(latestInterview) : null;
@@ -174,7 +354,18 @@ export const CandidateProfilePanel = ({
   const completedInterviews = history.interviews.filter((item) => item.status === 'COMPLETED').length;
   const submittedEvaluations = history.interviews.reduce((sum, item) => sum + item.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED').length, 0);
 
-  if (!candidate) return null;
+  const displayCandidate = candidateOverride ?? candidate;
+  if (!displayCandidate) return null;
+
+  const canEditProfile = role === 'ADMIN' || role === 'AGENCY';
+  const hasCompletedInterview = history.interviews.some((item) => item.status === 'COMPLETED');
+  const hasScheduledInterview = history.interviews.some((item) => item.status === 'SCHEDULED');
+  const candidateStatusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
+  const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
+  const visibleStatusOptions = role === 'INTERVIEWER'
+    ? finalStatusOptions
+    : candidateStatusOptions.filter((status) => !finalStatusOptions.includes(status) || hasCompletedInterview || status === displayCandidate.status);
+  const profileMeta = history.profile;
 
   const frameClass = maximized
     ? 'fixed inset-3 sm:inset-5'
@@ -188,11 +379,11 @@ export const CandidateProfilePanel = ({
         <div className={frameClass + ' pointer-events-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl'}>
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-black text-slate-950">{candidate.name}</p>
-              <p className="truncate text-[10px] text-slate-400">{candidate.reference} · Passport: {value(candidate.passportNumber)} · {label(candidate.status)}</p>
+              <p className="truncate text-xs font-black text-slate-950">{displayCandidate.name}</p>
+              <p className="truncate text-[10px] text-slate-400">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {label(displayCandidate.status)}</p>
             </div>
             <button type="button" className="rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100" onClick={onRestore}>Open</button>
-            <button type="button" aria-label="Close candidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
+            <button type="button" aria-label="Close displayCandidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
           </div>
         </div>
       </div>
@@ -207,16 +398,16 @@ export const CandidateProfilePanel = ({
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-cyan-700">Candidate full profile</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-base font-black text-slate-950 sm:text-lg">{candidate.name}</h2>
-                <StatusPill value={candidate.status} />
-                <StatusPill value={candidate.onboardingStatus} />
+                <h2 className="truncate text-base font-black text-slate-950 sm:text-lg">{displayCandidate.name}</h2>
+                <StatusPill value={displayCandidate.status} />
+                <StatusPill value={displayCandidate.onboardingStatus} />
               </div>
-              <p className="mt-1 break-words text-xs text-slate-500">{candidate.reference} · Passport: {value(candidate.passportNumber)} · {candidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.profession ?? 'Profession not set'}</p>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" aria-label="Minimize candidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
-              <button type="button" aria-label={maximized ? 'Restore candidate profile' : 'Maximize candidate profile'} title={maximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1.5 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMaximize}>{maximized ? '❐' : '□'}</button>
-              <button type="button" aria-label="Close candidate profile" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
+              <button type="button" aria-label="Minimize displayCandidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
+              <button type="button" aria-label={maximized ? 'Restore displayCandidate profile' : 'Maximize displayCandidate profile'} title={maximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1.5 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMaximize}>{maximized ? '❐' : '□'}</button>
+              <button type="button" aria-label="Close displayCandidate profile" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
             </div>
           </div>
         </header>
@@ -242,28 +433,28 @@ export const CandidateProfilePanel = ({
         </nav>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {loading && <StateMessage kind="loading" title="Loading candidate history" description="Fetching interviews, scorecards and timeline activity." />}
+          {loading && <StateMessage kind="loading" title="Loading displayCandidate history" description="Fetching interviews, scorecards and timeline activity." />}
           {error && <StateMessage kind="error" title="Candidate history unavailable" description={error} />}
 
           {activeTab === 'overview' && (
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Passport number"><span className="text-cyan-700">{value(candidate.passportNumber)}</span></Field>
-                <Field label="Passport expiry">{candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</Field>
-                <Field label="Reference">{candidate.reference}</Field>
-                <Field label="Country / nationality">{value(candidate.country)}</Field>
-                <Field label="Current location">{value(candidate.currentLocation)}</Field>
-                <Field label="Visa / work status">{value(candidate.visaStatus)}</Field>
-                <Field label="Availability">{value(candidate.availability)}</Field>
-                <Field label="Profession">{value(candidate.profession)}</Field>
-                <Field label="Experience">{candidate.experienceYears === null ? 'Not provided' : candidate.experienceYears + ' years'}</Field>
-                <Field label="Email">{value(candidate.email)}</Field>
-                <Field label="Contact number">{value(candidate.phone)}</Field>
-                <Field label="Alternate contact">{value(candidate.alternatePhone)}</Field>
-                <Field label="Onboarding"><StatusPill value={candidate.onboardingStatus} /></Field>
-                <Field label="Candidate source"><StatusPill value={candidate.source} /></Field>
-                <Field label="Status"><StatusPill value={candidate.status} /></Field>
-                <Field label="Status updated">{formatDate(candidate.statusUpdatedAt)}</Field>
+                <Field label="Passport number"><span className="text-cyan-700">{value(displayCandidate.passportNumber)}</span></Field>
+                <Field label="Passport expiry">{displayCandidate.passportExpiry ? new Date(displayCandidate.passportExpiry).toLocaleDateString() : 'Not provided'}</Field>
+                <Field label="Reference">{displayCandidate.reference}</Field>
+                <Field label="Country / nationality">{value(displayCandidate.country)}</Field>
+                <Field label="Current location">{value(displayCandidate.currentLocation)}</Field>
+                <Field label="Visa / work status">{value(displayCandidate.visaStatus)}</Field>
+                <Field label="Availability">{value(displayCandidate.availability)}</Field>
+                <Field label="Profession">{value(displayCandidate.profession)}</Field>
+                <Field label="Experience">{displayCandidate.experienceYears === null ? 'Not provided' : displayCandidate.experienceYears + ' years'}</Field>
+                <Field label="Email">{value(displayCandidate.email)}</Field>
+                <Field label="Contact number">{value(displayCandidate.phone)}</Field>
+                <Field label="Alternate contact">{value(displayCandidate.alternatePhone)}</Field>
+                <Field label="Onboarding"><StatusPill value={displayCandidate.onboardingStatus} /></Field>
+                <Field label="Candidate source"><StatusPill value={displayCandidate.source} /></Field>
+                <Field label="Status"><StatusPill value={displayCandidate.status} /></Field>
+                <Field label="Status updated">{formatDate(displayCandidate.statusUpdatedAt)}</Field>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
@@ -272,16 +463,162 @@ export const CandidateProfilePanel = ({
                 <Card><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Latest average</p><p className="mt-1 text-2xl font-black text-cyan-700">{latestScore?.averagePercentage === null || latestScore?.averagePercentage === undefined ? '—' : latestScore.averagePercentage + '%'}</p><p className="mt-1 text-[10px] text-slate-400">{latestInterview ? label(latestInterview.type) + ' interview' : 'No scored interview yet'}</p></Card>
               </div>
 
+              <div className="grid gap-3 lg:grid-cols-2">
+                <Card>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">Agency</h3>
+                      <p className="mt-1 text-[10px] text-slate-400">Workspace that owns this candidate record.</p>
+                    </div>
+                    <StatusPill value={profileMeta?.agency?.status ?? 'UNKNOWN'} />
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <Field label="Agency name">{profileMeta?.agency?.name ?? 'Not available'}</Field>
+                    <Field label="Agency slug">{profileMeta?.agency?.slug ?? 'Not available'}</Field>
+                    <Field label="Agency ID">{profileMeta?.agency?.id ?? displayCandidate.agencyId}</Field>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">Linked account</h3>
+                      <p className="mt-1 text-[10px] text-slate-400">Interviewee login connected to this candidate, when available.</p>
+                    </div>
+                    {profileMeta?.account && <StatusPill value={profileMeta.account.active ? 'ACTIVE' : 'INACTIVE'} />}
+                  </div>
+                  {profileMeta?.account ? (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <Field label="Account name">{profileMeta.account.name}</Field>
+                      <Field label="Account email">{profileMeta.account.email}</Field>
+                      <Field label="Account role">{label(profileMeta.account.role)}</Field>
+                      <Field label="Account ID">{profileMeta.account.id}</Field>
+                      <Field label="Account created">{formatDate(profileMeta.account.createdAt)}</Field>
+                      <Field label="Account updated">{formatDate(profileMeta.account.updatedAt)}</Field>
+                    </div>
+                  ) : (
+                    <p className="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-400">No linked login account.</p>
+                  )}
+                </Card>
+              </div>
+
+              <Card>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-950">Record management</h3>
+                    <p className="mt-1 text-xs text-slate-500">The actions available in the original candidate details popup are available here too.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canEditProfile && <button type="button" className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800" onClick={() => { setEditingProfile((value) => !value); setError(''); }}>
+                      {editingProfile ? 'Close edit' : 'Edit profile'}
+                    </button>}
+                    {canEditProfile && displayCandidate.onboardingStatus !== 'COMPLETED' && (
+                      <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" disabled={savingOnboarding} onClick={() => void updateOnboarding()}>
+                        {savingOnboarding ? 'Updating…' : 'Mark onboarding complete'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {editingProfile && canEditProfile && (
+                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                    {[
+                      ['name', 'Full name'],
+                      ['country', 'Country / nationality'],
+                      ['email', 'Email'],
+                      ['phone', 'Contact number'],
+                      ['alternatePhone', 'Alternate contact'],
+                      ['passportNumber', 'Passport number'],
+                      ['currentLocation', 'Current location'],
+                      ['availability', 'Availability'],
+                      ['visaStatus', 'Visa / work status'],
+                      ['profession', 'Profession'],
+                    ].map(([key, fieldLabel]) => (
+                      <label key={key} className="block">
+                        <span className="field-label">{fieldLabel}</span>
+                        <input
+                          className="field-input mt-1 w-full"
+                          type={key === 'email' ? 'email' : 'text'}
+                          value={profileForm[key as keyof typeof profileForm]}
+                          onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))}
+                        />
+                      </label>
+                    ))}
+                    <label className="block">
+                      <span className="field-label">Passport expiry</span>
+                      <input type="date" className="field-input mt-1 w-full" value={profileForm.passportExpiry} onChange={(event) => setProfileForm((current) => ({ ...current, passportExpiry: event.target.value }))} />
+                    </label>
+                    <label className="block">
+                      <span className="field-label">Experience years</span>
+                      <input type="number" min="0" max="60" className="field-input mt-1 w-full" value={profileForm.experienceYears} onChange={(event) => setProfileForm((current) => ({ ...current, experienceYears: event.target.value }))} />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="field-label">Skills</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.skills} onChange={(event) => setProfileForm((current) => ({ ...current, skills: event.target.value }))} />
+                    </label>
+                    <div className="flex justify-end gap-2 sm:col-span-2">
+                      <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50" onClick={() => setEditingProfile(false)}>Cancel</button>
+                      <button type="button" className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-bold text-white hover:bg-cyan-800" disabled={savingProfile} onClick={() => void saveProfile()}>
+                        {savingProfile ? 'Saving…' : 'Save profile'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(canEditProfile || role === 'INTERVIEWER') && (
+                  <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto]">
+                    <label className="block">
+                      <span className="field-label">Lifecycle status</span>
+                      <select className="field-input mt-1 w-full" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
+                        {visibleStatusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="field-label">Reason / decision note</span>
+                      <input className="field-input mt-1 w-full" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional note" />
+                    </label>
+                    <button
+                      type="button"
+                      className="self-end rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+                      disabled={savingProfile || !statusDraft || statusDraft === displayCandidate.status || (role === 'INTERVIEWER' && (!hasCompletedInterview || hasScheduledInterview))}
+                      onClick={() => void updateStatus()}
+                    >
+                      {role === 'INTERVIEWER' ? 'Record decision' : 'Update status'}
+                    </button>
+                  </div>
+                )}
+                {role === 'INTERVIEWER' && (!hasCompletedInterview || hasScheduledInterview) && (
+                  <p className="mt-3 text-[10px] text-amber-700">
+                    A final decision can be recorded only after a completed interview and when no other interview is still scheduled.
+                  </p>
+                )}
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-950">Record metadata</h3>
+                    <p className="mt-1 text-[10px] text-slate-400">System timestamps for the candidate record.</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <Field label="Candidate ID">{displayCandidate.id}</Field>
+                  <Field label="Created">{formatDate(profileMeta?.createdAt ?? displayCandidate.createdAt)}</Field>
+                  <Field label="Last updated">{formatDate(profileMeta?.updatedAt ?? displayCandidate.updatedAt)}</Field>
+                  <Field label="Source">{label(displayCandidate.source)}</Field>
+                </div>
+              </Card>
+
               <Card>
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-black text-slate-950">Skills</h3>
-                    <p className="mt-1 text-[10px] text-slate-400">{candidate.skills.length} skill(s) recorded</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{displayCandidate.skills.length} skill(s) recorded</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {candidate.skills.length
-                    ? candidate.skills.map((skill) => <span key={skill} className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600">{skill}</span>)
+                  {displayCandidate.skills.length
+                    ? displayCandidate.skills.map((skill) => <span key={skill} className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600">{skill}</span>)
                     : <span className="text-xs text-slate-400">No skills recorded.</span>}
                 </div>
               </Card>
@@ -293,7 +630,7 @@ export const CandidateProfilePanel = ({
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-950">Interview history & scorecards</h3>
-                  <p className="mt-1 text-xs text-slate-500">Every interview, panel assignment and available evaluation for this candidate.</p>
+                  <p className="mt-1 text-xs text-slate-500">Every interview, panel assignment and available evaluation for this displayCandidate.</p>
                 </div>
                 <div className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">{totalInterviews} interview(s)</div>
               </div>
@@ -390,7 +727,7 @@ export const CandidateProfilePanel = ({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-950">Candidate timeline</h3>
-                  <p className="mt-1 text-xs text-slate-500">Status changes, interview lifecycle events and recorded candidate activity.</p>
+                  <p className="mt-1 text-xs text-slate-500">Status changes, interview lifecycle events and recorded displayCandidate activity.</p>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{timeline.length} events</span>
               </div>
@@ -423,7 +760,7 @@ export const CandidateProfilePanel = ({
 
           {activeTab === 'documents' && (
             <CandidateDocumentsPanel
-              candidateId={candidate.id}
+              candidateId={displayCandidate.id}
               apiEnabled={apiEnabled}
               readOnly={role === 'INTERVIEWER'}
             />
