@@ -1366,8 +1366,20 @@ export const InterviewsPage = ({ role }: Props) => {
                               <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
                             </>
                           )}
-                          {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
-                            <Button size="sm" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); startEvaluation(interview); }}>Evaluate</Button>
+                          {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
+                            <Button
+                              size="sm"
+                              className="min-h-10 rounded-lg px-2 py-1 text-[9px]"
+                              disabled={now < new Date(interview.scheduledAt).getTime() - 15 * 60_000}
+                              onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
+                            >
+                              {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Start interview'}
+                            </Button>
+                          )}
+                          {isAssignedInterviewer && interview.status === 'IN_PROGRESS' && (
+                            <Button size="sm" variant={alreadyEvaluated ? 'secondary' : 'primary'} className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
+                              {alreadyEvaluated ? 'View scorecard' : 'Continue'}
+                            </Button>
                           )}
                         </div>
                       </td>
