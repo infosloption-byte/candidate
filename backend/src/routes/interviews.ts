@@ -102,7 +102,7 @@ const hasScheduleConflict = async (
 ): Promise<boolean> => {
   const interviews = await getPrisma().interview.findMany({
     where: {
-      status: 'SCHEDULED',
+      status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
       id: excludeInterviewId ? { not: excludeInterviewId } : undefined,
       OR: [
         { panel: { some: { userId: { in: interviewerIds } } } },
