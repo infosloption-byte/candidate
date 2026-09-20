@@ -617,13 +617,34 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return updated;
       });
 
+      const auditAction =
+        request.body.status === 'CANCELLED'
+          ? 'INTERVIEW_CANCELLED'
+          : request.body.status === 'NO_SHOW'
+            ? 'INTERVIEW_NO_SHOW'
+            : request.body.status === 'SCHEDULED' || request.body.scheduledAt !== undefined
+              ? 'INTERVIEW_RESCHEDULED'
+              : request.body.interviewerIds !== undefined
+                ? 'INTERVIEW_PANEL_UPDATED'
+                : 'INTERVIEW_UPDATED';
+      const auditSummary =
+        auditAction === 'INTERVIEW_CANCELLED'
+          ? 'Cancelled interview for "' + result.candidate.name + '".'
+          : auditAction === 'INTERVIEW_NO_SHOW'
+            ? 'Recorded no-show for interview with "' + result.candidate.name + '".'
+            : auditAction === 'INTERVIEW_RESCHEDULED'
+              ? 'Rescheduled interview for "' + result.candidate.name + '".'
+              : auditAction === 'INTERVIEW_PANEL_UPDATED'
+                ? 'Updated interview panel for "' + result.candidate.name + '".'
+                : 'Updated interview for "' + result.candidate.name + '".';
+
       await recordAuditEvent({
         actorId: request.authUser!.id,
         agencyId,
-        action: request.body.status === 'CANCELLED' ? 'INTERVIEW_CANCELLED' : 'INTERVIEW_UPDATED',
+        action: auditAction,
         entityType: 'Interview',
         entityId: result.id,
-        summary: (request.body.status === 'CANCELLED' ? 'Cancelled ' : 'Updated ') + 'interview for "' + result.candidate.name + '".',
+        summary: auditSummary,
       });
       await createNotifications(result.panel.map((participant) => ({
         userId: participant.userId,
