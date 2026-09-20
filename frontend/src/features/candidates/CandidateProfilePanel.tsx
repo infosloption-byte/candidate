@@ -326,6 +326,12 @@ export const CandidateProfilePanel = ({
                       <Field label="Completed">{formatDate(interview.completedAt)}</Field>
                       <Field label="Interview ID">{interview.id}</Field>
                     </div>
+                    {interview.notes && (
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Interview notes</p>
+                        <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">{interview.notes}</p>
+                      </div>
+                    )}
 
                     {interview.panel.length > 0 && (
                       <div className="mt-4">
