@@ -449,7 +449,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       const assignments = await getAssignments(interview.id, interview.candidate.agencyId);
       const evaluations = user.role === 'INTERVIEWER'
-        ? interview.evaluations
+        ? interview.evaluations.filter((item) => item.status === 'SUBMITTED' || item.interviewerId === user.id)
         : interview.evaluations.filter((item) => item.status === 'SUBMITTED');
 
       return reply.send({
