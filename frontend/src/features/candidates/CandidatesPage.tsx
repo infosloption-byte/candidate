@@ -180,12 +180,58 @@ export const CandidatesPage = ({ role }: Props) => {
     setStatusDraft(candidate.status);
     setStatusReason('');
     if (developmentMode) {
-      setHistory({ statusHistory: [{ id: 'history-' + candidate.id, candidateId: candidate.id, fromStatus: null, toStatus: 'POOL', reason: 'Candidate added to the candidate pool.', changedBy: null, createdAt: candidate.statusUpdatedAt }], interviews: state.interviews.filter((item) => item.candidateId === candidate.id).map((item) => ({ id: item.id, type: item.type, status: item.status, scheduledAt: item.scheduledAt, durationMins: item.durationMins, location: item.location, job: item.job ? { id: item.job.id, title: item.job.title, location: item.job.location } : null, panel: [], evaluations: item.evaluations ?? [] })), auditEvents: [] });
+      const linkedAccount = state.users.find((item) => item.candidateId === candidate.id);
+      const agency = state.agencies.find((item) => item.id === candidate.agencyId);
+      const recordDate = candidate.createdAt ?? candidate.statusUpdatedAt;
+      const updatedDate = candidate.updatedAt ?? candidate.statusUpdatedAt;
+      setHistory({
+        profile: {
+          agency: agency ? { id: agency.id, name: agency.name, slug: agency.slug, status: agency.status } : null,
+          account: linkedAccount ? {
+            id: linkedAccount.id,
+            name: linkedAccount.name,
+            email: linkedAccount.email,
+            role: linkedAccount.role,
+            active: linkedAccount.active,
+            createdAt: recordDate,
+            updatedAt: updatedDate,
+          } : null,
+          createdAt: recordDate,
+          updatedAt: updatedDate,
+        },
+        statusHistory: [{
+          id: 'history-' + candidate.id,
+          candidateId: candidate.id,
+          fromStatus: null,
+          toStatus: 'POOL',
+          reason: 'Candidate added to the candidate pool.',
+          changedBy: null,
+          createdAt: candidate.statusUpdatedAt,
+        }],
+        interviews: state.interviews.filter((item) => item.candidateId === candidate.id).map((item) => ({
+          id: item.id,
+          candidateId: item.candidateId,
+          type: item.type,
+          status: item.status,
+          scheduledAt: item.scheduledAt,
+          durationMins: item.durationMins,
+          location: item.location,
+          notes: item.notes ?? null,
+          startedAt: item.startedAt ?? null,
+          completedAt: item.completedAt ?? null,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          job: item.job ? { id: item.job.id, title: item.job.title, location: item.job.location } : null,
+          panel: item.panel ?? [],
+          evaluations: item.evaluations ?? [],
+        })),
+        auditEvents: [],
+      });
       return;
     }
     let cancelled = false;
     setLoadingHistory(true);
-    apiFetch<{ statusHistory: CandidateStatusHistory[]; interviews: CandidateHistoryInterview[]; auditEvents: CandidateAuditEvent[] }>('/candidates/' + candidate.id + '/history')
+    apiFetch<CandidateProfileHistory>('/candidates/' + candidate.id + '/history')
       .then((result) => { if (!cancelled) setHistory(result); })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidate history.'); })
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
