@@ -586,7 +586,7 @@ export const CandidatesPage = ({ role }: Props) => {
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-3" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
   ];
 
   return (
@@ -1131,7 +1131,7 @@ export const CandidatesPage = ({ role }: Props) => {
                       <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
                         {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
                       </Button>
-                      <Button size="sm" variant="secondary" className="w-full px-3 sm:w-auto" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+                      <Button size="sm" variant="secondary" className="w-full px-2.5 sm:w-auto" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
                     </div>
                   </div>
 
