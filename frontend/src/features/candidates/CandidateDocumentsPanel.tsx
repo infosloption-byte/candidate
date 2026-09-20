@@ -8,6 +8,7 @@ import type { CandidateDocument } from '../../domain/types';
 interface CandidateDocumentsPanelProps {
   candidateId: string;
   apiEnabled: boolean;
+  readOnly?: boolean;
 }
 
 const maxDocumentSizeBytes = 5 * 1024 * 1024;
@@ -18,7 +19,7 @@ const formatBytes = (bytes: number): string => {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 };
 
-export const CandidateDocumentsPanel = ({ candidateId, apiEnabled }: CandidateDocumentsPanelProps) => {
+export const CandidateDocumentsPanel = ({ candidateId, apiEnabled, readOnly = false }: CandidateDocumentsPanelProps) => {
   const [documents, setDocuments] = useState<CandidateDocument[]>([]);
   const [loading, setLoading] = useState(apiEnabled);
   const [busy, setBusy] = useState(false);
@@ -127,27 +128,31 @@ export const CandidateDocumentsPanel = ({ candidateId, apiEnabled }: CandidateDo
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-sm font-black text-slate-950">Documents</h2>
-          <p className="mt-1 text-xs text-slate-500">Optional supporting files for onboarding. PDF, JPEG, or PNG up to 5 MB.</p>
+          <p className="mt-1 text-xs text-slate-500">{readOnly ? 'Supporting files attached to this candidate profile.' : 'Optional supporting files for onboarding. PDF, JPEG, or PNG up to 5 MB.'}</p>
         </div>
-        <Button
-          variant="secondary"
-          disabled={!apiEnabled || busy}
-          onClick={() => inputRef.current?.click()}
-        >
-          {busy ? 'Working…' : 'Upload document'}
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="secondary"
+            disabled={!apiEnabled || busy}
+            onClick={() => inputRef.current?.click()}
+          >
+            {busy ? 'Working…' : 'Upload document'}
+          </Button>
+        )}
       </div>
 
-      <input
-        ref={inputRef}
-        className="hidden"
-        type="file"
-        accept=".pdf,image/jpeg,image/png"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void upload(file);
-        }}
-      />
+      {!readOnly && (
+        <input
+          ref={inputRef}
+          className="hidden"
+          type="file"
+          accept=".pdf,image/jpeg,image/png"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void upload(file);
+          }}
+        />
+      )
 
       {!apiEnabled && (
         <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-xs font-semibold text-slate-500">
@@ -175,7 +180,7 @@ export const CandidateDocumentsPanel = ({ candidateId, apiEnabled }: CandidateDo
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button variant="secondary" className="px-3 py-1.5" onClick={() => void download(document)}>Download</Button>
-                <Button variant="ghost" className="px-3 py-1.5 text-rose-600" disabled={busy} onClick={() => void remove(document)}>Delete</Button>
+                {!readOnly && <Button variant="ghost" className="px-3 py-1.5 text-rose-600" disabled={busy} onClick={() => void remove(document)}>Delete</Button>}
               </div>
             </div>
           ))}
