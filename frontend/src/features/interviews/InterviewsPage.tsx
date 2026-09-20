@@ -761,7 +761,7 @@ export const InterviewsPage = ({ role }: Props) => {
       {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
 
       {!loading && visible.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((interview) => {
             const candidate = candidateFor(interview);
             const job = jobFor(interview);
@@ -770,9 +770,8 @@ export const InterviewsPage = ({ role }: Props) => {
             const currentStatus = candidate?.status;
 
             return (
-              <Card key={interview.id}>
-                <div className="flex h-full flex-col">
-                  <div className="flex flex-col gap-3">
+              <Card key={interview.id} padded={false} className="flex h-full flex-col p-4 sm:p-4">
+                <div className="flex min-h-0 flex-1 flex-col">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
@@ -783,9 +782,26 @@ export const InterviewsPage = ({ role }: Props) => {
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
-                  </div>
-                  <div className="mt-auto flex flex-wrap gap-1 pt-3">
-                    <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-2 py-1 text-[9px] sm:px-2.5" onClick={() => void openInterviewDetails(interview)}>View</Button>
+
+                  {interview.panel && interview.panel.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {interview.panel.map((participant) => (
+                        <span key={participant.userId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                          {participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="min-h-8 rounded-lg px-2.5 py-1 text-[9px]"
+                      onClick={() => void openInterviewDetails(interview)}
+                    >
+                      View
+                    </Button>
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
                         <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
@@ -799,19 +815,13 @@ export const InterviewsPage = ({ role }: Props) => {
                   </div>
                 </div>
 
-                {interview.panel && interview.panel.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {interview.panel.map((participant) => <span key={participant.userId} className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-bold text-slate-600">{participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}</span>)}
-                  </div>
-                )}
-
                 {evaluationFor === interview.id && (
-                  <div className="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                  <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3.5">
                     <div className="flex items-center justify-between gap-3">
                       <div><h3 className="text-sm font-black text-slate-950">Interview scorecard</h3><p className="mt-1 text-xs text-slate-500">Score every active criterion for this agency.</p></div>
                       <Button size="sm" variant="secondary" onClick={() => setEvaluationFor(null)}>Close</Button>
                     </div>
-                    <div className="mt-4 grid gap-3">
+                    <div className="mt-3 grid gap-2.5">
                       {criteria.map((criterion) => (
                         <div key={criterion.id} className="rounded-xl border border-white bg-white p-3">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -824,17 +834,17 @@ export const InterviewsPage = ({ role }: Props) => {
                     <FormField label="Comments">
                       <textarea className="field-input min-h-24 resize-y" value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Interview observations, strengths, concerns…" />
                     </FormField>
-                    <div className="mt-4 flex justify-end"><Button disabled={evaluating} onClick={() => void submitEvaluation(interview)}>{evaluating ? 'Submitting…' : 'Submit scorecard'}</Button></div>
+                    <div className="mt-3 flex justify-end"><Button disabled={evaluating} onClick={() => void submitEvaluation(interview)}>{evaluating ? 'Submitting…' : 'Submit scorecard'}</Button></div>
                   </div>
                 )}
 
                 {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'COMPLETED' && candidate && currentStatus && !candidateFinalStatuses.includes(currentStatus) && (
-                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
                     <div>
                       <h3 className="text-sm font-black text-slate-950">Final candidate status</h3>
                       <p className="mt-1 text-xs text-slate-400">Review the completed scorecard, then update the candidate's lifecycle status.</p>
                     </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+                    <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
                       <FormField label="Status">
                         <select className="field-input" value={statusDrafts[candidate.id] ?? ''} onChange={(event) => setStatusDrafts((current) => ({ ...current, [candidate.id]: event.target.value as CandidateStatus }))}>
                           <option value="">Select final status</option>
@@ -853,6 +863,7 @@ export const InterviewsPage = ({ role }: Props) => {
           })}
         </div>
       )}
+
       {detailFor && detail && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
           <button type="button" aria-label="Close interview details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeInterviewDetails} />
