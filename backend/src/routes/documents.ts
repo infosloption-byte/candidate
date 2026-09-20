@@ -235,10 +235,10 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         select: { agencyId: true, name: true },
       });
 
-      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId))) {
+      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
         return reply.code(403).send({
           success: false,
-          error: { code: 'FORBIDDEN', message: 'You do not have access to this document.' },
+          error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can delete candidate documents.' },
         });
       }
 
