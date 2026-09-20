@@ -34,7 +34,8 @@ const allowedToAccessCandidate = (
 ): boolean =>
   user.role === 'ADMIN'
   || (user.role === 'INTERVIEWEE' && user.candidateId === candidateId)
-  || (user.role === 'AGENCY' && user.agencyId === agencyId);
+  || (user.role === 'AGENCY' && user.agencyId === agencyId)
+  || (user.role === 'INTERVIEWER' && Boolean(user.id && candidateId));
 
 const sanitizeDownloadName = (fileName: string): string => fileName.replace(/[\r\n"]/g, '_');
 
