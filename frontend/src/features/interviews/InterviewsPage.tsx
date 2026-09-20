@@ -770,8 +770,8 @@ export const InterviewsPage = ({ role }: Props) => {
             const currentStatus = candidate?.status;
 
             return (
-              <Card key={interview.id} padded={false} className="flex h-full flex-col p-4 sm:p-4">
-                <div className="flex min-h-0 flex-1 flex-col">
+              <Card key={interview.id} padded={false} className="p-4">
+                <div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
@@ -793,7 +793,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                   )}
 
-                  <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
                     <Button
                       size="sm"
                       variant="primary"
