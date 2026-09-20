@@ -8,10 +8,10 @@ import { Card } from '../../shared/components/Card';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { InterviewDetailsModal, type InterviewDetail } from '../interviews/InterviewDetailsModal';
 
 interface Props {
   role: UserRole;
-  onOpenInterview?: (interviewId: string) => void;
 }
 
 type CalendarMode = 'month' | 'agenda';
@@ -100,7 +100,7 @@ const buildDevInterviews = (
     }).filter((item): item is NonNullable<typeof item> => Boolean(item)),
   }));
 
-export const CalendarPage = ({ role, onOpenInterview }: Props) => {
+export const CalendarPage = ({ role }: Props) => {
   const { developmentMode, user } = useAuth();
   const { state } = useRecruitment();
   const [interviews, setInterviews] = useState<Interview[]>(developmentMode ? buildDevInterviews(state.interviews, state.candidates, state.jobs, state.users) : []);
@@ -111,6 +111,9 @@ export const CalendarPage = ({ role, onOpenInterview }: Props) => {
   const [statusFilter, setStatusFilter] = useState<InterviewStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
   const [search, setSearch] = useState('');
+  const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(null);
+  const [selectedInterviewDetail, setSelectedInterviewDetail] = useState<InterviewDetail | null>(null);
+  const [selectedInterviewLoading, setSelectedInterviewLoading] = useState(false);
 
   useEffect(() => {
     if (developmentMode) {
@@ -205,6 +208,45 @@ export const CalendarPage = ({ role, onOpenInterview }: Props) => {
     setStatusFilter('');
     setTypeFilter('');
   };
+
+  const openInterviewDetails = async (interview: Interview) => {
+    setSelectedInterviewId(interview.id);
+    setSelectedInterviewDetail(null);
+    setSelectedInterviewLoading(true);
+    setError('');
+
+    if (developmentMode) {
+      setSelectedInterviewDetail(interview as InterviewDetail);
+      setSelectedInterviewLoading(false);
+      return;
+    }
+
+    try {
+      const result = await apiFetch<InterviewDetail>('/interviews/' + interview.id);
+      setSelectedInterviewDetail(result);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load interview details.');
+      setSelectedInterviewId(null);
+    } finally {
+      setSelectedInterviewLoading(false);
+    }
+  };
+
+  const closeInterviewDetails = () => {
+    setSelectedInterviewId(null);
+    setSelectedInterviewDetail(null);
+    setSelectedInterviewLoading(false);
+  };
+
+  useEffect(() => {
+    if (!selectedInterviewId) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedInterviewId]);
+
 
   return (
     <section className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
@@ -317,7 +359,7 @@ export const CalendarPage = ({ role, onOpenInterview }: Props) => {
                         key={event.id}
                         type="button"
                         title={event.title}
-                        onClick={() => onOpenInterview?.(event.interview.id)}
+                        onClick={() => void openInterviewDetails(event.interview)}
                         className={'w-full rounded-lg border px-1.5 py-1 text-left transition hover:-translate-y-px hover:shadow-sm ' + statusTone(event.interview.status)}
                       >
                         <p className="truncate text-[9px] font-black">{formatTime(event.date)} · {event.title}</p>
@@ -355,7 +397,7 @@ export const CalendarPage = ({ role, onOpenInterview }: Props) => {
               <button
                 key={event.id}
                 type="button"
-                onClick={() => setSelectedEventId(event.id)}
+                onClick={() => void openInterviewDetails(event.interview)}
                 className="block w-full rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-sm"
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -376,6 +418,24 @@ export const CalendarPage = ({ role, onOpenInterview }: Props) => {
         </Card>
       )}
 
+
+      {selectedInterviewId && (
+        selectedInterviewDetail ? (
+          <InterviewDetailsModal detail={selectedInterviewDetail} open={Boolean(selectedInterviewId)} onClose={closeInterviewDetails} />
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button type="button" aria-label="Close interview details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeInterviewDetails} />
+            <div className="relative z-10 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="calendar-interview-loading-title">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
+              <h2 id="calendar-interview-loading-title" className="mt-1 text-lg font-black text-slate-950">Loading interview</h2>
+              {selectedInterviewLoading && <div className="mt-4"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
+              <div className="mt-4 flex justify-end">
+                <Button size="sm" variant="secondary" onClick={closeInterviewDetails}>Close</Button>
+              </div>
+            </div>
+          </div>
+        )
+      )}
 
     </section>
   );
