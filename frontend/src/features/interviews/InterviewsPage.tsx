@@ -72,7 +72,6 @@ export const InterviewsPage = ({ role }: Props) => {
   const [sortBy, setSortBy] = useState<'date' | 'candidate' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
@@ -556,7 +555,7 @@ export const InterviewsPage = ({ role }: Props) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:items-end ${role === 'ADMIN' ? 'lg:grid-cols-[minmax(220px,1fr)_180px_180px_190px_40px]' : 'lg:grid-cols-[minmax(220px,1fr)_180px_190px_40px]'}`}>
+        <div className="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
@@ -578,90 +577,78 @@ export const InterviewsPage = ({ role }: Props) => {
             </select>
           </div>
           <div className="min-w-0">
-            <label className="field-label">Sort</label>
-            <div className="relative mt-1 flex min-w-0 gap-1.5">
-              <button
-                type="button"
-                title="Choose sort field"
-                aria-label="Choose sort field"
-                aria-haspopup="menu"
-                aria-expanded={sortMenuOpen}
-                className="field-input flex min-w-0 flex-1 items-center gap-2 py-2 text-left"
-                onClick={() => setSortMenuOpen((value) => !value)}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 4v16" />
-                  <path d="m4 7 3-3 3 3" />
-                  <path d="M17 20V4" />
-                  <path d="m14 17 3 3 3-3" />
-                </svg>
-                <span className="min-w-0 flex-1 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
-              </button>
-              {sortMenuOpen && (
-                <div role="menu" aria-label="Sort options" className="absolute left-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                  {([
-                    ['date', 'Date'],
-                    ['candidate', 'Candidate'],
-                    ['status', 'Status'],
-                  ] as const).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={sortBy === value}
-                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                      onClick={() => {
-                        setSortBy(value);
-                        setSortMenuOpen(false);
-                      }}
-                    >
-                      <span>{label}</span>
-                      {sortBy === value && <span className="text-cyan-600">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-                  {sortDirection === 'asc'
-                    ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div className="flex items-end md:justify-end">
-            <button type="button" title={showAdvancedFilters ? 'Hide filters' : 'More filters'} aria-label={showAdvancedFilters ? 'Hide filters' : 'More filters'} className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`} onClick={() => setShowAdvancedFilters((value) => !value)}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
-            </button>
+            <label className="field-label">Interview type</label>
+            <select className="field-input mt-1 w-full" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
+              <option value="">All interview types</option>
+              <option value="SCREENING">Screening</option>
+              <option value="TECHNICAL">Technical</option>
+              <option value="PRACTICAL">Practical</option>
+              <option value="FINAL">Final</option>
+            </select>
           </div>
         </div>
 
-        {showAdvancedFilters && (
-          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="field-label">Interview type</label>
-                <select className="field-input mt-1 w-full" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
-                  <option value="">All interview types</option>
-                  <option value="SCREENING">Screening</option>
-                  <option value="TECHNICAL">Technical</option>
-                  <option value="PRACTICAL">Practical</option>
-                  <option value="FINAL">Final</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-          <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
-          {(search || statusFilter || typeFilter) && (
-            <button type="button" title="Clear filters" aria-label="Clear filters" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter(''); }}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M6 12h12M10 18h4" /><path d="M7 6l1-2h8l1 2" /></svg>
+        <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex min-w-0 items-center gap-1.5">
+            <span className="field-label shrink-0">Sort</span>
+            <button
+              type="button"
+              title="Choose sort field"
+              aria-label="Choose sort field"
+              aria-haspopup="menu"
+              aria-expanded={sortMenuOpen}
+              className="field-input flex min-w-0 items-center gap-2 py-2 text-left"
+              onClick={() => setSortMenuOpen((value) => !value)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 4v16" />
+                <path d="m4 7 3-3 3 3" />
+                <path d="M17 20V4" />
+                <path d="m14 17 3 3 3 3" />
+              </svg>
+              <span className="min-w-0 truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
             </button>
-          )}
+            {sortMenuOpen && (
+              <div role="menu" aria-label="Sort options" className="absolute left-12 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                {([
+                  ['date', 'Date'],
+                  ['candidate', 'Candidate'],
+                  ['status', 'Status'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={sortBy === value}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                    onClick={() => {
+                      setSortBy(value);
+                      setSortMenuOpen(false);
+                    }}
+                  >
+                    <span>{label}</span>
+                    {sortBy === value && <span className="text-cyan-600">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                {sortDirection === 'asc'
+                  ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+              </svg>
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
+            {(search || statusFilter || typeFilter || (role === 'ADMIN' && agencyId)) && (
+              <button type="button" title="Clear filters" aria-label="Clear filters" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter(''); if (role === 'ADMIN') setAgencyId(''); }}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M6 12h12M10 18h4" /><path d="M7 6l1-2h8l1 2" /></svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
