@@ -311,6 +311,28 @@ dbTest('admin can manage unified system users and interviewer types', async () =
   assert.equal(agencyCreateSystemUser.statusCode, 403);
 });
 
+dbTest('global interviewer can authenticate without an agency', async () => {
+  assert.ok(app);
+
+  const interviewerCookie = await login(emails.globalInterviewer);
+  const meResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/auth/me',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(meResponse.statusCode, 200);
+  const meBody = json<{ data: { user: { role: string; agencyId: string | null } } }>(meResponse);
+  assert.equal(meBody.data.user.role, 'INTERVIEWER');
+  assert.equal(meBody.data.user.agencyId, null);
+
+  const interviewsResponse = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews',
+    headers: { cookie: interviewerCookie },
+  });
+  assert.equal(interviewsResponse.statusCode, 200);
+});
+
 dbTest('interviewer pool includes own agency and global interviewers without cross-agency leakage', async () => {
   assert.ok(app);
 
