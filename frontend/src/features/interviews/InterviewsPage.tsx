@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { SelectMenu } from '../../shared/components/SelectMenu';
+import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
@@ -17,6 +18,7 @@ interface Props { role: UserRole; }
 type InterviewRecord = Interview;
 
 const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
+const INTERVIEWS_PAGE_SIZE = 10;
 
 const defaultForm = {
   scheduledAt: '',
@@ -74,6 +76,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [listView, setListView] = useState<'cards' | 'table'>('cards');
+  const [interviewPage, setInterviewPage] = useState(1);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
@@ -203,6 +206,17 @@ export const InterviewsPage = ({ role }: Props) => {
       return sortDirection === 'asc' ? result : -result;
     });
   }, [candidates, interviews, jobs, role, search, sortBy, sortDirection, statusFilter, typeFilter]);
+
+  const interviewTotalPages = Math.max(1, Math.ceil(visible.length / INTERVIEWS_PAGE_SIZE));
+  const activeInterviewPage = Math.min(interviewPage, interviewTotalPages);
+  const paginatedInterviews = useMemo(
+    () => visible.slice((activeInterviewPage - 1) * INTERVIEWS_PAGE_SIZE, activeInterviewPage * INTERVIEWS_PAGE_SIZE),
+    [activeInterviewPage, visible],
+  );
+
+  useEffect(() => {
+    setInterviewPage(1);
+  }, [search, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
@@ -821,7 +835,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
       {!loading && visible.length > 0 && listView === 'cards' && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((interview) => {
+          {paginatedInterviews.map((interview) => {
             const candidate = candidateFor(interview);
             const job = jobFor(interview);
             const alreadyEvaluated = Boolean(interview.evaluations?.length);
@@ -938,7 +952,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {visible.map((interview) => {
+                {paginatedInterviews.map((interview) => {
                   const candidate = candidateFor(interview);
                   const job = jobFor(interview);
                   const alreadyEvaluated = Boolean(interview.evaluations?.length);
@@ -992,6 +1006,15 @@ export const InterviewsPage = ({ role }: Props) => {
         </div>
       )}
 
+
+      {!loading && (
+        <Pagination
+          page={activeInterviewPage}
+          pageSize={INTERVIEWS_PAGE_SIZE}
+          total={visible.length}
+          onPageChange={setInterviewPage}
+        />
+      )}
 
       {detailFor && detail && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
