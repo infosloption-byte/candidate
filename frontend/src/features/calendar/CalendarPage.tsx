@@ -209,7 +209,7 @@ export const CalendarPage = ({ role }: Props) => {
   };
 
   return (
-    <section className="mx-auto flex h-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
+    <section className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
       <SectionHeading
         eyebrow={role === 'ADMIN' ? 'System schedule' : role === 'AGENCY' ? 'Agency schedule' : role === 'INTERVIEWER' ? 'My interview schedule' : 'My recruitment schedule'}
         title="Calendar"
@@ -292,13 +292,13 @@ export const CalendarPage = ({ role }: Props) => {
       {error && <StateMessage kind="error" title="Calendar unavailable" description={error} />}
 
       {!loading && !error && mode === 'month' && (
-        <Card className="min-h-0 flex-1 overflow-hidden p-0">
+        <Card className="shrink-0 overflow-visible p-0">
           <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
               <div key={day} className="px-2 py-2.5 text-center text-[9px] font-black uppercase tracking-wider text-slate-400 sm:px-3">{day}</div>
             ))}
           </div>
-          <div className="grid min-h-[620px] grid-cols-7 overflow-auto">
+          <div className="grid grid-cols-7 overflow-visible" style={{ gridTemplateRows: `repeat(${calendarDays.length / 7}, minmax(120px, 1fr))` }}>
             {calendarDays.map((day) => {
               const dayEvents = events.filter((event) => isSameDay(event.date, day));
               const outsideMonth = day.getMonth() !== visibleMonth.getMonth();
@@ -307,7 +307,7 @@ export const CalendarPage = ({ role }: Props) => {
               return (
                 <div
                   key={dateKey(day)}
-                  className={'min-h-28 border-b border-r border-slate-100 p-1.5 sm:min-h-32 sm:p-2 ' + (outsideMonth ? 'bg-slate-50/60' : 'bg-white') + (dayToday ? ' ring-2 ring-inset ring-cyan-100' : '')}
+                  className={'min-h-[120px] border-b border-r border-slate-100 p-1.5 sm:min-h-[136px] sm:p-2 ' + (outsideMonth ? 'bg-slate-50/60' : 'bg-white') + (dayToday ? ' ring-2 ring-inset ring-cyan-100' : '')}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className={'grid size-7 place-items-center rounded-full text-[11px] font-black ' + (dayToday ? 'bg-cyan-700 text-white' : outsideMonth ? 'text-slate-300' : 'text-slate-500')}>{day.getDate()}</span>
