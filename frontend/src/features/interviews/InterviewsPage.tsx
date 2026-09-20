@@ -852,7 +852,7 @@ export const InterviewsPage = ({ role }: Props) => {
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
-            <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
+            <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search any candidate, passport, job, interviewer, status or detail…" />
           </div>
 
           <button
