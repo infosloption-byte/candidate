@@ -813,12 +813,30 @@ export const InterviewsPage = ({ role }: Props) => {
               onChange={setStatusFilter}
               options={[
                 { value: '', label: 'All statuses' },
-                ...['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => ({ value: status, label: statusLabel(status) })),
+                ...['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => ({ value: status, label: statusLabel(status) })),
               ]}
               ariaLabel="Filter by interview status"
               className="mt-1"
             />
           </div>
+
+          {role === 'INTERVIEWER' && (
+            <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+              <label className="field-label">Schedule</label>
+              <SelectMenu
+                value={scheduleFilter}
+                onChange={(value) => setScheduleFilter(value as typeof scheduleFilter)}
+                options={[
+                  { value: 'all', label: 'All interviews' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                  { value: 'current', label: 'Current' },
+                  { value: 'past', label: 'Past' },
+                ]}
+                ariaLabel="Filter interviewer schedule"
+                className="mt-1"
+              />
+            </div>
+          )}
 
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Interview type</label>
@@ -977,18 +995,51 @@ export const InterviewsPage = ({ role }: Props) => {
               </div>
             )}
             <FormField label="Job / position" hint="Optional">
-              <select className="field-input" value={jobId} onChange={(event) => setJobId(event.target.value)}>
-                <option value="">No specific job</option>
-                {availableJobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
-              </select>
+              <SelectMenu
+                value={jobId}
+                onChange={setJobId}
+                options={[
+                  { value: '', label: 'No specific job' },
+                  ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
+                ]}
+                ariaLabel="Select job position"
+              />
             </FormField>
             <FormField label="Interview type">
-              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}>
-                <option value="SCREENING">Screening</option>
-                <option value="TECHNICAL">Technical</option>
-                <option value="PRACTICAL">Practical</option>
-                <option value="FINAL">Final</option>
-              </select>
+              <SelectMenu
+                value={form.type}
+                onChange={(value) => setForm({ ...form, type: value as InterviewType })}
+                options={[
+                  { value: 'SCREENING', label: 'Screening' },
+                  { value: 'TECHNICAL', label: 'Technical' },
+                  { value: 'PRACTICAL', label: 'Practical' },
+                  { value: 'FINAL', label: 'Final' },
+                ]}
+                ariaLabel="Select interview type"
+              />
+            </FormField>
+            <FormField label="Scoring criteria group" hint="The selected group becomes the scorecard for this interview.">
+              <SelectMenu
+                value={criterionGroupId}
+                onChange={setCriterionGroupId}
+                options={[
+                  { value: '', label: 'Select a scoring group' },
+                  ...criteriaGroups.map((group) => ({
+                    value: group.id,
+                    label: group.category ? group.name + ' · ' + group.category : group.name,
+                  })),
+                ]}
+                ariaLabel="Select interview scoring criteria group"
+              />
+              {criterionGroupId && (
+                <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
+                  {(() => {
+                    const group = criteriaGroups.find((item) => item.id === criterionGroupId);
+                    const total = group?.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0) ?? 0;
+                    return group ? group.criteria.length + ' criteria · ' + total + ' max points' : 'Group unavailable';
+                  })()}
+                </p>
+              )}
             </FormField>
             <FormField label="Date & time">
               <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
