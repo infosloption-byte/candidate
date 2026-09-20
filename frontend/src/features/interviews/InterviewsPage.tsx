@@ -72,6 +72,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [sortBy, setSortBy] = useState<'date' | 'candidate' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [listView, setListView] = useState<'cards' | 'table'>('cards');
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
@@ -555,28 +557,41 @@ export const InterviewsPage = ({ role }: Props) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 ${role === 'ADMIN' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
           </div>
-          {role === 'ADMIN' && (
-            <div className="min-w-0">
-              <label className="field-label">Agency</label>
-              <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
-                <option value="">All agencies</option>
-                {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="min-w-0">
+          <button
+            type="button"
+            className="flex min-h-10 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm md:hidden"
+            aria-expanded={mobileFiltersOpen}
+            onClick={() => setMobileFiltersOpen((value) => !value)}
+          >
+            <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+            </svg>
+          </button>
+          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+            {role === 'ADMIN' ? (
+              <>
+                <label className="field-label">Agency</label>
+                <select className="field-input mt-1 w-full" value={agencyId} onChange={(event) => { setAgencyId(event.target.value); setPanel([]); }}>
+                  <option value="">All agencies</option>
+                  {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+                </select>
+              </>
+            ) : null}
+          </div>
+          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Status</label>
             <select className="field-input mt-1 w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="">All statuses</option>
               {['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
             </select>
           </div>
-          <div className="min-w-0">
+          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Interview type</label>
             <select className="field-input mt-1 w-full" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
               <option value="">All interview types</option>
@@ -588,8 +603,8 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex min-w-0 items-center gap-2">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+          <div className={mobileFiltersOpen ? 'relative flex min-w-0 items-center gap-2 sm:flex' : 'relative hidden min-w-0 items-center gap-2 md:flex'}>
             <span className="field-label shrink-0">Sort</span>
             <button
               type="button"
@@ -641,8 +656,30 @@ export const InterviewsPage = ({ role }: Props) => {
               </svg>
             </button>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Interview list view">
+              <button
+                type="button"
+                aria-label="Card view"
+                aria-pressed={listView === 'cards'}
+                title="Card view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setListView('cards')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>
+              </button>
+              <button
+                type="button"
+                aria-label="Table view"
+                aria-pressed={listView === 'table'}
+                title="Table view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setListView('table')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M4 10h16M10 5v14"/></svg>
+              </button>
+            </div>
+            <p className="hidden text-xs text-slate-500 sm:block"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
           </div>
         </div>
       </div>
