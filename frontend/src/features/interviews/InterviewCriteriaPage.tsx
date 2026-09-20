@@ -46,12 +46,12 @@ const CriteriaModal = ({
         aria-modal="true"
         aria-labelledby="criteria-dialog-title"
         tabIndex={-1}
-        className="relative z-10 my-auto w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2.5rem)]"
+        className="relative z-10 my-auto w-full max-w-xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2.5rem)]"
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview setup</p>
-            <h2 id="criteria-dialog-title" className="mt-1 text-lg font-black text-slate-950">{title}</h2>
+            <h2 id="criteria-dialog-title" className="mt-1 text-base font-black text-slate-950 sm:text-lg">{title}</h2>
             <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
@@ -77,6 +77,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [mobileTab, setMobileTab] = useState<'groups' | 'criteria'>('groups');
 
   useEffect(() => {
     if (developmentMode) {
@@ -499,112 +500,137 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
         </CriteriaModal>
       )}
 
-      {!loading && groups.length > 0 && (
-        <section>
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Reusable scorecards</p>
-              <h2 className="text-lg font-black text-slate-950">Criteria groups</h2>
-              <p className="mt-1 text-xs text-slate-500">Choose one of these groups when scheduling an interview.</p>
+      {!loading && (
+        <>
+          <div className="md:hidden">
+            <div role="tablist" aria-label="Interview criteria sections" className="grid grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileTab === 'groups'}
+                onClick={() => setMobileTab('groups')}
+                className={`rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${mobileTab === 'groups' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}
+              >
+                Groups <span className="ml-1 text-[10px] opacity-60">{groups.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileTab === 'criteria'}
+                onClick={() => setMobileTab('criteria')}
+                className={`rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${mobileTab === 'criteria' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}
+              >
+                Criteria <span className="ml-1 text-[10px] opacity-60">{criteria.length}</span>
+              </button>
             </div>
-            <p className="text-xs text-slate-400">{groups.length} group(s)</p>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {groups.map((group) => {
-              const totalMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
-              return (
-                <Card key={group.id} padded={false} className="p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-black text-slate-950">{group.name}</h3>
-                        <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
-                      </div>
-                      {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
-                      <p className="mt-2 text-xs leading-5 text-slate-500">{group.description ?? 'No description provided.'}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p>
-                        <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
-                      </div>
-                      {canManage && (
-                        <Button size="sm" variant={group.active ? 'danger' : 'secondary'} onClick={() => void toggleGroup(group)}>
-                          {group.active ? 'Deactivate' : 'Activate'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
-                    {group.criteria.slice(0, 4).map((item) => (
-                      <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                        {item.criterion.name} · {item.criterion.maxPoints}
-                      </span>
-                    ))}
-                    {group.criteria.length > 4 && (
-                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">+{group.criteria.length - 4} more</span>
-                    )}
-                  </div>
-                  <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
-                    <Button size="sm" variant="ghost" onClick={() => openViewGroup(group)}>View details</Button>
-                    {canManage && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit</Button>}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
-      {!loading && groups.length === 0 && (
-        <StateMessage kind="empty" title="No criteria groups configured" description="Create a reusable group so each new interview can use a job-specific scorecard." />
-      )}
-
-      {!loading && criteria.length > 0 && (
-        <section>
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Scoring library</p>
-              <h2 className="text-lg font-black text-slate-950">Criteria</h2>
-              <p className="mt-1 text-xs text-slate-500">Deactivate individual criteria instead of deleting them so older scorecards remain readable.</p>
-            </div>
-            <p className="text-xs text-slate-400">{criteria.length} criterion/criteria</p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {criteria.map((criterion) => (
-              <Card key={criterion.id}>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-sm font-black text-slate-950">{criterion.name}</h2>
-                      <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description ?? 'No description provided.'}</p>
-                  </div>
-                  <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
-                    <div className="mr-auto flex items-center gap-3">
-                      <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max</p>
-                        <p className="text-sm font-black text-slate-900">{criterion.maxPoints}</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
-                    {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
-                    {canManage && (
-                      <Button size="sm" variant={criterion.active ? 'danger' : 'secondary'} onClick={() => void toggleCriterion(criterion)}>
-                        {criterion.active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    )}
-                  </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <section className={mobileTab === 'groups' ? 'block' : 'hidden md:block'}>
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Reusable scorecards</p>
+                  <h2 className="text-lg font-black text-slate-950">Criteria groups</h2>
+                  <p className="mt-1 text-xs text-slate-500">Choose one of these groups when scheduling an interview.</p>
                 </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+                <p className="text-xs text-slate-400">{groups.length} group(s)</p>
+              </div>
+              {groups.length > 0 ? (
+                <div className="space-y-3">
+                  {groups.map((group) => {
+                    const totalMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                    return (
+                      <Card key={group.id} padded={false} className="p-4">
+                        <div className="flex flex-col gap-4">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-sm font-black text-slate-950">{group.name}</h3>
+                              <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
+                            </div>
+                            {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
+                            <p className="mt-2 text-xs leading-5 text-slate-500">{group.description ?? 'No description provided.'}</p>
+                          </div>
 
-      {!loading && criteria.length === 0 && (
-        <StateMessage kind="empty" title="No criteria configured" description="Add at least one active criterion before creating criteria groups or scoring interviews." />
+                          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                            <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p>
+                              <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => openViewGroup(group)}>View</Button>
+                              {canManage && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit</Button>}
+                              {canManage && (
+                                <Button size="sm" variant={group.active ? 'danger' : 'secondary'} onClick={() => void toggleGroup(group)}>
+                                  {group.active ? 'Deactivate' : 'Activate'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
+                            {group.criteria.slice(0, 4).map((item) => (
+                              <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                                {item.criterion.name} · {item.criterion.maxPoints}
+                              </span>
+                            ))}
+                            {group.criteria.length > 4 && (
+                              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">+{group.criteria.length - 4} more</span>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <StateMessage kind="empty" title="No criteria groups configured" description="Create a reusable group so each new interview can use a job-specific scorecard." />
+              )}
+            </section>
+
+            <section className={mobileTab === 'criteria' ? 'block' : 'hidden md:block'}>
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Scoring library</p>
+                  <h2 className="text-lg font-black text-slate-950">Criteria</h2>
+                  <p className="mt-1 text-xs text-slate-500">Deactivate individual criteria instead of deleting them so older scorecards remain readable.</p>
+                </div>
+                <p className="text-xs text-slate-400">{criteria.length} criterion/criteria</p>
+              </div>
+              {criteria.length > 0 ? (
+                <div className="space-y-3">
+                  {criteria.map((criterion) => (
+                    <Card key={criterion.id}>
+                      <div className="flex flex-col gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-sm font-black text-slate-950">{criterion.name}</h2>
+                            <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description ?? 'No description provided.'}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                          <div className="mr-auto rounded-xl bg-slate-50 px-3 py-2 text-center">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max</p>
+                            <p className="text-sm font-black text-slate-900">{criterion.maxPoints}</p>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
+                          {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
+                          {canManage && (
+                            <Button size="sm" variant={criterion.active ? 'danger' : 'secondary'} onClick={() => void toggleCriterion(criterion)}>
+                              {criterion.active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <StateMessage kind="empty" title="No criteria configured" description="Add at least one active criterion before creating criteria groups or scoring interviews." />
+              )}
+            </section>
+          </div>
+        </>
       )}
 
 
@@ -659,50 +685,55 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           description="Review the complete scorecard before assigning it to an interview."
           onClose={closeModal}
         >
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-4">
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/50 p-3.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-black text-slate-950">{selectedGroup.name}</h3>
+                <h3 className="text-sm font-black text-slate-950">{selectedGroup.name}</h3>
                 <StatusPill value={selectedGroup.active ? 'ACTIVE' : 'INACTIVE'} />
               </div>
               {selectedGroup.category && (
                 <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{selectedGroup.category}</p>
               )}
-              <p className="mt-2 text-xs leading-5 text-slate-600">{selectedGroup.description ?? 'No description provided.'}</p>
+              <p className="mt-1.5 text-xs leading-5 text-slate-600">{selectedGroup.description ?? 'No description provided.'}</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Criteria</p>
-                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.criteria.length}</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Criteria</p>
+                <p className="mt-0.5 text-base font-black text-slate-950">{selectedGroup.criteria.length}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Maximum score</p>
-                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0)}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max score</p>
+                <p className="mt-0.5 text-base font-black text-slate-950">{selectedGroup.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0)}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</p>
-                <p className="mt-1 text-lg font-black text-slate-950">{selectedGroup.active ? 'Ready' : 'Inactive'}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Status</p>
+                <p className="mt-0.5 text-sm font-black text-slate-950">{selectedGroup.active ? 'Ready' : 'Inactive'}</p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-black text-slate-900">Criteria in this scorecard</p>
-              <div className="mt-2 space-y-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-black text-slate-900">Criteria in this scorecard</p>
+                <p className="text-[10px] font-bold text-slate-400">{selectedGroup.criteria.length} items</p>
+              </div>
+              <div className="space-y-1.5">
                 {selectedGroup.criteria.map((item, index) => (
-                  <div key={item.criterionId} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-3">
+                  <div key={item.criterionId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="text-xs font-extrabold text-slate-900">{index + 1}. {item.criterion.name}</p>
-                      <p className="mt-1 text-[10px] leading-4 text-slate-400">{item.criterion.description ?? 'No description.'}</p>
+                      {item.criterion.description && (
+                        <p className="mt-0.5 truncate text-[10px] text-slate-400">{item.criterion.description}</p>
+                      )}
                     </div>
-                    <span className="shrink-0 text-xs font-black text-slate-700">{item.criterion.maxPoints} pts</span>
+                    <span className="shrink-0 text-[11px] font-black text-slate-700">{item.criterion.maxPoints} pts</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {canManage && (
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
                 <Button variant="secondary" onClick={closeModal}>Close</Button>
                 <Button onClick={() => openEditGroup(selectedGroup)}>Edit group</Button>
               </div>
