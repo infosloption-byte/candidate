@@ -1535,6 +1535,8 @@ export const InterviewsPage = ({ role }: Props) => {
 
       <CandidateProfilePanel
         candidate={profileCandidate}
+        role={role}
+        apiEnabled={!developmentMode}
         minimized={profileMinimized}
         maximized={profileMaximized}
         onMinimize={() => setProfileMinimized(true)}
