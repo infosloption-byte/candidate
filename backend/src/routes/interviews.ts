@@ -183,7 +183,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
     if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this interview.' } });
 
-    return reply.send({ success: true, data: interview });
+    const safeInterview = user.role === 'INTERVIEWER'
+      ? { ...interview, evaluations: interview.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED' || evaluation.interviewerId === user.id) }
+      : interview;
+
+    return reply.send({ success: true, data: safeInterview });
   });
 
   app.post<{
