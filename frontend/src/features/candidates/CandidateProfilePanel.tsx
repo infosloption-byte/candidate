@@ -123,7 +123,7 @@ export const CandidateProfilePanel = ({
       ...history.interviews.flatMap((interview) => {
         const events = [{
           id: 'interview-created-' + interview.id,
-          date: interview.createdAt,
+          date: interview.createdAt ?? interview.scheduledAt,
           kind: 'interview' as const,
           title: label(interview.type) + ' interview created',
           detail: (interview.job?.title ?? 'General interview') + ' · ' + label(interview.status),
