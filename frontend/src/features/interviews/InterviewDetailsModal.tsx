@@ -3,6 +3,8 @@ import { Button } from '../../shared/components/Button';
 import { StatusPill } from '../../shared/components/StatusPill';
 import type { Interview, InterviewCriterionAssignment } from '../../domain/types';
 
+const statusLabel = (value: string): string => value.replaceAll('_', ' ');
+
 export interface InterviewDetail extends Omit<Interview, 'evaluations'> {
   notes?: string | null;
   criterionAssignments?: InterviewCriterionAssignment[];
