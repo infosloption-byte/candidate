@@ -129,13 +129,11 @@ export const InterviewsPage = ({ role }: Props) => {
       ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Candidate[]>('/candidates') : Promise.resolve([] as Candidate[]),
       ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Job[]>('/jobs') : Promise.resolve([] as Job[]),
       role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
-      role === 'AGENCY' && user?.agencyId
-        ? apiFetch<User[]>('/agencies/' + user.agencyId + '/users')
-        : Promise.resolve([] as User[]),
+      Promise.resolve([] as User[]),
     ];
 
     Promise.all(requests)
-      .then(([interviewResult, candidateResult, jobResult, agencyResult, userResult]) => {
+      .then(([interviewResult, candidateResult, jobResult, agencyResult]) => {
         if (cancelled) return;
         setInterviews(interviewResult);
         if (role !== 'INTERVIEWEE' && role !== 'INTERVIEWER') {
