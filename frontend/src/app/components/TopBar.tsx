@@ -26,6 +26,7 @@ interface TopBarProps {
 
 const titles: Record<AppView, string> = {
   dashboard: 'Dashboard',
+  reports: 'Reports',
   jobs: 'Jobs',
   candidates: 'Candidates',
   interviews: 'Interviews',
