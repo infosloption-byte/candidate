@@ -557,15 +557,17 @@ export const InterviewsPage = ({ role }: Props) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
           </div>
+
           <button
             type="button"
             className="flex min-h-10 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm md:hidden"
             aria-expanded={mobileFiltersOpen}
+            aria-controls="mobile-interview-filters"
             onClick={() => setMobileFiltersOpen((value) => !value)}
           >
             <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
@@ -573,8 +575,9 @@ export const InterviewsPage = ({ role }: Props) => {
               <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
             </svg>
           </button>
-          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-            {role === 'ADMIN' ? (
+
+          <div id="mobile-interview-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+            {role === 'ADMIN' && (
               <>
                 <label className="field-label">Agency</label>
                 <SelectMenu
@@ -588,8 +591,9 @@ export const InterviewsPage = ({ role }: Props) => {
                   className="mt-1"
                 />
               </>
-            ) : null}
+            )}
           </div>
+
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Status</label>
             <SelectMenu
@@ -603,6 +607,7 @@ export const InterviewsPage = ({ role }: Props) => {
               className="mt-1"
             />
           </div>
+
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Interview type</label>
             <SelectMenu
@@ -621,8 +626,8 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-          <div className={mobileFiltersOpen ? 'flex min-w-0 items-center gap-2 sm:flex' : 'hidden min-w-0 items-center gap-2 md:flex'}>
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
             <span className="field-label shrink-0">Sort</span>
             <div className="min-w-32">
               <SelectMenu
@@ -644,7 +649,234 @@ export const InterviewsPage = ({ role }: Props) => {
               </svg>
             </button>
           </div>
+
           <div className="flex items-center justify-between gap-3">
+            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Interview list view">
+              <button
+                type="button"
+                aria-label="Card view"
+                aria-pressed={listView === 'cards'}
+                title="Card view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setListView('cards')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="4" y="4" width="6" height="6" rx="1" />
+                  <rect x="14" y="4" width="6" height="6" rx="1" />
+                  <rect x="4" y="14" width="6" height="6" rx="1" />
+                  <rect x="14" y="14" width="6" height="6" rx="1" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                aria-label="Table view"
+                aria-pressed={listView === 'table'}
+                title="Table view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setListView('table')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="4" y="5" width="16" height="14" rx="1" />
+                  <path d="M4 10h16M10 5v14" />
+                </svg>
+              </button>
+            </div>
+            <p className="hidden text-xs text-slate-500 sm:block"><span className="font-black text-slate-800">{visible.length}</span> interview(s)</p>
+          </div>
+        </div>
+      </div>
+
+      {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
+          <button type="button" aria-label="Close interview form" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeScheduleForm} />
+          <div ref={scheduleFormTrapRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" tabIndex={-1} className="relative z-10 flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:border sm:border-slate-200">
+            <header className="shrink-0 border-b border-slate-200 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p>
+                  <h2 id="schedule-interview-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Assign candidates, choose the interview setup, then select the panel.</p>
+                </div>
+                <Button size="sm" variant="secondary" className="px-3" onClick={closeScheduleForm}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+              </div>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                        {editingInterviewId ? (
+              <>
+                <FormField label="Current candidate">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? candidateId}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId}</p>
+                  </div>
+                </FormField>
+                <div className="md:col-span-2">
+                  <FormField label="Also schedule for other candidates" hint="Optional. Selected candidates receive new interviews in consecutive time slots after this interview.">
+                    <div className="rounded-2xl border border-slate-200 bg-white">
+                      <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
+                        <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates to add…" />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
+                          <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
+                        </div>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto p-2">
+                        {selectableCandidates.map((candidate) => (
+                          <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
+                            <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
+                              <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} additional candidate(s) selected</div>
+                    </div>
+                  </FormField>
+                </div>
+              </>
+            ) : (
+              <div className="md:col-span-2">
+                <FormField label="Candidates" hint="Select one or more candidates. Each candidate receives an individual interview in consecutive time slots starting at the selected time.">
+                  <div className="rounded-2xl border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
+                      <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates…" />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
+                        <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto p-2">
+                      {selectableCandidates.map((candidate) => (
+                        <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
+                          <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
+                            <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
+                          </span>
+                        </label>
+                      ))}
+                      {!selectableCandidates.length && <p className="p-4 text-center text-xs text-slate-400">No candidates match this search.</p>}
+                    </div>
+                    <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} candidate(s) selected</div>
+                  </div>
+                </FormField>
+              </div>
+            )}
+            <FormField label="Job / position" hint="Optional">
+              <select className="field-input" value={jobId} onChange={(event) => setJobId(event.target.value)}>
+                <option value="">No specific job</option>
+                {availableJobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Interview type">
+              <select className="field-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}>
+                <option value="SCREENING">Screening</option>
+                <option value="TECHNICAL">Technical</option>
+                <option value="PRACTICAL">Practical</option>
+                <option value="FINAL">Final</option>
+              </select>
+            </FormField>
+            <FormField label="Date & time">
+              <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+            </FormField>
+            <FormField label="Duration (minutes)">
+              <input type="number" min="15" max="480" className="field-input" value={form.durationMins} onChange={(event) => setForm({ ...form, durationMins: event.target.value })} />
+            </FormField>
+            <FormField label="Location">
+              <input className="field-input" value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Interview room / online" />
+            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Notes" hint="Optional">
+                <textarea className="field-input min-h-20 resize-y" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Interview instructions or notes…" />
+              </FormField>
+            </div>
+            <div className="md:col-span-2">
+              <FormField label="Interviewers" hint="Select one or more active interviewers from the candidate's agency.">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {interviewers.map((interviewer) => (
+                    <label key={interviewer.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:bg-slate-50">
+                      <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
+                      <span className="min-w-0"><span className="block text-xs font-bold text-slate-800">{interviewer.name}</span><span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span></span>
+                    </label>
+                  ))}
+                </div>
+                {!interviewers.length && <p className="mt-2 text-xs text-amber-600">No active interviewers are configured for this agency.</p>}
+              </FormField>
+            </div>
+          </div>
+              <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
+                  <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}
+
+      {!loading && visible.length > 0 && listView === 'cards' && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visible.map((interview) => {
+            const candidate = candidateFor(interview);
+            const job = jobFor(interview);
+            const alreadyEvaluated = Boolean(interview.evaluations?.length);
+            const isAssignedInterviewer = role === 'INTERVIEWER';
+            const currentStatus = candidate?.status;
+
+            return (
+              <Card key={interview.id} padded={false} className="p-4">
+                <div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
+                      <StatusPill value={interview.status} />
+                      {candidate?.status && <StatusPill value={candidate.status} />}
+                    </div>
+                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} {job ? '· ' + job.title : '· General interview'}</p>
+                    <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
+                    <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
+                  </div>
+
+                  {interview.panel && interview.panel.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {interview.panel.map((participant) => (
+                        <span key={participant.userId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                          {participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="min-h-8 rounded-lg px-2.5 py-1 text-[9px]"
+                      onClick={() => void openInterviewDetails(interview)}
+                    >
+                      View
+                    </Button>
+                    {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                      <>
+                        <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
+                        <Button size="sm" variant="secondary" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" title="Mark as no show" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" title="Cancel interview" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                      </>
+                    )}
+                    {isAssignedInterviewer && interview.status === 'SCHEDULED' && !alreadyEvaluated && (
+                      <Button size="sm" className="min-h-8 rounded-lg px-1.5 py-1 text-[9px]" onClick={() => startEvaluation(interview)}>Evaluate</Button>
+                    )}
+                  </div>
+                </div>
+
+                {evaluationFor === interview.id && (
+                  <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3.5">
+                    <div className="flex items-center justify-between gap-3">
                       <div><h3 className="text-sm font-black text-slate-950">Interview scorecard</h3><p className="mt-1 text-xs text-slate-500">Score every active criterion for this agency.</p></div>
                       <Button size="sm" variant="secondary" onClick={() => setEvaluationFor(null)}>Close</Button>
                     </div>
@@ -673,15 +905,10 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                     <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
                       <FormField label="Status">
-                        <SelectMenu
-                          value={statusDrafts[candidate.id] ?? ''}
-                          onChange={(value) => setStatusDrafts((current) => ({ ...current, [candidate.id]: value as CandidateStatus }))}
-                          options={[
-                            { value: '', label: 'Select final status' },
-                            ...candidateFinalStatuses.map((status) => ({ value: status, label: statusLabel(status) })),
-                          ]}
-                          ariaLabel="Select final candidate status"
-                        />
+                        <select className="field-input" value={statusDrafts[candidate.id] ?? ''} onChange={(event) => setStatusDrafts((current) => ({ ...current, [candidate.id]: event.target.value as CandidateStatus }))}>
+                          <option value="">Select final status</option>
+                          {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+                        </select>
                       </FormField>
                       <FormField label="Reason" hint="Optional">
                         <input className="field-input" value={statusReasons[candidate.id] ?? ''} onChange={(event) => setStatusReasons((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="Reason or decision note" />
@@ -716,7 +943,6 @@ export const InterviewsPage = ({ role }: Props) => {
                   const job = jobFor(interview);
                   const alreadyEvaluated = Boolean(interview.evaluations?.length);
                   const isAssignedInterviewer = role === 'INTERVIEWER';
-
                   return (
                     <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
                       <td className="px-4 py-3">
@@ -734,7 +960,7 @@ export const InterviewsPage = ({ role }: Props) => {
                           {candidate?.status && <StatusPill value={candidate.status} />}
                         </div>
                       </td>
-                      <td className="max-w-40 px-4 py-3"><span className="line-clamp-2 text-slate-500">{interview.location ?? 'Not specified'}</span></td>
+                      <td className="max-w-40 px-4 py-3 text-slate-500">{interview.location ?? 'Not specified'}</td>
                       <td className="max-w-44 px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {interview.panel?.length ? interview.panel.map((participant) => (
@@ -765,6 +991,7 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
         </div>
       )}
+
 
       {detailFor && detail && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
