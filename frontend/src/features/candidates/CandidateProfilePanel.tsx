@@ -681,7 +681,7 @@ export const CandidateProfilePanel = ({
                       </div>
                     )}
 
-                    {score.submitted.length > 0 ? (
+                    {interview.evaluations.length > 0 ? (
                       <div className="mt-4 space-y-3">
                         <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Evaluator scorecards</p>
                         {interview.evaluations.map((evaluation) => {
