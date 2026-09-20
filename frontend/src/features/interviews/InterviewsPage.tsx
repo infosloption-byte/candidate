@@ -555,7 +555,7 @@ export const InterviewsPage = ({ role }: Props) => {
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className={`grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 ${role === 'ADMIN' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Candidate, job, interviewer, type or status…" />
