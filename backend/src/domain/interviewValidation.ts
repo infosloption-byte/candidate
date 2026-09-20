@@ -9,6 +9,7 @@ export interface InterviewInput {
   location?: string | null;
   notes?: string | null;
   interviewerIds?: string[];
+  criterionGroupId?: string | null;
 }
 
 export const validateInterviewInput = (input: InterviewInput, mode: 'create' | 'update'): string[] => {
@@ -39,6 +40,9 @@ export const validateInterviewInput = (input: InterviewInput, mode: 'create' | '
   }
   if (mode === 'create' && (!input.interviewerIds?.length)) {
     errors.push('At least one interviewer is required.');
+  }
+  if (input.criterionGroupId !== undefined && input.criterionGroupId !== null && (!input.criterionGroupId.trim() || input.criterionGroupId.length > 36)) {
+    errors.push('Interview criteria group is invalid.');
   }
   if (input.interviewerIds !== undefined && (
     !Array.isArray(input.interviewerIds)
