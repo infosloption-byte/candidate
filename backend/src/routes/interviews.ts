@@ -18,6 +18,7 @@ const interviewInclude = {
       name: true,
       email: true,
       profession: true,
+      passportNumber: true,
       status: true,
     },
   },
