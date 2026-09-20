@@ -139,7 +139,7 @@ export interface Interview {
   panel?: Array<{
     userId: string;
     assignedAt: string;
-    user: Pick<User, 'id' | 'name' | 'email' | 'active'>;
+    user: Pick<User, 'id' | 'agencyId' | 'name' | 'email' | 'active'>;
   }>;
   evaluations?: Array<InterviewEvaluation & { interviewer?: Pick<User, 'id' | 'name' | 'email'> }>;
 }
