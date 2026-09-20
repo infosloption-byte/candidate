@@ -71,6 +71,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
   const [sortBy, setSortBy] = useState<'date' | 'candidate' | 'status'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
@@ -578,12 +579,56 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
           <div className="min-w-0">
             <label className="field-label">Sort</label>
-            <div className="mt-1 flex min-w-0 gap-1.5">
-              <select className="field-input min-w-0 flex-1 py-2" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
-                <option value="date">Date</option>
-                <option value="candidate">Candidate</option>
-                <option value="status">Status</option>
-              </select>
+            <div className="relative mt-1 flex min-w-0 gap-1.5">
+              <button
+                type="button"
+                title={'Sort by ' + (sortBy === 'date' ? 'date' : sortBy === 'candidate' ? 'candidate' : 'status')}
+                aria-label="Choose sort field"
+                aria-haspopup="menu"
+                aria-expanded={sortMenuOpen}
+                className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                onClick={() => setSortMenuOpen((value) => !value)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 4v16" />
+                  <path d="m4 7 3-3 3 3" />
+                  <path d="M17 20V4" />
+                  <path d="m14 17 3 3 3-3" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                title={'Sort by ' + (sortBy === 'date' ? 'date' : sortBy === 'candidate' ? 'candidate' : 'status')}
+                className="field-input flex min-w-0 flex-1 items-center justify-between gap-2 py-2 text-left"
+                onClick={() => setSortMenuOpen((value) => !value)}
+              >
+                <span className="truncate">{sortBy === 'date' ? 'Date' : sortBy === 'candidate' ? 'Candidate' : 'Status'}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m7 10 5 5 5-5" /></svg>
+              </button>
+              {sortMenuOpen && (
+                <div role="menu" aria-label="Sort options" className="absolute left-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                  {([
+                    ['date', 'Date'],
+                    ['candidate', 'Candidate'],
+                    ['status', 'Status'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={sortBy === value}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                      onClick={() => {
+                        setSortBy(value);
+                        setSortMenuOpen(false);
+                      }}
+                    >
+                      <span>{label}</span>
+                      {sortBy === value && <span className="text-cyan-600">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button type="button" title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
                   {sortDirection === 'asc'
