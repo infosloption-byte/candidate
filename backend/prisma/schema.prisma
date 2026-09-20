@@ -47,9 +47,15 @@ enum InterviewType {
 
 enum InterviewStatus {
   SCHEDULED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+enum InterviewEvaluationStatus {
+  DRAFT
+  SUBMITTED
 }
 
 enum CandidateStatus {
@@ -75,8 +81,9 @@ model Agency {
   users      User[]
   jobs       Job[]
   candidates Candidate[]
-  interviewCriteria InterviewCriterion[]
-  auditEvents AuditEvent[]
+  interviewCriteria       InterviewCriterion[]
+  interviewCriterionGroups InterviewCriterionGroup[]
+  auditEvents              AuditEvent[]
 }
 
 model User {
@@ -195,16 +202,22 @@ model Interview {
   scheduledAt   DateTime
   durationMins  Int             @default(30)
   location      String?         @db.VarChar(160)
-  notes         String?         @db.Text
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  notes           String?        @db.Text
+  criterionGroupId String?        @db.VarChar(36)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  job       Job?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  panel       InterviewParticipant[]
-  evaluations InterviewEvaluation[]
+  candidate         Candidate                     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job               Job?                          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  criterionGroup    InterviewCriterionGroup?      @relation(fields: [criterionGroupId], references: [id], onDelete: SetNull)
+  panel             InterviewParticipant[]
+  evaluations       InterviewEvaluation[]
+  criterionAssignments InterviewCriterionAssignment[]
 
   @@index([candidateId, scheduledAt])
+  @@index([criterionGroupId])
   @@index([jobId, scheduledAt])
   @@index([status, scheduledAt])
 }
@@ -222,19 +235,71 @@ model InterviewParticipant {
 }
 
 model InterviewEvaluation {
-  id             String         @id @default(uuid()) @db.VarChar(36)
-  interviewId    String         @db.VarChar(36)
-  interviewerId  String         @db.VarChar(36)
-  comments       String?        @db.Text
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id             String                    @id @default(uuid()) @db.VarChar(36)
+  interviewId    String                    @db.VarChar(36)
+  interviewerId  String                    @db.VarChar(36)
+  status         InterviewEvaluationStatus @default(DRAFT)
+  comments       String?                   @db.Text
+  submittedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
 
   interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
   scores      InterviewEvaluationScore[]
 
   @@unique([interviewId, interviewerId])
-  @@index([interviewerId, createdAt])
+  @@index([interviewerId, status, createdAt])
+}
+
+model InterviewCriterionGroup {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  agencyId    String   @db.VarChar(36)
+  name        String   @db.VarChar(160)
+  category    String?  @db.VarChar(120)
+  description String?  @db.VarChar(500)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agency      Agency                      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  criteria    InterviewCriterionGroupItem[]
+  interviews  Interview[]
+  assignments InterviewCriterionAssignment[]
+
+  @@index([agencyId, active, name])
+}
+
+model InterviewCriterionGroupItem {
+  groupId     String @db.VarChar(36)
+  criterionId String @db.VarChar(36)
+  sortOrder   Int    @default(0)
+
+  group     InterviewCriterionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  criterion InterviewCriterion      @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, criterionId])
+  @@index([criterionId])
+}
+
+model InterviewCriterionAssignment {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  interviewId String   @db.VarChar(36)
+  criterionId String   @db.VarChar(36)
+  groupId     String?  @db.VarChar(36)
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(500)
+  maxPoints   Int
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  interview  Interview          @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  criterion  InterviewCriterion @relation(fields: [criterionId], references: [id], onDelete: Restrict)
+  group      InterviewCriterionGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([interviewId, criterionId])
+  @@index([interviewId, sortOrder])
+  @@index([criterionId])
 }
 
 model InterviewCriterion {
@@ -249,6 +314,8 @@ model InterviewCriterion {
 
   agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   scores InterviewEvaluationScore[]
+  groupItems InterviewCriterionGroupItem[]
+  assignments InterviewCriterionAssignment[]
 
   @@index([agencyId, active, createdAt])
 }
