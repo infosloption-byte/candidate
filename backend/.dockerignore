@@ -1,0 +1,14 @@
+node_modules
+dist
+src/generated
+storage
+uploads
+logs
+coverage
+*.log
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
+.git

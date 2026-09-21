@@ -1,0 +1,51 @@
+name: buildhire
+
+services:
+  buildhire_api:
+    build:
+      context: ./backend
+    container_name: buildhire_api
+    restart: always
+    env_file:
+      - ./backend/.env            # created on the server, never committed (DATABASE_URL, CORS_ORIGIN)
+    environment:
+      NODE_ENV: production        # also turns on the Secure flag of the session cookie
+      HOST: 0.0.0.0
+      PORT: "4000"
+      DOCUMENT_STORAGE_DIR: /data/documents
+    volumes:
+      - documents:/data/documents # uploaded candidate documents live here
+    networks:
+      - buildhire_net
+      - shared_net                # to reach shared MySQL as mysql_shared:3306
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s          # first start also applies the database migrations
+    # no published ports: only buildhire_app can reach the API, over buildhire_net
+
+  buildhire_app:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
+    container_name: buildhire_app
+    restart: always
+    depends_on:
+      buildhire_api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9020:80"       # host nginx (TLS) proxies buildhire.ycusriya.online to this
+    networks:
+      - buildhire_net
+
+volumes:
+  documents:
+
+networks:
+  buildhire_net:
+    driver: bridge
+  shared_net:
+    external: true

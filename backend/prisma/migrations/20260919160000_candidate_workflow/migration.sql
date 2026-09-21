@@ -28,8 +28,7 @@ ALTER TABLE `Interview`
   ADD CONSTRAINT `Interview_jobId_fkey`
     FOREIGN KEY (`jobId`) REFERENCES `Job`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE `Job`
-  ADD INDEX `Job_agencyId_status_idx`(`agencyId`, `status`);
+-- `Job_agencyId_status_idx` is now created in 20260919110000_remove_job_status_published_index
 
 CREATE TABLE `InterviewCriterion` (
   `id` VARCHAR(36) NOT NULL,

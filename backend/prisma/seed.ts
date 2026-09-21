@@ -70,9 +70,10 @@ const main = async () => {
     { name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5 },
   ];
 
+  // Interview criteria are a global library (no agencyId since 20260920110000_global_interview_criteria_library).
   for (const criterion of defaultCriteria) {
     const existing = await prisma.interviewCriterion.findFirst({
-      where: { agencyId: agency.id, name: criterion.name },
+      where: { name: criterion.name },
       select: { id: true },
     });
 
@@ -84,7 +85,6 @@ const main = async () => {
     } else {
       await prisma.interviewCriterion.create({
         data: {
-          agencyId: agency.id,
           name: criterion.name,
           description: criterion.description,
           maxPoints: criterion.maxPoints,
