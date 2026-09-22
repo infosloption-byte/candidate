@@ -712,6 +712,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setEvaluating(true);
     setError('');
     let interviewCompleted = false;
+    let closeAfterSubmit = false;
     try {
       const saved = await saveEvaluationDraft(interview.id);
       if (!saved) return;
@@ -731,12 +732,14 @@ export const InterviewsPage = ({ role }: Props) => {
           };
           const allEvaluations = [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluation];
           const requiredPanelSize = updated.panel?.length ?? updated.panelUserIds.length;
+          const completed = allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize;
           mergeInterview({
             ...updated,
-            status: allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize ? 'COMPLETED' : 'IN_PROGRESS',
-            completedAt: allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize ? submittedAt : updated.completedAt,
+            status: completed ? 'COMPLETED' : 'IN_PROGRESS',
+            completedAt: completed ? submittedAt : updated.completedAt,
             evaluations: allEvaluations,
           });
+          closeAfterSubmit = completed;
         }
         setEvaluationStatus('SUBMITTED');
       } else {
@@ -744,10 +747,11 @@ export const InterviewsPage = ({ role }: Props) => {
         setEvaluationStatus('SUBMITTED');
         if (result.summary) setEvaluationSummary(result.summary);
         interviewCompleted = result.interviewCompleted;
+        closeAfterSubmit = result.interviewCompleted;
         setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: result.interviewCompleted ? 'COMPLETED' : item.status, completedAt: result.interviewCompleted ? new Date().toISOString() : item.completedAt } : item));
       }
       setEvaluationLastSaved(Date.now());
-      if (interviewCompleted || (developmentMode && interviews.find((item) => item.id === interview.id)?.status === 'COMPLETED')) {
+      if (closeAfterSubmit) {
         setEvaluationFor(null);
         setEvaluationMinimized(false);
         setEvaluationMaximized(false);
