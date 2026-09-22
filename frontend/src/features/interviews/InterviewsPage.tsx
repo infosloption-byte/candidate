@@ -123,22 +123,41 @@ export const InterviewsPage = ({ role }: Props) => {
       Promise.resolve([] as User[]),
     ];
 
-    Promise.all(requests)
+    Promise.allSettled(requests)
       .then(([interviewResult, candidateResult, jobResult, agencyResult]) => {
         if (cancelled) return;
-        setInterviews(interviewResult);
-        if (role !== 'INTERVIEWEE' && role !== 'INTERVIEWER') {
-          setCandidates(candidateResult);
-          setJobs(jobResult);
+
+        const failures: string[] = [];
+
+        if (interviewResult.status === 'fulfilled') {
+          setInterviews(interviewResult.value);
+        } else {
+          failures.push('Unable to load the interview schedule.');
         }
-        if (role === 'ADMIN') setAgencies(agencyResult);
-        if (role === 'ADMIN') {
-          const firstAgency = agencyResult.find((item) => item.status === 'ACTIVE');
-          setAgencyId((current) => current || firstAgency?.id || '');
+
+        if (candidateResult.status === 'fulfilled') {
+          setCandidates(candidateResult.value);
+        } else if (role !== 'INTERVIEWEE' && role !== 'INTERVIEWER') {
+          failures.push('Unable to load candidates.');
         }
-      })
-      .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load interviews.');
+
+        if (jobResult.status === 'fulfilled') {
+          setJobs(jobResult.value);
+        } else if (role !== 'INTERVIEWEE' && role !== 'INTERVIEWER') {
+          failures.push('Unable to load jobs.');
+        }
+
+        if (agencyResult.status === 'fulfilled') {
+          if (role === 'ADMIN') setAgencies(agencyResult.value);
+          if (role === 'ADMIN') {
+            const firstAgency = agencyResult.value.find((item) => item.status === 'ACTIVE');
+            setAgencyId((current) => current || firstAgency?.id || '');
+          }
+        } else if (role === 'ADMIN') {
+          failures.push('Unable to load agencies.');
+        }
+
+        if (failures.length) setError(failures.join(' '));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -281,7 +300,10 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const openScheduleForm = () => {
     const firstInterviewer = interviewers[0];
+    const defaultAgencyId = agencyId
+      || (role === 'ADMIN' ? agencies.find((item) => item.status === 'ACTIVE')?.id ?? '' : user?.agencyId ?? '');
     setEditingInterviewId(null);
+    setAgencyId(defaultAgencyId);
     setForm(defaultForm);
     setCandidateId('');
     setSelectedCandidateIds([]);
@@ -297,7 +319,11 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   const openReschedule = (interview: InterviewRecord) => {
+    const interviewAgencyId = interview.candidate?.agencyId
+      ?? candidates.find((item) => item.id === interview.candidateId)?.agencyId
+      ?? '';
     setEditingInterviewId(interview.id);
+    if (interviewAgencyId) setAgencyId(interviewAgencyId);
     setCandidateId(interview.candidateId);
     setSelectedCandidateIds([]);
     setCandidateSearch('');
@@ -992,6 +1018,26 @@ export const InterviewsPage = ({ role }: Props) => {
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6">
               <div className="grid gap-4 md:grid-cols-2">
+                {role === 'ADMIN' && (
+                  <div className="md:col-span-2">
+                    <FormField label="Agency workspace" hint="Select the agency whose candidate pool you want to schedule from.">
+                      <SelectMenu
+                        value={agencyId}
+                        onChange={(value) => {
+                          setAgencyId(value);
+                          setPanel([]);
+                          setSelectedCandidateIds([]);
+                          setCandidateSearch('');
+                        }}
+                        options={[
+                          { value: '', label: 'Select an agency' },
+                          ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                        ]}
+                        ariaLabel="Select agency workspace for interview scheduling"
+                      />
+                    </FormField>
+                  </div>
+                )}
                         {editingInterviewId ? (
               <>
                 <FormField label="Current candidate">
@@ -1047,7 +1093,11 @@ export const InterviewsPage = ({ role }: Props) => {
                           </span>
                         </label>
                       ))}
-                      {!selectableCandidates.length && <p className="p-4 text-center text-xs text-slate-400">No candidates match this search.</p>}
+                      {!agencyId
+                        ? <p className="p-4 text-center text-xs text-slate-400">Select an agency workspace to load candidates.</p>
+                        : !selectableCandidates.length
+                          ? <p className="p-4 text-center text-xs text-slate-400">No candidates match this agency or search.</p>
+                          : null}
                     </div>
                     <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} candidate(s) selected</div>
                   </div>
