@@ -222,6 +222,7 @@ export const CandidateProfilePanel = ({
       setEditingProfile(false);
       onCandidateUpdated?.(updated);
       await refreshHistory();
+      onClose();
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to save the candidate profile.');
     } finally {
