@@ -57,14 +57,20 @@ export const TopBar = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
-      if (!profileMenuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!notificationMenuRef.current?.contains(target)) {
+        setNotificationsOpen(false);
+      }
+      if (!profileMenuRef.current?.contains(target)) {
         setProfileOpen(false);
       }
     };
+
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, []);
@@ -134,7 +140,7 @@ export const TopBar = ({
           </div>
         )}
 
-        <div className="relative">
+        <div ref={notificationMenuRef} className="relative">
           <button type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label={unreadCount > 0 ? unreadCount + ' unread notifications' : 'Notifications'} className="relative grid size-10 place-items-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">
             <Icon name="bell" size={18} />
             {unreadCount > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-cyan-600 px-1 text-[9px] font-black leading-4 text-white shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
