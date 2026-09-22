@@ -164,7 +164,7 @@ export const InterviewsPage = ({ role }: Props) => {
       });
 
     return () => { cancelled = true; };
-  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriterionGroups, user?.agencyId, user?.id, agencyId]);
+  }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriterionGroups, user?.agencyId, user?.id]);
 
   useEffect(() => {
     if (!agencyId) return;
