@@ -80,6 +80,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluationLastSaved, setEvaluationLastSaved] = useState<number | null>(null);
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
+  const [evaluationDecisionMessage, setEvaluationDecisionMessage] = useState('');
   const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
@@ -569,6 +570,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setEvaluationSummary(null);
     setEvaluationDetail(null);
     setEvaluationLastSaved(null);
+    setEvaluationDecisionMessage('');
 
     try {
       if (role !== 'INTERVIEWER') {
@@ -766,22 +768,37 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const updateCandidateStatus = async (candidate: Pick<Candidate, 'id' | 'name' | 'status'>) => {
     const status = statusDrafts[candidate.id];
-    if (!status) return;
+    if (!status || status === candidate.status) return;
+
     try {
       const currentCandidate = candidates.find((item) => item.id === candidate.id);
       if (!currentCandidate && developmentMode) {
         throw new Error('The candidate is not available in the local workspace.');
       }
+
       const updated: Candidate = developmentMode
         ? { ...(currentCandidate as Candidate), status, statusUpdatedAt: new Date().toISOString() }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null }),
           });
+
       if (developmentMode) dispatch({ type: 'SET_CANDIDATE_STATUS', candidateId: candidate.id, status });
+
       setCandidates((current) => current.map((item) => item.id === updated.id ? updated : item));
-      setSuccess('Candidate "' + candidate.name + '" is now ' + statusLabel(status) + '.');
+      setInterviews((current) => current.map((item) => item.candidateId === updated.id
+        ? {
+            ...item,
+            candidate: item.candidate ? { ...item.candidate, ...updated } : item.candidate,
+          }
+        : item));
+
+      setStatusDrafts((current) => ({ ...current, [updated.id]: updated.status }));
+      const message = 'Decision recorded: ' + updated.name + ' is now ' + statusLabel(updated.status) + '.';
+      setEvaluationDecisionMessage(message);
+      setSuccess(message);
     } catch (requestError: unknown) {
+      setEvaluationDecisionMessage('');
       setError(requestError instanceof Error ? requestError.message : 'Unable to update candidate status.');
     }
   };
@@ -1511,6 +1528,18 @@ export const InterviewsPage = ({ role }: Props) => {
                       </div>
                     )}
                   </div>
+                  {evaluationDecisionMessage && (
+                    <div className="shrink-0 border-t border-emerald-100 bg-emerald-50 px-4 py-3 sm:px-5" role="status" aria-live="polite">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-[11px] font-black text-white">✓</div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-extrabold text-emerald-900">Decision recorded</p>
+                          <p className="mt-0.5 text-[11px] leading-5 text-emerald-800">{evaluationDecisionMessage}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {activeInterview.status === 'COMPLETED' && activeCandidate && !candidateFinalStatuses.includes(activeCandidate.status) && (
                     <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
                       <div>
