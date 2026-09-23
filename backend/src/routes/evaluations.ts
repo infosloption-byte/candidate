@@ -14,6 +14,9 @@ type Assignment = {
   name: string;
   description: string | null;
   maxPoints: number;
+  responseType: 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
+  required: boolean;
+  options: unknown;
   sortOrder: number;
 };
 
@@ -27,6 +30,9 @@ const assignmentSelect = {
   name: true,
   description: true,
   maxPoints: true,
+  responseType: true,
+  required: true,
+  options: true,
   sortOrder: true,
 } as const;
 
@@ -40,7 +46,7 @@ const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
 
   const criteria = await getPrisma().interviewCriterion.findMany({
     where: { active: true },
-    select: { id: true, name: true, description: true, maxPoints: true, createdAt: true },
+    select: { id: true, name: true, description: true, maxPoints: true, responseType: true, required: true, options: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
   return criteria.map((criterion, index) => ({
@@ -50,6 +56,9 @@ const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
     name: criterion.name,
     description: criterion.description,
     maxPoints: criterion.maxPoints,
+    responseType: criterion.responseType,
+    required: criterion.required,
+    options: criterion.options,
     sortOrder: index,
   }));
 };
@@ -61,15 +70,18 @@ const toSummary = (
 ) => {
   const submitted = evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED');
   const assignmentByCriterion = new Map(assignments.map((item) => [item.criterionId, item]));
+  const scoringAssignments = assignments.filter((item) => item.responseType === 'SCORE');
+  const scoringIds = new Set(scoringAssignments.map((item) => item.criterionId));
   let totalPoints = 0;
   let maxPoints = 0;
 
   for (const evaluation of submitted) {
-    totalPoints += calculateEvaluationTotal(evaluation.scores);
-    maxPoints += evaluation.scores.reduce(
-      (total, score) => total + (assignmentByCriterion.get(score.criterionId)?.maxPoints ?? 0),
-      0,
-    );
+    const scoreValues = evaluation.scores.filter((score) => scoringIds.has(score.criterionId));
+    totalPoints += calculateEvaluationTotal(scoreValues);
+    maxPoints += scoringAssignments.reduce((total, assignment) => {
+      const score = scoreValues.find((item) => item.criterionId === assignment.criterionId);
+      return total + (score ? assignment.maxPoints : 0);
+    }, 0);
   }
 
   return {
@@ -94,8 +106,43 @@ const validateScores = (scores: EvaluationInput['scores'], assignments: Assignme
       errors.push('Score references a criterion that is not assigned to this interview.');
       continue;
     }
+    if (assignment.responseType !== 'SCORE') {
+      errors.push('Criterion "' + assignment.name + '" does not accept a numeric score.');
+      continue;
+    }
     if (score.points > assignment.maxPoints) {
       errors.push('Score for "' + assignment.name + '" cannot exceed ' + assignment.maxPoints + ' points.');
+    }
+  }
+  return errors;
+};
+
+const validateResponses = (responses: EvaluationInput['responses'], assignments: Assignment[]): string[] => {
+  if (!Array.isArray(responses)) return ['Responses must be an array.'];
+  const errors: string[] = [];
+  const assignmentById = new Map(assignments.map((item) => [item.criterionId, item]));
+
+  for (const response of responses) {
+    const assignment = assignmentById.get(response.criterionId);
+    if (!assignment) {
+      errors.push('Response references a criterion that is not assigned to this interview.');
+      continue;
+    }
+    if (assignment.responseType === 'SCORE') {
+      errors.push('Criterion "' + assignment.name + '" requires a numeric score, not a response field.');
+      continue;
+    }
+    if (assignment.responseType === 'MULTI_SELECT') {
+      if (!Array.isArray(response.selectedOptions) || response.selectedOptions.length === 0) {
+        errors.push('Select at least one option for "' + assignment.name + '".');
+      }
+    } else if (!response.textValue?.trim()) {
+      errors.push('Provide an answer for "' + assignment.name + '".');
+    }
+    if (Array.isArray(assignment.options) && assignment.options.length && Array.isArray(response.selectedOptions)) {
+      const allowed = new Set(assignment.options.filter((value): value is string => typeof value === 'string'));
+      const invalid = response.selectedOptions.filter((value) => typeof value !== 'string' || (!allowed.has(value) && assignment.responseType !== 'MULTI_SELECT'));
+      if (invalid.length) errors.push('One or more selected options for "' + assignment.name + '" are invalid.');
     }
   }
   return errors;
@@ -119,6 +166,9 @@ const ensureInterviewAssignments = async (interviewId: string) => {
       name: criterion.name,
       description: criterion.description,
       maxPoints: criterion.maxPoints,
+      responseType: criterion.responseType,
+      required: criterion.required,
+      options: criterion.options,
       sortOrder: index,
     })),
   });
@@ -202,6 +252,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             include: {
               interviewer: { select: { id: true, name: true, email: true } },
               scores: { select: { criterionId: true, points: true } },
+              responses: { select: { criterionId: true, textValue: true, selectedOptions: true } },
             },
             orderBy: { createdAt: 'asc' },
           },
@@ -265,8 +316,11 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       await ensureInterviewAssignments(interview.id);
       const assignments = await getAssignments(interview.id);
-      const scoreErrors = validateScores(request.body.scores, assignments);
-      if (scoreErrors.length) return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: scoreErrors.join(' ') } });
+      const scoreErrors = validateScores(request.body.scores ?? [], assignments);
+      const responseErrors = validateResponses(request.body.responses ?? [], assignments);
+      if (scoreErrors.length || responseErrors.length) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: [...scoreErrors, ...responseErrors].join(' ') } });
+      }
 
       const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
         where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
@@ -285,6 +339,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             status: 'DRAFT',
             comments: request.body.comments?.trim() || null,
             scores: { create: (request.body.scores ?? []).map((score) => ({ criterionId: score.criterionId, points: score.points })) },
+            responses: { create: (request.body.responses ?? []).map((response) => ({ criterionId: response.criterionId, textValue: response.textValue?.trim() || null, selectedOptions: response.selectedOptions ?? null })) },
           },
           update: {
             comments: request.body.comments?.trim() || null,
@@ -292,10 +347,15 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
               deleteMany: {},
               create: (request.body.scores ?? []).map((score) => ({ criterionId: score.criterionId, points: score.points })),
             },
+            responses: {
+              deleteMany: {},
+              create: (request.body.responses ?? []).map((response) => ({ criterionId: response.criterionId, textValue: response.textValue?.trim() || null, selectedOptions: response.selectedOptions ?? null })),
+            },
           },
           include: {
             interviewer: { select: { id: true, name: true, email: true } },
             scores: { select: { criterionId: true, points: true } },
+            responses: { select: { criterionId: true, textValue: true, selectedOptions: true } },
           },
         });
 
@@ -351,7 +411,10 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       const assignments = await getAssignments(interview.id);
       const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
         where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
-        include: { scores: { select: { criterionId: true, points: true } } },
+        include: {
+          scores: { select: { criterionId: true, points: true } },
+          responses: { select: { criterionId: true, textValue: true, selectedOptions: true } },
+        },
       });
       if (!existingEvaluation) {
         return reply.code(409).send({ success: false, error: { code: 'EVALUATION_NOT_STARTED', message: 'Save the scorecard before submitting it.' } });
@@ -366,14 +429,31 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const currentScores = existingEvaluation.scores;
+      const currentResponses = existingEvaluation.responses;
       const submittedScoreErrors = validateScores(currentScores, assignments);
-      if (submittedScoreErrors.length || currentScores.length !== assignments.length) {
-        return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: 'Every assigned interview criterion must be scored before submission.' } });
+      const submittedResponseErrors = validateResponses(currentResponses, assignments);
+      if (submittedScoreErrors.length || submittedResponseErrors.length) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: [...submittedScoreErrors, ...submittedResponseErrors].join(' ') } });
       }
 
-      const requiredCriterionIds = new Set(assignments.map((item) => item.criterionId));
-      if (currentScores.some((score) => !requiredCriterionIds.has(score.criterionId))) {
-        return reply.code(400).send({ success: false, error: { code: 'CRITERIA_MISMATCH', message: 'Every submitted score must belong to the interview criteria group.' } });
+      const scoreByCriterion = new Map(currentScores.map((score) => [score.criterionId, score]));
+      const responseByCriterion = new Map(currentResponses.map((response) => [response.criterionId, response]));
+      const missingRequired = assignments.filter((assignment) => {
+        if (!assignment.required) return false;
+        if (assignment.responseType === 'SCORE') return !scoreByCriterion.has(assignment.criterionId);
+        const response = responseByCriterion.get(assignment.criterionId);
+        if (!response) return true;
+        if (assignment.responseType === 'MULTI_SELECT') return !Array.isArray(response.selectedOptions) || response.selectedOptions.length === 0;
+        return !response.textValue?.trim();
+      });
+      if (missingRequired.length) {
+        return reply.code(400).send({
+          success: false,
+          error: {
+            code: 'REQUIRED_CRITERIA_MISSING',
+            message: 'Complete the required criteria before submitting: ' + missingRequired.map((item) => item.name).join(', ') + '.',
+          },
+        });
       }
 
       const result = await getPrisma().$transaction(async (tx) => {
