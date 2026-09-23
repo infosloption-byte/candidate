@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
-import type { Prisma } from '../generated/prisma/client.js';
-import type { InterviewInterviewCriterionResponseType } from '../generated/prisma/enums.js';
+import { Prisma } from '../generated/prisma/client.js';
+import type { InterviewCriterionResponseType } from '../generated/prisma/enums.js';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
@@ -142,7 +142,7 @@ const criterionAssignmentData = (
         maxPoints: number;
         responseType: InterviewCriterionResponseType;
         required: boolean;
-        options: Prisma.InputJsonValue | undefined;
+        options: Prisma.JsonValue | null;
       };
     }>;
   }>,
@@ -156,7 +156,7 @@ const criterionAssignmentData = (
     maxPoints: number;
     responseType: InterviewCriterionResponseType;
     required: boolean;
-    options: Prisma.InputJsonValue | undefined;
+    options: Prisma.JsonValue | null;
     sortOrder: number;
   }> = [];
   let sortOrder = 0;
@@ -172,7 +172,7 @@ const criterionAssignmentData = (
         maxPoints: item.criterion.maxPoints,
         responseType: item.criterion.responseType,
         required: item.criterion.required,
-        ...(item.criterion.options === null ? {} : { options: item.criterion.options as Prisma.InputJsonValue }),
+        options: item.criterion.options === null ? Prisma.DbNull : item.criterion.options as Prisma.InputJsonValue,
         sortOrder: sortOrder++,
       });
     }
