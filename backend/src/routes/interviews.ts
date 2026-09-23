@@ -139,9 +139,9 @@ const criterionAssignmentData = (
         name: string;
         description: string | null;
         maxPoints: number;
-        responseType: string;
+        responseType: Prisma.InterviewCriterionResponseType;
         required: boolean;
-        options: unknown;
+        options: Prisma.JsonValue | null;
       };
     }>;
   }>,
@@ -153,9 +153,9 @@ const criterionAssignmentData = (
     name: string;
     description: string | null;
     maxPoints: number;
-    responseType: string;
+    responseType: Prisma.InterviewCriterionResponseType;
     required: boolean;
-    options: unknown;
+    options: Prisma.JsonValue | null;
     sortOrder: number;
   }> = [];
   let sortOrder = 0;
