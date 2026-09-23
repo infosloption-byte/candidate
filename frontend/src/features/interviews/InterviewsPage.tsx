@@ -954,7 +954,7 @@ export const InterviewsPage = ({ role }: Props) => {
         action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
-      {error && <StateMessage kind="error" title="Interview action failed" description={error} />}
+      {error && <StateMessage kind="error" title="Interview action failed" description={error} floating={showScheduleForm || Boolean(evaluationFor) || Boolean(detailFor) || Boolean(profileCandidate)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
