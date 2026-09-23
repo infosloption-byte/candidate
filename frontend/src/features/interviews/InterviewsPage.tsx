@@ -12,6 +12,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
+import { CriterionResponseField } from './CriterionResponseField';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
@@ -38,6 +39,37 @@ const toDateTimeLocal = (value: string): string => {
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
+const buildCriterionAssignments = (
+  groups: InterviewCriterionGroup[],
+  groupIds: string[],
+  interviewId = 'draft',
+): InterviewCriterionAssignment[] => {
+  const selected = groupIds.map((id) => groups.find((group) => group.id === id)).filter((group): group is InterviewCriterionGroup => Boolean(group));
+  const seen = new Set<string>();
+  const assignments: InterviewCriterionAssignment[] = [];
+  let sortOrder = 0;
+  for (const group of selected) {
+    for (const item of group.criteria) {
+      if (seen.has(item.criterionId)) continue;
+      seen.add(item.criterionId);
+      assignments.push({
+        id: 'assignment-' + Date.now() + '-' + sortOrder,
+        interviewId,
+        criterionId: item.criterionId,
+        groupId: group.id,
+        name: item.criterion.name,
+        description: item.criterion.description,
+        maxPoints: item.criterion.maxPoints,
+        responseType: item.criterion.responseType,
+        required: item.criterion.required,
+        options: item.criterion.options,
+        sortOrder: sortOrder++,
+      });
+    }
+  }
+  return assignments;
+};
+
 
 export const InterviewsPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
@@ -53,7 +85,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
   const [jobId, setJobId] = useState('');
-  const [criterionGroupId, setCriterionGroupId] = useState('');
+  const [criterionGroupIds, setCriterionGroupIds] = useState<string[]>([]);
   const [panel, setPanel] = useState<string[]>([]);
   const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
@@ -72,6 +104,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluationMinimized, setEvaluationMinimized] = useState(false);
   const [evaluationMaximized, setEvaluationMaximized] = useState(false);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
+  const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
+  const [selectedOptionsDrafts, setSelectedOptionsDrafts] = useState<Record<string, string[]>>({});
+  const [customTagDrafts, setCustomTagDrafts] = useState<Record<string, string>>({});
   const [evaluationComments, setEvaluationComments] = useState('');
   const [evaluationAssignments, setEvaluationAssignments] = useState<InterviewCriterionAssignment[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<InterviewDetail | null>(null);
@@ -295,8 +330,11 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId('');
-    setCriterionGroupId('');
+    setCriterionGroupIds([]);
     setPanel([]);
+    setResponseDrafts({});
+    setSelectedOptionsDrafts({});
+    setCustomTagDrafts({});
   };
 
   const openScheduleForm = () => {
@@ -310,7 +348,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId('');
-    setCriterionGroupId(criteriaGroups[0]?.id ?? '');
+    setCriterionGroupIds([]);
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
     setScheduleModalOpen(true);
@@ -329,7 +367,9 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId(interview.jobId ?? '');
-    setCriterionGroupId(interview.criterionGroupId ?? '');
+    setCriterionGroupIds(interview.criterionGroupIds?.length
+      ? interview.criterionGroupIds
+      : interview.criterionGroups?.map((group) => group.id) ?? (interview.criterionGroupId ? [interview.criterionGroupId] : []));
     setForm({
       scheduledAt: toDateTimeLocal(interview.scheduledAt),
       type: interview.type,
@@ -349,10 +389,15 @@ export const InterviewsPage = ({ role }: Props) => {
     setSuccess('');
   };
 
+  useEffect(() => {
+    if (!scheduleModalOpen || editingInterviewId || !criteriaGroups.length) return;
+    setCriterionGroupIds((current) => current.length ? current.filter((id) => criteriaGroups.some((group) => group.id === id)) : criteriaGroups.map((group) => group.id));
+  }, [criteriaGroups, editingInterviewId, scheduleModalOpen]);
+
   const saveSchedule = async () => {
     const createIds = selectedCandidateIds;
-    if (!criterionGroupId) {
-      setError('Select a scoring criteria group before scheduling the interview.');
+    if (!criterionGroupIds.length) {
+      setError('Select at least one scoring criteria group before scheduling the interview.');
       return;
     }
     if (panel.length === 0) {
@@ -373,6 +418,11 @@ export const InterviewsPage = ({ role }: Props) => {
     try {
       const scheduledAt = new Date(form.scheduledAt).toISOString();
       const durationMins = Math.max(15, Number(form.durationMins) || 30);
+      const selectedGroups = criteriaGroups.filter((group) => criterionGroupIds.includes(group.id));
+      if (selectedGroups.length !== criterionGroupIds.length) {
+        setError('One or more selected criteria groups are no longer available.');
+        return;
+      }
 
       if (editingInterviewId) {
         const updated = developmentMode
@@ -383,18 +433,10 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
-              criterionGroupId,
-              criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
-              criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
-                id: 'assignment-' + Date.now() + '-' + criterionIndex,
-                interviewId: editingInterviewId,
-                criterionId: item.criterionId,
-                groupId: criterionGroupId,
-                name: item.criterion.name,
-                description: item.criterion.description,
-                maxPoints: item.criterion.maxPoints,
-                sortOrder: item.sortOrder,
-              })),
+              criterionGroupId: criterionGroupIds[0] ?? null,
+              criterionGroupIds,
+              criterionGroups: selectedGroups,
+              criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, editingInterviewId),
             }
           : await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
               method: 'PATCH',
@@ -405,7 +447,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
-                criterionGroupId,
+                criterionGroupIds,
               }),
             });
 
@@ -425,18 +467,10 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
-              criterionGroupId,
-              criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
-              criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
-                id: 'assignment-' + Date.now() + '-' + index + '-' + criterionIndex,
-                interviewId: 'draft',
-                criterionId: item.criterionId,
-                groupId: criterionGroupId,
-                name: item.criterion.name,
-                description: item.criterion.description,
-                maxPoints: item.criterion.maxPoints,
-                sortOrder: item.sortOrder,
-              })),
+              criterionGroupId: criterionGroupIds[0] ?? null,
+              criterionGroupIds,
+              criterionGroups: selectedGroups,
+              criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, 'draft'),
             }));
             drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
             setInterviews((current) => [...drafts, ...current]);
@@ -452,7 +486,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
-              criterionGroupId,
+                criterionGroupIds,
               }),
             });
             setInterviews((current) => [...result.candidates, ...current]);
@@ -475,18 +509,10 @@ export const InterviewsPage = ({ role }: Props) => {
           durationMins,
           location: form.location.trim() || null,
           panelUserIds: panel,
-          criterionGroupId,
-          criterionGroup: criteriaGroups.find((group) => group.id === criterionGroupId) ?? null,
-          criterionAssignments: (criteriaGroups.find((group) => group.id === criterionGroupId)?.criteria ?? []).map((item, criterionIndex) => ({
-            id: 'assignment-' + Date.now() + '-' + index + '-' + criterionIndex,
-            interviewId: 'draft',
-            criterionId: item.criterionId,
-            groupId: criterionGroupId,
-            name: item.criterion.name,
-            description: item.criterion.description,
-            maxPoints: item.criterion.maxPoints,
-            sortOrder: item.sortOrder,
-          })),
+          criterionGroupId: criterionGroupIds[0] ?? null,
+          criterionGroupIds,
+          criterionGroups: selectedGroups,
+          criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, 'draft'),
         }));
         drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
         setInterviews((current) => [...drafts, ...current]);
@@ -504,7 +530,7 @@ export const InterviewsPage = ({ role }: Props) => {
             location: form.location.trim() || null,
             notes: form.notes.trim() || null,
             interviewerIds: panel,
-            criterionGroupId,
+            criterionGroupIds,
           }),
         });
         setInterviews((current) => [...result.candidates, ...current]);
@@ -547,16 +573,27 @@ export const InterviewsPage = ({ role }: Props) => {
       comments: string | null;
       submittedAt: string | null;
       scores: Array<{ criterionId: string; points: number }>;
+      responses?: Array<{ criterionId: string; textValue: string | null; selectedOptions: string[] | null }>;
     } | null,
   ) => {
     const own = evaluation ?? interview.evaluations?.find((item) => item.interviewerId === user?.id);
-    const drafts: Record<string, string> = {};
+    const scores: Record<string, string> = {};
+    const responses: Record<string, string> = {};
+    const options: Record<string, string[]> = {};
+    const customTags: Record<string, string> = {};
     for (const assignment of assignments) {
       const existingScore = own?.scores.find((score) => score.criterionId === assignment.criterionId);
-      drafts[assignment.criterionId] = existingScore ? String(existingScore.points) : '';
+      const existingResponse = own?.responses?.find((response) => response.criterionId === assignment.criterionId);
+      scores[assignment.criterionId] = existingScore ? String(existingScore.points) : '';
+      responses[assignment.criterionId] = existingResponse?.textValue ?? '';
+      options[assignment.criterionId] = existingResponse?.selectedOptions ?? [];
+      customTags[assignment.criterionId] = '';
     }
     setEvaluationAssignments(assignments);
-    setScoreDrafts(drafts);
+    setScoreDrafts(scores);
+    setResponseDrafts(responses);
+    setSelectedOptionsDrafts(options);
+    setCustomTagDrafts(customTags);
     setEvaluationComments(own?.comments ?? '');
     setEvaluationStatus(own?.status ?? 'DRAFT');
   };
@@ -581,16 +618,11 @@ export const InterviewsPage = ({ role }: Props) => {
         }
         if (developmentMode) {
           const current = interviews.find((item) => item.id === interview.id) ?? interview;
-          const assignments = current.criterionAssignments ?? (criteriaGroups.find((group) => group.id === current.criterionGroupId)?.criteria ?? []).map((item, index) => ({
-            id: current.id + '-assignment-' + index,
-            interviewId: current.id,
-            criterionId: item.criterionId,
-            groupId: current.criterionGroupId ?? null,
-            name: item.criterion.name,
-            description: item.criterion.description,
-            maxPoints: item.criterion.maxPoints,
-            sortOrder: item.sortOrder,
-          }));
+          const assignments = current.criterionAssignments ?? buildCriterionAssignments(
+            criteriaGroups,
+            current.criterionGroupIds ?? current.criterionGroups?.map((group) => group.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
+            current.id,
+          );
           setEvaluationAssignments(assignments);
           setEvaluationDetail(current as InterviewDetail);
           return;
@@ -607,20 +639,16 @@ export const InterviewsPage = ({ role }: Props) => {
           current = { ...current, status: 'IN_PROGRESS', startedAt: new Date().toISOString() };
           mergeInterview(current);
         }
-        const assignments = current.criterionAssignments ?? (criteriaGroups.find((group) => group.id === current.criterionGroupId)?.criteria ?? []).map((item, index) => ({
-          id: current.id + '-assignment-' + index,
-          interviewId: current.id,
-          criterionId: item.criterionId,
-          groupId: current.criterionGroupId ?? null,
-          name: item.criterion.name,
-          description: item.criterion.description,
-          maxPoints: item.criterion.maxPoints,
-          sortOrder: item.sortOrder,
-        }));
+        const assignments = current.criterionAssignments ?? buildCriterionAssignments(
+          criteriaGroups,
+          current.criterionGroupIds ?? current.criterionGroups?.map((group) => group.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
+          current.id,
+        );
         initialiseEvaluation(current, assignments);
         const ownEvaluation = current.evaluations?.find((item) => item.interviewerId === user?.id);
-        const total = assignments.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
-        setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
+        const scoring = assignments.filter((item) => item.responseType === 'SCORE');
+        const total = scoring.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
+        setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: scoring.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
         return;
       }
 
@@ -632,7 +660,7 @@ export const InterviewsPage = ({ role }: Props) => {
       const result = await apiFetch<{
         interview: InterviewRecord;
         assignments: InterviewCriterionAssignment[];
-        evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }> } | null;
+        evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }>; responses?: Array<{ criterionId: string; textValue: string | null; selectedOptions: string[] | null }> } | null;
         summary: { submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean };
       }>('/interviews/' + interview.id + '/evaluation');
       initialiseEvaluation(result.interview, result.assignments, result.evaluation as never);
@@ -646,8 +674,16 @@ export const InterviewsPage = ({ role }: Props) => {
   const saveEvaluationDraft = async (interviewId: string, silent = false): Promise<boolean> => {
     if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return false;
     const scores = evaluationAssignments
-      .filter((assignment) => scoreDrafts[assignment.criterionId] !== '')
+      .filter((assignment) => assignment.responseType === 'SCORE' && scoreDrafts[assignment.criterionId] !== '')
       .map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
+    const responses = evaluationAssignments
+      .filter((assignment) => assignment.responseType !== 'SCORE')
+      .map((assignment) => ({
+        criterionId: assignment.criterionId,
+        textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
+        selectedOptions: assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
+      }))
+      .filter((response) => response.textValue !== null || (response.selectedOptions?.length ?? 0) > 0);
 
     if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > (evaluationAssignments.find((item) => item.criterionId === score.criterionId)?.maxPoints ?? 0))) {
       if (!silent) setError('Every score must be a whole number within the criterion maximum.');
@@ -668,17 +704,18 @@ export const InterviewsPage = ({ role }: Props) => {
             comments: evaluationComments.trim() || null,
             submittedAt: null,
             scores,
+            responses,
           };
           mergeInterview({ ...interview, evaluations: [...(interview.evaluations ?? []).filter((item) => item.interviewerId !== ownId), draftEvaluation] });
         }
       } else {
         const result = await apiFetch<{
-          evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }> };
+          evaluation: { id: string; interviewerId: string; status: 'DRAFT' | 'SUBMITTED'; comments: string | null; submittedAt: string | null; scores: Array<{ criterionId: string; points: number }>; responses: Array<{ criterionId: string; textValue: string | null; selectedOptions: string[] | null }> };
           assignments: InterviewCriterionAssignment[];
           summary: { submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean };
         }>('/interviews/' + interviewId + '/evaluation', {
           method: 'PUT',
-          body: JSON.stringify({ scores, comments: evaluationComments.trim() || null }),
+          body: JSON.stringify({ scores, responses, comments: evaluationComments.trim() || null }),
         });
         setEvaluationStatus(result.evaluation.status);
         setEvaluationSummary(result.summary);
@@ -702,18 +739,22 @@ export const InterviewsPage = ({ role }: Props) => {
 
   const submitEvaluation = async (interview: InterviewRecord) => {
     if (!evaluationAssignments.length) {
-      setError('This interview has no criteria assigned. Ask the scheduler to select a criteria group.');
+      setError('This interview has no criteria assigned. Ask the scheduler to select at least one criteria group.');
       return;
     }
-    const scores = evaluationAssignments.map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
-    if (scores.some((score) => !Number.isInteger(score.points) || score.points < 0 || score.points > evaluationAssignments.find((item) => item.criterionId === score.criterionId)!.maxPoints || scoreDrafts[score.criterionId] === '')) {
-      setError('Score every assigned criterion before submitting the interview.');
+    const missingRequired = evaluationAssignments.filter((assignment) => {
+      if (!assignment.required) return false;
+      if (assignment.responseType === 'SCORE') return scoreDrafts[assignment.criterionId] === '';
+      if (assignment.responseType === 'MULTI_SELECT') return !(selectedOptionsDrafts[assignment.criterionId]?.length);
+      return !responseDrafts[assignment.criterionId]?.trim();
+    });
+    if (missingRequired.length) {
+      setError('Complete the required criteria before submitting: ' + missingRequired.map((item) => item.name).join(', ') + '.');
       return;
     }
 
     setEvaluating(true);
     setError('');
-    let interviewCompleted = false;
     let closeAfterSubmit = false;
     try {
       const saved = await saveEvaluationDraft(interview.id);
@@ -723,24 +764,25 @@ export const InterviewsPage = ({ role }: Props) => {
         const updated = interviews.find((item) => item.id === interview.id);
         if (updated) {
           const submittedAt = new Date().toISOString();
-          const ownEvaluation = {
-            id: updated.evaluations?.find((item) => item.interviewerId === ownId)?.id ?? 'evaluation-' + Date.now(),
+          const ownEvaluation = updated.evaluations?.find((item) => item.interviewerId === ownId);
+          const ownEvaluationSubmitted = {
+            id: ownEvaluation?.id ?? 'evaluation-' + Date.now(),
             interviewId: interview.id,
             interviewerId: ownId,
             status: 'SUBMITTED' as const,
             comments: evaluationComments.trim() || null,
             submittedAt,
-            scores,
+            scores: evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) })),
+            responses: evaluationAssignments.filter((assignment) => assignment.responseType !== 'SCORE').map((assignment) => ({
+              criterionId: assignment.criterionId,
+              textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
+              selectedOptions: assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
+            })).filter((response) => response.textValue !== null || (response.selectedOptions?.length ?? 0) > 0),
           };
-          const allEvaluations = [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluation];
+          const allEvaluations = [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluationSubmitted];
           const requiredPanelSize = updated.panel?.length ?? updated.panelUserIds.length;
           const completed = allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize;
-          mergeInterview({
-            ...updated,
-            status: completed ? 'COMPLETED' : 'IN_PROGRESS',
-            completedAt: completed ? submittedAt : updated.completedAt,
-            evaluations: allEvaluations,
-          });
+          mergeInterview({ ...updated, status: completed ? 'COMPLETED' : 'IN_PROGRESS', completedAt: completed ? submittedAt : updated.completedAt, evaluations: allEvaluations });
           closeAfterSubmit = completed;
         }
         setEvaluationStatus('SUBMITTED');
@@ -748,7 +790,6 @@ export const InterviewsPage = ({ role }: Props) => {
         const result = await apiFetch<{ interviewCompleted: boolean; evaluation: { status: 'SUBMITTED' }; summary: typeof evaluationSummary }>('/interviews/' + interview.id + '/evaluation/submit', { method: 'POST' });
         setEvaluationStatus('SUBMITTED');
         if (result.summary) setEvaluationSummary(result.summary);
-        interviewCompleted = result.interviewCompleted;
         closeAfterSubmit = result.interviewCompleted;
         setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: result.interviewCompleted ? 'COMPLETED' : item.status, completedAt: result.interviewCompleted ? new Date().toISOString() : item.completedAt } : item));
       }
@@ -1149,28 +1190,28 @@ export const InterviewsPage = ({ role }: Props) => {
                 ariaLabel="Select interview type"
               />
             </FormField>
-            <FormField label="Scoring criteria group" hint="The selected group becomes the scorecard for this interview.">
-              <SelectMenu
-                value={criterionGroupId}
-                onChange={setCriterionGroupId}
-                options={[
-                  { value: '', label: 'Select a scoring group' },
-                  ...criteriaGroups.map((group) => ({
-                    value: group.id,
-                    label: group.category ? group.name + ' · ' + group.category : group.name,
-                  })),
-                ]}
-                ariaLabel="Select interview scoring criteria group"
-              />
-              {criterionGroupId && (
-                <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
-                  {(() => {
-                    const group = criteriaGroups.find((item) => item.id === criterionGroupId);
-                    const total = group?.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0) ?? 0;
-                    return group ? group.criteria.length + ' criteria · ' + total + ' max points' : 'Group unavailable';
-                  })()}
-                </p>
-              )}
+            <FormField label="Scoring criteria groups" hint="All active groups are selected by default. Remove any that are not relevant to this interview.">
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                {criteriaGroups.length ? criteriaGroups.map((group) => {
+                  const checked = criterionGroupIds.includes(group.id);
+                  const scoreMax = group.criteria.reduce((sum, item) => sum + (item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints : 0), 0);
+                  return (
+                    <label key={group.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition ${checked ? 'border-cyan-200 bg-cyan-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={checked}
+                        onChange={(event) => setCriterionGroupIds((current) => event.target.checked ? [...new Set([...current, group.id])] : current.filter((id) => id !== group.id))}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-extrabold text-slate-800">{group.name}</span>
+                        <span className="mt-0.5 block text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria{scoreMax ? ' · ' + scoreMax + ' score points' : ''}</span>
+                      </span>
+                    </label>
+                  );
+                }) : <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>}
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
             </FormField>
             <FormField label="Date & time">
               <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
@@ -1449,16 +1490,48 @@ export const InterviewsPage = ({ role }: Props) => {
                     {role === 'INTERVIEWER' ? (
                     <>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p><p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((item) => scoreDrafts[item.criterionId] !== '').length} / {evaluationAssignments.length} scored</p></div>
-                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My total</p><p className="mt-1 text-sm font-black text-cyan-700">{evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)} / {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}</p></div>
-                      <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p><p className="mt-1 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
+                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE' ? scoreDrafts[assignment.criterionId] !== '' : assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim())).length} / {evaluationAssignments.length} answered</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My score</p>
+                        <p className="mt-1 text-sm font-black text-cyan-700">
+                          {evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
+                          {' / '}
+                          {evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').reduce((sum, item) => sum + item.maxPoints, 0)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p>
+                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
+                      </div>
                     </div>
-                    <div className="mt-4 space-y-2.5">
+                    <div className="mt-4 space-y-3">
                       {evaluationAssignments.map((assignment) => (
                         <div key={assignment.id} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{assignment.name}</p><p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description ?? 'No description provided.'}</p></div>
-                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold text-slate-400">/ {assignment.maxPoints}</span><input type="number" min="0" max={assignment.maxPoints} disabled={evaluationStatus === 'SUBMITTED' || evaluating} className="field-input !mt-0 w-20 px-2 text-sm font-bold" value={scoreDrafts[assignment.criterionId] ?? ''} onChange={(event) => setScoreDrafts((current) => ({ ...current, [assignment.criterionId]: event.target.value }))} /></div>
+                          <div className="flex flex-col gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-extrabold text-slate-900">{assignment.name}</p>
+                                {assignment.required && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-700">Required</span>}
+                                {assignment.responseType === 'SCORE' && <span className="text-[10px] font-bold text-slate-400">Score · {assignment.maxPoints} pts</span>}
+                                {assignment.responseType !== 'SCORE' && <span className="text-[10px] font-bold text-slate-400">{assignment.responseType.replace('_', ' ')}</span>}
+                              </div>
+                              {assignment.description && <p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description}</p>}
+                            </div>
+                            <CriterionResponseField
+                              assignment={assignment}
+                              scoreValue={scoreDrafts[assignment.criterionId] ?? ''}
+                              textValue={responseDrafts[assignment.criterionId] ?? ''}
+                              selectedOptions={selectedOptionsDrafts[assignment.criterionId] ?? []}
+                              customTagValue={customTagDrafts[assignment.criterionId] ?? ''}
+                              disabled={evaluationStatus === 'SUBMITTED' || evaluating}
+                              onScoreChange={(value) => setScoreDrafts((current) => ({ ...current, [assignment.criterionId]: value }))}
+                              onTextChange={(value) => setResponseDrafts((current) => ({ ...current, [assignment.criterionId]: value }))}
+                              onSelectedOptionsChange={(value) => setSelectedOptionsDrafts((current) => ({ ...current, [assignment.criterionId]: value }))}
+                              onCustomTagValueChange={(value) => setCustomTagDrafts((current) => ({ ...current, [assignment.criterionId]: value }))}
+                            />
                           </div>
                         </div>
                       ))}
@@ -1466,7 +1539,6 @@ export const InterviewsPage = ({ role }: Props) => {
                     <FormField label="Interview notes" hint="Add your interview observations before submitting.">
                       <textarea className="field-input min-h-28 resize-y" disabled={evaluationStatus === 'SUBMITTED' || evaluating} value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Enter interview observations, strengths, concerns and final notes…" />
                     </FormField>
-                    </>
                     ) : (
                       <div>
                         <div className="grid gap-3 sm:grid-cols-3">
@@ -1478,9 +1550,10 @@ export const InterviewsPage = ({ role }: Props) => {
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Final average</p>
                             <p className="mt-1 text-sm font-black text-cyan-700">{(() => {
                               const submitted = evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED') ?? [];
-                              const max = evaluationDetail?.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0;
+                              const scoringAssignments = evaluationDetail?.criterionAssignments?.filter((item) => item.responseType === 'SCORE') ?? [];
+                              const max = scoringAssignments.reduce((sum, item) => sum + item.maxPoints, 0);
                               if (!submitted.length || !max) return '—';
-                              const percentages = submitted.map((item) => item.scores.reduce((sum, score) => sum + score.points, 0) / max * 100);
+                              const percentages = submitted.map((item) => item.scores.filter((score) => scoringAssignments.some((assignment) => assignment.criterionId === score.criterionId)).reduce((sum, score) => sum + score.points, 0) / max * 100);
                               return (percentages.reduce((sum, value) => sum + value, 0) / percentages.length).toFixed(2) + '%';
                             })()}</p>
                           </div>
@@ -1501,6 +1574,17 @@ export const InterviewsPage = ({ role }: Props) => {
                             <tbody className="divide-y divide-slate-100">
                               {(evaluationDetail?.criterionAssignments ?? []).map((assignment) => {
                                 const submitted = (evaluationDetail?.evaluations ?? []).filter((item) => item.status === 'SUBMITTED');
+                                if (assignment.responseType !== 'SCORE') {
+                                  return <tr key={assignment.id}>
+                                    <td className="px-3 py-2.5 font-bold text-slate-700">{assignment.name}</td>
+                                    {submitted.map((evaluation) => {
+                                      const response = evaluation.responses?.find((item) => item.criterionId === assignment.criterionId);
+                                      const value = response?.selectedOptions?.join(', ') || response?.textValue || '—';
+                                      return <td key={evaluation.id} className="px-3 py-2.5 text-slate-600">{value}</td>;
+                                    })}
+                                    <td className="px-3 py-2.5 font-black text-slate-400">—</td>
+                                  </tr>;
+                                }
                                 const values = submitted.map((item) => item.scores.find((score) => score.criterionId === assignment.criterionId)?.points ?? 0);
                                 const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
                                 return <tr key={assignment.id}>
@@ -1509,9 +1593,9 @@ export const InterviewsPage = ({ role }: Props) => {
                                   <td className="px-3 py-2.5 font-black text-cyan-700">{average.toFixed(1)}</td>
                                 </tr>;
                               })}
-                            </tbody>
-                          </table>
-                        </div>
+                          </tbody>
+                        </table>
+                      </div>
                         <div className="mt-4 space-y-3">
                           {(evaluationDetail?.evaluations ?? []).filter((item) => item.status === 'SUBMITTED').map((evaluation) => {
                             const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
@@ -1582,8 +1666,8 @@ export const InterviewsPage = ({ role }: Props) => {
                   {role === 'INTERVIEWER' && (
                     <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All scores and notes are submitted together.'}</p>
-                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => scoreDrafts[assignment.criterionId] === '') || !evaluationComments.trim()}>
+                        <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All required criteria and notes are submitted together.'}</p>
+                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (assignment.responseType === 'SCORE' ? scoreDrafts[assignment.criterionId] === '' : assignment.responseType === 'MULTI_SELECT' ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim())) || !evaluationComments.trim()}>
                           {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
                         </Button>
                       </div>
