@@ -325,6 +325,17 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
     }));
   };
 
+  const moveGroupCriterion = (criterionId: string, direction: -1 | 1) => {
+    setGroupForm((current) => {
+      const index = current.criterionIds.indexOf(criterionId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.criterionIds.length) return current;
+      const next = [...current.criterionIds];
+      [next[index], next[nextIndex]] = [next[nextIndex]!, next[index]!];
+      return { ...current, criterionIds: next };
+    });
+  };
+
   const createGroup = async () => {
     if (!canManage) return;
     if (groupForm.name.trim().length < 2) {
@@ -552,25 +563,54 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                   </div>
                   <p className="text-[10px] font-bold text-slate-400">Only active criteria can be added</p>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {activeCriteria.length ? activeCriteria.map((criterion) => {
-                    const checked = groupForm.criterionIds.includes(criterion.id);
-                    return (
-                      <button
-                        key={criterion.id}
-                        type="button"
-                        aria-pressed={checked}
-                        onClick={() => toggleGroupCriterion(criterion.id)}
-                        className={`flex items-center justify-between gap-3 rounded-2xl border p-3 text-left transition ${checked ? 'border-cyan-200 bg-cyan-50/50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
-                      >
-                        <span className="min-w-0">
-                          <span className="block text-xs font-extrabold text-slate-900">{criterion.name}</span>
-                          <span className="mt-1 block text-[10px] leading-4 text-slate-400">{criterion.description ?? 'No description.'}</span>
-                        </span>
-                        <span className={`grid size-6 shrink-0 place-items-center rounded-lg border text-[11px] font-black ${checked ? 'border-cyan-500 bg-cyan-500 text-white' : 'border-slate-200 text-transparent'}`}>✓</span>
-                      </button>
-                    );
-                  }) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">Create at least one active criterion first.</p>}
+                <div className="mt-3 space-y-4">
+                  {groupForm.criterionIds.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview order</p>
+                      <div className="space-y-2">
+                        {groupForm.criterionIds.map((criterionId, index) => {
+                          const criterion = activeCriteria.find((item) => item.id === criterionId);
+                          if (!criterion) return null;
+                          return (
+                            <div key={criterion.id} className="flex items-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50/50 p-2.5">
+                              <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-extrabold text-slate-900">{criterion.name}</p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">{criterion.maxPoints} pts{criterion.responseType === 'MULTI_SELECT' ? ' · multiple tags' : ''}</p>
+                              </div>
+                              <button type="button" title="Move up" aria-label={`Move ${criterion.name} up`} disabled={index === 0} onClick={() => moveGroupCriterion(criterion.id, -1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
+                              <button type="button" title="Move down" aria-label={`Move ${criterion.name} down`} disabled={index === groupForm.criterionIds.length - 1} onClick={() => moveGroupCriterion(criterion.id, 1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
+                              <button type="button" title="Remove" aria-label={`Remove ${criterion.name}`} onClick={() => toggleGroupCriterion(criterion.id)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available criteria</p>
+                    {activeCriteria.length ? (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {activeCriteria.filter((criterion) => !groupForm.criterionIds.includes(criterion.id)).map((criterion) => (
+                          <button
+                            key={criterion.id}
+                            type="button"
+                            onClick={() => toggleGroupCriterion(criterion.id)}
+                            className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:bg-slate-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-extrabold text-slate-900">{criterion.name}</span>
+                              <span className="mt-1 block text-[10px] leading-4 text-slate-400">{criterion.description ?? 'No description.'}</span>
+                            </span>
+                            <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">Create at least one active criterion first.</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
