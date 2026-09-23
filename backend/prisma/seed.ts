@@ -65,11 +65,11 @@ const main = async () => {
   );
 
   const defaultCriteria = [
-    { name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, responseType: 'SCORE' as const, required: true, options: null },
-    { name: 'Relevant experience', description: 'Relevant trade experience and project exposure.', maxPoints: 10, responseType: 'SCORE' as const, required: true, options: null },
-    { name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, responseType: 'SCORE' as const, required: true, options: null },
-    { name: 'Current activities', description: 'What are you doing these days?', maxPoints: 0, responseType: 'TEXT' as const, required: true, options: null },
-    { name: 'Sub Professions', description: 'Other professions or trades the candidate can perform.', maxPoints: 0, responseType: 'MULTI_SELECT' as const, required: false, options: null },
+    { name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, responseType: 'TEXT' as const, required: true, options: null },
+    { name: 'Relevant experience', description: 'Relevant trade experience and project exposure.', maxPoints: 10, responseType: 'TEXT' as const, required: true, options: null },
+    { name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, responseType: 'TEXT' as const, required: true, options: null },
+    { name: 'Current activities', description: 'What are you doing these days?', maxPoints: 5, responseType: 'TEXT' as const, required: true, options: null },
+    { name: 'Sub Professions', description: 'Other professions or trades the candidate can perform.', maxPoints: 5, responseType: 'MULTI_SELECT' as const, required: true, options: null },
   ];
 
   // Interview criteria are a global library (no agencyId since 20260920110000_global_interview_criteria_library).
