@@ -82,15 +82,24 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_CRITERION', message: errors.join(' ') } });
       }
 
+      const effectiveResponseType = request.body.responseType ?? existing.responseType;
       const updated = await getPrisma().interviewCriterion.update({
         where: { id: existing.id },
         data: {
           ...(request.body.name !== undefined ? { name: request.body.name.trim() } : {}),
           ...(request.body.description !== undefined ? { description: request.body.description?.trim() || null } : {}),
-          ...(request.body.maxPoints !== undefined ? { maxPoints: request.body.responseType === 'SCORE' || request.body.responseType === undefined ? request.body.maxPoints : 0 } : {}),
+          ...((request.body.responseType !== undefined || request.body.maxPoints !== undefined) ? {
+            maxPoints: effectiveResponseType === 'SCORE' ? (request.body.maxPoints ?? existing.maxPoints) : 0,
+          } : {}),
           ...(request.body.responseType !== undefined ? { responseType: request.body.responseType } : {}),
           ...(request.body.required !== undefined ? { required: request.body.required } : {}),
-          ...(request.body.options !== undefined ? { options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull } : {}),
+          ...((request.body.responseType !== undefined || request.body.options !== undefined) ? {
+            options: effectiveResponseType === 'MULTI_SELECT'
+              ? (request.body.options === undefined
+                ? (existing.options === null ? Prisma.DbNull : existing.options as Prisma.InputJsonValue)
+                : (request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull))
+              : Prisma.DbNull,
+          } : {}),
           ...(request.body.active !== undefined ? { active: request.body.active } : {}),
         },
         select,
