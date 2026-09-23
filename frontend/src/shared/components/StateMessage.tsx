@@ -6,6 +6,7 @@ interface StateMessageProps {
   kind: StateMessageKind;
   title: string;
   description?: string;
+  floating?: boolean;
 }
 
 const config: Record<StateMessageKind, { icon: 'clock' | 'file' | 'alert' | 'check'; className: string }> = {
@@ -15,11 +16,11 @@ const config: Record<StateMessageKind, { icon: 'clock' | 'file' | 'alert' | 'che
   success: { icon: 'check', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
 };
 
-export const StateMessage = ({ kind, title, description }: StateMessageProps) => {
+export const StateMessage = ({ kind, title, description, floating = false }: StateMessageProps) => {
   const item = config[kind];
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl border p-4 ${item.className}`}
+      className={`${floating ? 'fixed left-1/2 top-4 z-[200] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 shadow-2xl' : ''} flex items-start gap-3 rounded-2xl border p-4 ${item.className}`}
       role={kind === 'error' ? 'alert' : 'status'}
       aria-live="polite"
     >
