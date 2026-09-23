@@ -31,7 +31,7 @@ export const interviewCriteria: InterviewCriterion[] = [
   { id: 'criterion-2', name: 'Experience', description: 'Relevant experience and project exposure.', maxPoints: 10, responseType: 'SCORE', required: true, options: null, active: true },
   { id: 'criterion-3', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, responseType: 'SCORE', required: true, options: null, active: true },
   { id: 'criterion-4', name: 'Previous experience notes', description: 'Capture relevant experience that should remain as an interview finding rather than a numeric score.', maxPoints: 0, responseType: 'TEXT', required: true, options: null, active: true },
-  { id: 'criterion-5', name: 'Other skills / sub-professions', description: 'Select additional trades demonstrated by the candidate during the interview.', maxPoints: 0, responseType: 'MULTI_SELECT', required: false, options: ['Mason', 'Plumber', 'Welder', 'Tiler', 'Electrician', 'Painter'], active: true },
+  { id: 'criterion-5', name: 'Other skills / sub-professions', description: 'Capture every additional trade or profession demonstrated by the candidate.', maxPoints: 0, responseType: 'MULTI_SELECT', required: false, options: null, active: true },
 ];
 
 export const interviewCriterionGroups = [
