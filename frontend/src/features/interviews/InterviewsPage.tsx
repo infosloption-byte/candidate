@@ -646,9 +646,8 @@ export const InterviewsPage = ({ role }: Props) => {
         );
         initialiseEvaluation(current, assignments);
         const ownEvaluation = current.evaluations?.find((item) => item.interviewerId === user?.id);
-        const scoring = assignments.filter((item) => item.responseType === 'SCORE');
-        const total = scoring.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
-        setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: scoring.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
+        const total = assignments.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
+        setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
         return;
       }
 
@@ -674,10 +673,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const saveEvaluationDraft = async (interviewId: string, silent = false): Promise<boolean> => {
     if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return false;
     const scores = evaluationAssignments
-      .filter((assignment) => assignment.responseType === 'SCORE' && scoreDrafts[assignment.criterionId] !== '')
+      .filter((assignment) => scoreDrafts[assignment.criterionId] !== '')
       .map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
     const responses = evaluationAssignments
-      .filter((assignment) => assignment.responseType !== 'SCORE')
       .map((assignment) => ({
         criterionId: assignment.criterionId,
         textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
@@ -744,9 +742,11 @@ export const InterviewsPage = ({ role }: Props) => {
     }
     const missingRequired = evaluationAssignments.filter((assignment) => {
       if (!assignment.required) return false;
-      if (assignment.responseType === 'SCORE') return scoreDrafts[assignment.criterionId] === '';
-      if (assignment.responseType === 'MULTI_SELECT') return !(selectedOptionsDrafts[assignment.criterionId]?.length);
-      return !responseDrafts[assignment.criterionId]?.trim();
+      const missingScore = scoreDrafts[assignment.criterionId] === '';
+      const missingAnswer = assignment.responseType === 'MULTI_SELECT'
+        ? !(selectedOptionsDrafts[assignment.criterionId]?.length)
+        : !responseDrafts[assignment.criterionId]?.trim();
+      return missingScore || missingAnswer;
     });
     if (missingRequired.length) {
       setError('Complete the required criteria before submitting: ' + missingRequired.map((item) => item.name).join(', ') + '.');
@@ -772,8 +772,8 @@ export const InterviewsPage = ({ role }: Props) => {
             status: 'SUBMITTED' as const,
             comments: evaluationComments.trim() || null,
             submittedAt,
-            scores: evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) })),
-            responses: evaluationAssignments.filter((assignment) => assignment.responseType !== 'SCORE').map((assignment) => ({
+            scores: evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '').map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) })),
+            responses: evaluationAssignments.map((assignment) => ({
               criterionId: assignment.criterionId,
               textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
               selectedOptions: assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
@@ -1194,7 +1194,7 @@ export const InterviewsPage = ({ role }: Props) => {
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
                 {criteriaGroups.length ? criteriaGroups.map((group) => {
                   const checked = criterionGroupIds.includes(group.id);
-                  const scoreMax = group.criteria.reduce((sum, item) => sum + (item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints : 0), 0);
+                  const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
                   return (
                     <label key={group.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition ${checked ? 'border-cyan-200 bg-cyan-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                       <input
@@ -1492,14 +1492,14 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE' ? scoreDrafts[assignment.criterionId] !== '' : assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim())).length} / {evaluationAssignments.length} answered</p>
+                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My score</p>
                         <p className="mt-1 text-sm font-black text-cyan-700">
-                          {evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
+                          {evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
                           {' / '}
-                          {evaluationAssignments.filter((assignment) => assignment.responseType === 'SCORE').reduce((sum, item) => sum + item.maxPoints, 0)}
+                          {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}
                         </p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
@@ -1515,8 +1515,7 @@ export const InterviewsPage = ({ role }: Props) => {
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-xs font-extrabold text-slate-900">{assignment.name}</p>
                                 {assignment.required && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-700">Required</span>}
-                                {assignment.responseType === 'SCORE' && <span className="text-[10px] font-bold text-slate-400">Score · {assignment.maxPoints} pts</span>}
-                                {assignment.responseType !== 'SCORE' && <span className="text-[10px] font-bold text-slate-400">{assignment.responseType.replace('_', ' ')}</span>}
+                                <span className="text-[10px] font-bold text-slate-400">Max {assignment.maxPoints} pts · {assignment.responseType === 'MULTI_SELECT' ? 'Multiple tags' : 'Standard answer'}</span>
                               </div>
                               {assignment.description && <p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description}</p>}
                             </div>
@@ -1551,10 +1550,10 @@ export const InterviewsPage = ({ role }: Props) => {
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Final average</p>
                             <p className="mt-1 text-sm font-black text-cyan-700">{(() => {
                               const submitted = evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED') ?? [];
-                              const scoringAssignments = evaluationDetail?.criterionAssignments?.filter((item) => item.responseType === 'SCORE') ?? [];
+                              const scoringAssignments = evaluationDetail?.criterionAssignments ?? [];
                               const max = scoringAssignments.reduce((sum, item) => sum + item.maxPoints, 0);
                               if (!submitted.length || !max) return '—';
-                              const percentages = submitted.map((item) => item.scores.filter((score) => scoringAssignments.some((assignment) => assignment.criterionId === score.criterionId)).reduce((sum, score) => sum + score.points, 0) / max * 100);
+                              const percentages = submitted.map((item) => item.scores.reduce((sum, score) => sum + score.points, 0) / max * 100);
                               return (percentages.reduce((sum, value) => sum + value, 0) / percentages.length).toFixed(2) + '%';
                             })()}</p>
                           </div>
@@ -1575,22 +1574,20 @@ export const InterviewsPage = ({ role }: Props) => {
                             <tbody className="divide-y divide-slate-100">
                               {(evaluationDetail?.criterionAssignments ?? []).map((assignment) => {
                                 const submitted = (evaluationDetail?.evaluations ?? []).filter((item) => item.status === 'SUBMITTED');
-                                if (assignment.responseType !== 'SCORE') {
-                                  return <tr key={assignment.id}>
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">{assignment.name}</td>
-                                    {submitted.map((evaluation) => {
-                                      const response = evaluation.responses?.find((item) => item.criterionId === assignment.criterionId);
-                                      const value = response?.selectedOptions?.join(', ') || response?.textValue || '—';
-                                      return <td key={evaluation.id} className="px-3 py-2.5 text-slate-600">{value}</td>;
-                                    })}
-                                    <td className="px-3 py-2.5 font-black text-slate-400">—</td>
-                                  </tr>;
-                                }
                                 const values = submitted.map((item) => item.scores.find((score) => score.criterionId === assignment.criterionId)?.points ?? 0);
                                 const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
                                 return <tr key={assignment.id}>
                                   <td className="px-3 py-2.5 font-bold text-slate-700">{assignment.name} <span className="font-normal text-slate-400">/ {assignment.maxPoints}</span></td>
-                                  {values.map((value, index) => <td key={submitted[index]!.id} className="px-3 py-2.5 font-black text-slate-900">{value}</td>)}
+                                  {submitted.map((evaluation, index) => {
+                                    const response = evaluation.responses?.find((item) => item.criterionId === assignment.criterionId);
+                                    const value = response?.selectedOptions?.join(', ') || response?.textValue || '—';
+                                    return (
+                                      <td key={evaluation.id} className="px-3 py-2.5 align-top">
+                                        <div className="font-black text-slate-900">{values[index]}</div>
+                                        <div className="mt-0.5 text-[10px] text-slate-500">{value}</div>
+                                      </td>
+                                    );
+                                  })}
                                   <td className="px-3 py-2.5 font-black text-cyan-700">{average.toFixed(1)}</td>
                                 </tr>;
                               })}
@@ -1668,7 +1665,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All required criteria and notes are submitted together.'}</p>
-                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (assignment.responseType === 'SCORE' ? scoreDrafts[assignment.criterionId] === '' : assignment.responseType === 'MULTI_SELECT' ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim())) || !evaluationComments.trim()}>
+                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (scoreDrafts[assignment.criterionId] === '' || (assignment.responseType === 'MULTI_SELECT' ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim()))) || !evaluationComments.trim()}>
                           {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
                         </Button>
                       </div>
