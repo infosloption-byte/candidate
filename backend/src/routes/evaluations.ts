@@ -445,7 +445,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       const responseByCriterion = new Map(currentResponses.map((response) => [response.criterionId, response]));
       const missingRequired = assignments.filter((assignment) => {
         if (!assignment.required) return false;
-        if (assignment.responseType === 'SCORE') return !scoreByCriterion.has(assignment.criterionId);
+        if (!scoreByCriterion.has(assignment.criterionId)) return true;
         const response = responseByCriterion.get(assignment.criterionId);
         if (!response) return true;
         if (assignment.responseType === 'MULTI_SELECT') return !Array.isArray(response.selectedOptions) || response.selectedOptions.length === 0;
