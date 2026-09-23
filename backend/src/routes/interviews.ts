@@ -156,7 +156,7 @@ const criterionAssignmentData = (
     maxPoints: number;
     responseType: InterviewCriterionResponseType;
     required: boolean;
-    options: Prisma.JsonValue | null;
+    options?: Prisma.InputJsonValue;
     sortOrder: number;
   }> = [];
   let sortOrder = 0;
@@ -172,7 +172,7 @@ const criterionAssignmentData = (
         maxPoints: item.criterion.maxPoints,
         responseType: item.criterion.responseType,
         required: item.criterion.required,
-        options: item.criterion.options === null ? Prisma.DbNull : item.criterion.options as Prisma.InputJsonValue,
+        ...(item.criterion.options === null ? {} : { options: item.criterion.options as Prisma.InputJsonValue }),
         sortOrder: sortOrder++,
       });
     }
