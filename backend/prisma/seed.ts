@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/lib/auth.js';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -82,7 +82,7 @@ const main = async () => {
     if (existing) {
       await prisma.interviewCriterion.update({
         where: { id: existing.id },
-        data: { description: criterion.description, maxPoints: criterion.maxPoints, responseType: criterion.responseType, required: criterion.required, options: criterion.options, active: true },
+        data: { description: criterion.description, maxPoints: criterion.maxPoints, responseType: criterion.responseType, required: criterion.required, options: criterion.options === null ? Prisma.DbNull : criterion.options, active: true },
       });
     } else {
       await prisma.interviewCriterion.create({
