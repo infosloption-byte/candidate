@@ -58,6 +58,14 @@ enum InterviewEvaluationStatus {
   SUBMITTED
 }
 
+enum InterviewCriterionResponseType {
+  SCORE
+  TEXT
+  SINGLE_SELECT
+  MULTI_SELECT
+  BOOLEAN
+}
+
 enum CandidateStatus {
   POOL
   READY_FOR_INTERVIEW
@@ -210,6 +218,7 @@ model Interview {
   candidate         Candidate                     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job               Job?                          @relation(fields: [jobId], references: [id], onDelete: SetNull)
   criterionGroup    InterviewCriterionGroup?      @relation(fields: [criterionGroupId], references: [id], onDelete: SetNull)
+  criterionGroups   InterviewCriterionGroupAssignment[]
   panel             InterviewParticipant[]
   evaluations       InterviewEvaluation[]
   criterionAssignments InterviewCriterionAssignment[]
@@ -245,6 +254,7 @@ model InterviewEvaluation {
   interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
   scores      InterviewEvaluationScore[]
+  responses   InterviewEvaluationResponse[]
 
   @@unique([interviewId, interviewerId])
   @@index([interviewerId, status, createdAt])
@@ -261,8 +271,21 @@ model InterviewCriterionGroup {
 
   criteria    InterviewCriterionGroupItem[]
   interviews  Interview[]
+  interviewAssignments InterviewCriterionGroupAssignment[]
   assignments InterviewCriterionAssignment[]
 
+}
+
+model InterviewCriterionGroupAssignment {
+  interviewId String @db.VarChar(36)
+  groupId     String @db.VarChar(36)
+  sortOrder   Int    @default(0)
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  group     InterviewCriterionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([interviewId, groupId])
+  @@index([groupId, sortOrder])
 }
 
 model InterviewCriterionGroupItem {
@@ -284,8 +307,11 @@ model InterviewCriterionAssignment {
   groupId     String?  @db.VarChar(36)
   name        String   @db.VarChar(120)
   description String?  @db.VarChar(500)
-  maxPoints   Int
-  sortOrder   Int      @default(0)
+  maxPoints    Int
+  responseType InterviewCriterionResponseType @default(SCORE)
+  required     Boolean @default(true)
+  options      Json?
+  sortOrder    Int      @default(0)
   createdAt   DateTime @default(now())
 
   interview  Interview          @relation(fields: [interviewId], references: [id], onDelete: Cascade)
@@ -301,14 +327,18 @@ model InterviewCriterion {
   id          String   @id @default(uuid()) @db.VarChar(36)
   name        String   @db.VarChar(120)
   description String?  @db.VarChar(500)
-  maxPoints   Int      @default(5)
-  active      Boolean  @default(true)
+  maxPoints    Int      @default(5)
+  responseType InterviewCriterionResponseType @default(SCORE)
+  required     Boolean @default(true)
+  options      Json?
+  active       Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   scores InterviewEvaluationScore[]
   groupItems InterviewCriterionGroupItem[]
   assignments InterviewCriterionAssignment[]
+  responses   InterviewEvaluationResponse[]
 
 }
 
@@ -320,6 +350,22 @@ model InterviewEvaluationScore {
 
   evaluation InterviewEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   criterion  InterviewCriterion  @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@unique([evaluationId, criterionId])
+  @@index([criterionId])
+}
+
+model InterviewEvaluationResponse {
+  id              String  @id @default(uuid()) @db.VarChar(36)
+  evaluationId    String  @db.VarChar(36)
+  criterionId     String  @db.VarChar(36)
+  textValue       String? @db.Text
+  selectedOptions Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  evaluation InterviewEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  criterion  InterviewCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
 
   @@unique([evaluationId, criterionId])
   @@index([criterionId])
