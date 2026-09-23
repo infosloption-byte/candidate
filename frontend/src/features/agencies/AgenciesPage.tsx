@@ -479,7 +479,7 @@ export const AgenciesPage = () => {
       />
 
       {loading && <StateMessage kind="loading" title="Loading administration" description="Fetching users, agencies, and interviewers." />}
-      {error && <StateMessage kind="error" title="Administration action failed" description={error} />}
+      {error && <StateMessage kind="error" title="Administration action failed" description={error} floating={Boolean(modalMode)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
 
       <Card padded={false}>
