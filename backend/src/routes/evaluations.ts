@@ -154,7 +154,7 @@ const ensureInterviewAssignments = async (interviewId: string) => {
 
   const criteria = await getPrisma().interviewCriterion.findMany({
     where: { active: true },
-    select: { id: true, name: true, description: true, maxPoints: true, createdAt: true },
+    select: { id: true, name: true, description: true, maxPoints: true, responseType: true, required: true, options: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
   if (!criteria.length) return;
