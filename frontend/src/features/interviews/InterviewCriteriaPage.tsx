@@ -9,11 +9,11 @@ import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
-import type { InterviewCriterion, InterviewCriterionGroup, UserRole } from '../../domain/types';
+import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionResponseType, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
-const emptyCriterionForm = { name: '', description: '', maxPoints: '5' };
+const emptyCriterionForm = { name: '', description: '', maxPoints: '5', responseType: 'SCORE' as InterviewCriterionResponseType, required: true, optionsText: '' };
 const emptyGroupForm = { name: '', category: '', description: '', criterionIds: [] as string[] };
 
 
@@ -145,6 +145,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       name: criterion.name,
       description: criterion.description ?? '',
       maxPoints: String(criterion.maxPoints),
+      responseType: criterion.responseType,
+      required: criterion.required,
+      optionsText: (criterion.options ?? []).join('\n'),
     });
     setSelectedCriterionId(criterion.id);
     setSelectedGroupId(null);
@@ -194,8 +197,13 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
     const maxPoints = Number(criterionForm.maxPoints);
-    if (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100) {
+    if (criterionForm.responseType === 'SCORE' && (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100)) {
       setError('Maximum points must be a whole number from 1 to 100.');
+      return;
+    }
+    const options = criterionForm.optionsText.split(/\r?\n|,/).map((option) => option.trim()).filter(Boolean);
+    if (['SINGLE_SELECT', 'MULTI_SELECT'].includes(criterionForm.responseType) && !options.length) {
+      setError('Add at least one option for this selection criterion.');
       return;
     }
 
@@ -222,7 +230,10 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             ...existingCriterion,
             name: criterionForm.name.trim(),
             description: criterionForm.description.trim() || null,
-            maxPoints,
+            maxPoints: criterionForm.responseType === 'SCORE' ? maxPoints : 0,
+            responseType: criterionForm.responseType,
+            required: criterionForm.required,
+            options: options.length ? options : null,
           };
         } else {
           saved = {
@@ -248,7 +259,10 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           body: JSON.stringify({
             name: criterionForm.name.trim(),
             description: criterionForm.description.trim() || null,
-            maxPoints,
+            maxPoints: criterionForm.responseType === 'SCORE' ? maxPoints : 0,
+            responseType: criterionForm.responseType,
+            required: criterionForm.required,
+            options: options.length ? options : null,
           }),
         });
         setCriteria((current) => current.map((item) => item.id === saved.id ? saved : item));
@@ -460,6 +474,19 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                   <textarea className="field-input min-h-20 resize-y" value={criterionForm.description} onChange={(event) => setCriterionForm({ ...criterionForm, description: event.target.value })} placeholder="What should the interviewer assess?" />
                 </FormField>
               </div>
+              {['SINGLE_SELECT', 'MULTI_SELECT'].includes(criterionForm.responseType) && (
+                <div className="md:col-span-2">
+                  <FormField label="Options" hint="Enter one option per line. Multi-select criteria also allow the interviewer to add a custom tag.">
+                    <textarea className="field-input min-h-24 resize-y" value={criterionForm.optionsText} onChange={(event) => setCriterionForm({ ...criterionForm, optionsText: event.target.value })} placeholder={'Mason\nPlumber\nWelder'} />
+                  </FormField>
+                </div>
+              )}
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <input type="checkbox" checked={criterionForm.required} onChange={(event) => setCriterionForm({ ...criterionForm, required: event.target.checked })} />
+                  Required before the interviewer can submit
+                </label>
+              </div>
               <div className="md:col-span-2 flex justify-end gap-2">
                 <Button variant="secondary" onClick={closeModal}>Cancel</Button>
                 <Button disabled={saving} onClick={() => void createCriterion()}>{saving ? 'Saving…' : modalMode === 'EDIT_CRITERION' ? 'Save changes' : 'Create criterion'}</Button>
@@ -560,7 +587,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               {groups.length > 0 ? (
                 <div className="space-y-3">
                   {groups.map((group) => {
-                    const totalMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                    const totalMax = group.criteria.reduce((sum, item) => sum + (item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints : 0), 0);
                     return (
                       <Card key={group.id} padded={false} className="p-4">
                         <div className="flex flex-col gap-4">
@@ -592,7 +619,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                           <div className="flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
                             {group.criteria.slice(0, 4).map((item) => (
                               <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                                {item.criterion.name} · {item.criterion.maxPoints}
+                                {item.criterion.name} · {item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints + ' pts' : item.criterion.responseType.replace('_', ' ')}
                               </span>
                             ))}
                             {group.criteria.length > 4 && (
@@ -627,6 +654,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-sm font-black text-slate-950">{criterion.name}</h2>
                             <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-slate-500">{criterion.responseType === 'MULTI_SELECT' ? 'MULTI TAG' : criterion.responseType.replace('_', ' ')}</span>
                           </div>
                           <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description ?? 'No description provided.'}</p>
                         </div>
@@ -673,8 +701,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Maximum score</p>
-                <p className="mt-1 text-lg font-black text-slate-950">{selectedCriterion.maxPoints}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Response type</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{selectedCriterion.responseType === 'SCORE' ? selectedCriterion.maxPoints + ' pts' : selectedCriterion.responseType.replace('_', ' ')}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Used in scorecards</p>
