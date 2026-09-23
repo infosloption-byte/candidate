@@ -158,6 +158,32 @@ export const InterviewDetailsModal = ({ detail, open, onClose }: Props) => {
             </div>
 
             <div className="mt-5">
+              <h3 className="text-sm font-black text-slate-950">Interview responses</h3>
+              <p className="mt-1 text-[10px] text-slate-400">Text, selections, and additional-skill findings captured by interviewers.</p>
+              <div className="mt-3 space-y-3">
+                {(detail.evaluations ?? []).filter((evaluation) => evaluation.status === 'SUBMITTED' && (evaluation.responses?.length ?? 0) > 0).map((evaluation) => (
+                  <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
+                    <p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {(evaluation.responses ?? []).map((response) => {
+                        const assignment = detail.criterionAssignments?.find((item) => item.criterionId === response.criterionId);
+                        return (
+                          <div key={response.criterionId} className="rounded-xl bg-slate-50 p-3">
+                            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{assignment?.name ?? 'Criterion'}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-xs font-semibold text-slate-700">{response.selectedOptions?.join(', ') || response.textValue || '—'}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {!(detail.evaluations ?? []).some((evaluation) => evaluation.status === 'SUBMITTED' && (evaluation.responses?.length ?? 0) > 0) && (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No non-scoring responses recorded yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5">
               <h3 className="text-sm font-black text-slate-950">Scorecards</h3>
               <div className="mt-3 space-y-3">
                 {detail.evaluations?.length ? detail.evaluations.map((evaluation) => {
