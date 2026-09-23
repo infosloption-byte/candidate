@@ -7,7 +7,6 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
-import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionResponseType, UserRole } from '../../domain/types';
@@ -622,7 +621,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               {groups.length > 0 ? (
                 <div className="space-y-3">
                   {groups.map((group) => {
-                    const totalMax = group.criteria.reduce((sum, item) => sum + (item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints : 0), 0);
+                    const totalMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
                     return (
                       <Card key={group.id} padded={false} className="p-4">
                         <div className="flex flex-col gap-4">
@@ -654,7 +653,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                           <div className="flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
                             {group.criteria.slice(0, 4).map((item) => (
                               <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                                {item.criterion.name} · {item.criterion.responseType === 'SCORE' ? item.criterion.maxPoints + ' pts' : item.criterion.responseType.replace('_', ' ')}
+                                {item.criterion.name} · {item.criterion.maxPoints} pts{item.criterion.responseType === 'MULTI_SELECT' ? ' · tags' : ''}
                               </span>
                             ))}
                             {group.criteria.length > 4 && (
@@ -674,7 +673,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             <section className={mobileTab === 'criteria' ? 'block' : 'hidden md:block'}>
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Scoring library</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview library</p>
                   <h2 className="text-lg font-black text-slate-950">Criteria</h2>
                   <p className="mt-1 text-xs text-slate-500">Deactivate individual criteria instead of deleting them so older scorecards remain readable.</p>
                 </div>
@@ -695,8 +694,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                         </div>
                         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                           <div className="mr-auto rounded-xl bg-slate-50 px-3 py-2 text-center">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Type</p>
-                            <p className="text-sm font-black text-slate-900">{criterionResponseLabel(criterion.responseType, criterion.maxPoints)}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Points</p>
+                            <p className="text-sm font-black text-slate-900">{criterion.maxPoints} pts</p>
+                            <p className="mt-0.5 text-[9px] font-bold text-slate-400">{criterion.responseType === 'MULTI_SELECT' ? 'Multiple tag option' : 'Standard answer'}</p>
                           </div>
                           <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
                           {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
