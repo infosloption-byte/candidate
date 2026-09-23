@@ -472,7 +472,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
         }
       />
 
-      {error && <StateMessage kind="error" title="Interview setup action failed" description={error} />}
+      {error && <StateMessage kind="error" title="Interview setup action failed" description={error} floating={Boolean(modalMode)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
       {loading && <StateMessage kind="loading" title="Loading interview setup" description="Fetching criteria and reusable interview groups." />}
 
