@@ -735,7 +735,7 @@ export const InterviewsPage = ({ role }: Props) => {
     if (!evaluationFor || role !== 'INTERVIEWER' || evaluationStatus !== 'DRAFT' || !evaluationAssignments.length) return;
     const timer = window.setTimeout(() => { void saveEvaluationDraft(evaluationFor, true); }, 800);
     return () => window.clearTimeout(timer);
-  }, [evaluationAssignments, evaluationComments, evaluationFor, evaluationStatus, scoreDrafts]);
+  }, [customTagDrafts, evaluationAssignments, evaluationComments, evaluationFor, evaluationStatus, responseDrafts, scoreDrafts, selectedOptionsDrafts]);
 
   const submitEvaluation = async (interview: InterviewRecord) => {
     if (!evaluationAssignments.length) {
