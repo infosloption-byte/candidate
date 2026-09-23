@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionResponseType, UserRole } from '../../domain/types';
@@ -14,6 +15,15 @@ import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionRes
 interface Props { role: UserRole; }
 
 const emptyCriterionForm = { name: '', description: '', maxPoints: '5', responseType: 'SCORE' as InterviewCriterionResponseType, required: true, optionsText: '' };
+
+const criterionResponseOptions = [
+  { value: 'SCORE', label: 'Points — interviewer gives a score' },
+  { value: 'TEXT', label: 'Text answer — interviewer enters notes' },
+  { value: 'MULTI_SELECT', label: 'Multiple tags — interviewer enters multiple values' },
+];
+
+const criterionResponseLabel = (responseType: InterviewCriterionResponseType, maxPoints: number): string =>
+  responseType === 'SCORE' ? `Points · ${maxPoints} max` : responseType === 'MULTI_SELECT' ? 'Multiple tags' : 'Text answer';
 const emptyGroupForm = { name: '', category: '', description: '', criterionIds: [] as string[] };
 
 
@@ -202,8 +212,12 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
     const options = criterionForm.optionsText.split(/\r?\n|,/).map((option) => option.trim()).filter(Boolean);
-    if (['SINGLE_SELECT', 'MULTI_SELECT'].includes(criterionForm.responseType) && !options.length) {
-      setError('Add at least one option for this selection criterion.');
+    if (criterionForm.responseType === 'MULTI_SELECT' && options.length > 50) {
+      setError('You can add up to 50 suggested tags. Interviewers can still enter custom tags during the interview.');
+      return;
+    }
+    if (criterionForm.responseType !== 'MULTI_SELECT' && options.length) {
+      setError('Suggested tags can only be added to a Multiple tags criterion.');
       return;
     }
 
@@ -448,7 +462,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       <SectionHeading
         eyebrow="Interview setup"
         title="Interview criteria"
-        description="Build reusable scoring criteria and group them by job type or trade category. Select a group when scheduling an interview so interviewers only score the criteria assigned to that interview."
+        description="Build reusable interview criteria and group them by job type or trade category. Each criterion defines whether the interviewer gives points, writes a text answer, or enters multiple tags."
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={openCreateCriterion}>New criterion</Button>
@@ -464,7 +478,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       {!loading && (criterionFormOpen || groupFormOpen) && (
         <CriteriaModal
           title={groupFormOpen ? (modalMode === 'EDIT_GROUP' ? 'Edit criteria group' : 'New criteria group') : (modalMode === 'EDIT_CRITERION' ? 'Edit criterion' : 'New criterion')}
-          description={groupFormOpen ? 'Define the reusable scorecard and choose the criteria interviewers should score.' : 'Define one reusable scoring item for the shared interview library.'}
+          description={groupFormOpen ? 'Define the reusable interview form and choose the criteria used in the interview.' : 'Define one reusable interview criterion and choose how the interviewer will answer it.'}
           onClose={closeModal}
         >
           {criterionFormOpen && (
@@ -472,18 +486,39 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               <FormField label="Criterion name">
                 <input className="field-input" value={criterionForm.name} onChange={(event) => setCriterionForm({ ...criterionForm, name: event.target.value })} placeholder="Technical skill" />
               </FormField>
-              <FormField label="Maximum points">
-                <input type="number" min="1" max="100" className="field-input" value={criterionForm.maxPoints} onChange={(event) => setCriterionForm({ ...criterionForm, maxPoints: event.target.value })} />
+              <FormField label="Response type" hint="This determines what the interviewer sees in the interview panel.">
+                <SelectMenu
+                  value={criterionForm.responseType}
+                  onChange={(value) => setCriterionForm({
+                    ...criterionForm,
+                    responseType: value as InterviewCriterionResponseType,
+                    maxPoints: value === 'SCORE' ? (criterionForm.maxPoints || '5') : '0',
+                    optionsText: value === 'MULTI_SELECT' ? criterionForm.optionsText : '',
+                  })}
+                  options={criterionResponseOptions}
+                  ariaLabel="Select criterion response type"
+                />
               </FormField>
+              {criterionForm.responseType === 'SCORE' ? (
+                <FormField label="Maximum points" hint="The interviewer cannot exceed this value.">
+                  <input type="number" min="1" max="100" className="field-input" value={criterionForm.maxPoints} onChange={(event) => setCriterionForm({ ...criterionForm, maxPoints: event.target.value })} />
+                </FormField>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Interviewer input</p>
+                  <p className="mt-1 text-xs font-black text-slate-800">{criterionForm.responseType === 'MULTI_SELECT' ? 'Multiple tags' : 'Text answer'}</p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">This criterion does not contribute points to the interview score.</p>
+                </div>
+              )
               <div className="md:col-span-2">
                 <FormField label="Description">
                   <textarea className="field-input min-h-20 resize-y" value={criterionForm.description} onChange={(event) => setCriterionForm({ ...criterionForm, description: event.target.value })} placeholder="What should the interviewer assess?" />
                 </FormField>
               </div>
-              {['SINGLE_SELECT', 'MULTI_SELECT'].includes(criterionForm.responseType) && (
+              {criterionForm.responseType === 'MULTI_SELECT' && (
                 <div className="md:col-span-2">
-                  <FormField label="Options" hint="Enter one option per line. Multi-select criteria also allow the interviewer to add a custom tag.">
-                    <textarea className="field-input min-h-24 resize-y" value={criterionForm.optionsText} onChange={(event) => setCriterionForm({ ...criterionForm, optionsText: event.target.value })} placeholder={'Mason\nPlumber\nWelder'} />
+                  <FormField label="Suggested tags (optional)" hint="These are shortcuts in the interview panel. Interviewers can always type additional tags such as Plumber or Tile Worker.">
+                    <textarea className="field-input min-h-24 resize-y" value={criterionForm.optionsText} onChange={(event) => setCriterionForm({ ...criterionForm, optionsText: event.target.value })} placeholder={'Plumber\nTile Worker\nMason'} />
                   </FormField>
                 </div>
               )}
@@ -666,8 +701,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                         </div>
                         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                           <div className="mr-auto rounded-xl bg-slate-50 px-3 py-2 text-center">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Max</p>
-                            <p className="text-sm font-black text-slate-900">{criterion.maxPoints}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Type</p>
+                            <p className="text-sm font-black text-slate-900">{criterionResponseLabel(criterion.responseType, criterion.maxPoints)}</p>
                           </div>
                           <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
                           {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
@@ -708,7 +743,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Response type</p>
-                <p className="mt-1 text-lg font-black text-slate-950">{selectedCriterion.responseType === 'SCORE' ? selectedCriterion.maxPoints + ' pts' : selectedCriterion.responseType.replace('_', ' ')}</p>
+                <p className="mt-1 text-lg font-black text-slate-950">{criterionResponseLabel(selectedCriterion.responseType, selectedCriterion.maxPoints)}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Used in scorecards</p>
