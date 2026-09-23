@@ -339,6 +339,17 @@ export const InterviewsPage = ({ role }: Props) => {
       : [...current, id]);
   };
 
+  const moveCriterionGroup = (groupId: string, direction: -1 | 1) => {
+    setCriterionGroupIds((current) => {
+      const index = current.indexOf(groupId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex]!, next[index]!];
+      return next;
+    });
+  };
+
   const selectAllVisibleCandidates = () => {
     setSelectedCandidateIds((current) => [...new Set([...current, ...selectableCandidates.map((candidate) => candidate.id)])]);
   };
@@ -1214,26 +1225,52 @@ export const InterviewsPage = ({ role }: Props) => {
                 ariaLabel="Select interview type"
               />
             </FormField>
-            <FormField label="Interview criteria groups" hint="All active groups are selected by default. Remove any that are not relevant to this interview.">
-              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
-                {criteriaGroups.length ? criteriaGroups.map((group) => {
-                  const checked = criterionGroupIds.includes(group.id);
-                  const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
-                  return (
-                    <label key={group.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition ${checked ? 'border-cyan-200 bg-cyan-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={checked}
-                        onChange={(event) => setCriterionGroupIds((current) => event.target.checked ? [...new Set([...current, group.id])] : current.filter((id) => id !== group.id))}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-extrabold text-slate-800">{group.name}</span>
-                        <span className="mt-0.5 block text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria{scoreMax ? ' · ' + scoreMax + ' score points' : ''}</span>
-                      </span>
-                    </label>
-                  );
-                }) : <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>}
+            <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                {criterionGroupIds.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
+                    {criterionGroupIds.map((groupId, index) => {
+                      const group = criteriaGroups.find((item) => item.id === groupId);
+                      if (!group) return null;
+                      const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                      return (
+                        <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
+                          <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-extrabold text-slate-800">{group.name}</p>
+                            <p className="mt-0.5 text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
+                          </div>
+                          <button type="button" title="Move group up" aria-label={`Move ${group.name} up`} disabled={index === 0} onClick={() => moveCriterionGroup(group.id, -1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
+                          <button type="button" title="Move group down" aria-label={`Move ${group.name} down`} disabled={index === criterionGroupIds.length - 1} onClick={() => moveCriterionGroup(group.id, 1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
+                          <button type="button" title="Remove group" aria-label={`Remove ${group.name}`} onClick={() => setCriterionGroupIds((current) => current.filter((id) => id !== group.id))} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div>
+                  <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
+                  {criteriaGroups.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {criteriaGroups.filter((group) => !criterionGroupIds.includes(group.id)).map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => setCriterionGroupIds((current) => [...current, group.id])}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-xs font-extrabold text-slate-800">{group.name}</span>
+                            <span className="mt-0.5 block text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
+                          </span>
+                          <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>}
+                </div>
               </div>
               <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
             </FormField>
