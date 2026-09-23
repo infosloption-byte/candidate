@@ -70,13 +70,12 @@ const toSummary = (
 ) => {
   const submitted = evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED');
   const assignmentByCriterion = new Map(assignments.map((item) => [item.criterionId, item]));
-  const scoringAssignments = assignments.filter((item) => item.responseType === 'SCORE');
-  const scoringIds = new Set(scoringAssignments.map((item) => item.criterionId));
+  const scoringAssignments = assignments;
   let totalPoints = 0;
   let maxPoints = 0;
 
   for (const evaluation of submitted) {
-    const scoreValues = evaluation.scores.filter((score) => scoringIds.has(score.criterionId));
+    const scoreValues = evaluation.scores.filter((score) => assignmentByCriterion.has(score.criterionId));
     totalPoints += calculateEvaluationTotal(scoreValues);
     maxPoints += scoringAssignments.reduce((total, assignment) => {
       const score = scoreValues.find((item) => item.criterionId === assignment.criterionId);
@@ -106,10 +105,6 @@ const validateScores = (scores: EvaluationInput['scores'], assignments: Assignme
       errors.push('Score references a criterion that is not assigned to this interview.');
       continue;
     }
-    if (assignment.responseType !== 'SCORE') {
-      errors.push('Criterion "' + assignment.name + '" does not accept a numeric score.');
-      continue;
-    }
     if (score.points > assignment.maxPoints) {
       errors.push('Score for "' + assignment.name + '" cannot exceed ' + assignment.maxPoints + ' points.');
     }
@@ -126,10 +121,6 @@ const validateResponses = (responses: EvaluationInput['responses'], assignments:
     const assignment = assignmentById.get(response.criterionId);
     if (!assignment) {
       errors.push('Response references a criterion that is not assigned to this interview.');
-      continue;
-    }
-    if (assignment.responseType === 'SCORE') {
-      errors.push('Criterion "' + assignment.name + '" requires a numeric score, not a response field.');
       continue;
     }
     if (assignment.responseType === 'MULTI_SELECT') {
