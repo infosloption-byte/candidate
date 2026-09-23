@@ -90,7 +90,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
           ...(request.body.maxPoints !== undefined ? { maxPoints: request.body.responseType === 'SCORE' || request.body.responseType === undefined ? request.body.maxPoints : 0 } : {}),
           ...(request.body.responseType !== undefined ? { responseType: request.body.responseType } : {}),
           ...(request.body.required !== undefined ? { required: request.body.required } : {}),
-          ...(request.body.options !== undefined ? { options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? null } : {}),
+          ...(request.body.options !== undefined ? { options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull } : {}),
           ...(request.body.active !== undefined ? { active: request.body.active } : {}),
         },
         select,
