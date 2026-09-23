@@ -1412,8 +1412,8 @@ export const InterviewsPage = ({ role }: Props) => {
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                       <>
                         <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
-                        <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Mark as no show" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                        <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Cancel interview" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                        <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Mark as no show" onClick={() => requestInterviewStatusChange(interview, 'NO_SHOW')}>No show</Button>
+                        <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Cancel interview" onClick={() => requestInterviewStatusChange(interview, 'CANCELLED')}>Cancel</Button>
                       </>
                     )}
 
@@ -1503,8 +1503,8 @@ export const InterviewsPage = ({ role }: Props) => {
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                             <>
                               <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
-                              <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'NO_SHOW')}>No show</Button>
-                              <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void changeInterviewStatus(interview, 'CANCELLED')}>Cancel</Button>
+                              <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => requestInterviewStatusChange(interview, 'NO_SHOW')}>No show</Button>
+                              <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => requestInterviewStatusChange(interview, 'CANCELLED')}>Cancel</Button>
                             </>
                           )}
                           {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
@@ -1797,7 +1797,7 @@ export const InterviewsPage = ({ role }: Props) => {
                             variant="secondary"
                             className="min-h-10 rounded-lg px-3 py-1 text-[9px] font-extrabold"
                             disabled={Boolean(interviewStatusUpdating) || evaluationStatus === 'SUBMITTED' || evaluating}
-                            onClick={() => void changeInterviewStatus(activeInterview, 'NO_SHOW', true)}
+                            onClick={() => requestInterviewStatusChange(activeInterview, 'NO_SHOW')}
                           >
                             {interviewStatusUpdating === activeInterview.id + ':NO_SHOW' ? 'Updating…' : 'No show'}
                           </Button>
@@ -1806,7 +1806,7 @@ export const InterviewsPage = ({ role }: Props) => {
                             variant="danger"
                             className="min-h-10 rounded-lg px-3 py-1 text-[9px] font-extrabold"
                             disabled={Boolean(interviewStatusUpdating) || evaluationStatus === 'SUBMITTED' || evaluating}
-                            onClick={() => void changeInterviewStatus(activeInterview, 'CANCELLED', true)}
+                            onClick={() => requestInterviewStatusChange(activeInterview, 'CANCELLED')}
                           >
                             {interviewStatusUpdating === activeInterview.id + ':CANCELLED' ? 'Updating…' : 'Cancel interview'}
                           </Button>
