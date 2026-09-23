@@ -27,11 +27,11 @@ export const jobs: Job[] = [
 ];
 
 export const interviewCriteria: InterviewCriterion[] = [
-  { id: 'criterion-1', name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, responseType: 'SCORE', required: true, options: null, active: true },
-  { id: 'criterion-2', name: 'Experience', description: 'Relevant experience and project exposure.', maxPoints: 10, responseType: 'SCORE', required: true, options: null, active: true },
-  { id: 'criterion-3', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, responseType: 'SCORE', required: true, options: null, active: true },
-  { id: 'criterion-4', name: 'Previous experience notes', description: 'Capture relevant experience that should remain as an interview finding rather than a numeric score.', maxPoints: 0, responseType: 'TEXT', required: true, options: null, active: true },
-  { id: 'criterion-5', name: 'Other skills / sub-professions', description: 'Capture every additional trade or profession demonstrated by the candidate.', maxPoints: 0, responseType: 'MULTI_SELECT', required: false, options: null, active: true },
+  { id: 'criterion-1', name: 'Technical skill', description: 'Role-specific practical and technical ability.', maxPoints: 10, responseType: 'TEXT', required: true, options: null, active: true },
+  { id: 'criterion-2', name: 'Experience', description: 'Relevant experience and project exposure.', maxPoints: 10, responseType: 'TEXT', required: true, options: null, active: true },
+  { id: 'criterion-3', name: 'Communication', description: 'Clarity, teamwork, and communication.', maxPoints: 5, responseType: 'TEXT', required: true, options: null, active: true },
+  { id: 'criterion-4', name: 'Previous experience notes', description: 'Capture relevant experience as an interview answer and score.', maxPoints: 5, responseType: 'TEXT', required: true, options: null, active: true },
+  { id: 'criterion-5', name: 'Other skills / sub-professions', description: 'Capture every additional trade or profession demonstrated by the candidate.', maxPoints: 5, responseType: 'MULTI_SELECT', required: true, options: null, active: true },
 ];
 
 export const interviewCriterionGroups = [
@@ -80,6 +80,10 @@ export const evaluations: InterviewEvaluation[] = [
       { criterionId: 'criterion-2', points: 8, criterion: interviewCriteria[1] },
       { criterionId: 'criterion-3', points: 4, criterion: interviewCriteria[2] },
     ],
-    responses: [],
+    responses: [
+      { criterionId: 'criterion-1', textValue: 'Strong fabrication and welding technique.', selectedOptions: null },
+      { criterionId: 'criterion-2', textValue: 'Five years of industrial fabrication experience.', selectedOptions: null },
+      { criterionId: 'criterion-3', textValue: 'Communicates clearly and explains technical decisions well.', selectedOptions: null },
+    ],
   },
 ];
