@@ -46,8 +46,8 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
         data: {
           name: request.body.name!.trim(),
           description: request.body.description?.trim() || null,
-          maxPoints: request.body.responseType === 'SCORE' || request.body.responseType === undefined ? (request.body.maxPoints ?? 5) : 0,
-          responseType: request.body.responseType ?? 'SCORE',
+          maxPoints: request.body.maxPoints ?? 5,
+          responseType: request.body.responseType ?? 'TEXT',
           required: request.body.required ?? true,
           options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull,
           active: true,
@@ -89,7 +89,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
           ...(request.body.name !== undefined ? { name: request.body.name.trim() } : {}),
           ...(request.body.description !== undefined ? { description: request.body.description?.trim() || null } : {}),
           ...((request.body.responseType !== undefined || request.body.maxPoints !== undefined) ? {
-            maxPoints: effectiveResponseType === 'SCORE' ? (request.body.maxPoints ?? existing.maxPoints) : 0,
+            maxPoints: request.body.maxPoints ?? existing.maxPoints,
           } : {}),
           ...(request.body.responseType !== undefined ? { responseType: request.body.responseType } : {}),
           ...(request.body.required !== undefined ? { required: request.body.required } : {}),
