@@ -404,7 +404,7 @@ export const InterviewsPage = ({ role }: Props) => {
     setJobId(interview.jobId ?? '');
     const persistedGroupIds = interview.criterionGroupIds?.length
       ? interview.criterionGroupIds
-      : interview.criterionGroups?.slice().sort((left, right) => left.sortOrder - right.sortOrder).map((item) => item.group.id)
+      : interview.criterionGroups?.slice().sort((left, right) => left.sortOrder - right.sortOrder).map((item) => item.id)
         ?? (interview.criterionGroupId ? [interview.criterionGroupId] : []);
     setCriterionGroupIds([...new Set(persistedGroupIds.filter((id): id is string => typeof id === 'string' && id.length > 0))]);
     setForm({
@@ -465,6 +465,7 @@ export const InterviewsPage = ({ role }: Props) => {
       const selectedGroups = normalizedGroupIds
         .map((id) => criteriaGroups.find((group) => group.id === id))
         .filter((group): group is InterviewCriterionGroup => Boolean(group));
+      const selectedGroupViews = selectedGroups.map((group, index) => ({ ...group, sortOrder: index }));
 
       if (editingInterviewId) {
         const updated = developmentMode
@@ -477,7 +478,7 @@ export const InterviewsPage = ({ role }: Props) => {
               panelUserIds: panel,
               criterionGroupId: normalizedGroupIds[0] ?? null,
               criterionGroupIds: normalizedGroupIds,
-              criterionGroups: selectedGroups,
+              criterionGroups: selectedGroupViews,
               criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, editingInterviewId),
             }
           : await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
@@ -511,7 +512,7 @@ export const InterviewsPage = ({ role }: Props) => {
               panelUserIds: panel,
               criterionGroupId: normalizedGroupIds[0] ?? null,
               criterionGroupIds: normalizedGroupIds,
-              criterionGroups: selectedGroups,
+              criterionGroups: selectedGroupViews,
               criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, 'draft'),
             }));
             drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
@@ -553,7 +554,7 @@ export const InterviewsPage = ({ role }: Props) => {
           panelUserIds: panel,
           criterionGroupId: normalizedGroupIds[0] ?? null,
           criterionGroupIds: normalizedGroupIds,
-          criterionGroups: selectedGroups,
+          criterionGroups: selectedGroupViews,
           criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, 'draft'),
         }));
         drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
@@ -662,7 +663,7 @@ export const InterviewsPage = ({ role }: Props) => {
           const current = interviews.find((item) => item.id === interview.id) ?? interview;
           const assignments = current.criterionAssignments ?? buildCriterionAssignments(
             criteriaGroups,
-            current.criterionGroupIds ?? current.criterionGroups?.map((group) => group.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
+            current.criterionGroupIds ?? current.criterionGroups?.slice().sort((left, right) => left.sortOrder - right.sortOrder).map((item) => item.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
             current.id,
           );
           setEvaluationAssignments(assignments);
@@ -683,7 +684,7 @@ export const InterviewsPage = ({ role }: Props) => {
         }
         const assignments = current.criterionAssignments ?? buildCriterionAssignments(
           criteriaGroups,
-          current.criterionGroupIds ?? current.criterionGroups?.map((group) => group.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
+          current.criterionGroupIds ?? current.criterionGroups?.slice().sort((left, right) => left.sortOrder - right.sortOrder).map((item) => item.id) ?? (current.criterionGroupId ? [current.criterionGroupId] : []),
           current.id,
         );
         initialiseEvaluation(current, assignments);
@@ -1527,7 +1528,7 @@ export const InterviewsPage = ({ role }: Props) => {
               const activeCandidate = activeInterview ? candidateFor(activeInterview) : null;
               if (!activeInterview) return null;
               const panelGroupSources = [
-                ...(activeInterview.criterionGroups ?? []).map((item) => item.group),
+                ...(activeInterview.criterionGroups ?? []),
                 ...criteriaGroups,
               ];
               const criterionSections = buildCriterionSections(
