@@ -9,6 +9,7 @@ import { FormField } from '../../shared/components/FormField';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
@@ -142,6 +143,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluationDecisionMessage, setEvaluationDecisionMessage] = useState('');
   const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [interviewStatusUpdating, setInterviewStatusUpdating] = useState<string | null>(null);
+  const [pendingInterviewStatus, setPendingInterviewStatus] = useState<{ interview: InterviewRecord; status: 'CANCELLED' | 'NO_SHOW' } | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
@@ -599,12 +601,15 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const changeInterviewStatus = async (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW', closeWorkspace = false) => {
-    const label = status === 'CANCELLED' ? 'cancel this interview' : 'mark this candidate as a no-show';
-    const warning = closeWorkspace && evaluationStatus === 'DRAFT'
-      ? ' Any unsaved scorecard changes in this workspace will not be submitted.'
-      : '';
-    if (!window.confirm('Are you sure you want to ' + label + '?' + warning)) return;
+  const requestInterviewStatusChange = (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW') => {
+    setError('');
+    setPendingInterviewStatus({ interview, status });
+  };
+
+  const changeInterviewStatus = async () => {
+    if (!pendingInterviewStatus) return;
+    const { interview, status } = pendingInterviewStatus;
+    const closeWorkspace = evaluationFor === interview.id;
 
     setError('');
     setInterviewStatusUpdating(interview.id + ':' + status);
@@ -615,11 +620,12 @@ export const InterviewsPage = ({ role }: Props) => {
       if (developmentMode) dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status });
       setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, ...updated } : item));
       setSuccess('Interview marked ' + statusLabel(status).toLowerCase() + '.');
-      if (closeWorkspace && evaluationFor === interview.id) {
+      if (closeWorkspace) {
         setEvaluationFor(null);
         setEvaluationMinimized(false);
         setEvaluationMaximized(false);
       }
+      setPendingInterviewStatus(null);
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the interview.');
     } finally {
@@ -1825,6 +1831,29 @@ export const InterviewsPage = ({ role }: Props) => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingInterviewStatus)}
+        title={pendingInterviewStatus?.status === 'CANCELLED' ? 'Cancel this interview?' : 'Mark this interview as a no-show?'}
+        description={
+          pendingInterviewStatus?.status === 'CANCELLED'
+            ? 'This interview will be cancelled and removed from the active interview workflow.'
+            : 'This will record that the candidate did not attend the scheduled interview.'
+        }
+        warning={
+          pendingInterviewStatus && evaluationFor === pendingInterviewStatus.interview.id && evaluationStatus === 'DRAFT'
+            ? 'Any unsaved scorecard changes in the open interview panel will not be submitted.'
+            : undefined
+        }
+        confirmLabel={pendingInterviewStatus?.status === 'CANCELLED' ? 'Cancel interview' : 'Mark no-show'}
+        cancelLabel="Keep interview"
+        danger={pendingInterviewStatus?.status === 'CANCELLED'}
+        busy={Boolean(interviewStatusUpdating)}
+        onCancel={() => {
+          if (!interviewStatusUpdating) setPendingInterviewStatus(null);
+        }}
+        onConfirm={() => void changeInterviewStatus()}
+      />
 
       <CandidateProfilePanel
         candidate={profileCandidate}
