@@ -240,7 +240,10 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             id: 'criterion-' + Date.now(),
             name: criterionForm.name.trim(),
             description: criterionForm.description.trim() || null,
-            maxPoints,
+            maxPoints: criterionForm.responseType === 'SCORE' ? maxPoints : 0,
+            responseType: criterionForm.responseType,
+            required: criterionForm.required,
+            options: options.length ? options : null,
             active: true,
           };
         }
@@ -272,7 +275,10 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           body: JSON.stringify({
             name: criterionForm.name.trim(),
             description: criterionForm.description.trim() || null,
-            maxPoints,
+            maxPoints: criterionForm.responseType === 'SCORE' ? maxPoints : 0,
+            responseType: criterionForm.responseType,
+            required: criterionForm.required,
+            options: options.length ? options : null,
           }),
         });
         setCriteria((current) => [saved, ...current]);
