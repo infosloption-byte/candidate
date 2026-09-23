@@ -161,7 +161,7 @@ export const InterviewsPage = ({ role }: Props) => {
       setJobs(state.jobs);
       setAgencies(state.agencies);
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active));
-      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
+      setCriteriaGroups([...new Map(state.interviewCriterionGroups.filter((item) => item.active).map((item) => [item.id, item])).values()]);
       return;
     }
 
@@ -242,7 +242,7 @@ export const InterviewsPage = ({ role }: Props) => {
       ])
         .then(([users, groupResult]) => {
           setInterviewers(users.filter((item) => item.role === 'INTERVIEWER' && item.active));
-          setCriteriaGroups(groupResult.filter((item) => item.active));
+          setCriteriaGroups([...new Map(groupResult.filter((item) => item.active).map((item) => [item.id, item])).values()]);
         })
         .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load interview scoring setup.'));
     }
@@ -427,8 +427,16 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   useEffect(() => {
-    if (!scheduleModalOpen || editingInterviewId || !criteriaGroups.length) return;
-    setCriterionGroupIds((current) => current.length ? current.filter((id) => criteriaGroups.some((group) => group.id === id)) : criteriaGroups.map((group) => group.id));
+    if (!scheduleModalOpen || !criteriaGroups.length) return;
+
+    const availableIds = new Set(criteriaGroups.map((group) => group.id));
+    setCriterionGroupIds((current) => {
+      const valid = [...new Set(current.filter((id) => availableIds.has(id)))];
+      if (!editingInterviewId && valid.length === 0) {
+        return criteriaGroups.map((group) => group.id);
+      }
+      return valid;
+    });
   }, [criteriaGroups, editingInterviewId, scheduleModalOpen]);
 
   const saveSchedule = async () => {
