@@ -70,6 +70,25 @@ const interviewInclude = {
   },
 } as const;
 
+const normalizeInterviewRecord = <
+  T extends {
+    criterionGroups: Array<{
+      sortOrder: number;
+      group: { id: string; name: string; category: string | null; description: string | null; active: boolean };
+    }>;
+  },
+>(interview: T) => ({
+  ...interview,
+  criterionGroupIds: interview.criterionGroups
+    .slice()
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((item) => item.group.id),
+  criterionGroups: interview.criterionGroups
+    .slice()
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((item) => ({ ...item.group, sortOrder: item.sortOrder })),
+});
+
 const canManage = (role: string, agencyId: string | null, interviewAgencyId: string): boolean =>
   role === 'ADMIN' || (role === 'AGENCY' && agencyId === interviewAgencyId);
 
@@ -241,7 +260,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       orderBy: { scheduledAt: 'asc' },
     });
 
-    return reply.send({ success: true, data: interviews });
+    return reply.send({ success: true, data: interviews.map(normalizeInterviewRecord) });
   });
 
   app.get<{ Params: InterviewParams }>('/interviews/:id', { preHandler: requireAuth }, async (request, reply) => {
@@ -289,7 +308,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       ? Math.round((interviewerTotals.reduce((sum, item) => sum + item.percentage, 0) / interviewerTotals.length) * 100) / 100
       : null;
     const safeInterview = {
-      ...interview,
+      ...normalizeInterviewRecord(interview),
       evaluations: visibleEvaluations,
       finalScore: {
         averagePercentage,
@@ -460,7 +479,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         success: true,
         data: {
           importedCount: created.length,
-          candidates: created,
+          candidates: created.map(normalizeInterviewRecord),
           slotMinutes: durationMins,
         },
       });
@@ -583,7 +602,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         { type: 'INTERVIEW_SCHEDULED', title: 'Interview scheduled', message: 'Your ' + result.type.toLowerCase() + ' interview is scheduled for ' + result.scheduledAt.toISOString() + '.' },
       );
 
-      return reply.code(201).send({ success: true, data: result });
+      return reply.code(201).send({ success: true, data: normalizeInterviewRecord(result) });
     },
   );
 
