@@ -606,6 +606,89 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  app.post<{ Params: InterviewParams; Body: { status: 'CANCELLED' | 'NO_SHOW' } }>(
+    '/interviews/:id/status',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const user = request.authUser!;
+      const requestedStatus = request.body?.status;
+      if (!['CANCELLED', 'NO_SHOW'].includes(requestedStatus)) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview status must be CANCELLED or NO_SHOW.' } });
+      }
+
+      const existing = await getPrisma().interview.findUnique({
+        where: { id: request.params.id },
+        include: {
+          candidate: { select: { id: true, agencyId: true, name: true, status: true } },
+          panel: { select: { userId: true } },
+        },
+      });
+      if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
+
+      const assignedInterviewer = user.role === 'INTERVIEWER' && existing.panel.some((participant) => participant.userId === user.id);
+      const managedByAgency = canManage(user.role, user.agencyId, existing.candidate.agencyId);
+      if (!assignedInterviewer && !managedByAgency) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to change this interview status.' } });
+      }
+
+      if (!['SCHEDULED', 'IN_PROGRESS'].includes(existing.status)) {
+        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_STATUS_LOCKED', message: 'Only scheduled or in-progress interviews can be cancelled or marked as a no-show.' } });
+      }
+
+      const result = await getPrisma().$transaction(async (tx) => {
+        const updated = await tx.interview.update({
+          where: { id: existing.id },
+          data: { status: requestedStatus },
+          include: interviewInclude,
+        });
+
+        if (requestedStatus === 'CANCELLED' && existing.candidate.status === 'INTERVIEW_SCHEDULED') {
+          await tx.candidate.update({ where: { id: existing.candidateId }, data: { status: 'READY_FOR_INTERVIEW', statusUpdatedAt: new Date() } });
+          await addCandidateStatusHistory(tx, existing.candidateId, existing.candidate.status, 'READY_FOR_INTERVIEW', 'Interview was cancelled.', user.id);
+        }
+        if (requestedStatus === 'NO_SHOW' && existing.candidate.status === 'INTERVIEW_SCHEDULED') {
+          await tx.candidate.update({ where: { id: existing.candidateId }, data: { status: 'ON_HOLD', statusUpdatedAt: new Date() } });
+          await addCandidateStatusHistory(tx, existing.candidateId, existing.candidate.status, 'ON_HOLD', 'Candidate was marked as a no-show for the interview.', user.id);
+        }
+
+        return updated;
+      });
+
+      const auditAction = requestedStatus === 'CANCELLED' ? 'INTERVIEW_CANCELLED' : 'INTERVIEW_NO_SHOW';
+      const auditSummary = requestedStatus === 'CANCELLED'
+        ? 'Cancelled interview for "' + result.candidate.name + '".'
+        : 'Recorded no-show for interview with "' + result.candidate.name + '".';
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: existing.candidate.agencyId,
+        action: auditAction,
+        entityType: 'Interview',
+        entityId: result.id,
+        summary: auditSummary,
+      });
+      await createNotifications(result.panel.map((participant) => ({
+        userId: participant.userId,
+        type: 'INTERVIEW_UPDATED',
+        title: requestedStatus === 'CANCELLED' ? 'Interview cancelled' : 'Interview marked no-show',
+        message: requestedStatus === 'CANCELLED'
+          ? 'The interview for "' + result.candidate.name + '" has been cancelled.'
+          : 'The interview for "' + result.candidate.name + '" has been marked as a no-show.',
+      })));
+      await notifyCandidateAccount(
+        result.candidate.id,
+        {
+          type: 'INTERVIEW_UPDATED',
+          title: requestedStatus === 'CANCELLED' ? 'Interview cancelled' : 'Interview marked no-show',
+          message: requestedStatus === 'CANCELLED'
+            ? 'Your interview schedule has been cancelled.'
+            : 'Your interview has been marked as a no-show.',
+        },
+      );
+
+      return reply.send({ success: true, data: normalizeInterviewRecord(result) });
+    },
+  );
+
   app.patch<{ Params: InterviewParams; Body: InterviewInput }>(
     '/interviews/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
