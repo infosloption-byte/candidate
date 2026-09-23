@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '../generated/prisma/client.js';
+
+type CriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
@@ -139,9 +141,9 @@ const criterionAssignmentData = (
         name: string;
         description: string | null;
         maxPoints: number;
-        responseType: Prisma.InterviewCriterionResponseType;
+        responseType: CriterionResponseType;
         required: boolean;
-        options: Prisma.JsonValue | null;
+        options: Prisma.InputJsonValue | undefined;
       };
     }>;
   }>,
@@ -153,9 +155,9 @@ const criterionAssignmentData = (
     name: string;
     description: string | null;
     maxPoints: number;
-    responseType: Prisma.InterviewCriterionResponseType;
+    responseType: CriterionResponseType;
     required: boolean;
-    options: Prisma.JsonValue | null;
+    options: Prisma.InputJsonValue | undefined;
     sortOrder: number;
   }> = [];
   let sortOrder = 0;
@@ -171,7 +173,7 @@ const criterionAssignmentData = (
         maxPoints: item.criterion.maxPoints,
         responseType: item.criterion.responseType,
         required: item.criterion.required,
-        options: item.criterion.options,
+        ...(item.criterion.options === null ? {} : { options: item.criterion.options as Prisma.InputJsonValue }),
         sortOrder: sortOrder++,
       });
     }
@@ -396,7 +398,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const prisma = getPrisma();
       const created = await prisma.$transaction(async (tx) => {
-        const records = [];
+        const records: Array<Prisma.InterviewGetPayload<{ include: typeof interviewInclude }>> = [];
         for (const slot of schedule) {
           const candidate = candidates.find((item) => item.id === slot.candidateId)!;
           const interview = await tx.interview.create({
@@ -412,7 +414,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
               criterionGroups: { create: criterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
               panel: { create: interviewerIds.map((userId) => ({ userId })) },
               criterionAssignments: {
-                create: criterionAssignmentData(criterionSetups),
+                createMany: { data: criterionAssignmentData(criterionSetups) },
               },
             },
             include: interviewInclude,
@@ -534,7 +536,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             criterionGroups: { create: criterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
             panel: { create: interviewerIds.map((userId) => ({ userId })) },
             criterionAssignments: {
-              create: criterionAssignmentData(criterionSetups),
+              createMany: { data: criterionAssignmentData(criterionSetups) },
             },
           },
           include: interviewInclude,
@@ -666,9 +668,9 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             ...(request.body.location !== undefined ? { location: request.body.location?.trim() || null } : {}),
             ...(request.body.notes !== undefined ? { notes: request.body.notes?.trim() || null } : {}),
             ...(criterionGroupsChanged ? {
-              criterionGroupId: nextCriterionSetups[0]!.group.id,
+              criterionGroup: { connect: { id: nextCriterionSetups[0]!.group.id } },
               criterionGroups: { create: nextCriterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
-              criterionAssignments: { create: criterionAssignmentData(nextCriterionSetups) },
+              criterionAssignments: { createMany: { data: criterionAssignmentData(nextCriterionSetups) } },
             } : {}),
             ...(request.body.interviewerIds !== undefined ? { panel: { create: [...new Set(nextPanel)].map((userId) => ({ userId })) } } : {}),
           },
