@@ -1190,7 +1190,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 ariaLabel="Select interview type"
               />
             </FormField>
-            <FormField label="Scoring criteria groups" hint="All active groups are selected by default. Remove any that are not relevant to this interview.">
+            <FormField label="Interview criteria groups" hint="All active groups are selected by default. Remove any that are not relevant to this interview.">
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
                 {criteriaGroups.length ? criteriaGroups.map((group) => {
                   const checked = criterionGroupIds.includes(group.id);
