@@ -402,9 +402,11 @@ export const InterviewsPage = ({ role }: Props) => {
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId(interview.jobId ?? '');
-    setCriterionGroupIds(interview.criterionGroupIds?.length
+    const persistedGroupIds = interview.criterionGroupIds?.length
       ? interview.criterionGroupIds
-      : interview.criterionGroups?.map((group) => group.id) ?? (interview.criterionGroupId ? [interview.criterionGroupId] : []));
+      : interview.criterionGroups?.slice().sort((left, right) => left.sortOrder - right.sortOrder).map((item) => item.group.id)
+        ?? (interview.criterionGroupId ? [interview.criterionGroupId] : []);
+    setCriterionGroupIds([...new Set(persistedGroupIds.filter((id): id is string => typeof id === 'string' && id.length > 0))]);
     setForm({
       scheduledAt: toDateTimeLocal(interview.scheduledAt),
       type: interview.type,
@@ -453,11 +455,16 @@ export const InterviewsPage = ({ role }: Props) => {
     try {
       const scheduledAt = new Date(form.scheduledAt).toISOString();
       const durationMins = Math.max(15, Number(form.durationMins) || 30);
-      const selectedGroups = criteriaGroups.filter((group) => criterionGroupIds.includes(group.id));
-      if (selectedGroups.length !== criterionGroupIds.length) {
-        setError('One or more selected criteria groups are no longer available.');
+      const availableGroupIds = new Set(criteriaGroups.map((group) => group.id));
+      const normalizedGroupIds = [...new Set(criterionGroupIds.filter((id) => availableGroupIds.has(id)))];
+      if (normalizedGroupIds.length !== criterionGroupIds.length) {
+        setCriterionGroupIds(normalizedGroupIds);
+        setError('One or more selected criteria groups are no longer available. The unavailable groups were removed; review the order and save again.');
         return;
       }
+      const selectedGroups = normalizedGroupIds
+        .map((id) => criteriaGroups.find((group) => group.id === id))
+        .filter((group): group is InterviewCriterionGroup => Boolean(group));
 
       if (editingInterviewId) {
         const updated = developmentMode
@@ -468,10 +475,10 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
-              criterionGroupId: criterionGroupIds[0] ?? null,
-              criterionGroupIds,
+              criterionGroupId: normalizedGroupIds[0] ?? null,
+              criterionGroupIds: normalizedGroupIds,
               criterionGroups: selectedGroups,
-              criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, editingInterviewId),
+              criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, editingInterviewId),
             }
           : await apiFetch<InterviewRecord>('/interviews/' + editingInterviewId, {
               method: 'PATCH',
@@ -482,7 +489,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
-                criterionGroupIds,
+                criterionGroupIds: normalizedGroupIds,
               }),
             });
 
@@ -502,10 +509,10 @@ export const InterviewsPage = ({ role }: Props) => {
               durationMins,
               location: form.location.trim() || null,
               panelUserIds: panel,
-              criterionGroupId: criterionGroupIds[0] ?? null,
-              criterionGroupIds,
+              criterionGroupId: normalizedGroupIds[0] ?? null,
+              criterionGroupIds: normalizedGroupIds,
               criterionGroups: selectedGroups,
-              criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, 'draft'),
+              criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, 'draft'),
             }));
             drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
             setInterviews((current) => [...drafts, ...current]);
@@ -521,7 +528,7 @@ export const InterviewsPage = ({ role }: Props) => {
                 location: form.location.trim() || null,
                 notes: form.notes.trim() || null,
                 interviewerIds: panel,
-                criterionGroupIds,
+                criterionGroupIds: normalizedGroupIds,
               }),
             });
             setInterviews((current) => [...result.candidates, ...current]);
@@ -544,10 +551,10 @@ export const InterviewsPage = ({ role }: Props) => {
           durationMins,
           location: form.location.trim() || null,
           panelUserIds: panel,
-          criterionGroupId: criterionGroupIds[0] ?? null,
-          criterionGroupIds,
+          criterionGroupId: normalizedGroupIds[0] ?? null,
+          criterionGroupIds: normalizedGroupIds,
           criterionGroups: selectedGroups,
-          criterionAssignments: buildCriterionAssignments(criteriaGroups, criterionGroupIds, 'draft'),
+          criterionAssignments: buildCriterionAssignments(criteriaGroups, normalizedGroupIds, 'draft'),
         }));
         drafts.forEach((draft) => dispatch({ type: 'SCHEDULE_INTERVIEW', interview: draft }));
         setInterviews((current) => [...drafts, ...current]);
@@ -565,7 +572,7 @@ export const InterviewsPage = ({ role }: Props) => {
             location: form.location.trim() || null,
             notes: form.notes.trim() || null,
             interviewerIds: panel,
-            criterionGroupIds,
+            criterionGroupIds: normalizedGroupIds,
           }),
         });
         setInterviews((current) => [...result.candidates, ...current]);
@@ -1520,7 +1527,7 @@ export const InterviewsPage = ({ role }: Props) => {
               const activeCandidate = activeInterview ? candidateFor(activeInterview) : null;
               if (!activeInterview) return null;
               const panelGroupSources = [
-                ...(activeInterview.criterionGroups ?? []),
+                ...(activeInterview.criterionGroups ?? []).map((item) => item.group),
                 ...criteriaGroups,
               ];
               const criterionSections = buildCriterionSections(
