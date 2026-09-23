@@ -678,7 +678,7 @@ export const CandidatesPage = ({ role }: Props) => {
       />
 
 
-      {error && <StateMessage kind="error" title="Candidate action failed" description={error} />}
+      {error && <StateMessage kind="error" title="Candidate action failed" description={error} floating={candidateFormModalOpen || showImportModal} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
       {loading && <StateMessage kind="loading" title="Loading candidates" description="Fetching the candidate pool." />}
 
