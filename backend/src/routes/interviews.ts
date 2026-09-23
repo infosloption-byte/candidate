@@ -45,6 +45,13 @@ const interviewInclude = {
   criterionGroup: {
     select: { id: true, name: true, category: true, description: true, active: true },
   },
+  criterionGroups: {
+    orderBy: { sortOrder: 'asc' as const },
+    select: {
+      sortOrder: true,
+      group: { select: { id: true, name: true, category: true, description: true, active: true } },
+    },
+  },
   criterionAssignments: {
     orderBy: { sortOrder: 'asc' as const },
     select: {
@@ -54,6 +61,9 @@ const interviewInclude = {
       name: true,
       description: true,
       maxPoints: true,
+      responseType: true,
+      required: true,
+      options: true,
       sortOrder: true,
     },
   },
@@ -75,41 +85,99 @@ const getInterviewers = async (ids: string[], agencyId: string) => {
   });
 };
 
-const getCriterionGroup = async (groupId: string) => {
-  const group = await getPrisma().interviewCriterionGroup.findFirst({
-    where: { id: groupId, active: true },
+const getCriterionGroups = async (groupIds: string[]) => {
+  const groups = await getPrisma().interviewCriterionGroup.findMany({
+    where: { id: { in: groupIds }, active: true },
     include: {
       criteria: {
         orderBy: { sortOrder: 'asc' },
         include: {
           criterion: {
-            select: { id: true, name: true, description: true, maxPoints: true, active: true },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              maxPoints: true,
+              responseType: true,
+              required: true,
+              options: true,
+              active: true,
+            },
           },
         },
       },
     },
   });
-  if (!group) return null;
-  const activeCriteria = group.criteria.filter((item) => item.criterion.active);
-  if (!activeCriteria.length) return null;
-  return { group, criteria: activeCriteria };
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  return groupIds
+    .map((id) => byId.get(id))
+    .filter((group): group is NonNullable<typeof group> => Boolean(group))
+    .map((group) => ({
+      group,
+      criteria: group.criteria.filter((item) => item.criterion.active),
+    }))
+    .filter((item) => item.criteria.length > 0);
+};
+
+const getCriterionGroupIds = (input: { criterionGroupIds?: string[]; criterionGroupId?: string | null }): string[] => {
+  const ids = Array.isArray(input.criterionGroupIds)
+    ? input.criterionGroupIds
+    : input.criterionGroupId
+      ? [input.criterionGroupId]
+      : [];
+  return [...new Set(ids.filter((id): id is string => typeof id === 'string' && Boolean(id.trim())))];
 };
 
 const criterionAssignmentData = (
-  criteria: Array<{
-    criterionId: string;
-    sortOrder: number;
-    criterion: { id: string; name: string; description: string | null; maxPoints: number };
+  setups: Array<{
+    group: { id: string };
+    criteria: Array<{
+      criterionId: string;
+      sortOrder: number;
+      criterion: {
+        id: string;
+        name: string;
+        description: string | null;
+        maxPoints: number;
+        responseType: string;
+        required: boolean;
+        options: unknown;
+      };
+    }>;
   }>,
-  groupId: string,
-) => criteria.map((item) => ({
-  criterionId: item.criterion.id,
-  groupId,
-  name: item.criterion.name,
-  description: item.criterion.description,
-  maxPoints: item.criterion.maxPoints,
-  sortOrder: item.sortOrder,
-}));
+) => {
+  const seen = new Set<string>();
+  const assignments: Array<{
+    criterionId: string;
+    groupId: string;
+    name: string;
+    description: string | null;
+    maxPoints: number;
+    responseType: string;
+    required: boolean;
+    options: unknown;
+    sortOrder: number;
+  }> = [];
+  let sortOrder = 0;
+  for (const setup of setups) {
+    for (const item of setup.criteria) {
+      if (seen.has(item.criterion.id)) continue;
+      seen.add(item.criterion.id);
+      assignments.push({
+        criterionId: item.criterion.id,
+        groupId: setup.group.id,
+        name: item.criterion.name,
+        description: item.criterion.description,
+        maxPoints: item.criterion.maxPoints,
+        responseType: item.criterion.responseType,
+        required: item.criterion.required,
+        options: item.criterion.options,
+        sortOrder: sortOrder++,
+      });
+    }
+  }
+  return assignments;
+};
 
 const hasScheduleConflict = async (
   interviewerIds: string[],
@@ -292,12 +360,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
 
-      if (!request.body.criterionGroupId) {
-        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
+      const criterionGroupIds = getCriterionGroupIds(request.body);
+      if (!criterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group before scheduling.' } });
       }
-      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId);
-      if (!criterionSetup) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
+      const criterionSetups = await getCriterionGroups(criterionGroupIds);
+      if (criterionSetups.length !== criterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
 
       const scheduledAt = new Date(request.body.scheduledAt!);
@@ -338,10 +407,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
               durationMins,
               location: request.body.location?.trim() || null,
               notes: request.body.notes?.trim() || null,
-              criterionGroupId: criterionSetup.group.id,
+              criterionGroupId: criterionSetups[0]!.group.id,
+              criterionGroups: { create: criterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
               panel: { create: interviewerIds.map((userId) => ({ userId })) },
               criterionAssignments: {
-                create: criterionAssignmentData(criterionSetup.criteria, criterionSetup.group.id),
+                create: criterionAssignmentData(criterionSetups),
               },
             },
             include: interviewInclude,
@@ -431,12 +501,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
 
-      if (!request.body.criterionGroupId) {
-        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group before scheduling.' } });
+      const criterionGroupIds = getCriterionGroupIds(request.body);
+      if (!criterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group before scheduling.' } });
       }
-      const criterionSetup = await getCriterionGroup(request.body.criterionGroupId);
-      if (!criterionSetup) {
-        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
+      const criterionSetups = await getCriterionGroups(criterionGroupIds);
+      if (criterionSetups.length !== criterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
 
       const scheduledAt = new Date(request.body.scheduledAt!);
@@ -458,10 +529,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             durationMins,
             location: request.body.location?.trim() || null,
             notes: request.body.notes?.trim() || null,
-            criterionGroupId: criterionSetup.group.id,
+            criterionGroupId: criterionSetups[0]!.group.id,
+            criterionGroups: { create: criterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
             panel: { create: interviewerIds.map((userId) => ({ userId })) },
             criterionAssignments: {
-              create: criterionAssignmentData(criterionSetup.criteria, criterionSetup.group.id),
+              create: criterionAssignmentData(criterionSetups),
             },
           },
           include: interviewInclude,
@@ -545,19 +617,18 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (request.body.status !== undefined && !['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(request.body.status)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_STATUS', message: 'Interview can only be scheduled, cancelled, or marked as a no-show from the scheduler.' } });
       }
-      if (request.body.criterionGroupId !== undefined && existing.status !== 'SCHEDULED') {
-        return reply.code(409).send({ success: false, error: { code: 'CRITERION_GROUP_LOCKED', message: 'The scoring criteria group cannot be changed after the interview has started or completed.' } });
+      if ((request.body.criterionGroupIds !== undefined || request.body.criterionGroupId !== undefined) && existing.status !== 'SCHEDULED') {
+        return reply.code(409).send({ success: false, error: { code: 'CRITERION_GROUP_LOCKED', message: 'The scoring criteria groups cannot be changed after the interview has started or completed.' } });
       }
 
-      let nextCriterionSetup = null;
-      if (request.body.criterionGroupId !== undefined) {
-        if (!request.body.criterionGroupId) {
-          return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select an active interview criteria group.' } });
-        }
-        nextCriterionSetup = await getCriterionGroup(request.body.criterionGroupId);
-        if (!nextCriterionSetup) {
-          return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'The selected interview criteria group is missing, inactive, or has no active criteria.' } });
-        }
+      const criterionGroupsChanged = request.body.criterionGroupIds !== undefined || request.body.criterionGroupId !== undefined;
+      const nextCriterionGroupIds = getCriterionGroupIds(request.body);
+      if (criterionGroupsChanged && !nextCriterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group.' } });
+      }
+      const nextCriterionSetups = criterionGroupsChanged ? await getCriterionGroups(nextCriterionGroupIds) : [];
+      if (criterionGroupsChanged && nextCriterionSetups.length !== nextCriterionGroupIds.length) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
 
       if (nextStatus === 'SCHEDULED') {
@@ -579,7 +650,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (request.body.interviewerIds !== undefined) {
           await tx.interviewParticipant.deleteMany({ where: { interviewId: existing.id } });
         }
-        if (request.body.criterionGroupId !== undefined) {
+        if (criterionGroupsChanged) {
+          await tx.interviewCriterionGroupAssignment.deleteMany({ where: { interviewId: existing.id } });
           await tx.interviewCriterionAssignment.deleteMany({ where: { interviewId: existing.id } });
         }
 
@@ -592,9 +664,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             ...(request.body.durationMins !== undefined ? { durationMins: nextDuration } : {}),
             ...(request.body.location !== undefined ? { location: request.body.location?.trim() || null } : {}),
             ...(request.body.notes !== undefined ? { notes: request.body.notes?.trim() || null } : {}),
-            ...(request.body.criterionGroupId !== undefined ? {
-              criterionGroupId: nextCriterionSetup!.group.id,
-              criterionAssignments: { create: criterionAssignmentData(nextCriterionSetup!.criteria, nextCriterionSetup!.group.id) },
+            ...(criterionGroupsChanged ? {
+              criterionGroupId: nextCriterionSetups[0]!.group.id,
+              criterionGroups: { create: nextCriterionSetups.map((setup, index) => ({ groupId: setup.group.id, sortOrder: index })) },
+              criterionAssignments: { create: criterionAssignmentData(nextCriterionSetups) },
             } : {}),
             ...(request.body.interviewerIds !== undefined ? { panel: { create: [...new Set(nextPanel)].map((userId) => ({ userId })) } } : {}),
           },
