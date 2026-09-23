@@ -252,6 +252,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           include: {
             interviewer: { select: { id: true, name: true, email: true } },
             scores: { include: { criterion: { select: { id: true, name: true, maxPoints: true } } } },
+            responses: { select: { criterionId: true, textValue: true, selectedOptions: true } },
           },
           orderBy: { createdAt: 'asc' },
         },
