@@ -509,7 +509,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                   <p className="mt-1 text-xs font-black text-slate-800">{criterionForm.responseType === 'MULTI_SELECT' ? 'Multiple tags' : 'Text answer'}</p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-500">This criterion does not contribute points to the interview score.</p>
                 </div>
-              )
+              )}
               <div className="md:col-span-2">
                 <FormField label="Description">
                   <textarea className="field-input min-h-20 resize-y" value={criterionForm.description} onChange={(event) => setCriterionForm({ ...criterionForm, description: event.target.value })} placeholder="What should the interviewer assess?" />
