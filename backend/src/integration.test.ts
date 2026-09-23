@@ -736,13 +736,51 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   assert.equal(blockedFinalDecision.statusCode, 409);
 
   const secondInterview = json<{ data: { id: string } }>(secondInterviewResponse);
-  const cancelledSecondInterview = await app.inject({
-    method: 'PATCH',
-    url: '/api/v1/interviews/' + secondInterview.data.id,
-    headers: { cookie: agencyCookie },
+  const outsiderStatusChange = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + secondInterview.data.id + '/status',
+    headers: { cookie: await login(emails.interviewerB) },
     payload: { status: 'CANCELLED' },
   });
-  assert.equal(cancelledSecondInterview.statusCode, 200);
+  assert.equal(outsiderStatusChange.statusCode, 403);
+
+  const interviewerCancellation = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + secondInterview.data.id + '/status',
+    headers: { cookie: interviewerCookie },
+    payload: { status: 'CANCELLED' },
+  });
+  assert.equal(interviewerCancellation.statusCode, 200);
+  const interviewerCancellationBody = json<{ data: { status: string; candidate: { status: string } } }>(interviewerCancellation);
+  assert.equal(interviewerCancellationBody.data.status, 'CANCELLED');
+  assert.equal(interviewerCancellationBody.data.candidate.status, 'READY_FOR_INTERVIEW');
+
+  const noShowInterviewResponse = await app.inject({
+    method: 'POST',
+    url: '/api/v1/candidates/' + candidateId + '/interviews',
+    headers: { cookie: agencyCookie },
+    payload: {
+      jobId: jobAId,
+      type: 'FINAL',
+      scheduledAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+      durationMins: 30,
+      location: 'QA No Show Room',
+      interviewerIds: [interviewerId],
+      criterionGroupId,
+    },
+  });
+  assert.equal(noShowInterviewResponse.statusCode, 201);
+  const noShowInterview = json<{ data: { id: string } }>(noShowInterviewResponse);
+  const interviewerNoShow = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + noShowInterview.data.id + '/status',
+    headers: { cookie: interviewerCookie },
+    payload: { status: 'NO_SHOW' },
+  });
+  assert.equal(interviewerNoShow.statusCode, 200);
+  const interviewerNoShowBody = json<{ data: { status: string; candidate: { status: string } } }>(interviewerNoShow);
+  assert.equal(interviewerNoShowBody.data.status, 'NO_SHOW');
+  assert.equal(interviewerNoShowBody.data.candidate.status, 'ON_HOLD');
 
   const finalDecision = await app.inject({
     method: 'PATCH',
