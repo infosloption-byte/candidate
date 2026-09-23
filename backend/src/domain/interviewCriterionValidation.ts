@@ -37,12 +37,16 @@ export const validateInterviewCriterionInput = (
     errors.push('Criterion required flag must be true or false.');
   }
   if (input.options !== undefined && input.options !== null) {
-    const options = input.options.filter((option) => typeof option === 'string' && option.trim()).map((option) => option.trim());
-    if (!Array.isArray(input.options) || options.length > 50 || options.some((option) => option.length > 120)) {
-      errors.push('Criterion options must contain up to 50 non-empty labels of 120 characters or fewer.');
-    }
-    if (responseType !== 'MULTI_SELECT' && options.length) {
-      errors.push('Suggested tags can only be used when Multiple tag option is enabled.');
+    if (!Array.isArray(input.options)) {
+      errors.push('Criterion options must be an array of suggested tags.');
+    } else {
+      const options = input.options.filter((option) => typeof option === 'string' && option.trim()).map((option) => option.trim());
+      if (options.length > 50 || options.some((option) => option.length > 120)) {
+        errors.push('Criterion options must contain up to 50 non-empty labels of 120 characters or fewer.');
+      }
+      if (responseType !== 'MULTI_SELECT' && options.length) {
+        errors.push('Suggested tags can only be used when Multiple tag option is enabled.');
+      }
     }
   }
   // Multiple-tag criteria may have optional suggested tags, but the interviewer can always enter free-form tags.
