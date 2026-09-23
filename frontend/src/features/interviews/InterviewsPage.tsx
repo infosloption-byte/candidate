@@ -39,6 +39,30 @@ const toDateTimeLocal = (value: string): string => {
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
+const buildCriterionSections = (
+  assignments: InterviewCriterionAssignment[],
+  groups: Array<{ id: string; name: string }>,
+  fallbackGroup?: { id: string; name: string } | null,
+): Array<{ id: string; name: string; assignments: InterviewCriterionAssignment[] }> => {
+  const names = new Map(groups.map((group) => [group.id, group.name]));
+  if (fallbackGroup) names.set(fallbackGroup.id, fallbackGroup.name);
+
+  const sections: Array<{ id: string; name: string; assignments: InterviewCriterionAssignment[] }> = [];
+  const byId = new Map<string, { id: string; name: string; assignments: InterviewCriterionAssignment[] }>();
+
+  for (const assignment of assignments) {
+    const id = assignment.groupId ?? 'ungrouped';
+    let section = byId.get(id);
+    if (!section) {
+      section = { id, name: id === 'ungrouped' ? 'Interview criteria' : (names.get(id) ?? 'Criteria group'), assignments: [] };
+      byId.set(id, section);
+      sections.push(section);
+    }
+    section.assignments.push(assignment);
+  }
+  return sections;
+};
+
 const buildCriterionAssignments = (
   groups: InterviewCriterionGroup[],
   groupIds: string[],
@@ -1458,6 +1482,15 @@ export const InterviewsPage = ({ role }: Props) => {
               const activeInterview = interviews.find((item) => item.id === evaluationFor);
               const activeCandidate = activeInterview ? candidateFor(activeInterview) : null;
               if (!activeInterview) return null;
+              const panelGroupSources = [
+                ...(activeInterview.criterionGroups ?? []),
+                ...criteriaGroups,
+              ];
+              const criterionSections = buildCriterionSections(
+                evaluationAssignments,
+                panelGroupSources,
+                activeInterview.criterionGroup ? { id: activeInterview.criterionGroup.id, name: activeInterview.criterionGroup.name } : null,
+              );
               if (evaluationMinimized) {
                 return (
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
@@ -1508,7 +1541,17 @@ export const InterviewsPage = ({ role }: Props) => {
                       </div>
                     </div>
                     <div className="mt-4 space-y-3">
-                      {evaluationAssignments.map((assignment) => (
+                      {criterionSections.map((section) => (
+                        <section key={section.id} className="space-y-2.5">
+                          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <div className="h-5 w-1 rounded-full bg-cyan-500" />
+                            <div>
+                              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{section.name}</p>
+                              <p className="text-[10px] text-slate-400">{section.assignments.length} criter{section.assignments.length === 1 ? 'ion' : 'ia'}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                          {section.assignments.map((assignment) => (
                         <div key={assignment.id} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
                           <div className="flex flex-col gap-3">
                             <div className="min-w-0">
@@ -1533,6 +1576,9 @@ export const InterviewsPage = ({ role }: Props) => {
                             />
                           </div>
                         </div>
+                          ))}
+                          </div>
+                        </section>
                       ))}
                     </div>
                     <FormField label="Interview notes" hint="Add your interview observations before submitting.">
