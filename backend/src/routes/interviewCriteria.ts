@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { Prisma } from '../generated/prisma/client.js';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateInterviewCriterionInput, type InterviewCriterionInput } from '../domain/interviewCriterionValidation.js';
@@ -48,7 +49,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
           maxPoints: request.body.responseType === 'SCORE' || request.body.responseType === undefined ? (request.body.maxPoints ?? 5) : 0,
           responseType: request.body.responseType ?? 'SCORE',
           required: request.body.required ?? true,
-          options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? null,
+          options: request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull,
           active: true,
         },
         select,
