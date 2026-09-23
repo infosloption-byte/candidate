@@ -1,4 +1,4 @@
-export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
+export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'MULTI_SELECT';
 
 export interface InterviewCriterionInput {
   name?: string;
@@ -26,7 +26,7 @@ export const validateInterviewCriterionInput = (
   if (input.description !== undefined && input.description !== null && input.description.trim().length > 500) {
     errors.push('Criterion description must be 500 characters or fewer.');
   }
-  if (!['SCORE', 'TEXT', 'SINGLE_SELECT', 'MULTI_SELECT', 'BOOLEAN'].includes(responseType)) {
+  if (!['SCORE', 'TEXT', 'MULTI_SELECT'].includes(responseType)) {
     errors.push('Invalid criterion response type.');
   }
   if (responseType === 'SCORE') {
@@ -46,9 +46,7 @@ export const validateInterviewCriterionInput = (
       errors.push('Criterion options must contain up to 50 non-empty labels of 120 characters or fewer.');
     }
   }
-  if ((responseType === 'SINGLE_SELECT' || responseType === 'MULTI_SELECT') && (!input.options || input.options.filter((option) => option.trim()).length === 0)) {
-    errors.push('Selection criteria must include at least one option.');
-  }
+  // Multiple-tag criteria may have optional suggested tags, but the interviewer can always enter free-form tags.
   if (input.active !== undefined && typeof input.active !== 'boolean') {
     errors.push('Criterion active flag must be true or false.');
   }
