@@ -751,7 +751,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         { type: 'INTERVIEW_UPDATED', title: 'Interview updated', message: 'Your interview schedule has been updated.' },
       );
 
-      return reply.send({ success: true, data: result });
+      return reply.send({ success: true, data: normalizeInterviewRecord(result) });
     },
   );
 };
