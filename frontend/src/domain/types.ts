@@ -7,7 +7,7 @@ export type CandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDU
 export type InterviewStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type InterviewEvaluationStatus = 'DRAFT' | 'SUBMITTED';
 export type InterviewType = 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
-export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
+export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'MULTI_SELECT';
 
 export interface Agency {
   id: string;
