@@ -231,7 +231,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
     if (developmentMode) {
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && (item.agencyId === agencyId || item.agencyId === null)));
-      setCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
+      setCriteriaGroups([...new Map(state.interviewCriterionGroups.filter((item) => item.active).map((item) => [item.id, item])).values()]);
       return;
     }
 
@@ -442,7 +442,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const saveSchedule = async () => {
     const createIds = selectedCandidateIds;
     if (!criterionGroupIds.length) {
-      setError('Select at least one scoring criteria group before scheduling the interview.');
+      setError('Select at least one interview criteria group before scheduling the interview.');
       return;
     }
     if (panel.length === 0) {
@@ -465,10 +465,13 @@ export const InterviewsPage = ({ role }: Props) => {
       const durationMins = Math.max(15, Number(form.durationMins) || 30);
       const availableGroupIds = new Set(criteriaGroups.map((group) => group.id));
       const normalizedGroupIds = [...new Set(criterionGroupIds.filter((id) => availableGroupIds.has(id)))];
+      if (!normalizedGroupIds.length) {
+        setCriterionGroupIds([]);
+        setError('No selected interview criteria groups are currently available. Select at least one group.');
+        return;
+      }
       if (normalizedGroupIds.length !== criterionGroupIds.length) {
         setCriterionGroupIds(normalizedGroupIds);
-        setError('One or more selected criteria groups are no longer available. The unavailable groups were removed; review the order and save again.');
-        return;
       }
       const selectedGroups = normalizedGroupIds
         .map((id) => criteriaGroups.find((group) => group.id === id))
