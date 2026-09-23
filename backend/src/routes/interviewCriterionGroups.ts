@@ -11,6 +11,9 @@ const criterionSelect = {
   name: true,
   description: true,
   maxPoints: true,
+  responseType: true,
+  required: true,
+  options: true,
   active: true,
 } as const;
 
