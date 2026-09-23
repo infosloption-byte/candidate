@@ -7,6 +7,7 @@ export type CandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDU
 export type InterviewStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type InterviewEvaluationStatus = 'DRAFT' | 'SUBMITTED';
 export type InterviewType = 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
+export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
 
 export interface Agency {
   id: string;
@@ -78,6 +79,9 @@ export interface InterviewCriterion {
   name: string;
   description: string | null;
   maxPoints: number;
+  responseType: InterviewCriterionResponseType;
+  required: boolean;
+  options: string[] | null;
   active: boolean;
 }
 
@@ -100,6 +104,12 @@ export interface InterviewScore {
   points: number;
 }
 
+export interface InterviewEvaluationResponse {
+  criterionId: string;
+  textValue: string | null;
+  selectedOptions: string[] | null;
+}
+
 export interface InterviewEvaluation {
   id: string;
   interviewId: string;
@@ -108,6 +118,7 @@ export interface InterviewEvaluation {
   comments: string | null;
   submittedAt: string | null;
   scores: InterviewScore[];
+  responses: InterviewEvaluationResponse[];
 }
 
 export interface InterviewCriterionAssignment {
@@ -118,6 +129,9 @@ export interface InterviewCriterionAssignment {
   name: string;
   description: string | null;
   maxPoints: number;
+  responseType: InterviewCriterionResponseType;
+  required: boolean;
+  options: string[] | null;
   sortOrder: number;
 }
 
@@ -135,7 +149,9 @@ export interface Interview {
   createdAt?: string;
   updatedAt?: string;
   criterionGroupId?: string | null;
+  criterionGroupIds?: string[];
   criterionGroup?: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'> | null;
+  criterionGroups?: Array<Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'>>;
   criterionAssignments?: InterviewCriterionAssignment[];
   startedAt?: string | null;
   completedAt?: string | null;
