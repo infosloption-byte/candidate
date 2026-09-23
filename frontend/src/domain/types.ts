@@ -151,7 +151,10 @@ export interface Interview {
   criterionGroupId?: string | null;
   criterionGroupIds?: string[];
   criterionGroup?: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'> | null;
-  criterionGroups?: Array<Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'>>;
+  criterionGroups?: Array<{
+    sortOrder: number;
+    group: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'>;
+  }>;
   criterionAssignments?: InterviewCriterionAssignment[];
   startedAt?: string | null;
   completedAt?: string | null;
