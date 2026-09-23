@@ -15,7 +15,7 @@ export const validateInterviewCriterionInput = (
   mode: 'create' | 'update',
 ): string[] => {
   const errors: string[] = [];
-  const responseType = input.responseType ?? 'SCORE';
+  const responseType = input.responseType ?? 'TEXT';
 
   if (mode === 'create' && !input.name?.trim()) errors.push('Criterion name is required.');
   if (input.name !== undefined) {
@@ -29,13 +29,9 @@ export const validateInterviewCriterionInput = (
   if (!['SCORE', 'TEXT', 'MULTI_SELECT'].includes(responseType)) {
     errors.push('Invalid criterion response type.');
   }
-  if (responseType === 'SCORE') {
-    const maxPoints = input.maxPoints ?? (mode === 'create' ? 5 : undefined);
-    if (maxPoints !== undefined && (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100)) {
-      errors.push('Maximum points must be a whole number between 1 and 100.');
-    }
-  } else if (input.maxPoints !== undefined && input.maxPoints !== 0) {
-    errors.push('Non-scoring criteria must have maximum points set to 0.');
+  const maxPoints = input.maxPoints ?? (mode === 'create' ? 5 : undefined);
+  if (maxPoints !== undefined && (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100)) {
+    errors.push('Maximum points must be a whole number between 1 and 100.');
   }
   if (input.required !== undefined && typeof input.required !== 'boolean') {
     errors.push('Criterion required flag must be true or false.');
@@ -44,6 +40,9 @@ export const validateInterviewCriterionInput = (
     const options = input.options.filter((option) => typeof option === 'string' && option.trim()).map((option) => option.trim());
     if (!Array.isArray(input.options) || options.length > 50 || options.some((option) => option.length > 120)) {
       errors.push('Criterion options must contain up to 50 non-empty labels of 120 characters or fewer.');
+    }
+    if (responseType !== 'MULTI_SELECT' && options.length) {
+      errors.push('Suggested tags can only be used when Multiple tag option is enabled.');
     }
   }
   // Multiple-tag criteria may have optional suggested tags, but the interviewer can always enter free-form tags.
