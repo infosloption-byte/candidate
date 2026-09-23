@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '../generated/prisma/client.js';
-
-type CriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'BOOLEAN';
+import type { InterviewInterviewCriterionResponseType } from '../generated/prisma/enums.js';
 import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
@@ -141,7 +140,7 @@ const criterionAssignmentData = (
         name: string;
         description: string | null;
         maxPoints: number;
-        responseType: CriterionResponseType;
+        responseType: InterviewCriterionResponseType;
         required: boolean;
         options: Prisma.InputJsonValue | undefined;
       };
@@ -155,7 +154,7 @@ const criterionAssignmentData = (
     name: string;
     description: string | null;
     maxPoints: number;
-    responseType: CriterionResponseType;
+    responseType: InterviewCriterionResponseType;
     required: boolean;
     options: Prisma.InputJsonValue | undefined;
     sortOrder: number;
