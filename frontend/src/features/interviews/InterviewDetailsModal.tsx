@@ -20,6 +20,11 @@ export interface InterviewDetail extends Omit<Interview, 'evaluations'> {
       points: number;
       criterion: { id: string; name: string; maxPoints: number } | null;
     }>;
+    responses?: Array<{
+      criterionId: string;
+      textValue: string | null;
+      selectedOptions: string[] | null;
+    }>;
   }>;
 }
 
