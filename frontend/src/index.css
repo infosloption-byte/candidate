@@ -47,3 +47,45 @@ select.field-input option { color: #0f172a; background: #fff; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* BuildHire internationalization and Hebrew RTL support */
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="rtl"] body {
+  text-align: right;
+}
+
+/* Fixed mobile navigation slides in from the correct side in RTL. */
+html[dir="rtl"] [class~="inset-y-0"][class~="left-0"][class~="-translate-x-full"] {
+  left: auto;
+  right: 0;
+  transform: translateX(100%);
+}
+
+html[dir="rtl"] [class~="inset-y-0"][class~="left-0"][class~="translate-x-0"] {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+/* Top-bar anchored menus follow the reading direction. */
+html[dir="rtl"] [class~="top-[calc(100%+10px)"][class~="right-0"] {
+  right: auto;
+  left: 0;
+}
+
+/* Keep common controls readable when Hebrew is active. */
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select {
+  text-align: right;
+}
+
+html[dir="rtl"] select.field-input {
+  padding-right: 0.8rem;
+  padding-left: 2.6rem;
+  background-position: left 0.8rem center;
+}

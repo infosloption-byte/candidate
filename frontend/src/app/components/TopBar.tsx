@@ -4,6 +4,7 @@ import { useAuth } from '../../domain/authContext';
 import { apiFetch } from '../../shared/lib/api';
 import type { AppView } from './AppShell';
 import type { User, UserRole } from '../../domain/types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface NotificationRecord {
   id: string;
@@ -53,6 +54,7 @@ export const TopBar = ({
   onLogout,
 }: TopBarProps) => {
   const { developmentMode } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -113,20 +115,20 @@ export const TopBar = ({
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-xl">
       <div className="flex min-h-[72px] items-center gap-3 px-3 sm:px-5 lg:px-7">
-        <button type="button" onClick={onOpenMobileNav} aria-label="Open navigation" className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:hidden">
+        <button type="button" onClick={onOpenMobileNav} aria-label={t('Open navigation')} className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:hidden">
           <Icon name="menu" size={19} />
         </button>
 
         <div className="min-w-0 flex-1">
           <div className="hidden items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 sm:flex">
-            <span>Workspace</span>
+            <span>{t('Workspace')}</span>
             <Icon name="chevron-right" size={11} />
-            <span className="text-slate-500">{titles[activeView]}</span>
+            <span className="text-slate-500">{t(titles[activeView])}</span>
           </div>
           <div className="mt-0.5 flex items-center gap-2">
-            <h1 className="truncate text-[15px] font-extrabold tracking-[-0.01em] text-slate-950 sm:text-base">{titles[activeView]}</h1>
+            <h1 className="truncate text-[15px] font-extrabold tracking-[-0.01em] text-slate-950 sm:text-base">{t(titles[activeView])}</h1>
             <span className="hidden rounded-full border border-cyan-100 bg-cyan-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-cyan-700 md:inline-flex">
-              {roleLabels[role]}
+              {t(roleLabels[role])}
             </span>
           </div>
         </div>
@@ -140,20 +142,33 @@ export const TopBar = ({
           </div>
         )}
 
-        <div ref={notificationMenuRef} className="relative">
-          <button type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label={unreadCount > 0 ? unreadCount + ' unread notifications' : 'Notifications'} className="relative grid size-10 place-items-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">
+        <div className="flex items-center gap-1">
+          <div className="relative">
+            <select
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}
+              aria-label={t('Language')}
+              title={t('Language')}
+              className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50 focus:border-cyan-500"
+            >
+              <option value="en">EN · English</option>
+              <option value="he">HE · עברית</option>
+            </select>
+          </div>
+          <div ref={notificationMenuRef} className="relative">
+          <button type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label={unreadCount > 0 ? unreadCount + ' ' + t('unread notifications') : t('Notifications')} className="relative grid size-10 place-items-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">
             <Icon name="bell" size={18} />
             {unreadCount > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-cyan-600 px-1 text-[9px] font-black leading-4 text-white shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
           {notificationsOpen && (
             <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[350px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
-                <div><p className="text-xs font-extrabold text-slate-950">Notifications</p><p className="mt-0.5 text-[10px] text-slate-400">{unreadCount} unread</p></div>
-                <button type="button" onClick={() => setNotificationsOpen(false)} className="text-xs font-bold text-slate-400 hover:text-slate-700">Close</button>
+                <div><p className="text-xs font-extrabold text-slate-950">{t('Notifications')}</p><p className="mt-0.5 text-[10px] text-slate-400">{unreadCount} unread</p></div>
+                <button type="button" onClick={() => setNotificationsOpen(false)} className="text-xs font-bold text-slate-400 hover:text-slate-700">{t('Close')}</button>
               </div>
               <div className="max-h-80 overflow-auto p-1.5">
                 {notifications.length === 0 ? (
-                  <p className="px-3 py-10 text-center text-xs text-slate-400">No notifications yet.</p>
+                  <p className="px-3 py-10 text-center text-xs text-slate-400">{t('No notifications yet.')}</p>
                 ) : notifications.slice(0, 8).map((notification) => (
                   <button key={notification.id} type="button" onClick={() => void markRead(notification)} className={`block w-full rounded-xl px-3 py-3 text-left transition hover:bg-slate-50 ${notification.readAt ? 'opacity-60' : ''}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -167,6 +182,7 @@ export const TopBar = ({
               </div>
             </div>
           )}
+          </div>
         </div>
 
         <div ref={profileMenuRef} className="relative">
@@ -185,10 +201,10 @@ export const TopBar = ({
               <div className="rounded-xl bg-slate-50 px-3 py-3">
                 <p className="truncate text-xs font-extrabold text-slate-950">{user.name}</p>
                 <p className="mt-0.5 truncate text-[10px] text-slate-500">{user.email}</p>
-                <span className="mt-2 inline-flex rounded-full border border-cyan-100 bg-cyan-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-cyan-700">{roleLabels[role]}</span>
+                <span className="mt-2 inline-flex rounded-full border border-cyan-100 bg-cyan-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-cyan-700">{t(roleLabels[role])}</span>
               </div>
               <button type="button" onClick={() => { setProfileOpen(false); onLogout(); }} className="mt-1.5 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
-                <span>Sign out</span>
+                <span>{t('Sign out')}</span>
                 <span className="text-slate-400">↗</span>
               </button>
             </div>

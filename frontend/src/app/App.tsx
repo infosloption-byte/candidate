@@ -13,6 +13,7 @@ import { AgenciesPage } from '../features/agencies/AgenciesPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
+import { LanguageProvider } from '../i18n/LanguageContext';
 
 const roleDefaults: Record<UserRole, AppView> = {
   ADMIN: 'dashboard',
@@ -111,6 +112,8 @@ const AuthenticatedApp = ({
 
 export const App = () => (
   <AuthProvider>
-    <AppContent />
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   </AuthProvider>
 );
