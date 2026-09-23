@@ -43,7 +43,7 @@ export const validateInterviewInput = (input: InterviewInput, mode: 'create' | '
     errors.push('At least one interviewer is required.');
   }
   const criterionGroupIds = input.criterionGroupIds ?? (input.criterionGroupId ? [input.criterionGroupId] : []);
-  if (criterionGroupIds.length > 10 || criterionGroupIds.some((id) => typeof id !== 'string' || !id.trim() || id.length > 36)) {
+  if (criterionGroupIds.length > 50 || criterionGroupIds.some((id) => typeof id !== 'string' || !id.trim() || id.length > 36)) {
     errors.push('Interview criteria groups must contain between 1 and 10 valid group IDs.');
   }
   if (input.interviewerIds !== undefined && (
