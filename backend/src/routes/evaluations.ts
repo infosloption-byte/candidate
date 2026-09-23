@@ -168,7 +168,7 @@ const ensureInterviewAssignments = async (interviewId: string) => {
       maxPoints: criterion.maxPoints,
       responseType: criterion.responseType,
       required: criterion.required,
-      options: criterion.options,
+      ...(criterion.options === null ? {} : { options: criterion.options }),
       sortOrder: index,
     })),
   });
@@ -339,7 +339,11 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             status: 'DRAFT',
             comments: request.body.comments?.trim() || null,
             scores: { create: (request.body.scores ?? []).map((score) => ({ criterionId: score.criterionId, points: score.points })) },
-            responses: { create: (request.body.responses ?? []).map((response) => ({ criterionId: response.criterionId, textValue: response.textValue?.trim() || null, selectedOptions: response.selectedOptions ?? null })) },
+            responses: { createMany: { data: (request.body.responses ?? []).map((response) => ({
+              criterionId: response.criterionId,
+              textValue: response.textValue?.trim() || null,
+              ...(response.selectedOptions == null ? {} : { selectedOptions: response.selectedOptions }),
+            })) } },
           },
           update: {
             comments: request.body.comments?.trim() || null,
@@ -349,7 +353,11 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             },
             responses: {
               deleteMany: {},
-              create: (request.body.responses ?? []).map((response) => ({ criterionId: response.criterionId, textValue: response.textValue?.trim() || null, selectedOptions: response.selectedOptions ?? null })),
+              createMany: { data: (request.body.responses ?? []).map((response) => ({
+                criterionId: response.criterionId,
+                textValue: response.textValue?.trim() || null,
+                ...(response.selectedOptions == null ? {} : { selectedOptions: response.selectedOptions }),
+              })) },
             },
           },
           include: {
@@ -429,7 +437,13 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const currentScores = existingEvaluation.scores;
-      const currentResponses = existingEvaluation.responses;
+      const currentResponses = existingEvaluation.responses.map((response) => ({
+        criterionId: response.criterionId,
+        textValue: response.textValue,
+        selectedOptions: Array.isArray(response.selectedOptions)
+          ? response.selectedOptions.filter((value): value is string => typeof value === 'string')
+          : null,
+      }));
       const submittedScoreErrors = validateScores(currentScores, assignments);
       const submittedResponseErrors = validateResponses(currentResponses, assignments);
       if (submittedScoreErrors.length || submittedResponseErrors.length) {
