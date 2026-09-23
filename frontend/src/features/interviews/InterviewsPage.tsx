@@ -1539,6 +1539,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <FormField label="Interview notes" hint="Add your interview observations before submitting.">
                       <textarea className="field-input min-h-28 resize-y" disabled={evaluationStatus === 'SUBMITTED' || evaluating} value={evaluationComments} onChange={(event) => setEvaluationComments(event.target.value)} placeholder="Enter interview observations, strengths, concerns and final notes…" />
                     </FormField>
+                    </>
                     ) : (
                       <div>
                         <div className="grid gap-3 sm:grid-cols-3">
