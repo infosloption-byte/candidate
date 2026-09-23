@@ -141,6 +141,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
   const [evaluationDecisionMessage, setEvaluationDecisionMessage] = useState('');
   const [evaluationSaving, setEvaluationSaving] = useState(false);
+  const [interviewStatusUpdating, setInterviewStatusUpdating] = useState<string | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
@@ -598,17 +599,31 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const changeInterviewStatus = async (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW') => {
+  const changeInterviewStatus = async (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW', closeWorkspace = false) => {
+    const label = status === 'CANCELLED' ? 'cancel this interview' : 'mark this candidate as a no-show';
+    const warning = closeWorkspace && evaluationStatus === 'DRAFT'
+      ? ' Any unsaved scorecard changes in this workspace will not be submitted.'
+      : '';
+    if (!window.confirm('Are you sure you want to ' + label + '?' + warning)) return;
+
     setError('');
+    setInterviewStatusUpdating(interview.id + ':' + status);
     try {
       const updated = developmentMode
         ? { ...interview, status }
-        : await apiFetch<InterviewRecord>('/interviews/' + interview.id, { method: 'PATCH', body: JSON.stringify({ status }) });
+        : await apiFetch<InterviewRecord>('/interviews/' + interview.id + '/status', { method: 'POST', body: JSON.stringify({ status }) });
       if (developmentMode) dispatch({ type: 'SET_INTERVIEW_STATUS', interviewId: interview.id, status });
       setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, ...updated } : item));
       setSuccess('Interview marked ' + statusLabel(status).toLowerCase() + '.');
+      if (closeWorkspace && evaluationFor === interview.id) {
+        setEvaluationFor(null);
+        setEvaluationMinimized(false);
+        setEvaluationMaximized(false);
+      }
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the interview.');
+    } finally {
+      setInterviewStatusUpdating(null);
     }
   };
 
@@ -1757,6 +1772,37 @@ export const InterviewsPage = ({ role }: Props) => {
                             onClick={() => void updateCandidateStatus(activeCandidate)}
                           >
                             Update status
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {role === 'INTERVIEWER' && ['SCHEDULED', 'IN_PROGRESS'].includes(activeInterview.status) && (
+                    <div className="shrink-0 border-t border-amber-100 bg-amber-50/60 px-4 py-3 sm:px-5">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Interview actions</p>
+                          <p className="mt-0.5 text-[10px] leading-4 text-amber-700">Use No show when the candidate does not attend. Use Cancel when the interview should not continue.</p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="min-h-10 rounded-lg px-3 py-1 text-[9px] font-extrabold"
+                            disabled={Boolean(interviewStatusUpdating) || evaluationStatus === 'SUBMITTED' || evaluating}
+                            onClick={() => void changeInterviewStatus(activeInterview, 'NO_SHOW', true)}
+                          >
+                            {interviewStatusUpdating === activeInterview.id + ':NO_SHOW' ? 'Updating…' : 'No show'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            className="min-h-10 rounded-lg px-3 py-1 text-[9px] font-extrabold"
+                            disabled={Boolean(interviewStatusUpdating) || evaluationStatus === 'SUBMITTED' || evaluating}
+                            onClick={() => void changeInterviewStatus(activeInterview, 'CANCELLED', true)}
+                          >
+                            {interviewStatusUpdating === activeInterview.id + ':CANCELLED' ? 'Updating…' : 'Cancel interview'}
                           </Button>
                         </div>
                       </div>
