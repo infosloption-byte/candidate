@@ -256,7 +256,7 @@ export const CandidatesPage = ({ role }: Props) => {
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
     });
-  }, [candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.alternatePhone, candidate?.country, candidate?.passportNumber, candidate?.passportExpiry, candidate?.currentLocation, candidate?.availability, candidate?.visaStatus, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
+  }, [candidate?.birthdate, candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.alternatePhone, candidate?.country, candidate?.passportNumber, candidate?.passportExpiry, candidate?.currentLocation, candidate?.availability, candidate?.visaStatus, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
 
   const saveOwnProfile = async () => {
     if (!candidate) return;
@@ -296,6 +296,7 @@ export const CandidatesPage = ({ role }: Props) => {
             method: 'PATCH',
             body: JSON.stringify({
               name: profileForm.name.trim(),
+              birthdate: profileForm.birthdate.trim() || null,
               email: profileForm.email.trim() || null,
               phone: profileForm.phone.trim() || null,
               alternatePhone: profileForm.alternatePhone.trim() || null,
@@ -594,6 +595,7 @@ export const CandidatesPage = ({ role }: Props) => {
             method: 'PATCH',
             body: JSON.stringify({
               name: profileForm.name.trim(),
+              birthdate: profileForm.birthdate.trim() || null,
               email: profileForm.email.trim() || null,
               phone: profileForm.phone.trim() || null,
               alternatePhone: profileForm.alternatePhone.trim() || null,
