@@ -926,8 +926,13 @@ export const InterviewsPage = ({ role }: Props) => {
     setSavingBirthdate(true);
     setError('');
     try {
+      const currentCandidate = candidates.find((item) => item.id === candidate.id);
+      if (!currentCandidate && developmentMode) {
+        throw new Error('The candidate is not available in the local workspace.');
+      }
+
       const updated: Candidate = developmentMode
-        ? { ...candidate, birthdate: birthdateDraft }
+        ? { ...(currentCandidate as Candidate), birthdate: birthdateDraft }
         : await apiFetch<Candidate>('/candidates/' + candidate.id + '/birthdate', {
             method: 'PATCH',
             body: JSON.stringify({ birthdate: birthdateDraft }),
@@ -1718,7 +1723,7 @@ export const InterviewsPage = ({ role }: Props) => {
                                 variant="secondary"
                                 className="shrink-0"
                                 disabled={savingBirthdate || evaluationStatus === 'SUBMITTED' || !birthdateDraft || birthdateDraft === (activeCandidate?.birthdate ? activeCandidate.birthdate.slice(0, 10) : '')}
-                                onClick={() => void saveCandidateBirthdate(activeCandidate)}
+                                onClick={() => void saveCandidateBirthdate(activeCandidate ?? undefined)}
                               >
                                 {savingBirthdate ? 'Saving…' : 'Save'}
                               </Button>
