@@ -915,7 +915,7 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const saveCandidateBirthdate = async (candidate: Candidate | undefined) => {
+  const saveCandidateBirthdate = async (candidate: Pick<Candidate, 'id' | 'birthdate'> | undefined) => {
     if (!candidate) return;
     const age = birthdateDraft ? calculateAge(birthdateDraft) : null;
     if (!birthdateDraft || age === null) {
