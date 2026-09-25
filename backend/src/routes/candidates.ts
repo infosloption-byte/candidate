@@ -15,6 +15,7 @@ const candidateSelect = {
   agencyId: true,
   reference: true,
   name: true,
+  birthdate: true,
   email: true,
   phone: true,
   alternatePhone: true,
@@ -186,6 +187,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             agencyId: agency.id,
             reference: getReference(),
             name: request.body.name!.trim(),
+            birthdate: request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null,
             email: request.body.email?.trim().toLowerCase() || null,
             phone: request.body.phone?.trim() || null,
             alternatePhone: request.body.alternatePhone?.trim() || null,
@@ -252,8 +254,10 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         const experienceRaw = row.experienceyears?.trim() || row.experience?.trim() || '';
         const experienceYears = experienceRaw ? Number(experienceRaw) : null;
         const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
+        const birthdateRaw = row.birthdate?.trim() || row.birth_date?.trim() || row.dateofbirth?.trim() || row.date_of_birth?.trim() || row.dob?.trim() || '';
         const input: CandidateInput = {
           name: row.name,
+          birthdate: birthdateRaw || null,
           email,
           phone: row.phone || row.contactnumber || row.contact_number || null,
           alternatePhone: row.alternatephone || row.alternate_phone || null,
@@ -293,6 +297,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
               agencyId: agency.id,
               reference: getReference(),
               name: input.name!.trim(),
+              birthdate: input.birthdate?.trim() ? new Date(input.birthdate) : null,
               email: input.email?.trim().toLowerCase() || null,
               phone: input.phone?.trim() || null,
               alternatePhone: input.alternatePhone?.trim() || null,
@@ -352,6 +357,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             agencyId: agency.id,
             reference: getReference(),
             name: request.body.name!.trim(),
+            birthdate: request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null,
               email: request.body.email?.trim().toLowerCase() || null,
               phone: request.body.phone?.trim() || null,
               alternatePhone: request.body.alternatePhone?.trim() || null,
@@ -393,6 +399,52 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         ['AGENCY'],
       );
       return reply.code(201).send({ success: true, data: result });
+    },
+  );
+
+  app.patch<{
+    Params: CandidateParams;
+    Body: Pick<CandidateInput, 'birthdate'>;
+  }>(
+    '/candidates/:id/birthdate',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const candidate = await getPrisma().candidate.findUnique({ where: { id: request.params.id }, select: candidateSelect });
+      if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
+
+      const user = request.authUser!;
+      const canManage = canManageCandidate(user.role, user.agencyId, candidate.agencyId);
+      const isAssignedInterviewer = user.role === 'INTERVIEWER'
+        ? Boolean(await getPrisma().interviewParticipant.findFirst({
+            where: {
+              userId: user.id,
+              interview: { candidateId: candidate.id, status: { in: ['SCHEDULED', 'IN_PROGRESS'] } },
+            },
+            select: { interviewId: true },
+          }))
+        : false;
+      if (!canManage && !isAssignedInterviewer) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Only the assigned interview panel or candidate managers can update the birthdate.' } });
+      }
+
+      const errors = validateCandidateInput(request.body, 'update');
+      if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_BIRTHDATE', message: errors.join(' ') } });
+
+      const updated = await getPrisma().candidate.update({
+        where: { id: candidate.id },
+        data: { birthdate: request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null },
+        select: candidateSelect,
+      });
+
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: updated.agencyId,
+        action: 'CANDIDATE_BIRTHDATE_UPDATED',
+        entityType: 'Candidate',
+        entityId: updated.id,
+        summary: 'Updated birthdate for candidate "' + updated.name + '".',
+      });
+      return reply.send({ success: true, data: updated });
     },
   );
 
@@ -481,6 +533,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
       const data: Record<string, unknown> = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.birthdate !== undefined) data.birthdate = request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null;
       if (request.body.email !== undefined) data.email = request.body.email?.trim().toLowerCase() || null;
       if (request.body.phone !== undefined) data.phone = request.body.phone?.trim() || null;
       if (request.body.alternatePhone !== undefined) data.alternatePhone = request.body.alternatePhone?.trim() || null;
