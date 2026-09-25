@@ -27,6 +27,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Candidate Pool bulk-import UI with CSV template and agency selection.
 - ✅ Candidate profile editing.
 - ✅ Candidate identity/contact fields: country, passport number, passport expiry, contact and alternate contact numbers.
+- ✅ Candidate birthdate persistence, profile editing, and CSV import/template support.
 - ✅ Candidate recruitment-readiness fields: current location, availability, and visa/work status.
 - ✅ Candidate CSV import/template supports expanded profile fields.
 - ✅ Candidate filtering/search covers country, profession, current location, availability, visa/work status, passport expiry, passport number, and contact data.
@@ -70,6 +71,7 @@ Legend: ✅ completed · 🔄 implemented / awaiting verification · ⏳ planned
 - ✅ Reusable criteria groups by job / trade category.
 - ✅ Interview scheduling selects an active criteria group and copies its criteria into the interview scorecard.
 - ✅ Interviewer start / continue workspace with score progress and live total / percentage.
+- ✅ Interview panel candidate identity details with interviewer birthdate capture and automatic Age criteria fill.
 - ✅ Draft scorecard autosave with notes and final submission lock.
 - ✅ Criterion maximum points.
 - ✅ Activate/deactivate criteria without deleting history.
