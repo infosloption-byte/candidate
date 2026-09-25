@@ -437,7 +437,7 @@ export const CandidatesPage = ({ role }: Props) => {
   };
 
   const downloadCsvTemplate = () => {
-    const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
+    const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,1990-01-15,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
