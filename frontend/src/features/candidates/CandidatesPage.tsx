@@ -236,7 +236,7 @@ export const CandidatesPage = ({ role }: Props) => {
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidate history.'); })
       .finally(() => { if (!cancelled) setLoadingHistory(false); });
     return () => { cancelled = true; };
-  }, [candidate?.id, developmentMode, role, state.interviews]);
+  }, [candidate?.birthdate, candidate?.id, developmentMode, role, state.interviews]);
 
   useEffect(() => {
     if (!candidate) return;
