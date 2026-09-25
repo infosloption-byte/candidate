@@ -6,7 +6,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
-export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt'>;
+export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'birthdate' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt'>;
 
 export interface CandidateProfileHistory {
   profile?: {
@@ -88,6 +88,7 @@ export const CandidateProfilePanel = ({
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: '',
+    birthdate: '',
     email: '',
     phone: '',
     alternatePhone: '',
@@ -120,6 +121,7 @@ export const CandidateProfilePanel = ({
     if (!candidate) return;
     setProfileForm({
       name: candidate.name,
+      birthdate: candidate.birthdate ? candidate.birthdate.slice(0, 10) : '',
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
       alternatePhone: candidate.alternatePhone ?? '',
@@ -188,6 +190,7 @@ export const CandidateProfilePanel = ({
             method: 'PATCH',
             body: JSON.stringify({
               name: profileForm.name.trim(),
+              birthdate: profileForm.birthdate.trim() || null,
               email: profileForm.email.trim() || null,
               phone: profileForm.phone.trim() || null,
               alternatePhone: profileForm.alternatePhone.trim() || null,
@@ -205,6 +208,7 @@ export const CandidateProfilePanel = ({
         : {
             ...currentCandidate,
             name: profileForm.name.trim(),
+            birthdate: profileForm.birthdate.trim() || null,
             email: profileForm.email.trim() || null,
             phone: profileForm.phone.trim() || null,
             alternatePhone: profileForm.alternatePhone.trim() || null,
@@ -379,7 +383,7 @@ export const CandidateProfilePanel = ({
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-black text-slate-950">{displayCandidate.name}</p>
-              <p className="truncate text-[10px] text-slate-400">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {label(displayCandidate.status)}</p>
+              <p className="truncate text-[10px] text-slate-400">{displayCandidate.reference} · Birthdate: {displayCandidate.birthdate ? new Date(displayCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {value(displayCandidate.passportNumber)} · {label(displayCandidate.status)}</p>
             </div>
             <button type="button" className="rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100" onClick={onRestore}>Open</button>
             <button type="button" aria-label="Close candidate profile" className="rounded-lg px-2 py-1 text-lg font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onClose}>×</button>
@@ -401,7 +405,7 @@ export const CandidateProfilePanel = ({
                 <StatusPill value={displayCandidate.status} />
                 <StatusPill value={displayCandidate.onboardingStatus} />
               </div>
-              <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Birthdate: {displayCandidate.birthdate ? new Date(displayCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.profession ?? 'Profession not set'}</p>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" aria-label="Minimize candidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
@@ -438,6 +442,7 @@ export const CandidateProfilePanel = ({
           {activeTab === 'overview' && (
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Birthdate">{displayCandidate.birthdate ? new Date(displayCandidate.birthdate).toLocaleDateString() : 'Not provided'}</Field>
                 <Field label="Passport number"><span className="text-cyan-700">{value(displayCandidate.passportNumber)}</span></Field>
                 <Field label="Passport expiry">{displayCandidate.passportExpiry ? new Date(displayCandidate.passportExpiry).toLocaleDateString() : 'Not provided'}</Field>
                 <Field label="Reference">{displayCandidate.reference}</Field>
@@ -543,6 +548,10 @@ export const CandidateProfilePanel = ({
                         />
                       </label>
                     ))}
+                    <label className="block">
+                      <span className="field-label">Birthdate</span>
+                      <input type="date" className="field-input mt-1 w-full" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm((current) => ({ ...current, birthdate: event.target.value }))} />
+                    </label>
                     <label className="block">
                       <span className="field-label">Passport expiry</span>
                       <input type="date" className="field-input mt-1 w-full" value={profileForm.passportExpiry} onChange={(event) => setProfileForm((current) => ({ ...current, passportExpiry: event.target.value }))} />
