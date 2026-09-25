@@ -17,6 +17,7 @@ const interviewInclude = {
       agencyId: true,
       reference: true,
       name: true,
+      birthdate: true,
       email: true,
       phone: true,
       alternatePhone: true,
