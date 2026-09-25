@@ -1,5 +1,6 @@
 export interface CandidateInput {
   name?: string;
+  birthdate?: string | null;
   email?: string | null;
   phone?: string | null;
   alternatePhone?: string | null;
@@ -57,6 +58,11 @@ export const validateCandidateInput = (
     if (value !== undefined && value !== null && value.trim().length > max) {
       errors.push(message + ' must be ' + max + ' characters or fewer.');
     }
+  }
+  if (input.birthdate !== undefined && input.birthdate !== null && input.birthdate.trim()) {
+    const birthdate = Date.parse(input.birthdate);
+    if (Number.isNaN(birthdate)) errors.push('Candidate birthdate is invalid.');
+    else if (birthdate > Date.now()) errors.push('Candidate birthdate cannot be in the future.');
   }
   if (input.passportExpiry !== undefined && input.passportExpiry !== null && input.passportExpiry.trim() && Number.isNaN(Date.parse(input.passportExpiry))) {
     errors.push('Candidate passport expiry date is invalid.');
