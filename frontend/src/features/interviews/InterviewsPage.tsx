@@ -450,16 +450,6 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   useEffect(() => {
-    if (!evaluationFor) {
-      setBirthdateDraft('');
-      return;
-    }
-    const activeInterview = interviews.find((item) => item.id === evaluationFor);
-    const candidate = activeInterview?.candidate ?? (activeInterview ? candidates.find((item) => item.id === activeInterview.candidateId) : undefined);
-    setBirthdateDraft(candidate?.birthdate ? candidate.birthdate.slice(0, 10) : '');
-  }, [evaluationFor, interviews, candidates]);
-
-  useEffect(() => {
     if (!scheduleModalOpen || !criteriaGroups.length) return;
 
     const availableIds = new Set(criteriaGroups.map((group) => group.id));
@@ -711,6 +701,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const openEvaluationWorkspace = async (interview: InterviewRecord) => {
     setError('');
     setSuccess('');
+    const initialCandidate = interview.candidate ?? candidates.find((item) => item.id === interview.candidateId);
+    setBirthdateDraft(initialCandidate?.birthdate ? initialCandidate.birthdate.slice(0, 10) : '');
     setEvaluationFor(interview.id);
     setEvaluationMinimized(false);
     setEvaluationMaximized(false);
@@ -755,6 +747,7 @@ export const InterviewsPage = ({ role }: Props) => {
           current.id,
         );
         initialiseEvaluation(current, assignments);
+        setBirthdateDraft(current.candidate?.birthdate ? current.candidate.birthdate.slice(0, 10) : '');
         const ownEvaluation = current.evaluations?.find((item) => item.interviewerId === user?.id);
         const total = assignments.reduce((sum, item) => sum + (ownEvaluation?.scores.find((score) => score.criterionId === item.criterionId)?.points ?? 0), 0);
         setEvaluationSummary({ submitted: ownEvaluation?.status === 'SUBMITTED' ? 1 : 0, drafts: ownEvaluation?.status === 'DRAFT' ? 1 : 0, required: current.panel?.length ?? current.panelUserIds.length, totalPoints: total, maxPoints: assignments.reduce((sum, item) => sum + item.maxPoints, 0), averagePercentage: null, allSubmitted: false });
@@ -773,6 +766,7 @@ export const InterviewsPage = ({ role }: Props) => {
         summary: { submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean };
       }>('/interviews/' + interview.id + '/evaluation');
       initialiseEvaluation(result.interview, result.assignments, result.evaluation as never);
+      setBirthdateDraft(result.interview.candidate?.birthdate ? result.interview.candidate.birthdate.slice(0, 10) : '');
       setEvaluationSummary(result.summary);
     } catch (requestError: unknown) {
       setEvaluationFor(null);
@@ -962,6 +956,8 @@ export const InterviewsPage = ({ role }: Props) => {
       setEvaluationDetail((current) => current
         ? { ...current, candidate: current.candidate ? { ...current.candidate, ...updated } : current.candidate }
         : current);
+
+      setBirthdateDraft(updated.birthdate ? updated.birthdate.slice(0, 10) : birthdateDraft);
 
       setResponseDrafts((current) => {
         const next = { ...current };
