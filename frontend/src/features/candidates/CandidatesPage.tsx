@@ -437,7 +437,7 @@ export const CandidatesPage = ({ role }: Props) => {
   };
 
   const downloadCsvTemplate = () => {
-    const csv = 'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
+    const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -475,11 +475,13 @@ export const CandidatesPage = ({ role }: Props) => {
         const created: Candidate[] = rows.slice(1).map((values, index) => {
           const experienceRaw = read(values, 'experienceyears', 'experience');
           const experienceYears = experienceRaw ? Number(experienceRaw) : null;
+          const birthdate = read(values, 'birthdate', 'birth_date', 'dateofbirth', 'date_of_birth', 'dob');
           return {
             id: 'candidate-import-' + Date.now() + '-' + index,
             agencyId: targetAgencyId,
             reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
             name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
+            birthdate: birthdate || null,
             email: read(values, 'email') || null,
             phone: read(values, 'phone', 'contactnumber', 'contact_number') || null,
             alternatePhone: read(values, 'alternatephone', 'alternate_phone') || null,
@@ -648,7 +650,7 @@ export const CandidatesPage = ({ role }: Props) => {
   const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
-    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p></div> },
+    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p><p className="mt-1 text-[10px] text-slate-400">Birthdate: {item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p></div> },
     { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
     { key: 'passport', header: 'Passport', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.passportNumber ?? 'Not provided'}</span> },
     { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
@@ -809,6 +811,7 @@ export const CandidatesPage = ({ role }: Props) => {
             <Card>
               <div className="grid size-16 place-items-center rounded-2xl bg-cyan-50 text-lg font-black text-cyan-700">{candidate.name.slice(0, 2).toUpperCase()}</div>
               <h2 className="mt-4 text-xl font-black text-slate-950">{candidate.name}</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Birthdate: {candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
               <p className="mt-1 text-sm text-slate-500">{candidate.profession ?? 'Profession not set'}</p>
               <div className="mt-5 flex flex-wrap gap-2"><StatusPill value={candidate.status} /><StatusPill value={candidate.onboardingStatus} /></div>
               <p className="mt-4 text-xs text-slate-500">Reference <span className="font-bold text-slate-800">{candidate.reference}</span></p>
