@@ -205,7 +205,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: interview.id },
         data: { status: 'IN_PROGRESS', startedAt: new Date() },
         include: {
-          candidate: { select: { id: true, name: true, reference: true, profession: true } },
+          candidate: { select: { id: true, name: true, reference: true, profession: true, birthdate: true } },
           criterionGroup: { select: { id: true, name: true, category: true, description: true } },
           criterionAssignments: { select: assignmentSelect, orderBy: { sortOrder: 'asc' } },
         },
