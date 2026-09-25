@@ -133,6 +133,7 @@ model Candidate {
   agencyId         String           @db.VarChar(36)
   reference        String           @db.VarChar(32)
   name             String           @db.VarChar(160)
+  birthdate        DateTime?
   email            String?          @db.VarChar(191)
   phone            String?          @db.VarChar(60)
   alternatePhone   String?          @db.VarChar(60)
