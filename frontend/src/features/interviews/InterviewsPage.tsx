@@ -157,6 +157,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [birthdateDraft, setBirthdateDraft] = useState('');
   const [savingBirthdate, setSavingBirthdate] = useState(false);
   const [evaluationLastSaved, setEvaluationLastSaved] = useState<number | null>(null);
+  const evaluationSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
   const [evaluationDecisionMessage, setEvaluationDecisionMessage] = useState('');
@@ -779,8 +780,9 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const saveEvaluationDraft = async (interviewId: string, silent = false): Promise<boolean> => {
-    if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return false;
+  const saveEvaluationDraft = (interviewId: string, silent = false): Promise<boolean> => {
+    const saveOperation = async (): Promise<boolean> => {
+      if (!evaluationAssignments.length || evaluationStatus === 'SUBMITTED') return false;
     const scores = evaluationAssignments
       .filter((assignment) => scoreDrafts[assignment.criterionId] !== '')
       .map((assignment) => ({ criterionId: assignment.criterionId, points: Number(scoreDrafts[assignment.criterionId]) }));
@@ -835,7 +837,12 @@ export const InterviewsPage = ({ role }: Props) => {
     } finally {
       setEvaluationSaving(false);
     }
-    return true;
+      return true;
+    };
+
+    const queuedOperation = evaluationSaveQueueRef.current.then(saveOperation, saveOperation);
+    evaluationSaveQueueRef.current = queuedOperation.then(() => undefined, () => undefined);
+    return queuedOperation;
   };
 
   useEffect(() => {
@@ -1952,7 +1959,15 @@ export const InterviewsPage = ({ role }: Props) => {
                   {role === 'INTERVIEWER' && (
                     <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] text-slate-400">{evaluationStatus === 'SUBMITTED' ? 'Submitted. Waiting for the remaining panel members.' : 'All required criteria and notes are submitted together.'}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {evaluationStatus === 'SUBMITTED'
+                            ? 'Submitted. Waiting for the remaining panel members.'
+                            : evaluationSaving
+                              ? 'Saving your interview draft…'
+                              : evaluationLastSaved
+                                ? 'Saved automatically at ' + new Date(evaluationLastSaved).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                                : 'Changes save automatically while you interview.'}
+                        </p>
                         <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (scoreDrafts[assignment.criterionId] === '' || (assignment.responseType === 'MULTI_SELECT' ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim()))) || !evaluationComments.trim()}>
                           {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
                         </Button>
