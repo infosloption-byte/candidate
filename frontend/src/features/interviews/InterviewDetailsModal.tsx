@@ -50,12 +50,13 @@ export const InterviewDetailsModal = ({ detail, open, onClose }: Props) => {
               <div className="min-w-0">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
                 <h2 id="interview-details-title" className="mt-1 text-xl font-black text-slate-950">{detail.candidate?.name ?? detail.candidateId}</h2>
-                <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · Passport: {detail.candidate?.passportNumber ?? 'Not provided'} · {detail.type} interview · {statusLabel(detail.status)}</p>
+                <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · Birthdate: {detail.candidate?.birthdate ? new Date(detail.candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {detail.candidate?.passportNumber ?? 'Not provided'} · {detail.type} interview · {statusLabel(detail.status)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2"><StatusPill value={detail.status} /><Button size="sm" variant="secondary" onClick={onClose}>Close</Button></div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.candidate?.birthdate ? new Date(detail.candidate.birthdate).toLocaleDateString() : 'Not provided'}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Passport number</p><p className="mt-2 break-all text-sm font-bold text-slate-900">{detail.candidate?.passportNumber ?? 'Not provided'}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date & time</p><p className="mt-2 text-sm font-bold text-slate-900">{new Date(detail.scheduledAt).toLocaleString()}</p></div>
               <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</p><p className="mt-2 text-sm font-bold text-slate-900">{detail.durationMins} minutes</p></div>
