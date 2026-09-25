@@ -136,7 +136,7 @@ export const CandidateProfilePanel = ({
       skills: candidate.skills.join(', '),
     });
     setStatusDraft(candidate.status);
-  }, [candidate?.id]);
+  }, [candidate?.birthdate, candidate?.id]);
 
   useEffect(() => {
     if (!candidate || !apiEnabled || initialHistoryLoading || initialHistory) return;
