@@ -363,6 +363,7 @@ export const CandidatesPage = ({ role }: Props) => {
         item.alternatePhone ?? '',
         item.passportNumber ?? '',
         item.passportExpiry ?? '',
+        item.birthdate ?? '',
         item.country ?? '',
         item.currentLocation ?? '',
         item.profession ?? '',
@@ -1123,6 +1124,10 @@ export const CandidatesPage = ({ role }: Props) => {
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p>
+                      </div>
                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Experience</p>
                         <p className="mt-1 text-[11px] font-bold text-slate-800">{item.experienceYears ?? 0} years</p>
