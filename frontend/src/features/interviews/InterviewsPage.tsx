@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { SelectMenu } from '../../shared/components/SelectMenu';
+import { DatePicker } from '../../shared/components/DatePicker';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
@@ -453,7 +454,7 @@ export const InterviewsPage = ({ role }: Props) => {
       return;
     }
     const activeInterview = interviews.find((item) => item.id === evaluationFor);
-    const candidate = activeInterview ? candidates.find((item) => item.id === activeInterview.candidateId) : undefined;
+    const candidate = activeInterview?.candidate ?? (activeInterview ? candidates.find((item) => item.id === activeInterview.candidateId) : undefined);
     setBirthdateDraft(candidate?.birthdate ? candidate.birthdate.slice(0, 10) : '');
   }, [evaluationFor, interviews, candidates]);
 
@@ -842,6 +843,15 @@ export const InterviewsPage = ({ role }: Props) => {
     const timer = window.setTimeout(() => { void saveEvaluationDraft(evaluationFor, true); }, 800);
     return () => window.clearTimeout(timer);
   }, [customTagDrafts, evaluationAssignments, evaluationComments, evaluationFor, evaluationStatus, responseDrafts, scoreDrafts, selectedOptionsDrafts]);
+
+  const closeEvaluationWorkspace = async () => {
+    if (role === 'INTERVIEWER' && evaluationFor && evaluationStatus === 'DRAFT') {
+      await saveEvaluationDraft(evaluationFor, true);
+    }
+    setEvaluationFor(null);
+    setEvaluationMinimized(false);
+    setEvaluationMaximized(false);
+  };
 
   const submitEvaluation = async (interview: InterviewRecord) => {
     if (!evaluationAssignments.length) {
@@ -1394,7 +1404,13 @@ export const InterviewsPage = ({ role }: Props) => {
               <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
             </FormField>
             <FormField label="Date & time">
-              <input type="datetime-local" className="field-input" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
+              <DatePicker
+                value={form.scheduledAt}
+                onChange={(value) => setForm({ ...form, scheduledAt: value })}
+                showTime
+                placeholder="Select interview date & time"
+                ariaLabel="Interview date and time"
+              />
             </FormField>
             <FormField label="Duration (minutes)">
               <input type="number" min="15" max="480" className="field-input" value={form.durationMins} onChange={(event) => setForm({ ...form, durationMins: event.target.value })} />
@@ -1656,7 +1672,7 @@ export const InterviewsPage = ({ role }: Props) => {
                         <p className="text-[10px] text-slate-400">{activeCandidate?.passportNumber ? 'Passport: ' + activeCandidate.passportNumber + ' · ' : 'Passport: Not provided · '}{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading scorecard…'}</p>
                       </div>
                       <Button size="sm" variant="secondary" className="min-h-9 px-2 text-[10px]" onClick={() => setEvaluationMinimized(false)}>Open</Button>
-                      <button type="button" aria-label="Close interview workspace" className="text-lg font-bold text-slate-400 hover:text-slate-700" onClick={() => setEvaluationFor(null)}>×</button>
+                      <button type="button" aria-label="Close interview workspace" className="text-lg font-bold text-slate-400 hover:text-slate-700" onClick={() => void closeEvaluationWorkspace()}>×</button>
                     </div>
                   </div>
                 );
@@ -1672,7 +1688,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="flex items-center gap-1">
                       <button type="button" aria-label="Minimize interview workspace" title="Minimize" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMinimized(true)}>−</button>
                       <button type="button" aria-label={evaluationMaximized ? 'Restore interview workspace' : 'Maximize interview workspace'} title={evaluationMaximized ? 'Restore' : 'Maximize'} className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMaximized((value) => !value)}>{evaluationMaximized ? '❐' : '□'}</button>
-                      <button type="button" aria-label="Close interview workspace" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationFor(null)}>×</button>
+                      <button type="button" aria-label="Close interview workspace" title="Close" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => void closeEvaluationWorkspace()}>×</button>
                     </div>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
@@ -1710,13 +1726,14 @@ export const InterviewsPage = ({ role }: Props) => {
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p>
                           {role === 'INTERVIEWER' ? (
                             <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <input
-                                type="date"
-                                className="field-input min-w-0 flex-1 bg-white"
+                              <DatePicker
                                 value={birthdateDraft}
+                                onChange={setBirthdateDraft}
                                 max={new Date().toISOString().slice(0, 10)}
-                                onChange={(event) => setBirthdateDraft(event.target.value)}
+                                placeholder="Select birthdate"
                                 disabled={savingBirthdate || evaluationStatus === 'SUBMITTED'}
+                                className="min-w-0 flex-1"
+                                ariaLabel="Candidate birthdate"
                               />
                               <Button
                                 size="sm"
