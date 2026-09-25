@@ -43,6 +43,7 @@ export interface Candidate {
   agencyId: string;
   reference: string;
   name: string;
+  birthdate?: string | null;
   email: string | null;
   phone: string | null;
   alternatePhone: string | null;
@@ -155,7 +156,7 @@ export interface Interview {
   criterionAssignments?: InterviewCriterionAssignment[];
   startedAt?: string | null;
   completedAt?: string | null;
-  candidate?: Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
+  candidate?: Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'birthdate' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
   job?: Pick<Job, 'id' | 'title' | 'location' | 'status'> | null;
   panel?: Array<{
     userId: string;
