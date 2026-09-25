@@ -54,3 +54,17 @@ test('candidate validation rejects malformed passport expiry date', () => {
     ['Candidate passport expiry date is invalid.'],
   );
 });
+
+test('candidate validation accepts a valid birthdate', () => {
+  assert.deepEqual(
+    validateCandidateInput({ name: 'Ruwan Fernando', birthdate: '1994-08-17' }, 'create'),
+    [],
+  );
+});
+
+test('candidate validation rejects a future birthdate', () => {
+  assert.deepEqual(
+    validateCandidateInput({ name: 'Ruwan Fernando', birthdate: '2999-01-01' }, 'create'),
+    ['Candidate birthdate cannot be in the future.'],
+  );
+});
