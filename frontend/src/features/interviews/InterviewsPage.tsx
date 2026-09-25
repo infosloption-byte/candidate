@@ -40,6 +40,22 @@ const toDateTimeLocal = (value: string): string => {
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
+const calculateAge = (birthdate: string, referenceDate = new Date()): number | null => {
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(birthdate)
+    ? new Date(birthdate + 'T00:00:00Z')
+    : new Date(birthdate);
+  if (Number.isNaN(normalized.getTime())) return null;
+  let age = referenceDate.getUTCFullYear() - normalized.getUTCFullYear();
+  const monthDelta = referenceDate.getUTCMonth() - normalized.getUTCMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && referenceDate.getUTCDate() < normalized.getUTCDate())) age -= 1;
+  return age >= 0 ? age : null;
+};
+
+const isAgeCriterion = (name: string): boolean => {
+  const normalized = name.trim().toLowerCase().split(/\s+/).join(' ');
+  return normalized === 'age' || normalized === 'age criteria';
+};
+
 const buildCriterionSections = (
   assignments: InterviewCriterionAssignment[],
   groups: Array<{ id: string; name: string }>,
@@ -137,6 +153,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [evaluationDetail, setEvaluationDetail] = useState<InterviewDetail | null>(null);
   const [evaluationSummary, setEvaluationSummary] = useState<{ submitted: number; drafts: number; required: number; totalPoints: number; maxPoints: number; averagePercentage: number | null; allSubmitted: boolean } | null>(null);
   const [evaluationStatus, setEvaluationStatus] = useState<'DRAFT' | 'SUBMITTED' | null>(null);
+  const [birthdateDraft, setBirthdateDraft] = useState('');
+  const [savingBirthdate, setSavingBirthdate] = useState(false);
   const [evaluationLastSaved, setEvaluationLastSaved] = useState<number | null>(null);
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
@@ -430,6 +448,16 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   useEffect(() => {
+    if (!evaluationFor) {
+      setBirthdateDraft('');
+      return;
+    }
+    const activeInterview = interviews.find((item) => item.id === evaluationFor);
+    const candidate = activeInterview ? candidates.find((item) => item.id === activeInterview.candidateId) : undefined;
+    setBirthdateDraft(candidate?.birthdate ? candidate.birthdate.slice(0, 10) : '');
+  }, [evaluationFor, interviews, candidates]);
+
+  useEffect(() => {
     if (!scheduleModalOpen || !criteriaGroups.length) return;
 
     const availableIds = new Set(criteriaGroups.map((group) => group.id));
@@ -656,11 +684,16 @@ export const InterviewsPage = ({ role }: Props) => {
     const responses: Record<string, string> = {};
     const options: Record<string, string[]> = {};
     const customTags: Record<string, string> = {};
+    const candidateBirthdate = interview.candidate?.birthdate ?? candidates.find((item) => item.id === interview.candidateId)?.birthdate;
+    const candidateAge = candidateBirthdate ? calculateAge(candidateBirthdate) : null;
     for (const assignment of assignments) {
       const existingScore = own?.scores.find((score) => score.criterionId === assignment.criterionId);
       const existingResponse = own?.responses?.find((response) => response.criterionId === assignment.criterionId);
       scores[assignment.criterionId] = existingScore ? String(existingScore.points) : '';
       responses[assignment.criterionId] = existingResponse?.textValue ?? '';
+      if (candidateAge !== null && isAgeCriterion(assignment.name)) {
+        responses[assignment.criterionId] = String(candidateAge);
+      }
       options[assignment.criterionId] = existingResponse?.selectedOptions ?? [];
       customTags[assignment.criterionId] = '';
     }
@@ -879,6 +912,47 @@ export const InterviewsPage = ({ role }: Props) => {
       setError(requestError instanceof Error ? requestError.message : 'Unable to submit the interview scorecard.');
     } finally {
       setEvaluating(false);
+    }
+  };
+
+  const saveCandidateBirthdate = async (candidate: Candidate | undefined) => {
+    if (!candidate) return;
+    const age = birthdateDraft ? calculateAge(birthdateDraft) : null;
+    if (!birthdateDraft || age === null) {
+      setError('Enter a valid birthdate that is not in the future.');
+      return;
+    }
+
+    setSavingBirthdate(true);
+    setError('');
+    try {
+      const updated: Candidate = developmentMode
+        ? { ...candidate, birthdate: birthdateDraft }
+        : await apiFetch<Candidate>('/candidates/' + candidate.id + '/birthdate', {
+            method: 'PATCH',
+            body: JSON.stringify({ birthdate: birthdateDraft }),
+          });
+
+      setCandidates((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setInterviews((current) => current.map((item) => item.candidateId === updated.id
+        ? { ...item, candidate: item.candidate ? { ...item.candidate, ...updated } : item.candidate }
+        : item));
+      setEvaluationDetail((current) => current
+        ? { ...current, candidate: current.candidate ? { ...current.candidate, ...updated } : current.candidate }
+        : current);
+
+      setResponseDrafts((current) => {
+        const next = { ...current };
+        for (const assignment of evaluationAssignments) {
+          if (isAgeCriterion(assignment.name)) next[assignment.criterionId] = String(age);
+        }
+        return next;
+      });
+      setSuccess('Candidate birthdate saved and Age criteria updated.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to save the candidate birthdate.');
+    } finally {
+      setSavingBirthdate(false);
     }
   };
 
@@ -1390,7 +1464,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       <StatusPill value={interview.status} />
                       {candidate?.status && <StatusPill value={candidate.status} />}
                     </div>
-                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Passport: {candidate?.passportNumber ?? 'Not provided'} {job ? '· ' + job.title : '· General interview'}</p>
+                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Birthdate: {candidate?.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {candidate?.passportNumber ?? 'Not provided'} {job ? '· ' + job.title : '· General interview'}</p>
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
                     <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
                   </div>
@@ -1475,7 +1549,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
                       <td className="px-4 py-3">
                         <p className="font-extrabold text-slate-900">{candidate?.name ?? interview.candidateId}</p>
-                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Passport: {candidate?.passportNumber ?? 'Not provided'}{job ? ' · ' + job.title : ''}</p>
+                        <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Birthdate: {candidate?.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {candidate?.passportNumber ?? 'Not provided'}{job ? ' · ' + job.title : ''}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <p className="font-semibold text-slate-700">{new Date(interview.scheduledAt).toLocaleDateString()}</p>
@@ -1588,7 +1662,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{activeInterview.status === 'COMPLETED' ? 'Completed interview panel' : 'Ongoing interview'}</p>
                       <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? activeInterview.candidateId}</h3>
-                      <p className="truncate text-[10px] text-slate-400">Passport: {activeCandidate?.passportNumber ?? 'Not provided'} · {activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
+                      <p className="truncate text-[10px] text-slate-400">Birthdate: {activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {activeCandidate?.passportNumber ?? 'Not provided'} · {activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button type="button" aria-label="Minimize interview workspace" title="Minimize" className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={() => setEvaluationMinimized(true)}>−</button>
@@ -1615,6 +1689,44 @@ export const InterviewsPage = ({ role }: Props) => {
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p>
                         <p className="mt-1 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3.5 sm:p-4">
+                      <div className="mb-3">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Candidate details</p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">Personal details available to the interviewer before completing the criteria below.</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</p>
+                          <p className="mt-1 text-sm font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
+                        </div>
+                        <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p>
+                          {role === 'INTERVIEWER' ? (
+                            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <input
+                                type="date"
+                                className="field-input min-w-0 flex-1 bg-white"
+                                value={birthdateDraft}
+                                max={new Date().toISOString().slice(0, 10)}
+                                onChange={(event) => setBirthdateDraft(event.target.value)}
+                                disabled={savingBirthdate || evaluationStatus === 'SUBMITTED'}
+                              />
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="shrink-0"
+                                disabled={savingBirthdate || evaluationStatus === 'SUBMITTED' || !birthdateDraft || birthdateDraft === (activeCandidate?.birthdate ? activeCandidate.birthdate.slice(0, 10) : '')}
+                                onClick={() => void saveCandidateBirthdate(activeCandidate)}
+                              >
+                                {savingBirthdate ? 'Saving…' : 'Save'}
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-sm font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="mt-4 space-y-3">
