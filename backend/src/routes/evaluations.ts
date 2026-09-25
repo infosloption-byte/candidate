@@ -179,7 +179,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.interviewId },
         include: {
           panel: { select: { userId: true } },
-          candidate: { select: { id: true, agencyId: true, name: true } },
+          candidate: { select: { id: true, agencyId: true, name: true, birthdate: true } },
         },
       });
       if (!interview) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
@@ -237,7 +237,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.interviewId },
         include: {
           panel: { select: { userId: true } },
-          candidate: { select: { id: true, agencyId: true, name: true, reference: true, profession: true } },
+          candidate: { select: { id: true, agencyId: true, name: true, reference: true, profession: true, birthdate: true } },
           criterionGroup: { select: { id: true, name: true, category: true, description: true } },
           evaluations: {
             include: {
