@@ -190,8 +190,8 @@ export const DatePicker = ({
       const next = roundedMinute === 60
         ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0)
         : new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMinute);
-      onChange(dateTimeKey(today, next.getHours(), next.getMinutes()));
-      setViewDate(today);
+      onChange(dateTimeKey(next, next.getHours(), next.getMinutes()));
+      setViewDate(next);
       return;
     }
     onChange(dateKey(today));
