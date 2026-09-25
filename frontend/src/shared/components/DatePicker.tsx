@@ -251,29 +251,58 @@ export const DatePicker = ({
           style={{ top: panelPosition.top, left: panelPosition.left, width: panelPosition.width }}
         >
           <div className="border-b border-slate-100 px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="grid size-9 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 onClick={() => shiftMonth(-1)}
                 aria-label="Previous month"
               >
                 ‹
               </button>
-              <div className="min-w-0 text-center">
-                <p className="text-sm font-black text-slate-900">{monthYearLabel(viewDate)}</p>
-                <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                  {selectedDate ? formatDisplayValue(value, showTime) : 'Choose a date'}
-                </p>
-              </div>
+
+              <select
+                className="field-input h-9 min-w-0 flex-1 bg-white px-2 text-xs font-extrabold text-slate-800"
+                value={viewDate.getMonth()}
+                onChange={(event) => setViewDate((current) => new Date(current.getFullYear(), Number(event.target.value), 1))}
+                aria-label="Select month"
+              >
+                {Array.from({ length: 12 }, (_, month) => (
+                  <option key={month} value={month}>
+                    {new Intl.DateTimeFormat(undefined, { month: 'long' }).format(new Date(2000, month, 1))}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="field-input h-9 w-24 shrink-0 bg-white px-2 text-xs font-extrabold text-slate-800"
+                value={viewDate.getFullYear()}
+                onChange={(event) => setViewDate((current) => new Date(Number(event.target.value), current.getMonth(), 1))}
+                aria-label="Select year"
+              >
+                {Array.from(
+                  { length: Math.max(1, (maximumDate?.getFullYear() ?? new Date().getFullYear() + 10) - (minimumDate?.getFullYear() ?? (showTime ? new Date().getFullYear() : 1900)) + 1) },
+                  (_, index) => (minimumDate?.getFullYear() ?? (showTime ? new Date().getFullYear() : 1900)) + index,
+                ).map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+
               <button
                 type="button"
-                className="grid size-9 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 onClick={() => shiftMonth(1)}
                 aria-label="Next month"
               >
                 ›
               </button>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="truncate text-[10px] font-semibold text-slate-400">
+                {selectedDate ? formatDisplayValue(value, showTime) : 'Choose a date'}
+              </p>
+              {!showTime && <span className="text-[10px] font-bold text-cyan-700">Select year & day</span>}
             </div>
           </div>
 
