@@ -18,7 +18,7 @@ import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface Props { role: UserRole; }
 
-const emptyForm = { name: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
+const emptyForm = { name: '', birthdate: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
@@ -242,6 +242,7 @@ export const CandidatesPage = ({ role }: Props) => {
     if (!candidate) return;
     setProfileForm({
       name: candidate.name,
+      birthdate: candidate.birthdate ? candidate.birthdate.slice(0, 10) : '',
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
       alternatePhone: candidate.alternatePhone ?? '',
@@ -276,6 +277,7 @@ export const CandidatesPage = ({ role }: Props) => {
         ? {
             ...candidate,
             name: profileForm.name.trim(),
+            birthdate: profileForm.birthdate.trim() || null,
             email: profileForm.email.trim() || null,
             phone: profileForm.phone.trim() || null,
             alternatePhone: profileForm.alternatePhone.trim() || null,
@@ -408,6 +410,7 @@ export const CandidatesPage = ({ role }: Props) => {
       const draft: Candidate = {
         id: 'candidate-' + Date.now(), agencyId: agencyId || 'agency-1', reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
         name: form.name.trim(),
+        birthdate: form.birthdate.trim() || null,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         alternatePhone: form.alternatePhone.trim() || null,
@@ -422,7 +425,7 @@ export const CandidatesPage = ({ role }: Props) => {
         skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
         onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
       };
-      const created = developmentMode ? draft : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', { method: 'POST', body: JSON.stringify({ name: draft.name, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills }) });
+      const created = developmentMode ? draft : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', { method: 'POST', body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills }) });
       if (developmentMode) dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
       setCandidates((current) => [created, ...current]);
       setForm(emptyForm);
@@ -571,6 +574,7 @@ export const CandidatesPage = ({ role }: Props) => {
         ? {
             ...candidate,
             name: profileForm.name.trim(),
+            birthdate: profileForm.birthdate.trim() || null,
             email: profileForm.email.trim() || null,
             phone: profileForm.phone.trim() || null,
             alternatePhone: profileForm.alternatePhone.trim() || null,
@@ -689,6 +693,7 @@ export const CandidatesPage = ({ role }: Props) => {
                       <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></FormField>
+            <FormField label="Birthdate"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
             <FormField label="Country / nationality"><input className="field-input" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} placeholder="Sri Lanka" /></FormField>
             <FormField label="Contact number"><input className="field-input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} autoComplete="tel" /></FormField>
             <FormField label="Alternate contact number"><input className="field-input" value={form.alternatePhone} onChange={(event) => setForm({ ...form, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
@@ -813,6 +818,7 @@ export const CandidatesPage = ({ role }: Props) => {
               <p className="mt-1 text-xs text-slate-400">Keep your contact, passport, location, work status, profession, experience, and skills up to date.</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
+                <FormField label="Birthdate"><input type="date" className="field-input" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm({ ...profileForm, birthdate: event.target.value })} /></FormField>
                 <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
                 <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
                 <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
