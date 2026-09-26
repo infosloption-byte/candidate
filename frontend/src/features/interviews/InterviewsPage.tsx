@@ -285,13 +285,6 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   }, [agencyId, developmentMode, role, state.users, state.interviewCriterionGroups]);
 
-  const isInterviewStartable = (interview: Interview): boolean => {
-    if (interview.status !== 'SCHEDULED') return false;
-    const start = new Date(interview.scheduledAt).getTime();
-    const end = start + interview.durationMins * 60_000;
-    return now >= start - 15 * 60_000 && now <= end;
-  };
-
   const scheduleBucket = (interview: Interview): 'upcoming' | 'current' | 'past' => {
     const start = new Date(interview.scheduledAt).getTime();
     const end = start + interview.durationMins * 60_000;
@@ -1529,6 +1522,11 @@ export const InterviewsPage = ({ role }: Props) => {
                         <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                       </button>
                     )}
+                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
+                      <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
+                      </button>
+                    )}
                     {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
                       <InterviewActionMenu
                         interview={interview}
@@ -1610,6 +1608,11 @@ export const InterviewsPage = ({ role }: Props) => {
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                             <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
+                            </button>
+                          )}
+                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
+                            <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
                             </button>
                           )}
                           {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
