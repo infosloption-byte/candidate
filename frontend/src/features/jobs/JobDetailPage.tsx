@@ -597,17 +597,15 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     if (!query) return true;
     return [
       candidate.name,
+      candidate.firstName,
+      candidate.lastName,
       candidate.reference,
+      candidate.agencyRegisterNo,
+      candidate.birthdate ?? '',
       candidate.passportNumber ?? '',
-      candidate.requestedProfession ?? '',
-      candidate.country ?? '',
-      candidate.email ?? '',
-      candidate.phone ?? '',
-      candidate.currentLocation ?? '',
-      candidate.visaStatus ?? '',
-      ...(candidate.skills ?? []),
-    ].some((value) => value.toLowerCase().includes(query));
-  });
+      candidate.passportExpiry ?? '',
+      candidate.requestedProfession,
+    ].some((value) => value.toLowerCase().includes(query));});
   const candidatePageCount = Math.max(1, Math.ceil(filteredCandidates.length / CANDIDATE_POOL_PAGE_SIZE));
   const safeCandidatePage = Math.min(candidatePoolPage, candidatePageCount);
   const pagedCandidates = filteredCandidates.slice(
