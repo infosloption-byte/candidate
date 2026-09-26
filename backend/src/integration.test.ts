@@ -48,12 +48,12 @@ const cookieFrom = (response: { headers: { 'set-cookie'?: string | string[] } })
   return first.split(';')[0];
 };
 
-const login = async (email: string): Promise<string> => {
+const login = async (email: string, passwordOverride = password): Promise<string> => {
   assert.ok(app);
   const response = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { email, password },
+    payload: { email, password: passwordOverride },
   });
   assert.equal(response.statusCode, 200);
   return cookieFrom(response);
