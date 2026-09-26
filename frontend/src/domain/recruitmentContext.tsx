@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useReducer, type PropsWithChildren } from 'react';
-import { agencies as initialAgencies, candidates as initialCandidates, interviewCriteria as initialInterviewCriteria, interviewCriterionGroups as initialInterviewCriterionGroups, interviews as initialInterviews, jobs as initialJobs, users as initialUsers } from './fixtures';
-import type { Agency, Candidate, Interview, InterviewCriterion, InterviewCriterionGroup, Job, User } from './types';
+import { agencies as initialAgencies, candidates as initialCandidates, interviewCriteria as initialInterviewCriteria, interviewCriterionGroups as initialInterviewCriterionGroups, interviews as initialInterviews, jobCandidates as initialJobCandidates, jobs as initialJobs, users as initialUsers } from './fixtures';
+import type { Agency, Candidate, Interview, InterviewCriterion, InterviewCriterionGroup, Job, JobCandidate, User } from './types';
 
 interface RecruitmentState {
   agencies: Agency[];
@@ -10,11 +10,15 @@ interface RecruitmentState {
   interviewCriteria: InterviewCriterion[];
   interviewCriterionGroups: InterviewCriterionGroup[];
   interviews: Interview[];
+  jobCandidates: JobCandidate[];
 }
 
 type RecruitmentAction =
   | { type: 'CREATE_JOB'; job: Job }
   | { type: 'SET_JOB_STATUS'; jobId: string; status: Job['status'] }
+  | { type: 'ADD_JOB_CANDIDATES'; memberships: JobCandidate[] }
+  | { type: 'SET_JOB_CANDIDATE_STATUS'; jobId: string; candidateId: string; status: JobCandidate['status'] }
+  | { type: 'REMOVE_JOB_CANDIDATE'; jobId: string; candidateId: string }
   | { type: 'CREATE_CANDIDATE'; candidate: Candidate }
   | { type: 'UPDATE_CANDIDATE'; candidate: Candidate }
   | { type: 'SET_ONBOARDING_STATUS'; candidateId: string; status: Candidate['onboardingStatus'] }
@@ -35,6 +39,7 @@ const initialState: RecruitmentState = {
   interviewCriteria: initialInterviewCriteria,
   interviewCriterionGroups: initialInterviewCriterionGroups,
   interviews: initialInterviews,
+  jobCandidates: initialJobCandidates,
 };
 
 const reducer = (state: RecruitmentState, action: RecruitmentAction): RecruitmentState => {
@@ -43,6 +48,12 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
       return { ...state, jobs: [action.job, ...state.jobs] };
     case 'SET_JOB_STATUS':
       return { ...state, jobs: state.jobs.map((job) => job.id === action.jobId ? { ...job, status: action.status } : job) };
+    case 'ADD_JOB_CANDIDATES':
+      return { ...state, jobCandidates: [...state.jobCandidates.filter((item) => !action.memberships.some((next) => next.jobId === item.jobId && next.candidateId === item.candidateId)), ...action.memberships] };
+    case 'SET_JOB_CANDIDATE_STATUS':
+      return { ...state, jobCandidates: state.jobCandidates.map((item) => item.jobId === action.jobId && item.candidateId === action.candidateId ? { ...item, status: action.status, statusUpdatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item) };
+    case 'REMOVE_JOB_CANDIDATE':
+      return { ...state, jobCandidates: state.jobCandidates.filter((item) => !(item.jobId === action.jobId && item.candidateId === action.candidateId)) };
     case 'CREATE_CANDIDATE':
       return { ...state, candidates: [action.candidate, ...state.candidates] };
     case 'UPDATE_CANDIDATE':
@@ -54,11 +65,23 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
     case 'SCHEDULE_INTERVIEW':
       return {
         ...state,
+        jobCandidates: action.interview.jobId
+          ? state.jobCandidates.map((item) => item.jobId === action.interview.jobId && item.candidateId === action.interview.candidateId ? { ...item, status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item)
+          : state.jobCandidates,
         interviews: [action.interview, ...state.interviews],
         candidates: state.candidates.map((candidate) => candidate.id === action.interview.candidateId ? { ...candidate, status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date().toISOString() } : candidate),
       };
-    case 'SET_INTERVIEW_STATUS':
-      return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interviewId ? { ...interview, status: action.status } : interview) };
+    case 'SET_INTERVIEW_STATUS': {
+      const interview = state.interviews.find((item) => item.id === action.interviewId);
+      const jobCandidateStatus = action.status === 'SCHEDULED' ? 'INTERVIEW_SCHEDULED' : action.status === 'CANCELLED' ? 'READY_FOR_INTERVIEW' : action.status === 'NO_SHOW' ? 'ON_HOLD' : action.status === 'COMPLETED' ? 'INTERVIEW_COMPLETED' : null;
+      return {
+        ...state,
+        jobCandidates: interview?.jobId && jobCandidateStatus
+          ? state.jobCandidates.map((item) => item.jobId === interview.jobId && item.candidateId === interview.candidateId ? { ...item, status: jobCandidateStatus, statusUpdatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item)
+          : state.jobCandidates,
+        interviews: state.interviews.map((item) => item.id === action.interviewId ? { ...item, status: action.status } : item),
+      };
+    }
     case 'UPDATE_INTERVIEW':
       return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interview.id ? action.interview : interview) };
     case 'CREATE_CRITERION':
