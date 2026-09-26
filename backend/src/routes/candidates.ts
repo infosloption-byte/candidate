@@ -46,9 +46,6 @@ const canManageCandidate = (role: string, agencyId: string | null, candidateAgen
 const canSetFinalCandidateStatus = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
   role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId) || role === 'INTERVIEWER';
 
-const canManageJobPlaceholder = (role: string, agencyId: string | null, jobAgencyId: string): boolean =>
-  role === 'ADMIN' || (role === 'AGENCY' && agencyId === jobAgencyId);
-
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
   app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => done(null, body));
 
@@ -517,12 +514,9 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       const canSetFinalStatus = canSetFinalCandidateStatus(user.role, user.agencyId, existing.agencyId);
       const requestedFinalStatus = request.body.status !== undefined && ['PASSED', 'REJECTED', 'HIRED'].includes(request.body.status);
       const requestedJob = request.body.jobId
-        ? await getPrisma().job.findUnique({ where: { id: request.body.jobId }, select: { id: true, agencyId: true, title: true, openings: true, status: true } })
+        ? await getPrisma().job.findUnique({ where: { id: request.body.jobId }, select: { id: true, title: true, openings: true, status: true } })
         : null;
       if (request.body.jobId && !requestedJob) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (requestedJob && !canManageJobPlaceholder(user.role, user.agencyId, requestedJob.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
-      }
       if (requestedJob && requestedJob.status === 'CLOSED' && request.body.status !== undefined) {
         return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'A closed job cannot have its candidate workflow changed.' } });
       }
