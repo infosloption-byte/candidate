@@ -22,7 +22,26 @@ interface Props {
   onJobChange?: (jobId: string | null) => void;
 }
 
-const emptyForm = { name: '', birthdate: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
+const emptyForm = {
+  agencyRegisterNo: '',
+  firstName: '',
+  lastName: '',
+  birthdate: '',
+  passportNumber: '',
+  passportExpiry: '',
+  requestedProfession: '',
+  name: '',
+  email: '',
+  phone: '',
+  alternatePhone: '',
+  country: '',
+  currentLocation: '',
+  availability: '',
+  visaStatus: '',
+  profession: '',
+  experienceYears: '0',
+  skills: '',
+};
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
@@ -427,34 +446,48 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   }, [agencyId, availabilityFilter, countryFilter, locationFilter, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter, visaStatusFilter]);
 
   const createCandidate = async () => {
-    if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
+    if (!form.agencyRegisterNo.trim() || !form.firstName.trim() || !form.lastName.trim()) { setError('Agency register number, first name, and last name are required.'); return; }
+    if (!form.birthdate.trim() || !form.passportNumber.trim() || !form.passportExpiry.trim() || !form.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
+      return;
+    }
     if (!developmentMode && !agencyId) { setError('Select an agency workspace.'); return; }
     setSaving(true);
     setError('');
     try {
+      const displayName = [form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(' ');
       const draft: Candidate = {
-        id: 'candidate-' + Date.now(), agencyId: agencyId || 'agency-1', reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
-        name: form.name.trim(),
-        birthdate: form.birthdate.trim() || null,
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        alternatePhone: form.alternatePhone.trim() || null,
-        country: form.country.trim() || null,
-        passportNumber: form.passportNumber.trim() || null,
-        passportExpiry: form.passportExpiry.trim() || null,
-        currentLocation: form.currentLocation.trim() || null,
-        availability: form.availability.trim() || null,
-        visaStatus: form.visaStatus.trim() || null,
-        profession: form.profession.trim() || null,
-        experienceYears: Math.max(0, Number(form.experienceYears) || 0),
-        skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
-        onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
+        id: 'candidate-' + Date.now(),
+        agencyId: agencyId || 'agency-1',
+        reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
+        agencyRegisterNo: form.agencyRegisterNo.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        name: displayName,
+        birthdate: form.birthdate.trim(),
+        passportNumber: form.passportNumber.trim(),
+        passportExpiry: form.passportExpiry.trim(),
+        requestedProfession: form.requestedProfession.trim(),
+        skills: [],
+        onboardingStatus: 'NOT_STARTED',
+        source: 'AGENCY_ADDED',
+        status: 'POOL',
+        statusUpdatedAt: new Date().toISOString(),
       };
       const created = developmentMode
         ? draft
         : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', {
             method: 'POST',
-            body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills, jobId: jobId || null }),
+            body: JSON.stringify({
+              agencyRegisterNo: draft.agencyRegisterNo,
+              firstName: draft.firstName,
+              lastName: draft.lastName,
+              birthdate: draft.birthdate,
+              passportNumber: draft.passportNumber,
+              passportExpiry: draft.passportExpiry,
+              requestedProfession: draft.requestedProfession,
+              jobId: jobId || null,
+            }),
           });
       if (developmentMode) {
         dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
@@ -476,7 +509,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   };
 
   const downloadCsvTemplate = () => {
-    const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,1990-01-15,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
+    const csv = 'agencyRegisterNo,firstName,lastName,birthdate,passportNumber,passportExpiry,requestedProfession\nAGR-1001,Kamal,Perera,1990-01-15,N1234567,2031-12-31,Mason\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -510,29 +543,35 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
           const index = indexOf(...names);
           return index >= 0 ? values[index]?.trim() ?? '' : '';
         };
-        if (indexOf('name') < 0) throw new Error('CSV must contain a name column.');
+        const requiredHeaders = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const missingHeader = requiredHeaders.find((name) => indexOf(name) < 0);
+        if (missingHeader) throw new Error('CSV is missing the required column: ' + missingHeader);
         const created: Candidate[] = rows.slice(1).map((values, index) => {
-          const experienceRaw = read(values, 'experienceyears', 'experience');
-          const experienceYears = experienceRaw ? Number(experienceRaw) : null;
-          const birthdate = read(values, 'birthdate', 'birth_date', 'dateofbirth', 'date_of_birth', 'dob');
+          const firstName = read(values, 'firstname');
+          const lastName = read(values, 'lastname');
+          const name = [firstName, lastName].filter(Boolean).join(' ');
           return {
             id: 'candidate-import-' + Date.now() + '-' + index,
             agencyId: targetAgencyId,
             reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
-            name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
-            birthdate: birthdate || null,
-            email: read(values, 'email') || null,
-            phone: read(values, 'phone', 'contactnumber', 'contact_number') || null,
-            alternatePhone: read(values, 'alternatephone', 'alternate_phone') || null,
-            country: read(values, 'country', 'nationality') || null,
-            passportNumber: read(values, 'passportnumber', 'passport_number') || null,
-            passportExpiry: read(values, 'passportexpiry', 'passport_expiry') || null,
-            currentLocation: read(values, 'currentlocation', 'current_location', 'location') || null,
-            availability: read(values, 'availability') || null,
-            visaStatus: read(values, 'visastatus', 'visa_status') || null,
-            profession: read(values, 'profession') || null,
-            experienceYears: Number.isFinite(experienceYears) ? experienceYears : null,
-            skills: read(values, 'skills').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
+            agencyRegisterNo: read(values, 'agencyregisterno'),
+            firstName,
+            lastName,
+            name: name || 'Imported Candidate ' + (index + 1),
+            birthdate: read(values, 'birthdate') || null,
+            passportNumber: read(values, 'passportnumber') || null,
+            passportExpiry: read(values, 'passportexpiry') || null,
+            requestedProfession: read(values, 'requestedprofession'),
+            skills: [],
+            profession: read(values, 'requestedprofession') || null,
+            experienceYears: null,
+            email: null,
+            phone: null,
+            alternatePhone: null,
+            country: null,
+            currentLocation: null,
+            availability: null,
+            visaStatus: null,
             onboardingStatus: 'NOT_STARTED',
             source: 'BULK_IMPORTED',
             status: 'POOL',
