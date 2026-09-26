@@ -97,8 +97,6 @@ const AuthenticatedApp = ({
           role={role}
           jobId={activeJobId}
           onBack={() => navigate('jobs')}
-          onCandidates={(jobId) => navigate('candidates', jobId)}
-          onInterviews={(jobId) => navigate('interviews', jobId)}
         />;
       case 'candidates':
         return <CandidatesPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
