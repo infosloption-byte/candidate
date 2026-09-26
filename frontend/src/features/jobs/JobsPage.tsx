@@ -694,7 +694,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       )}
 
       {!loading && visibleJobs.length > 0 && listView === 'cards' && (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {paginatedJobs.map((job) => {
             const filledCount = job.filledCount ?? 0;
             const candidateCount = job.candidateCount ?? 0;
