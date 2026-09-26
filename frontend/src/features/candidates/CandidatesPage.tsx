@@ -120,7 +120,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [listView, setListView] = useState<'cards' | 'table'>('table');
   const [candidatePage, setCandidatePage] = useState(1);
-  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
@@ -396,7 +396,72 @@ const saveManagedProfile = async () => {
     }
   };
 
-const updateStatus = async () => {
+const filterOptions = useMemo(() => ({
+    professions: [...new Set(candidates.map((item) => item.requestedProfession).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+  }), [candidates]);
+
+  const passportMatches = (candidate: Candidate): boolean => {
+    if (!passportFilter) return true;
+    if (!candidate.passportExpiry) return passportFilter === 'missing';
+    const expiry = new Date(candidate.passportExpiry).getTime();
+    const now = Date.now();
+    if (passportFilter === 'expired') return expiry < now;
+    if (passportFilter === '30d') return expiry >= now && expiry <= now + 30 * 86_400_000;
+    if (passportFilter === '90d') return expiry >= now && expiry <= now + 90 * 86_400_000;
+    if (passportFilter === 'valid') return expiry > now + 90 * 86_400_000;
+    return true;
+  };
+
+  const filteredCandidates = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return candidates.filter((item) => {
+      const matchesStatus = !statusFilter || item.status === statusFilter;
+      const matchesProfession = !professionFilter || item.requestedProfession === professionFilter;
+      const matchesPassport = passportMatches(item);
+      const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
+      const matchesQuery = !query || [
+        item.name,
+        item.firstName,
+        item.lastName,
+        item.reference,
+        item.agencyRegisterNo,
+        item.birthdate ?? '',
+        item.passportNumber ?? '',
+        item.passportExpiry ?? '',
+        item.requestedProfession,
+        item.status,
+        item.onboardingStatus,
+      ].some((value) => value.toLowerCase().includes(query));
+      return matchesStatus && matchesProfession && matchesPassport && matchesAgency && matchesQuery;
+    });
+  }, [agencyId, candidates, passportFilter, professionFilter, role, search, statusFilter]);
+
+  const sortedCandidates = useMemo(() => {
+    const sorted = [...filteredCandidates];
+    const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+    sorted.sort((left, right) => {
+      let result = 0;
+      if (sortBy === 'name') result = compareText(left.name, right.name);
+      if (sortBy === 'profession') result = compareText(left.requestedProfession, right.requestedProfession);
+      if (sortBy === 'passport') result = compareText(left.passportNumber ?? '', right.passportNumber ?? '');
+      if (sortBy === 'status') result = compareText(left.status, right.status);
+      return sortDirection === 'asc' ? result : -result;
+    });
+    return sorted;
+  }, [filteredCandidates, sortBy, sortDirection]);
+
+  const candidateTotalPages = Math.max(1, Math.ceil(sortedCandidates.length / CANDIDATES_PAGE_SIZE));
+  const activeCandidatePage = Math.min(candidatePage, candidateTotalPages);
+  const paginatedCandidates = useMemo(
+    () => sortedCandidates.slice((activeCandidatePage - 1) * CANDIDATES_PAGE_SIZE, activeCandidatePage * CANDIDATES_PAGE_SIZE),
+    [activeCandidatePage, sortedCandidates],
+  );
+
+  useEffect(() => {
+    setCandidatePage(1);
+  }, [agencyId, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter]);
+
+  const updateStatus = async () => {
     if (!candidate || !statusDraft || statusDraft === candidate.status) return;
     setSaving(true);
     setError('');
@@ -425,10 +490,11 @@ const updateStatus = async () => {
   const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
-    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p><p className="mt-1 text-[10px] text-slate-400">Birthdate: {item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p></div> },
-    { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
-    { key: 'passport', header: 'Passport', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.passportNumber ?? 'Not provided'}</span> },
-    { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
+    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference}</p></div> },
+    { key: 'agencyRegisterNo', header: 'Agency Register No', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.agencyRegisterNo}</span> },
+    { key: 'birthdate', header: 'Birth date', render: (item: Candidate) => <span className="text-xs text-slate-600">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</span> },
+    { key: 'passport', header: 'Passport', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{displayPassport(item.passportNumber)}</p><p className="mt-1 text-[10px] text-slate-400">Exp. {item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div> },
+    { key: 'requestedProfession', header: 'Requested profession', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
     { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
@@ -596,30 +662,22 @@ const updateStatus = async () => {
               <div className="grid size-16 place-items-center rounded-2xl bg-cyan-50 text-lg font-black text-cyan-700">{candidate.name.slice(0, 2).toUpperCase()}</div>
               <h2 className="mt-4 text-xl font-black text-slate-950">{candidate.name}</h2>
               <p className="mt-1 text-xs font-semibold text-slate-500">Birthdate: {candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
-              <p className="mt-1 text-sm text-slate-500">{candidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 text-sm text-slate-500">{candidate.requestedProfession ?? 'Profession not set'}</p>
               <div className="mt-5 flex flex-wrap gap-2"><StatusPill value={candidate.status} /><StatusPill value={candidate.onboardingStatus} /></div>
               <p className="mt-4 text-xs text-slate-500">Reference <span className="font-bold text-slate-800">{candidate.reference}</span></p>
             </Card>
             <Card>
               <h2 className="text-sm font-black text-slate-950">Profile details</h2>
-              <p className="mt-1 text-xs text-slate-400">Keep your contact, passport, location, work status, profession, experience, and skills up to date.</p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
-                <FormField label="Birthdate"><input type="date" className="field-input" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm({ ...profileForm, birthdate: event.target.value })} /></FormField>
-                <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
-                <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
-                <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
-                <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} autoComplete="email" /></FormField>
+              <p className="mt-1 text-xs text-slate-400">Maintain the candidate intake details used for recruitment.</p>
+                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <FormField label="Agency Register No"><input className="field-input" value={profileForm.agencyRegisterNo} onChange={(event) => setProfileForm({ ...profileForm, agencyRegisterNo: event.target.value })} /></FormField>
+                <FormField label="First name"><input className="field-input" value={profileForm.firstName} onChange={(event) => setProfileForm({ ...profileForm, firstName: event.target.value })} /></FormField>
+                <FormField label="Last name"><input className="field-input" value={profileForm.lastName} onChange={(event) => setProfileForm({ ...profileForm, lastName: event.target.value })} /></FormField>
+                <FormField label="Birth date"><input type="date" className="field-input" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm({ ...profileForm, birthdate: event.target.value })} /></FormField>
                 <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
                 <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
-                <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
-                <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} placeholder="Immediately / Within 2 weeks" /></FormField>
-                <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} placeholder="Available / Required / In process" /></FormField>
-                <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} placeholder="Mason, Welder…" /></FormField>
-                <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                <div className="sm:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
-              </div>
-              <div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
+                <div className="sm:col-span-2"><FormField label="Requested profession"><input className="field-input" value={profileForm.requestedProfession} onChange={(event) => setProfileForm({ ...profileForm, requestedProfession: event.target.value })} /></FormField></div>
+              </div><div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
               <div className="mt-6 border-t border-slate-100 pt-6"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
             </Card>
           </div>
@@ -634,7 +692,7 @@ const updateStatus = async () => {
                   className="field-input mt-1 w-full"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Name, reference, passport, contact, location or skill…"
+                  placeholder="Name, register no, passport or profession…"
                 />
               </div>
 
@@ -699,92 +757,25 @@ const updateStatus = async () => {
 
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <label className="field-label">Country</label>
-                    <SelectMenu
-                      value={countryFilter}
-                      onChange={setCountryFilter}
-                      options={[
-                        { value: '', label: 'All countries' },
-                        ...filterOptions.countries.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by country"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Profession</label>
-                    <SelectMenu
-                      value={professionFilter}
-                      onChange={setProfessionFilter}
-                      options={[
-                        { value: '', label: 'All professions' },
-                        ...filterOptions.professions.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by profession"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Availability</label>
-                    <SelectMenu
-                      value={availabilityFilter}
-                      onChange={setAvailabilityFilter}
-                      options={[
-                        { value: '', label: 'Any availability' },
-                        ...filterOptions.availabilities.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by availability"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Visa / work status</label>
-                    <SelectMenu
-                      value={visaStatusFilter}
-                      onChange={setVisaStatusFilter}
-                      options={[
-                        { value: '', label: 'Any visa status' },
-                        ...filterOptions.visaStatuses.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by visa or work status"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Location</label>
-                    <SelectMenu
-                      value={locationFilter}
-                      onChange={setLocationFilter}
-                      options={[
-                        { value: '', label: 'All locations' },
-                        ...filterOptions.locations.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by location"
-                      className="mt-1"
-                    />
+                    <label className="field-label">Requested profession</label>
+                    <SelectMenu value={professionFilter} onChange={setProfessionFilter} options={[{ value: '', label: 'All professions' }, ...filterOptions.professions.map((value) => ({ value, label: value }))]} ariaLabel="Filter by requested profession" className="mt-1" />
                   </div>
                   <div>
                     <label className="field-label">Passport expiry</label>
-                    <SelectMenu
-                      value={passportFilter}
-                      onChange={setPassportFilter}
-                      options={[
-                        { value: '', label: 'Any passport status' },
-                        { value: 'expired', label: 'Expired' },
-                        { value: '30d', label: 'Expires in 30 days' },
-                        { value: '90d', label: 'Expires in 90 days' },
-                        { value: 'valid', label: 'Valid beyond 90 days' },
-                        { value: 'missing', label: 'Missing expiry' },
-                      ]}
-                      ariaLabel="Filter by passport expiry"
-                      className="mt-1"
-                    />
+                    <SelectMenu value={passportFilter} onChange={setPassportFilter} options={[
+                      { value: '', label: 'Any passport status' },
+                      { value: 'expired', label: 'Expired' },
+                      { value: '30d', label: 'Expires in 30 days' },
+                      { value: '90d', label: 'Expires in 90 days' },
+                      { value: 'valid', label: 'Valid beyond 90 days' },
+                      { value: 'missing', label: 'Missing expiry' },
+                    ]} ariaLabel="Filter by passport expiry" className="mt-1" />
                   </div>
                 </div>
               </div>
-            )}
+            )}}
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
@@ -837,7 +828,7 @@ const updateStatus = async () => {
                   </button>
                 </div>
 
-                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                {(search || statusFilter || professionFilter || passportFilter) && (
                   <button
                     type="button"
                     title="Clear filters"
@@ -913,7 +904,7 @@ const updateStatus = async () => {
                           </div>
                           <StatusPill value={item.status} />
                         </div>
-                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.profession ?? 'Profession not set'}</p>
+                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.requestedProfession ?? 'Profession not set'}</p>
                       </div>
                     </div>
 
@@ -1022,7 +1013,7 @@ const updateStatus = async () => {
                         <StatusPill value={candidate.onboardingStatus} />
                       </div>
                       <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
-                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
+                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
