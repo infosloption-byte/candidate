@@ -744,8 +744,11 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                         </p>
                       </div>
                     </div>
-                    <div className="shrink-0">
-                      <StatusPill value={job.status} />
+                    <div className="shrink-0 rounded-lg bg-slate-50 px-2.5 py-1.5 text-right">
+                      <p className="text-[8px] font-extrabold uppercase tracking-wider text-slate-400">Job code</p>
+                      <p className="mt-0.5 font-mono text-[10px] font-black tracking-wide text-slate-700">
+                        JOB-{job.id.slice(0, 8).toUpperCase()}
+                      </p>
                     </div>
                   </div>
 
