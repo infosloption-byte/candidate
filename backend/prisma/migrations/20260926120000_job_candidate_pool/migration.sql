@@ -35,7 +35,7 @@ GROUP BY i.`jobId`, i.`candidateId`;
 -- Set the membership status from the most recent interview/candidate state.
 UPDATE `JobCandidate` jc
 INNER JOIN (
-  SELECT latest.`jobId`, latest.`candidateId`, latest.`interviewStatus`, c.`status` AS `candidateStatus`
+  SELECT latest.`jobId`, latest.`candidateId`, latest.`status` AS `interviewStatus`, c.`status` AS `candidateStatus`
   FROM `Interview` latest
   INNER JOIN `Candidate` c ON c.`id` = latest.`candidateId`
   INNER JOIN (
