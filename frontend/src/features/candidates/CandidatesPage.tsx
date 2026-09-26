@@ -22,7 +22,26 @@ interface Props {
   onJobChange?: (jobId: string | null) => void;
 }
 
-const emptyForm = { name: '', birthdate: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
+const emptyForm = {
+  agencyRegisterNo: '',
+  firstName: '',
+  lastName: '',
+  birthdate: '',
+  passportNumber: '',
+  passportExpiry: '',
+  requestedProfession: '',
+  name: '',
+  email: '',
+  phone: '',
+  alternatePhone: '',
+  country: '',
+  currentLocation: '',
+  availability: '',
+  visaStatus: '',
+  profession: '',
+  experienceYears: '0',
+  skills: '',
+};
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
@@ -427,34 +446,50 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   }, [agencyId, availabilityFilter, countryFilter, locationFilter, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter, visaStatusFilter]);
 
   const createCandidate = async () => {
-    if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
+    if (!form.agencyRegisterNo.trim() || !form.firstName.trim() || !form.lastName.trim()) {
+      setError('Agency register number, first name, and last name are required.');
+      return;
+    }
+    if (!form.birthdate.trim() || !form.passportNumber.trim() || !form.passportExpiry.trim() || !form.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
+      return;
+    }
     if (!developmentMode && !agencyId) { setError('Select an agency workspace.'); return; }
     setSaving(true);
     setError('');
     try {
       const draft: Candidate = {
-        id: 'candidate-' + Date.now(), agencyId: agencyId || 'agency-1', reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
-        name: form.name.trim(),
-        birthdate: form.birthdate.trim() || null,
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        alternatePhone: form.alternatePhone.trim() || null,
-        country: form.country.trim() || null,
-        passportNumber: form.passportNumber.trim() || null,
-        passportExpiry: form.passportExpiry.trim() || null,
-        currentLocation: form.currentLocation.trim() || null,
-        availability: form.availability.trim() || null,
-        visaStatus: form.visaStatus.trim() || null,
-        profession: form.profession.trim() || null,
-        experienceYears: Math.max(0, Number(form.experienceYears) || 0),
-        skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
-        onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
+        id: 'candidate-' + Date.now(),
+        agencyId: agencyId || 'agency-1',
+        reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
+        agencyRegisterNo: form.agencyRegisterNo.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        name: [form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(' '),
+        birthdate: form.birthdate.trim(),
+        passportNumber: form.passportNumber.trim(),
+        passportExpiry: form.passportExpiry.trim(),
+        requestedProfession: form.requestedProfession.trim(),
+        skills: [],
+        onboardingStatus: 'NOT_STARTED',
+        source: 'AGENCY_ADDED',
+        status: 'POOL',
+        statusUpdatedAt: new Date().toISOString(),
       };
       const created = developmentMode
         ? draft
         : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', {
             method: 'POST',
-            body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills, jobId: jobId || null }),
+            body: JSON.stringify({
+              agencyRegisterNo: draft.agencyRegisterNo,
+              firstName: draft.firstName,
+              lastName: draft.lastName,
+              birthdate: draft.birthdate,
+              passportNumber: draft.passportNumber,
+              passportExpiry: draft.passportExpiry,
+              requestedProfession: draft.requestedProfession,
+              jobId: jobId || null,
+            }),
           });
       if (developmentMode) {
         dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
@@ -471,11 +506,14 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
       setShowForm(false);
       setSuccessTitle('Candidate added');
       setSuccess('"' + created.name + '" is now in the candidate pool.');
-    } catch (requestError: unknown) { setError(requestError instanceof Error ? requestError.message : 'Unable to create the candidate.'); }
-    finally { setSaving(false); }
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to create the candidate.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const downloadCsvTemplate = () => {
+const downloadCsvTemplate = () => {
     const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,1990-01-15,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
