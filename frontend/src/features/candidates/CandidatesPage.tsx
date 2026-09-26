@@ -968,92 +968,25 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <label className="field-label">Country</label>
-                    <SelectMenu
-                      value={countryFilter}
-                      onChange={setCountryFilter}
-                      options={[
-                        { value: '', label: 'All countries' },
-                        ...filterOptions.countries.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by country"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Profession</label>
-                    <SelectMenu
-                      value={professionFilter}
-                      onChange={setProfessionFilter}
-                      options={[
-                        { value: '', label: 'All professions' },
-                        ...filterOptions.professions.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by profession"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Availability</label>
-                    <SelectMenu
-                      value={availabilityFilter}
-                      onChange={setAvailabilityFilter}
-                      options={[
-                        { value: '', label: 'Any availability' },
-                        ...filterOptions.availabilities.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by availability"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Visa / work status</label>
-                    <SelectMenu
-                      value={visaStatusFilter}
-                      onChange={setVisaStatusFilter}
-                      options={[
-                        { value: '', label: 'Any visa status' },
-                        ...filterOptions.visaStatuses.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by visa or work status"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Location</label>
-                    <SelectMenu
-                      value={locationFilter}
-                      onChange={setLocationFilter}
-                      options={[
-                        { value: '', label: 'All locations' },
-                        ...filterOptions.locations.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by location"
-                      className="mt-1"
-                    />
+                    <label className="field-label">Requested profession</label>
+                    <SelectMenu value={professionFilter} onChange={setProfessionFilter} options={[{ value: '', label: 'All professions' }, ...filterOptions.professions.map((value) => ({ value, label: value }))]} ariaLabel="Filter by requested profession" className="mt-1" />
                   </div>
                   <div>
                     <label className="field-label">Passport expiry</label>
-                    <SelectMenu
-                      value={passportFilter}
-                      onChange={setPassportFilter}
-                      options={[
-                        { value: '', label: 'Any passport status' },
-                        { value: 'expired', label: 'Expired' },
-                        { value: '30d', label: 'Expires in 30 days' },
-                        { value: '90d', label: 'Expires in 90 days' },
-                        { value: 'valid', label: 'Valid beyond 90 days' },
-                        { value: 'missing', label: 'Missing expiry' },
-                      ]}
-                      ariaLabel="Filter by passport expiry"
-                      className="mt-1"
-                    />
+                    <SelectMenu value={passportFilter} onChange={setPassportFilter} options={[
+                      { value: '', label: 'Any passport status' },
+                      { value: 'expired', label: 'Expired' },
+                      { value: '30d', label: 'Expires in 30 days' },
+                      { value: '90d', label: 'Expires in 90 days' },
+                      { value: 'valid', label: 'Valid beyond 90 days' },
+                      { value: 'missing', label: 'Missing expiry' },
+                    ]} ariaLabel="Filter by passport expiry" className="mt-1" />
                   </div>
                 </div>
               </div>
-            )}
+            )})}
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
