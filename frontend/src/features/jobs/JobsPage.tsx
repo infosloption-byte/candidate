@@ -508,7 +508,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                 disabled={saving || positionRows.length === 0}
                 onClick={() => void saveJob()}
               >
-                {saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create draft'}
+                {saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create job'}
               </Button>
             </div>
           </div>
