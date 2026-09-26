@@ -186,6 +186,21 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       if (!isPanelInterviewer(interview, user.id)) {
         return reply.code(403).send({ success: false, error: { code: 'PANEL_ACCESS_DENIED', message: 'You are not assigned to this interview panel.' } });
       }
+      if (interview.status === 'IN_PROGRESS') {
+        await ensureInterviewAssignments(interview.id);
+
+        const current = await getPrisma().interview.findUnique({
+          where: { id: interview.id },
+          include: {
+            candidate: { select: { id: true, name: true, reference: true, profession: true, birthdate: true } },
+            criterionGroup: { select: { id: true, name: true, category: true, description: true } },
+            criterionAssignments: { select: assignmentSelect, orderBy: { sortOrder: 'asc' } },
+          },
+        });
+
+        return reply.send({ success: true, data: current });
+      }
+
       if (interview.status !== 'SCHEDULED') {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_STARTABLE', message: 'Only scheduled interviews can be started.' } });
       }
