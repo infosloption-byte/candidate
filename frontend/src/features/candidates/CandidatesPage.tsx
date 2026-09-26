@@ -771,7 +771,7 @@ const filterOptions = useMemo(() => ({
                   </div>
                 </div>
               </div>
-            )}}
+            )}
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
