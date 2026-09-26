@@ -13,6 +13,7 @@ interface SelectMenuProps {
   placeholder?: string;
   ariaLabel?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export const SelectMenu = ({
@@ -22,10 +23,15 @@ export const SelectMenu = ({
   placeholder = 'Select…',
   ariaLabel,
   className = '',
+  disabled = false,
 }: SelectMenuProps) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,11 +55,16 @@ export const SelectMenu = ({
     <div ref={rootRef} className={`relative min-w-0 ${className}`}>
       <button
         type="button"
-        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+        disabled={disabled}
+        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        aria-disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((current) => !current);
+        }}
       >
         <span className={`min-w-0 flex-1 truncate ${selected ? 'text-slate-800' : 'text-slate-400'}`}>
           {selected?.label ?? placeholder}
@@ -72,7 +83,7 @@ export const SelectMenu = ({
         </svg>
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div
           role="listbox"
           aria-label={ariaLabel}
