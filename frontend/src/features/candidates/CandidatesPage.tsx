@@ -297,7 +297,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
       profession: candidate.requestedProfession,
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
-    });;
+    });
   }, [candidate?.birthdate, candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.alternatePhone, candidate?.country, candidate?.passportNumber, candidate?.passportExpiry, candidate?.currentLocation, candidate?.availability, candidate?.visaStatus, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
 
   const saveOwnProfile = async () => {
