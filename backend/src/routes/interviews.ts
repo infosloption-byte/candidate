@@ -256,8 +256,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
                 ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
                 OR: [
                   { candidate: { agencyId: user.agencyId ?? '__missing__' } },
-                  { job: { agencyId: user.agencyId ?? '__missing__' } },
-                ],
+                                  ],
               },
       include: {
         ...interviewInclude,
@@ -654,7 +653,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, name: true, status: true } },
-          job: { select: { id: true, agencyId: true, title: true, status: true } },
+          job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
       });
@@ -742,7 +741,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, name: true, status: true } },
-          job: { select: { id: true, agencyId: true, title: true, status: true } },
+          job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
       });
