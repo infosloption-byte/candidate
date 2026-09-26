@@ -267,7 +267,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{
     Params: { id: string };
-    Body: { name?: string; active?: boolean };
+    Body: { name?: string; email?: string; password?: string; active?: boolean };
   }>(
     '/system-users/:id',
     { preHandler: [requireAuth, requireRole('ADMIN')] },
@@ -280,30 +280,52 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'CANNOT_DEACTIVATE_SELF', message: 'You cannot deactivate your own account.' } });
       }
 
-      const data: { name?: string; active?: boolean } = {};
+      const data: { name?: string; email?: string; passwordHash?: string; active?: boolean } = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.email !== undefined) data.email = request.body.email.trim().toLowerCase();
       if (request.body.active !== undefined) data.active = request.body.active;
+      if (request.body.password !== undefined) {
+        const password = request.body.password;
+        if (password.length < 8 || password.length > 128) {
+          return reply.code(400).send({
+            success: false,
+            error: { code: 'INVALID_SYSTEM_USER_PASSWORD', message: 'Password must be 8-128 characters.' },
+          });
+        }
+        data.passwordHash = await hashPassword(password);
+      }
+
       if (data.name === '') return reply.code(400).send({ success: false, error: { code: 'INVALID_SYSTEM_USER', message: 'User name cannot be empty.' } });
       if (data.name !== undefined && (data.name.length < 2 || data.name.length > 160)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_SYSTEM_USER', message: 'User name must be 2-160 characters.' } });
       }
+      if (data.email !== undefined && (data.email.length > 191 || !emailPattern.test(data.email))) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_SYSTEM_USER', message: 'Email must be valid and 191 characters or fewer.' } });
+      }
 
-      const user = await getPrisma().user.update({
-        where: { id: existing.id },
-        data,
-        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
-      });
+      try {
+        const user = await getPrisma().user.update({
+          where: { id: existing.id },
+          data,
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        });
 
-      await recordAuditEvent({
-        actorId: request.authUser!.id,
-        agencyId: user.agencyId,
-        action: 'SYSTEM_USER_UPDATED',
-        entityType: 'User',
-        entityId: user.id,
-        summary: 'Updated system user "' + user.name + '".',
-      });
+        await recordAuditEvent({
+          actorId: request.authUser!.id,
+          agencyId: user.agencyId,
+          action: 'SYSTEM_USER_UPDATED',
+          entityType: 'User',
+          entityId: user.id,
+          summary: 'Updated system user "' + user.name + '".',
+        });
 
-      return reply.send({ success: true, data: user });
+        return reply.send({ success: true, data: user });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') {
+          return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        }
+        throw error;
+      }
     },
   );
 
