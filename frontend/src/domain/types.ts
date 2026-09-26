@@ -68,7 +68,7 @@ export interface Candidate {
   visaStatus?: string | null;
   profession?: string | null;
   experienceYears?: number | null;
-  skills?: string[];
+  skills: string[];
 }
 
 export interface JobPosition {
