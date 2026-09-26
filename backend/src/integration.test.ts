@@ -269,6 +269,71 @@ dbTest('admin can manage unified system users and interviewer types', async () =
   assert.ok(systemUsersBody.data.some((item) => item.id === adminId && item.role === 'ADMIN'));
   assert.ok(systemUsersBody.data.some((item) => item.id === agencyAUserId && item.role === 'AGENCY' && item.agencyId === agencyAId));
 
+  const createdGlobalInterviewer = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviewers',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable Global Interviewer',
+      email: 'qa-editable-global-interviewer-' + suffix + '@buildhire.local',
+      password,
+    },
+  });
+  assert.equal(createdGlobalInterviewer.statusCode, 201);
+  const createdGlobalBody = json<{ data: { id: string; email: string } }>(createdGlobalInterviewer);
+
+  const updatedGlobalInterviewer = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/interviewers/' + createdGlobalBody.data.id,
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable Global Interviewer Updated',
+      email: 'qa-editable-global-interviewer-updated-' + suffix + '@buildhire.local',
+      password: 'UpdatedGlobalPassword456!',
+    },
+  });
+  assert.equal(updatedGlobalInterviewer.statusCode, 200);
+  const updatedGlobalBody = json<{ data: { id: string; name: string; email: string } }>(updatedGlobalInterviewer);
+  assert.equal(updatedGlobalBody.data.name, 'QA Editable Global Interviewer Updated');
+  assert.equal(updatedGlobalBody.data.email, 'qa-editable-global-interviewer-updated-' + suffix + '@buildhire.local');
+  const globalEditedCookie = await login(updatedGlobalBody.data.email, 'UpdatedGlobalPassword456!');
+  assert.match(globalEditedCookie, /buildhire_session=/);
+
+  const createdAgencyInterviewer = await app.inject({
+    method: 'POST',
+    url: '/api/v1/agencies/' + agencyAId + '/users',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable Agency Interviewer',
+      email: 'qa-editable-agency-interviewer-' + suffix + '@buildhire.local',
+      password,
+      role: 'INTERVIEWER',
+    },
+  });
+  assert.equal(createdAgencyInterviewer.statusCode, 201);
+  const createdAgencyInterviewerBody = json<{ data: { id: string; email: string } }>(createdAgencyInterviewer);
+
+  const updatedAgencyInterviewer = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/agencies/' + agencyAId + '/users/' + createdAgencyInterviewerBody.data.id,
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable Agency Interviewer Updated',
+      email: 'qa-editable-agency-interviewer-updated-' + suffix + '@buildhire.local',
+      password: 'UpdatedAgencyPassword456!',
+      role: 'INTERVIEWER',
+    },
+  });
+  assert.equal(updatedAgencyInterviewer.statusCode, 200);
+  const updatedAgencyBody = json<{ data: { id: string; name: string; email: string } }>(updatedAgencyInterviewer);
+  assert.equal(updatedAgencyBody.data.name, 'QA Editable Agency Interviewer Updated');
+  assert.equal(updatedAgencyBody.data.email, 'qa-editable-agency-interviewer-updated-' + suffix + '@buildhire.local');
+  const agencyEditedCookie = await login(updatedAgencyBody.data.email, 'UpdatedAgencyPassword456!');
+  assert.match(agencyEditedCookie, /buildhire_session=/);
+
+  await prisma.user.delete({ where: { id: createdGlobalBody.data.id } });
+  await prisma.user.delete({ where: { id: createdAgencyInterviewerBody.data.id } });
+
   const interviewerListResponse = await app.inject({
     method: 'GET',
     url: '/api/v1/interviewers/all',
