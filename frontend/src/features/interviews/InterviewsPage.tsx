@@ -1546,41 +1546,48 @@ export const InterviewsPage = ({ role }: Props) => {
                   </header>
 
                   <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                    <div className="grid sm:grid-cols-2">
-                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidate</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{candidate?.name ?? interview.candidateId}</p>
-                      </div>
-                      <div className="border-b border-slate-100 px-3.5 py-3">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Passport</p>
-                        <p className="mt-1 break-all text-sm font-bold text-slate-800">{candidate?.passportNumber ?? 'Not provided'}</p>
+                    <div className="divide-y divide-slate-100">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidate</span>
+                        <span className="min-w-0 text-sm font-black text-slate-900">{candidate?.name ?? interview.candidateId}</span>
                       </div>
 
-                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate · Age</p>
-                        <p className="mt-1 text-sm font-bold text-slate-800">
-                          {formatDateOnly(candidate?.birthdate)}
-                          {age ? <span className="ml-1.5 text-xs font-extrabold text-cyan-700">({age.years}y {age.months}m)</span> : null}
-                        </p>
-                      </div>
-                      <div className="border-b border-slate-100 px-3.5 py-3">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Schedule · Remaining</p>
-                        <p className="mt-1 text-sm font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleString()}</p>
-                        <p className="mt-1 text-xs font-extrabold text-cyan-700">{formatRemainingTime(interview, now)}</p>
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Passport</span>
+                        <span className="min-w-0 break-all text-sm font-bold text-slate-800">{candidate?.passportNumber ?? 'Not provided'}</span>
                       </div>
 
-                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview type</p>
-                        <p className="mt-1 text-sm font-bold text-slate-800">{statusLabel(interview.type)}</p>
-                      </div>
-                      <div className="border-b border-slate-100 px-3.5 py-3">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Venue / location</p>
-                        <p className="mt-1 text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</p>
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate</span>
+                        <span className="min-w-0 text-sm font-bold text-slate-800">{formatDateOnly(candidate?.birthdate)}</span>
                       </div>
 
-                      <div className="px-3.5 py-3 sm:col-span-2">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviewer{(interview.panel?.length ?? 0) === 1 ? '' : 's'}</p>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Age</span>
+                        <span className="text-sm font-extrabold text-cyan-700">{age ? `${age.years} years ${age.months} months` : 'Not available'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Schedule</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleString()}</p>
+                          <p className="mt-0.5 text-xs font-extrabold text-cyan-700">{formatRemainingTime(interview, now)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview type</span>
+                        <span className="text-sm font-bold text-slate-800">{statusLabel(interview.type)}</span>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Venue / location</span>
+                        <span className="min-w-0 break-words text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-start gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="pt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviewers</span>
+                        <div className="flex min-w-0 flex-wrap gap-1.5">
                           {interview.panel?.length
                             ? interview.panel.map((participant) => (
                                 <span key={participant.userId} className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700">
@@ -1589,8 +1596,14 @@ export const InterviewsPage = ({ role }: Props) => {
                               ))
                             : <span className="text-xs font-semibold text-slate-400">No interviewer assigned</span>}
                         </div>
-                        {job && <p className="mt-2 text-[10px] font-semibold text-slate-400">Position: {job.title}</p>}
                       </div>
+
+                      {job && (
+                        <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Position</span>
+                          <span className="min-w-0 text-sm font-bold text-slate-800">{job.title}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
