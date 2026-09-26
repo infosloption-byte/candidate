@@ -557,8 +557,6 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const data: Record<string, unknown> = {};
-      if (request.body.name !== undefined) data.name = request.body.name.trim();
-      if (request.body.birthdate !== undefined) data.birthdate = request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null;
       if (request.body.agencyRegisterNo !== undefined) data.agencyRegisterNo = request.body.agencyRegisterNo?.trim() || null;
       if (request.body.firstName !== undefined) data.firstName = request.body.firstName?.trim() || null;
       if (request.body.lastName !== undefined) data.lastName = request.body.lastName?.trim() || null;
