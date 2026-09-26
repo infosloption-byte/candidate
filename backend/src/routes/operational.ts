@@ -24,6 +24,10 @@ const interviewStatuses = [
 
 const interviewTypes = ['SCREENING', 'TECHNICAL', 'PRACTICAL', 'FINAL'] as const;
 
+interface AnalyticsQuery {
+  jobId?: string;
+}
+
 export const operationalRoutes: FastifyPluginAsync = async (app) => {
   app.get('/notifications', { preHandler: requireAuth }, async (request, reply) => {
     const userId = request.authUser!.id;
@@ -59,25 +63,49 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  app.get(
+  app.get<{ Querystring: AnalyticsQuery }>(
     '/analytics/summary',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY', 'INTERVIEWER')] },
     async (request, reply) => {
       const prisma = getPrisma();
       const user = request.authUser!;
-      const agencyId = user.role === 'ADMIN' ? undefined : user.agencyId ?? '__missing__';
-      const candidateWhere = user.role === 'INTERVIEWER'
+      const jobId = request.query.jobId?.trim() || undefined;
+
+      const baseCandidateWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : { agencyId };
-      const jobWhere = user.role === 'INTERVIEWER'
+        : { agencyId: user.agencyId ?? undefined };
+      const baseJobWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : { agencyId };
-      const interviewWhere = user.role === 'INTERVIEWER'
+        : { agencyId: user.role === 'ADMIN' ? undefined : user.agencyId ?? '__missing__' };
+      const baseInterviewWhere = user.role === 'INTERVIEWER'
         ? { panel: { some: { userId: user.id } } }
-        : { candidate: { agencyId } };
-      const evaluationWhere = user.role === 'INTERVIEWER'
+        : { candidate: { agencyId: user.agencyId ?? '__missing__' } };
+      const baseEvaluationWhere = user.role === 'INTERVIEWER'
         ? { interviewerId: user.id }
-        : { interview: { candidate: { agencyId } } };
+        : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } };
+
+      let selectedJob: { id: string; title: string; location: string | null; status: string } | null = null;
+      if (jobId) {
+        selectedJob = await prisma.job.findFirst({
+          where: { id: jobId, ...baseJobWhere },
+          select: { id: true, title: true, location: true, status: true },
+        });
+        if (!selectedJob) {
+          return reply.code(404).send({
+            success: false,
+            error: { code: 'JOB_NOT_FOUND', message: 'The selected job is not available in your workspace.' },
+          });
+        }
+      }
+
+      const candidateWhere = jobId
+        ? { ...baseCandidateWhere, jobMemberships: { some: { jobId } } }
+        : baseCandidateWhere;
+      const jobWhere = jobId ? { ...baseJobWhere, id: jobId } : baseJobWhere;
+      const interviewWhere = jobId ? { ...baseInterviewWhere, jobId } : baseInterviewWhere;
+      const evaluationWhere = jobId
+        ? { ...baseEvaluationWhere, interview: { ...('interview' in baseEvaluationWhere && typeof baseEvaluationWhere.interview === 'object' ? baseEvaluationWhere.interview : {}), jobId } }
+        : baseEvaluationWhere;
 
       const [
         agencies,
@@ -137,7 +165,8 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             status: true,
             type: true,
             scheduledAt: true,
-            candidate: { select: { name: true, reference: true } },
+            candidate: { select: { name: true, reference: true, passportNumber: true } },
+            job: { select: { id: true, title: true, location: true } },
           },
         }),
         prisma.interview.findMany({
@@ -152,7 +181,8 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             id: true,
             scheduledAt: true,
             type: true,
-            candidate: { select: { name: true, reference: true } },
+            candidate: { select: { name: true, reference: true, passportNumber: true } },
+            job: { select: { id: true, title: true, location: true } },
           },
         }),
       ]);
@@ -165,6 +195,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         success: true,
         data: {
           scope: user.role,
+          selectedJob,
           counts: {
             agencies,
             activeAgencies,
