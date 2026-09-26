@@ -1203,7 +1203,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="min-w-0">
             <label className="field-label">Search interviews</label>
             <input className="field-input mt-1 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search any candidate, passport, job, interviewer, status or detail…" />
@@ -1222,9 +1222,9 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
             </svg>
           </button>
 
-          <div id="mobile-interview-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+          <div id="mobile-interview-filters" className="contents">
             {(['ADMIN', 'AGENCY'].includes(role)) && (
-              <div className="mb-3">
+              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Job</label>
                 <SelectMenu
                   value={jobFilterId}
@@ -1239,7 +1239,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
               </div>
             )}
             {(['ADMIN', 'INTERVIEWER'].includes(role)) && (
-              <>
+              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Agency</label>
                 <SelectMenu
                   value={agencyFilter}
@@ -1251,7 +1251,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   ariaLabel="Filter interviews by agency"
                   className="mt-1"
                 />
-              </>
+              </div>
             )}
           </div>
 
@@ -1306,7 +1306,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
+          <div className="flex items-center gap-2">
             <span className="field-label shrink-0">Sort</span>
             <div className="min-w-32">
               <SelectMenu
