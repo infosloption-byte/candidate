@@ -508,43 +508,33 @@ export const CandidateProfilePanel = ({
 
                 {editingProfile && canEditProfile && (
                   <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
-                    {[
-                      ['name', 'Full name'],
-                      ['country', 'Country / nationality'],
-                      ['email', 'Email'],
-                      ['phone', 'Contact number'],
-                      ['alternatePhone', 'Alternate contact'],
-                      ['passportNumber', 'Passport number'],
-                      ['currentLocation', 'Current location'],
-                      ['availability', 'Availability'],
-                      ['visaStatus', 'Visa / work status'],
-                      ['profession', 'Profession'],
-                    ].map(([key, fieldLabel]) => (
-                      <label key={key} className="block">
-                        <span className="field-label">{fieldLabel}</span>
-                        <input
-                          className="field-input mt-1 w-full"
-                          type={key === 'email' ? 'email' : 'text'}
-                          value={profileForm[key as keyof typeof profileForm]}
-                          onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))}
-                        />
-                      </label>
-                    ))}
                     <label className="block">
-                      <span className="field-label">Birthdate</span>
+                      <span className="field-label">Agency Register No</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.agencyRegisterNo} onChange={(event) => setProfileForm((current) => ({ ...current, agencyRegisterNo: event.target.value }))} />
+                    </label>
+                    <label className="block">
+                      <span className="field-label">First name</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.firstName} onChange={(event) => setProfileForm((current) => ({ ...current, firstName: event.target.value }))} />
+                    </label>
+                    <label className="block">
+                      <span className="field-label">Last name</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.lastName} onChange={(event) => setProfileForm((current) => ({ ...current, lastName: event.target.value }))} />
+                    </label>
+                    <label className="block">
+                      <span className="field-label">Birth date</span>
                       <input type="date" className="field-input mt-1 w-full" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm((current) => ({ ...current, birthdate: event.target.value }))} />
+                    </label>
+                    <label className="block">
+                      <span className="field-label">Passport number</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.passportNumber} onChange={(event) => setProfileForm((current) => ({ ...current, passportNumber: event.target.value }))} />
                     </label>
                     <label className="block">
                       <span className="field-label">Passport expiry</span>
                       <input type="date" className="field-input mt-1 w-full" value={profileForm.passportExpiry} onChange={(event) => setProfileForm((current) => ({ ...current, passportExpiry: event.target.value }))} />
                     </label>
-                    <label className="block">
-                      <span className="field-label">Experience years</span>
-                      <input type="number" min="0" max="60" className="field-input mt-1 w-full" value={profileForm.experienceYears} onChange={(event) => setProfileForm((current) => ({ ...current, experienceYears: event.target.value }))} />
-                    </label>
                     <label className="block sm:col-span-2">
-                      <span className="field-label">Skills</span>
-                      <input className="field-input mt-1 w-full" value={profileForm.skills} onChange={(event) => setProfileForm((current) => ({ ...current, skills: event.target.value }))} />
+                      <span className="field-label">Requested profession</span>
+                      <input className="field-input mt-1 w-full" value={profileForm.requestedProfession} onChange={(event) => setProfileForm((current) => ({ ...current, requestedProfession: event.target.value }))} />
                     </label>
                     <div className="flex justify-end gap-2 sm:col-span-2">
                       <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50" onClick={() => setEditingProfile(false)}>Cancel</button>
