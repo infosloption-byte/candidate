@@ -22,11 +22,7 @@ SET
 
 ALTER TABLE `Candidate`
   DROP INDEX `Candidate_agencyId_name_idx`,
-  DROP INDEX `Candidate_agencyId_profession_idx`,
-  DROP INDEX `Candidate_agencyId_country_idx`,
-  DROP INDEX `Candidate_agencyId_passportNumber_idx`,
-  DROP INDEX `Candidate_agencyId_visaStatus_idx`,
-  DROP INDEX `Candidate_agencyId_availability_idx`;
+  DROP INDEX `Candidate_agencyId_profession_idx`;
 
 ALTER TABLE `Candidate`
   DROP COLUMN `name`,
