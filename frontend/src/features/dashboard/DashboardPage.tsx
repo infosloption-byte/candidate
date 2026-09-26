@@ -6,8 +6,9 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
-import type { CandidateStatus, Interview, InterviewStatus, InterviewType, UserRole } from '../../domain/types';
+import type { CandidateStatus, Interview, InterviewStatus, InterviewType, Job, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
@@ -29,8 +30,9 @@ interface Analytics {
   interviewTypes: Record<string, number>;
   averageScorePoints: number | null;
   recentCandidates: Array<{ id: string; name: string; reference: string; profession: string | null; status: CandidateStatus; statusUpdatedAt: string }>;
-  recentInterviews: Array<{ id: string; status: InterviewStatus; type: InterviewType; scheduledAt: string; candidate: { name: string; reference: string } }>;
-  upcomingInterviews: Array<{ id: string; scheduledAt: string; type: InterviewType; candidate: { name: string; reference: string; passportNumber: string | null } }>;
+  selectedJob?: { id: string; title: string; location: string | null; status: string } | null;
+  recentInterviews: Array<{ id: string; status: InterviewStatus; type: InterviewType; scheduledAt: string; candidate: { name: string; reference: string; passportNumber: string | null }; job?: { id: string; title: string; location: string | null } | null }>;
+  upcomingInterviews: Array<{ id: string; scheduledAt: string; type: InterviewType; candidate: { name: string; reference: string; passportNumber: string | null }; job?: { id: string; title: string; location: string | null } | null }>;
 }
 
 const statusLabel = (value: string) => value.replaceAll('_', ' ');
@@ -76,6 +78,8 @@ export const DashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state } = useRecruitment();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState('');
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
 
