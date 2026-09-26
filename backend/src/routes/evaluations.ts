@@ -3,6 +3,7 @@ import { requireAuth } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers, notifyCandidateAccount } from '../lib/notifications.js';
+import { getCandidateDisplayName } from '../domain/candidateDisplay.js';
 import { calculateEvaluationTotal, validateEvaluationInput, type EvaluationInput } from '../domain/evaluationValidation.js';
 
 interface InterviewParams { interviewId: string; }
@@ -179,7 +180,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.interviewId },
         include: {
           panel: { select: { userId: true } },
-          candidate: { select: { id: true, agencyId: true, name: true, birthdate: true } },
+          candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, birthdate: true } },
         },
       });
       if (!interview) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
@@ -192,7 +193,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         const current = await getPrisma().interview.findUnique({
           where: { id: interview.id },
           include: {
-            candidate: { select: { id: true, name: true, reference: true, profession: true, birthdate: true } },
+            candidate: { select: { id: true, firstName: true, lastName: true, reference: true, requestedProfession: true, birthdate: true } },
             criterionGroup: { select: { id: true, name: true, category: true, description: true } },
             criterionAssignments: { select: assignmentSelect, orderBy: { sortOrder: 'asc' } },
           },
@@ -220,7 +221,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: interview.id },
         data: { status: 'IN_PROGRESS', startedAt: new Date() },
         include: {
-          candidate: { select: { id: true, name: true, reference: true, profession: true, birthdate: true } },
+          candidate: { select: { id: true, firstName: true, lastName: true, reference: true, requestedProfession: true, birthdate: true } },
           criterionGroup: { select: { id: true, name: true, category: true, description: true } },
           criterionAssignments: { select: assignmentSelect, orderBy: { sortOrder: 'asc' } },
         },
@@ -232,7 +233,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         action: 'INTERVIEW_STARTED',
         entityType: 'Interview',
         entityId: interview.id,
-        summary: 'Started interview for "' + interview.candidate.name + '".',
+        summary: 'Started interview for "' + getCandidateDisplayName(interview.candidate) + '".',
       });
 
       return reply.send({ success: true, data: updated });
@@ -389,7 +390,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
           action: 'EVALUATION_STARTED',
           entityType: 'InterviewEvaluation',
           entityId: result.evaluation.id,
-          summary: 'Started interview scorecard for "' + interview.candidate.name + '".',
+          summary: 'Started interview scorecard for "' + getCandidateDisplayName(interview.candidate) + '".',
         });
       }
 
@@ -538,7 +539,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         action: 'EVALUATION_SUBMITTED',
         entityType: 'InterviewEvaluation',
         entityId: result.evaluation.id,
-        summary: 'Submitted interview scorecard for "' + interview.candidate.name + '".',
+        summary: 'Submitted interview scorecard for "' + getCandidateDisplayName(interview.candidate) + '".',
       });
 
       if (result.interviewCompleted) {
@@ -548,7 +549,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
           action: 'INTERVIEW_COMPLETED',
           entityType: 'Interview',
           entityId: interview.id,
-          summary: 'Completed interview for "' + interview.candidate.name + '".',
+          summary: 'Completed interview for "' + getCandidateDisplayName(interview.candidate) + '".',
         });
 
         await notifyCandidateAccount(
@@ -557,7 +558,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         );
         await notifyAgencyUsers(
           interview.candidate.agencyId,
-          { type: 'INTERVIEW_COMPLETED', title: 'Interview completed', message: 'All panel evaluations are complete for ' + interview.candidate.name + '. Please review the score summary and update the candidate status.' },
+          { type: 'INTERVIEW_COMPLETED', title: 'Interview completed', message: 'All panel evaluations are complete for ' + getCandidateDisplayName(interview.candidate) + '. Please review the score summary and update the candidate status.' },
           ['AGENCY'],
         );
       }
