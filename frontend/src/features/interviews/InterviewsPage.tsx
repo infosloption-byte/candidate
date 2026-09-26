@@ -12,7 +12,7 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
+import { CandidateProfilePanel, type CandidateProfileData } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
 import { CriterionResponseField } from './CriterionResponseField';
 import { InterviewActionMenu } from './InterviewActionMenu';
@@ -253,7 +253,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const [detail, setDetail] = useState<InterviewDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null);
+  const [profileCandidate, setProfileCandidate] = useState<CandidateProfileData | null>(null);
   const [profileMinimized, setProfileMinimized] = useState(false);
   const [profileMaximized, setProfileMaximized] = useState(false);
 
