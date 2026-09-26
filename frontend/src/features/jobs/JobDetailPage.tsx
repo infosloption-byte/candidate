@@ -55,6 +55,74 @@ const toDateTimeLocal = (date: Date): string => {
   return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
 };
 
+const escapeReportHtml = (value: unknown): string => String(value ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;');
+
+const buildJobReportHtml = (
+  job: JobDetail,
+  positions: Array<{ id: string; position: string; requiredCount: number }>,
+  candidatePool: JobCandidate[],
+  interviews: Interview[],
+) => {
+  const positionRows = positions.map((item) => '<tr><td>' + escapeReportHtml(item.position) + '</td><td>' + item.requiredCount + '</td></tr>').join('');
+  const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.profession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
+  const interviewRows = interviews.map((item) => '<tr><td>' + escapeReportHtml(item.candidate?.name || item.candidateId) + '</td><td>' + escapeReportHtml(item.candidate?.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.type) + '</td><td>' + escapeReportHtml(item.status) + '</td><td>' + escapeReportHtml(new Date(item.scheduledAt).toLocaleString()) + '</td></tr>').join('');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>BuildHire - ' + escapeReportHtml(job.title) + '</title><style>' +
+    'body{font-family:Arial,sans-serif;color:#0f172a;margin:32px;font-size:12px}' +
+    'h1{font-size:24px;margin:0 0 6px}h2{font-size:15px;margin:24px 0 8px}' +
+    '.meta{color:#64748b;margin-bottom:18px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.stat{border:1px solid #e2e8f0;border-radius:8px;padding:10px}.label{font-size:9px;text-transform:uppercase;color:#64748b;font-weight:700}.value{font-size:16px;font-weight:800;margin-top:4px}' +
+    'table{border-collapse:collapse;width:100%;margin-top:8px}th,td{border:1px solid #e2e8f0;padding:7px;text-align:left}th{background:#f8fafc;font-size:10px;text-transform:uppercase;color:#64748b}' +
+    '@media print{body{margin:16px}.no-print{display:none}}' +
+    '</style></head><body><h1>' + escapeReportHtml(job.title) + '</h1>' +
+    '<div class="meta">' + escapeReportHtml(job.location || 'Location not set') + ' · Status: ' + escapeReportHtml(job.status) + ' · Created: ' + escapeReportHtml(job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—') + '</div>' +
+    '<div class="grid"><div class="stat"><div class="label">Required workers</div><div class="value">' + job.openings + '</div></div>' +
+    '<div class="stat"><div class="label">Candidates</div><div class="value">' + candidatePool.length + '</div></div>' +
+    '<div class="stat"><div class="label">Interviews</div><div class="value">' + interviews.length + '</div></div>' +
+    '<div class="stat"><div class="label">Filled</div><div class="value">' + candidatePool.filter((item) => item.status === 'HIRED').length + '</div></div></div>' +
+    (job.description ? '<h2>Job description</h2><p>' + escapeReportHtml(job.description) + '</p>' : '') +
+    '<h2>Positions</h2><table><thead><tr><th>Position</th><th>Required workers</th></tr></thead><tbody>' + positionRows + '</tbody></table>' +
+    '<h2>Candidate pool</h2><table><thead><tr><th>Candidate</th><th>Reference</th><th>Passport</th><th>Profession</th><th>Status</th></tr></thead><tbody>' + candidateRows + '</tbody></table>' +
+    '<h2>Interview activity</h2><table><thead><tr><th>Candidate</th><th>Passport</th><th>Type</th><th>Status</th><th>Scheduled</th></tr></thead><tbody>' + interviewRows + '</tbody></table>' +
+    '</body></html>';
+};
+
+const downloadJobExcel = (
+  job: JobDetail,
+  positions: Array<{ id: string; position: string; requiredCount: number }>,
+  candidatePool: JobCandidate[],
+  interviews: Interview[],
+) => {
+  const html = buildJobReportHtml(job, positions, candidatePool, interviews);
+  const blob = new Blob(['\\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'buildhire-' + jobCode(job.id).toLowerCase() + '-report.xls';
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+const printJobPdf = (
+  job: JobDetail,
+  positions: Array<{ id: string; position: string; requiredCount: number }>,
+  candidatePool: JobCandidate[],
+  interviews: Interview[],
+) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  printWindow.document.open();
+  printWindow.document.write(buildJobReportHtml(job, positions, candidatePool, interviews));
+  printWindow.document.close();
+  printWindow.document.title = 'BuildHire - ' + job.title;
+  window.setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+  }, 250);
+};
+
 const parseCsv = (input: string): string[][] => {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -585,6 +653,8 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
           <div className="flex items-center gap-1.5">
             <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Add candidate" aria-label="Add candidate" disabled={job.status === 'CLOSED'} onClick={openCandidateModal}><Icon name="plus" size={16} /></Button>
             <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Upload candidates" aria-label="Upload candidates" disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }}><Icon name="upload" size={16} /></Button>
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Download PDF report" aria-label="Download PDF report" onClick={() => printJobPdf(job, positions, job.candidatePool, job.interviews)}><Icon name="file" size={16} /></Button>
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Download Excel report" aria-label="Download Excel report" onClick={() => downloadJobExcel(job, positions, job.candidatePool, job.interviews)}><Icon name="download" size={16} /></Button>
             <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Schedule interview" aria-label="Schedule interview" disabled={job.status === 'CLOSED' || candidateCount === 0} onClick={() => void openScheduleModal()}><Icon name="calendar" size={16} /></Button>
             <Button variant="danger" size="sm" className="!size-10 !min-h-10 !p-0" title="Delete job" aria-label="Delete job" onClick={() => setDeleteConfirm(true)}><Icon name="trash" size={16} /></Button>
           </div>
