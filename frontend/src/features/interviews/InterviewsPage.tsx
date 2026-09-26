@@ -438,7 +438,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const mixedAgencySelection = selectedAgencyIds.length > 1;
 
   const availableJobs = useMemo(
-    () => jobs.filter((job) => job.status !== 'CLOSED' && (role === 'ADMIN' || job.agencyId === agencyId)),
+    () => jobs.filter((job) => job.status !== 'CLOSED'),
     [agencyId, jobs, role],
   );
 
