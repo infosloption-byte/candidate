@@ -323,36 +323,29 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   };
 
   const createCandidate = async () => {
-    if (!job || !candidateForm.name.trim() || !candidateAgencyId) return;
+    if (!job || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId) {
+      setError('Agency register number, first name, last name, birth date, passport details, requested profession, and agency are required.');
+      return;
+    }
     setCandidateSaving(true);
     setError('');
     try {
-      const payload = {
-        ...candidateForm,
-        experienceYears: Number(candidateForm.experienceYears) || 0,
-        skills: candidateForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-        jobId: job.id,
-      };
       if (developmentMode) {
         const id = 'candidate-' + Date.now();
+        const name = [candidateForm.firstName.trim(), candidateForm.lastName.trim()].join(' ');
         const candidate: Candidate = {
           id,
           agencyId: candidateAgencyId,
           reference: 'CA-' + Date.now().toString().slice(-6),
-          name: payload.name.trim(),
-          birthdate: payload.birthdate || null,
-          email: payload.email.trim() || null,
-          phone: payload.phone.trim() || null,
-          alternatePhone: payload.alternatePhone.trim() || null,
-          country: payload.country.trim() || null,
-          passportNumber: payload.passportNumber.trim() || null,
-          passportExpiry: payload.passportExpiry || null,
-          currentLocation: payload.currentLocation.trim() || null,
-          availability: payload.availability.trim() || null,
-          visaStatus: payload.visaStatus.trim() || null,
-          profession: payload.profession.trim() || null,
-          experienceYears: payload.experienceYears,
-          skills: payload.skills,
+          agencyRegisterNo: candidateForm.agencyRegisterNo.trim(),
+          firstName: candidateForm.firstName.trim(),
+          lastName: candidateForm.lastName.trim(),
+          name,
+          birthdate: candidateForm.birthdate || null,
+          passportNumber: candidateForm.passportNumber.trim() || null,
+          passportExpiry: candidateForm.passportExpiry || null,
+          requestedProfession: candidateForm.requestedProfession.trim(),
+          skills: [],
           onboardingStatus: 'NOT_STARTED',
           source: 'AGENCY_ADDED',
           status: 'POOL',
@@ -363,7 +356,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         const membership: JobCandidate = {
           id: 'job-candidate-' + Date.now(),
           jobId: job.id,
-          candidateId: candidate.id,
+          candidateId: id,
           status: 'POOL',
           statusUpdatedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -373,13 +366,22 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         dispatch({ type: 'CREATE_CANDIDATE', candidate });
         dispatch({ type: 'ADD_JOB_CANDIDATES', memberships: [membership] });
       } else {
-        const created = await apiFetch<Candidate>('/agencies/' + candidateAgencyId + '/candidates', {
+        await apiFetch<Candidate>('/agencies/' + candidateAgencyId + '/candidates', {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            agencyRegisterNo: candidateForm.agencyRegisterNo.trim(),
+            firstName: candidateForm.firstName.trim(),
+            lastName: candidateForm.lastName.trim(),
+            birthdate: candidateForm.birthdate,
+            passportNumber: candidateForm.passportNumber.trim(),
+            passportExpiry: candidateForm.passportExpiry,
+            requestedProfession: candidateForm.requestedProfession.trim(),
+            jobId: job.id,
+          }),
         });
-        void created;
       }
       setCandidateModal(false);
+      setCandidateForm(emptyCandidate);
       setSuccess('Candidate added to this job.');
       await refreshJob();
     } catch (requestError: unknown) {
