@@ -457,6 +457,245 @@ const filterOptions = useMemo(() => ({
     setCandidatePage(1);
   }, [agencyId, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter]);
 
+  const createCandidate = async () => {
+    if (!form.agencyRegisterNo.trim() || !form.firstName.trim() || !form.lastName.trim() || !form.birthdate.trim() || !form.passportNumber.trim() || !form.passportExpiry.trim() || !form.requestedProfession.trim()) {
+      setError('Agency register number, first name, last name, birth date, passport details, and requested profession are required.');
+      return;
+    }
+    if (role === 'ADMIN' && !agencyId) {
+      setError('Select an agency workspace.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const now = new Date().toISOString();
+      const name = [form.firstName.trim(), form.lastName.trim()].filter(Boolean).join(' ');
+      const draft: Candidate = {
+        id: 'candidate-' + Date.now(),
+        agencyId: agencyId || 'agency-1',
+        reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
+        agencyRegisterNo: form.agencyRegisterNo.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        name,
+        birthdate: form.birthdate.trim(),
+        passportNumber: form.passportNumber.trim(),
+        passportExpiry: form.passportExpiry.trim(),
+        requestedProfession: form.requestedProfession.trim(),
+        onboardingStatus: 'NOT_STARTED',
+        source: 'AGENCY_ADDED',
+        status: 'POOL',
+        statusUpdatedAt: now,
+        skills: [],
+      };
+
+      const created = developmentMode
+        ? draft
+        : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', {
+            method: 'POST',
+            body: JSON.stringify({
+              agencyRegisterNo: draft.agencyRegisterNo,
+              firstName: draft.firstName,
+              lastName: draft.lastName,
+              birthdate: draft.birthdate,
+              passportNumber: draft.passportNumber,
+              passportExpiry: draft.passportExpiry,
+              requestedProfession: draft.requestedProfession,
+              jobId: jobId || null,
+            }),
+          });
+
+      if (developmentMode) {
+        dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
+        if (jobId) {
+          dispatch({
+            type: 'ADD_JOB_CANDIDATES',
+            memberships: [{
+              id: 'job-candidate-' + Date.now(),
+              jobId,
+              candidateId: created.id,
+              status: 'POOL',
+              statusUpdatedAt: now,
+              createdAt: now,
+              updatedAt: now,
+              candidate: created,
+            }],
+          });
+        }
+      }
+
+      setCandidates((current) => [created, ...current]);
+      setForm(emptyForm);
+      setShowForm(false);
+      setSuccessTitle('Candidate added');
+      setSuccess('"' + created.name + '" is now in the candidate pool.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to create the candidate.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const downloadCsvTemplate = () => {
+    const csv = 'agencyRegisterNo,firstName,lastName,birthdate,passportNumber,passportExpiry,requestedProfession\\nAGR-1001,Kamal,Perera,1990-01-15,N1234567,2031-12-31,Mason\\n';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'buildhire-candidate-import-template.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importCandidates = async (file: File, targetAgencyId: string, targetJobId: string | null = jobId || null): Promise<boolean> => {
+    if (!targetAgencyId) {
+      setError('Select an agency workspace before importing candidates.');
+      return false;
+    }
+    if (file.size > 2_000_000) {
+      setError('CSV must be 2 MB or smaller.');
+      return false;
+    }
+
+    setBulkImporting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const csv = await file.text();
+
+      if (developmentMode) {
+        const rows = parseCsvRows(csv);
+        if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
+
+        const header = rows[0].map((item, index) => (index === 0 ? item.replace(/^\\uFEFF/, '') : item).trim().toLowerCase());
+        const requiredHeaders = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const missingHeaders = requiredHeaders.filter((item) => !header.includes(item));
+        if (missingHeaders.length) throw new Error('CSV is missing required columns: ' + missingHeaders.join(', ') + '.');
+
+        const indexOf = (name: string) => header.indexOf(name);
+        const read = (values: string[], name: string) => values[indexOf(name)]?.trim() ?? '';
+
+        const created: Candidate[] = rows.slice(1).filter((values) => values.some((value) => value.trim())).map((values, index) => {
+          const agencyRegisterNo = read(values, 'agencyregisterno');
+          const firstName = read(values, 'firstname');
+          const lastName = read(values, 'lastname');
+          const birthdate = read(values, 'birthdate');
+          const passportNumber = read(values, 'passportnumber');
+          const passportExpiry = read(values, 'passportexpiry');
+          const requestedProfession = read(values, 'requestedprofession');
+
+          if (!agencyRegisterNo || !firstName || !lastName || !birthdate || !passportNumber || !passportExpiry || !requestedProfession) {
+            throw new Error('CSV row ' + (index + 2) + ' is missing one or more required intake fields.');
+          }
+
+          return {
+            id: 'candidate-import-' + Date.now() + '-' + index,
+            agencyId: targetAgencyId,
+            reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
+            agencyRegisterNo,
+            firstName,
+            lastName,
+            name: [firstName, lastName].join(' '),
+            birthdate,
+            passportNumber,
+            passportExpiry,
+            requestedProfession,
+            onboardingStatus: 'NOT_STARTED',
+            source: 'BULK_IMPORTED',
+            status: 'POOL',
+            statusUpdatedAt: new Date().toISOString(),
+            skills: [],
+          };
+        });
+
+        const seen = new Set<string>();
+        for (const item of created) {
+          if (seen.has(item.agencyRegisterNo.toLowerCase())) {
+            throw new Error('CSV contains duplicate Agency Register No: ' + item.agencyRegisterNo + '.');
+          }
+          seen.add(item.agencyRegisterNo.toLowerCase());
+        }
+
+        created.forEach((candidateItem) => dispatch({ type: 'CREATE_CANDIDATE', candidate: candidateItem }));
+
+        if (targetJobId) {
+          const now = new Date().toISOString();
+          dispatch({
+            type: 'ADD_JOB_CANDIDATES',
+            memberships: created.map((candidateItem, index) => ({
+              id: 'job-candidate-import-' + Date.now() + '-' + index,
+              jobId: targetJobId,
+              candidateId: candidateItem.id,
+              status: 'POOL',
+              statusUpdatedAt: now,
+              createdAt: now,
+              updatedAt: now,
+              candidate: candidateItem,
+            })),
+          });
+        }
+
+        setCandidates((current) => [...created, ...current]);
+        setSuccessTitle('Candidates imported');
+        setSuccess(created.length + ' candidate(s) were added to the candidate pool.');
+      } else {
+        const query = targetJobId ? '?jobId=' + encodeURIComponent(targetJobId) : '';
+        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + targetAgencyId + '/candidates/bulk' + query, {
+          method: 'POST',
+          headers: { 'content-type': 'text/csv' },
+          body: csv,
+        });
+        setCandidates((current) => [...result.candidates, ...current]);
+        setSuccessTitle('Candidates imported');
+        setSuccess(result.importedCount + ' candidate(s) were added to the candidate pool.');
+      }
+
+      return true;
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to import the CSV.');
+      return false;
+    } finally {
+      setBulkImporting(false);
+      if (bulkFileRef.current) bulkFileRef.current.value = '';
+    }
+  };
+
+  const openImportModal = () => {
+    setImportAgencyId(role === 'ADMIN' ? '' : agencyId);
+    setImportFile(null);
+    setShowImportModal(true);
+    setError('');
+  };
+
+  const closeImportModal = () => {
+    if (bulkImporting) return;
+    setShowImportModal(false);
+    setImportAgencyId('');
+    setImportFile(null);
+    setError('');
+    if (bulkFileRef.current) bulkFileRef.current.value = '';
+  };
+
+  const proceedImport = async () => {
+    if (!importAgencyId) {
+      setError('Select an agency before importing the CSV.');
+      return;
+    }
+    if (!importFile) {
+      setError('Select a CSV file before continuing.');
+      return;
+    }
+
+    const imported = await importCandidates(importFile, importAgencyId, jobId || null);
+    if (imported) {
+      setShowImportModal(false);
+      setImportFile(null);
+      if (bulkFileRef.current) bulkFileRef.current.value = '';
+    }
+  };
+
   const updateStatus = async () => {
     if (!candidate || !statusDraft || statusDraft === candidate.status) return;
     setSaving(true);
@@ -802,7 +1041,6 @@ const filterOptions = useMemo(() => ({
                     options={[
                       { value: 'name', label: 'Name' },
                       { value: 'profession', label: 'Profession' },
-                      { value: 'experience', label: 'Experience' },
                       { value: 'passport', label: 'Passport' },
                       { value: 'status', label: 'Status' },
                     ]}
@@ -833,11 +1071,7 @@ const filterOptions = useMemo(() => ({
                     onClick={() => {
                       setSearch('');
                       setStatusFilter('');
-                      setCountryFilter('');
                       setProfessionFilter('');
-                      setAvailabilityFilter('');
-                      setVisaStatusFilter('');
-                      setLocationFilter('');
                       setPassportFilter('');
                     }}
                   >
