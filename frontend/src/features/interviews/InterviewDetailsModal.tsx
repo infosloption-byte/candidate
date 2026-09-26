@@ -101,103 +101,117 @@ export const InterviewDetailsModal = ({ detail, open, onClose }: Props) => {
             </div>
 
             <div className="mt-5">
-              <h3 className="text-sm font-black text-slate-950">Final score & interviewer comparison</h3>
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-                {detail.evaluations?.filter((evaluation) => evaluation.status === 'SUBMITTED').length ? (
-                  <>
-                    {(() => {
-                      const submitted = detail.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED');
-                      const max = detail.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0;
-                      const totals = submitted.map((evaluation) => ({
-                        evaluation,
-                        total: evaluation.scores.reduce((sum, score) => sum + score.points, 0),
-                        percentage: max ? Math.round((evaluation.scores.reduce((sum, score) => sum + score.points, 0) / max) * 10000) / 100 : 0,
-                      }));
-                      const average = totals.length ? Math.round((totals.reduce((sum, item) => sum + item.percentage, 0) / totals.length) * 100) / 100 : 0;
-                      return (
-                        <>
-                          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average final score</p>
-                              <p className="mt-1 text-2xl font-black text-cyan-700">{average}%</p>
-                            </div>
-                            <p className="text-xs text-slate-500">{submitted.length} of {detail.panel?.length ?? 0} interviewers submitted</p>
-                          </div>
-                          <div className="overflow-x-auto">
-                            <table className="min-w-[760px] w-full text-left text-xs">
-                              <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                <tr>
-                                  <th className="px-3 py-2.5">Criterion</th>
-                                  {totals.map(({ evaluation }) => <th key={evaluation.id} className="px-3 py-2.5">{evaluation.interviewer.name}</th>)}
-                                  <th className="px-3 py-2.5">Average</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100">
-                                {(detail.criterionAssignments ?? []).map((assignment) => {
-                                  const values = totals.map(({ evaluation }) => evaluation.scores.find((score) => score.criterionId === assignment.criterionId)?.points ?? 0);
-                                  const rowAverage = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
-                                  return <tr key={assignment.id}>
-                                    <td className="px-3 py-2.5 font-bold text-slate-700">{assignment.name} <span className="font-normal text-slate-400">/ {assignment.maxPoints}</span></td>
-                                    {values.map((value, index) => <td key={totals[index]!.evaluation.id} className="px-3 py-2.5 font-black text-slate-900">{value}</td>)}
-                                    <td className="px-3 py-2.5 font-black text-cyan-700">{rowAverage.toFixed(1)}</td>
-                                  </tr>;
-                                })}
-                                <tr className="bg-slate-50">
-                                  <td className="px-3 py-2.5 font-black text-slate-900">Total</td>
-                                  {totals.map(({ evaluation, total }) => <td key={evaluation.id} className="px-3 py-2.5 font-black text-slate-900">{total} / {max}</td>)}
-                                  <td className="px-3 py-2.5 font-black text-cyan-700">{average}%</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </>
-                ) : <p className="text-xs text-slate-400">No submitted interviewer scorecards yet.</p>}
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <h3 className="text-sm font-black text-slate-950">Interview responses</h3>
-              <p className="mt-1 text-[10px] text-slate-400">Text, selections, and additional-skill findings captured by interviewers.</p>
-              <div className="mt-3 space-y-3">
-                {(detail.evaluations ?? []).filter((evaluation) => evaluation.status === 'SUBMITTED' && (evaluation.responses?.length ?? 0) > 0).map((evaluation) => (
-                  <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
-                    <p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {(evaluation.responses ?? []).map((response) => {
-                        const assignment = detail.criterionAssignments?.find((item) => item.criterionId === response.criterionId);
-                        return (
-                          <div key={response.criterionId} className="rounded-xl bg-slate-50 p-3">
-                            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{assignment?.name ?? 'Criterion'}</p>
-                            <p className="mt-1 whitespace-pre-wrap text-xs font-semibold text-slate-700">{response.selectedOptions?.join(', ') || response.textValue || '—'}</p>
-                          </div>
-                        );
-                      })}
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-950">Interview evaluation</h3>
+                  <p className="mt-1 text-[10px] text-slate-400">Scores, criterion breakdown, responses, status, and interviewer notes in one section.</p>
+                </div>
+                {(() => {
+                  const submitted = (detail.evaluations ?? []).filter((evaluation) => evaluation.status === 'SUBMITTED');
+                  const maxPoints = detail.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0;
+                  const percentages = submitted.map((evaluation) => {
+                    const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
+                    return maxPoints ? (total / maxPoints) * 100 : 0;
+                  });
+                  const average = percentages.length
+                    ? Math.round((percentages.reduce((sum, value) => sum + value, 0) / percentages.length) * 100) / 100
+                    : null;
+                  return (
+                    <div className="flex flex-wrap gap-2 text-[10px]">
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 font-bold text-slate-500">
+                        Submitted {submitted.length}/{detail.panel?.length ?? 0}
+                      </span>
+                      {average !== null && (
+                        <span className="rounded-full bg-cyan-50 px-2.5 py-1 font-black text-cyan-700">
+                          Panel average {average}%
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))}
-                {!(detail.evaluations ?? []).some((evaluation) => evaluation.status === 'SUBMITTED' && (evaluation.responses?.length ?? 0) > 0) && (
-                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No non-scoring responses recorded yet.</p>
+                  );
+                })()}
+              </div>
+
+              <div className="mt-3 space-y-3">
+                {detail.evaluations?.length ? detail.evaluations.map((evaluation) => {
+                  const criterionMax = detail.criterionAssignments?.reduce((sum, item) => sum + item.maxPoints, 0) ?? 0;
+                  const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
+                  const percentage = criterionMax ? Math.round((total / criterionMax) * 10000) / 100 : 0;
+                  const responseByCriterion = new Map(
+                    (evaluation.responses ?? []).map((response) => [response.criterionId, response]),
+                  );
+
+                  return (
+                    <div key={evaluation.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-slate-900">{evaluation.interviewer.name}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">{evaluation.interviewer.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <StatusPill value={evaluation.status} />
+                          <span className="text-sm font-black text-cyan-700">
+                            {total} / {criterionMax} · {percentage}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {(detail.criterionAssignments?.length ?? evaluation.scores.length) > 0 && (
+                        <div className="mt-3 overflow-x-auto">
+                          <table className="min-w-[560px] w-full text-left text-xs">
+                            <thead className="bg-slate-50 text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                              <tr>
+                                <th className="rounded-l-lg px-2.5 py-2">Criterion</th>
+                                <th className="px-2.5 py-2">Score</th>
+                                <th className="rounded-r-lg px-2.5 py-2">Response</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(detail.criterionAssignments ?? evaluation.scores.map((score) => ({
+                                id: score.criterionId,
+                                criterionId: score.criterionId,
+                                name: score.criterion?.name ?? 'Criterion',
+                                maxPoints: score.criterion?.maxPoints ?? 0,
+                              } as InterviewCriterionAssignment))).map((assignment) => {
+                                const score = evaluation.scores.find((item) => item.criterionId === assignment.criterionId);
+                                const response = responseByCriterion.get(assignment.criterionId);
+                                const responseValue = response?.selectedOptions?.join(', ') || response?.textValue || '—';
+
+                                return (
+                                  <tr key={evaluation.id + '-' + assignment.criterionId}>
+                                    <td className="px-2.5 py-2 align-top">
+                                      <p className="font-bold text-slate-700">{assignment.name}</p>
+                                      <p className="mt-0.5 text-[9px] text-slate-400">Max {assignment.maxPoints}</p>
+                                    </td>
+                                    <td className="px-2.5 py-2 align-top font-black text-slate-900">
+                                      {score?.points ?? 0} / {assignment.maxPoints}
+                                    </td>
+                                    <td className="max-w-[320px] px-2.5 py-2 align-top text-[10px] leading-4 text-slate-600">
+                                      <span className="whitespace-pre-wrap">{responseValue}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {evaluation.comments && (
+                        <div className="mt-3 rounded-xl bg-slate-50 p-3">
+                          <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Interviewer notes</p>
+                          <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{evaluation.comments}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }) : (
+                  <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">
+                    No interviewer evaluations recorded yet.
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="mt-5">
-              <h3 className="text-sm font-black text-slate-950">Scorecards</h3>
-              <div className="mt-3 space-y-3">
-                {detail.evaluations?.length ? detail.evaluations.map((evaluation) => {
-                  const total = evaluation.scores.reduce((sum, score) => sum + score.points, 0);
-                  const max = evaluation.scores.reduce((sum, score) => sum + (score.criterion?.maxPoints ?? 0), 0);
-                  return <div key={evaluation.id} className="rounded-2xl border border-slate-200 p-4">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-slate-900">{evaluation.interviewer.name}</p><p className="text-xs text-slate-400">{evaluation.interviewer.email}</p></div><div className="text-right"><StatusPill value={evaluation.status} /><p className="mt-1 text-sm font-black text-cyan-700">{total} / {max} {max ? '(' + Math.round((total / max) * 100) + '%)' : ''}</p></div></div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{evaluation.scores.map((score) => <div key={evaluation.id + '-' + score.criterionId} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"><span className="text-[11px] font-semibold text-slate-600">{score.criterion?.name ?? 'Criterion'}</span><span className="text-xs font-black text-slate-900">{score.points} / {score.criterion?.maxPoints ?? 0}</span></div>)}</div>
-                    {evaluation.comments && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{evaluation.comments}</p>}
-                  </div>;
-                }) : <p className="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No scorecards submitted yet.</p>}
-              </div>
-            </div>
           </div>
         </div>
   );
