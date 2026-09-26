@@ -8,6 +8,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface Props { role: UserRole; }
 
@@ -59,6 +60,7 @@ const downloadCsv = (rows: string[][]) => {
 
 export const ReportsPage = ({ role }: Props) => {
   const { developmentMode } = useAuth();
+  const { t } = useLanguage();
   const { state } = useRecruitment();
   const [data, setData] = useState<Analytics | null>(null);
   const [jobs, setJobs] = useState<JobFilterOption[]>([]);
@@ -217,7 +219,7 @@ export const ReportsPage = ({ role }: Props) => {
           <SectionHeading
             eyebrow="Business intelligence"
             title="Reports & exports"
-            description={selectedJob ? 'Job-scoped operational reporting for ' + selectedJob.title + '.' : 'Operational statistics for candidate flow, jobs, interviews, evaluations and decisions.'}
+            description={selectedJob ? t('Job-scoped operational reporting for') + ' ' + selectedJob.title + '.' : t('Operational statistics for candidate flow, jobs, interviews, evaluations and decisions.')}
           />
         </div>
         <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 print:hidden sm:w-auto">
