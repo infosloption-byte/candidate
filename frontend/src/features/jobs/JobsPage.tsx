@@ -939,7 +939,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                 </div>
               ),
             },
-          ]}}
+          ]}
         />
       )}
 
