@@ -15,6 +15,7 @@ import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
 import { CriterionResponseField } from './CriterionResponseField';
+import { InterviewActionMenu } from './InterviewActionMenu';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
@@ -120,6 +121,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
+  const [agencyOptions, setAgencyOptions] = useState<Array<{ id: string; name: string }>>(
+    developmentMode ? state.agencies.map((item) => ({ id: item.id, name: item.name })) : [],
+  );
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups.filter((item) => item.active) : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
@@ -134,6 +138,7 @@ export const InterviewsPage = ({ role }: Props) => {
   const [form, setForm] = useState(defaultForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [agencyFilter, setAgencyFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<InterviewType | ''>('');
   const [scheduleFilter, setScheduleFilter] = useState<'all' | 'upcoming' | 'current' | 'past'>('all');
   const [now, setNow] = useState(() => Date.now());
@@ -183,6 +188,7 @@ export const InterviewsPage = ({ role }: Props) => {
       setCandidates(state.candidates);
       setJobs(state.jobs);
       setAgencies(state.agencies);
+      setAgencyOptions(state.agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ id: item.id, name: item.name })));
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active));
       setCriteriaGroups([...new Map(state.interviewCriterionGroups.filter((item) => item.active).map((item) => [item.id, item])).values()]);
       return;
@@ -231,8 +237,9 @@ export const InterviewsPage = ({ role }: Props) => {
         }
 
         if (agencyResult.status === 'fulfilled') {
-          if (role === 'ADMIN') setAgencies(agencyResult.value);
           if (role === 'ADMIN') {
+            setAgencies(agencyResult.value);
+            setAgencyOptions(agencyResult.value.filter((item) => item.status === 'ACTIVE').map((item) => ({ id: item.id, name: item.name })));
             const firstAgency = agencyResult.value.find((item) => item.status === 'ACTIVE');
             setAgencyId((current) => current || firstAgency?.id || '');
           }
@@ -248,6 +255,13 @@ export const InterviewsPage = ({ role }: Props) => {
 
     return () => { cancelled = true; };
   }, [developmentMode, role, state.interviews, state.candidates, state.jobs, state.agencies, state.users, state.interviewCriterionGroups, user?.agencyId, user?.id]);
+
+  useEffect(() => {
+    if (developmentMode || role !== 'INTERVIEWER') return;
+    apiFetch<Array<{ id: string; name: string; slug: string }>>('/public/agencies')
+      .then((items) => setAgencyOptions(items.map((item) => ({ id: item.id, name: item.name }))))
+      .catch((requestError: unknown) => setError(requestError instanceof Error ? requestError.message : 'Unable to load agencies.'));
+  }, [developmentMode, role]);
 
   useEffect(() => {
     if (!agencyId) return;
@@ -308,10 +322,11 @@ export const InterviewsPage = ({ role }: Props) => {
         criterionAssignments: interview.criterionAssignments,
       };
       const matchesSearch = !query || JSON.stringify(searchableRecord).toLowerCase().includes(query);
+      const matchesAgency = !agencyFilter || candidate?.agencyId === agencyFilter;
       const matchesStatus = !statusFilter || interview.status === statusFilter;
       const matchesType = !typeFilter || interview.type === typeFilter;
       const matchesSchedule = scheduleFilter === 'all' || role !== 'INTERVIEWER' || scheduleBucket(interview) === scheduleFilter;
-      return matchesSearch && matchesStatus && matchesType && matchesSchedule;
+      return matchesSearch && matchesAgency && matchesStatus && matchesType && matchesSchedule;
     });
 
     return [...base].sort((left, right) => {
@@ -323,7 +338,7 @@ export const InterviewsPage = ({ role }: Props) => {
       if (sortBy === 'status') result = left.status.localeCompare(right.status, undefined, { sensitivity: 'base' });
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [candidates, interviews, jobs, now, role, scheduleFilter, search, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [agencyFilter, candidates, interviews, jobs, now, role, scheduleFilter, search, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const interviewTotalPages = Math.max(1, Math.ceil(visible.length / INTERVIEWS_PAGE_SIZE));
   const activeInterviewPage = Math.min(interviewPage, interviewTotalPages);
@@ -334,7 +349,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
   useEffect(() => {
     setInterviewPage(1);
-  }, [search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [agencyFilter, search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const availableCandidates = useMemo(
     () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
@@ -1104,17 +1119,17 @@ export const InterviewsPage = ({ role }: Props) => {
           </button>
 
           <div id="mobile-interview-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-            {role === 'ADMIN' && (
+            {(['ADMIN', 'INTERVIEWER'].includes(role)) && (
               <>
                 <label className="field-label">Agency</label>
                 <SelectMenu
-                  value={agencyId}
-                  onChange={(value) => { setAgencyId(value); setPanel([]); }}
+                  value={agencyFilter}
+                  onChange={setAgencyFilter}
                   options={[
                     { value: '', label: 'All agencies' },
-                    ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                    ...agencyOptions.map((agency) => ({ value: agency.id, label: agency.name })),
                   ]}
-                  ariaLabel="Filter by agency"
+                  ariaLabel="Filter interviews by agency"
                   className="mt-1"
                 />
               </>
@@ -1477,8 +1492,6 @@ export const InterviewsPage = ({ role }: Props) => {
             const ownEvaluation = interview.evaluations?.find((item) => item.interviewerId === user?.id);
             const alreadyEvaluated = ownEvaluation?.status === 'SUBMITTED';
             const isAssignedInterviewer = role === 'INTERVIEWER';
-            const currentStatus = candidate?.status;
-
             return (
               <Card key={interview.id} padded={false} className="p-4">
                 <div>
@@ -1486,7 +1499,6 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
                       <StatusPill value={interview.status} />
-                      {candidate?.status && <StatusPill value={candidate.status} />}
                     </div>
                     <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Birthdate: {candidate?.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {candidate?.passportNumber ?? 'Not provided'} {job ? '· ' + job.title : '· General interview'}</p>
                     <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
@@ -1504,39 +1516,31 @@ export const InterviewsPage = ({ role }: Props) => {
                   )}
 
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
-                    <Button size="sm" variant="primary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
-                    {candidate && <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>Full profile</Button>}
-
+                    <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+                    </button>
+                    {candidate && (
+                      <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
+                      </button>
+                    )}
                     {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                      <>
-                        <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Edit interview" onClick={() => openReschedule(interview)}>Edit</Button>
-                        <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Mark as no show" onClick={() => requestInterviewStatusChange(interview, 'NO_SHOW')}>No show</Button>
-                        <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" title="Cancel interview" onClick={() => requestInterviewStatusChange(interview, 'CANCELLED')}>Cancel</Button>
-                      </>
+                      <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
+                      </button>
                     )}
-
-                    {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
-                      isInterviewStartable(interview) ? (
-                        <Button size="sm" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
-                          Start interview
-                        </Button>
-                      ) : (
-                        <span className="inline-flex min-h-10 items-center rounded-lg bg-slate-100 px-2.5 text-[9px] font-extrabold text-slate-500">
-                          {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Past — view only'}
-                        </span>
-                      )
+                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
+                      <InterviewActionMenu
+                        interview={interview}
+                        role={role}
+                        now={now}
+                        onStart={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
+                        onNoShow={() => requestInterviewStatusChange(interview, 'NO_SHOW')}
+                        onCancel={() => requestInterviewStatusChange(interview, 'CANCELLED')}
+                      />
                     )}
-
-                    {isAssignedInterviewer && interview.status === 'IN_PROGRESS' && (
-                      <Button size="sm" variant={alreadyEvaluated ? 'secondary' : 'primary'} className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
-                        {alreadyEvaluated ? 'View scorecard' : 'Continue interview'}
-                      </Button>
-                    )}
-
-                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && interview.status === 'COMPLETED') && (
-                      <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openEvaluationWorkspace(interview)}>
-                        Open interview panel
-                      </Button>
+                    {isAssignedInterviewer && interview.status === 'COMPLETED' && (
+                      <span className="ml-auto text-[10px] font-bold text-slate-400">Completed</span>
                     )}
                   </div>
                 </div>
@@ -1556,7 +1560,7 @@ export const InterviewsPage = ({ role }: Props) => {
                   <th className="px-4 py-3">Candidate</th>
                   <th className="px-4 py-3">Schedule</th>
                   <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Interview status</th>
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Panel</th>
                   <th className="px-4 py-3 text-right">Actions</th>
@@ -1583,7 +1587,6 @@ export const InterviewsPage = ({ role }: Props) => {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           <StatusPill value={interview.status} />
-                          {candidate?.status && <StatusPill value={candidate.status} />}
                         </div>
                       </td>
                       <td className="max-w-40 px-4 py-3 text-slate-500">{interview.location ?? 'Not specified'}</td>
@@ -1596,30 +1599,28 @@ export const InterviewsPage = ({ role }: Props) => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          <Button size="sm" variant="primary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => void openInterviewDetails(interview)}>View</Button>
-                          {candidate && <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>Full profile</Button>}
+                          <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+                          </button>
+                          {candidate && (
+                            <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
+                            </button>
+                          )}
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                            <>
-                              <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => openReschedule(interview)}>Edit</Button>
-                              <Button size="sm" variant="secondary" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => requestInterviewStatusChange(interview, 'NO_SHOW')}>No show</Button>
-                              <Button size="sm" variant="danger" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => requestInterviewStatusChange(interview, 'CANCELLED')}>Cancel</Button>
-                            </>
+                            <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
+                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
+                            </button>
                           )}
-                          {isAssignedInterviewer && interview.status === 'SCHEDULED' && (
-                            isInterviewStartable(interview) ? (
-                              <Button size="sm" className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
-                                Start interview
-                              </Button>
-                            ) : (
-                              <span className="inline-flex min-h-10 items-center rounded-lg bg-slate-100 px-2.5 text-[9px] font-extrabold text-slate-500">
-                                {now < new Date(interview.scheduledAt).getTime() - 15 * 60_000 ? 'Starts later' : 'Past — view only'}
-                              </span>
-                            )
-                          )}
-                          {isAssignedInterviewer && interview.status === 'IN_PROGRESS' && (
-                            <Button size="sm" variant={alreadyEvaluated ? 'secondary' : 'primary'} className="min-h-10 rounded-lg px-2 py-1 text-[9px]" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
-                              {alreadyEvaluated ? 'View scorecard' : 'Continue'}
-                            </Button>
+                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
+                            <InterviewActionMenu
+                              interview={interview}
+                              role={role}
+                              now={now}
+                              onStart={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
+                              onNoShow={() => requestInterviewStatusChange(interview, 'NO_SHOW')}
+                              onCancel={() => requestInterviewStatusChange(interview, 'CANCELLED')}
+                            />
                           )}
                         </div>
                       </td>
