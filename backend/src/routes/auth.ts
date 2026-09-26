@@ -21,14 +21,16 @@ interface LoginBody {
 }
 
 interface RegisterIntervieweeBody {
-  name?: string;
+  agencyRegisterNo?: string | null;
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string | null;
+  passportNumber?: string | null;
+  passportExpiry?: string | null;
+  requestedProfession?: string;
   email?: string;
   password?: string;
   agencyId?: string;
-  phone?: string | null;
-  profession?: string | null;
-  experienceYears?: number | null;
-  skills?: string[];
 }
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
@@ -71,19 +73,19 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post<{ Body: RegisterIntervieweeBody }>('/auth/register/interviewee', async (request, reply) => {
-    const name = request.body?.name?.trim();
+    const firstName = request.body?.firstName?.trim();
+    const lastName = request.body?.lastName?.trim();
     const email = request.body?.email?.trim().toLowerCase();
     const password = request.body?.password ?? '';
     const agencyId = request.body?.agencyId?.trim();
-    const experienceYears = request.body?.experienceYears ?? null;
-    const skills = (request.body?.skills ?? []).map((skill) => skill.trim()).filter(Boolean);
     const profileErrors = validateCandidateInput({
-      name,
-      email,
-      phone: request.body?.phone ?? null,
-      profession: request.body?.profession ?? null,
-      experienceYears,
-      skills,
+      agencyRegisterNo: request.body?.agencyRegisterNo ?? null,
+      firstName,
+      lastName,
+      birthdate: request.body?.birthdate ?? null,
+      passportNumber: request.body?.passportNumber ?? null,
+      passportExpiry: request.body?.passportExpiry ?? null,
+      requestedProfession: request.body?.requestedProfession,
     }, 'self');
 
     if (!email) {
@@ -99,10 +101,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         error: { code: 'INVALID_REGISTRATION', message: profileErrors.join(' ') },
       });
     }
-    if (!name) {
+    if (!firstName || !lastName) {
       return reply.code(400).send({
         success: false,
-        error: { code: 'INVALID_REGISTRATION', message: 'A valid name is required.' },
+        error: { code: 'INVALID_REGISTRATION', message: 'First name and last name are required.' },
       });
     }
     if (!email || !email.includes('@')) {
@@ -129,12 +131,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           data: {
             agencyId: agency.id,
             reference: 'CA-' + randomBytes(5).toString('hex').toUpperCase(),
-            name,
-            email,
-            phone: request.body?.phone?.trim() || null,
-            profession: request.body?.profession?.trim() || null,
-            experienceYears,
-            skills,
+            agencyRegisterNo: request.body?.agencyRegisterNo?.trim() || 'SELF-' + randomBytes(5).toString('hex').toUpperCase(),
+            firstName: firstName!,
+            lastName: lastName!,
+            birthdate: request.body?.birthdate?.trim() ? new Date(request.body.birthdate) : null,
+            passportNumber: request.body?.passportNumber?.trim() || null,
+            passportExpiry: request.body?.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
+            requestedProfession: request.body?.requestedProfession?.trim() || 'Not specified',
             onboardingStatus: 'SUBMITTED',
             source: 'SELF_ONBOARDED',
           },
@@ -143,7 +146,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const user = await tx.user.create({
           data: {
             candidateId: candidate.id,
-            name,
+            name: [firstName!, lastName!].join(' '),
             email,
             passwordHash: await hashPassword(password),
             role: 'INTERVIEWEE',
