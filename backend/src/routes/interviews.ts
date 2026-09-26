@@ -252,12 +252,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           ? { panel: { some: { userId: user.id } }, ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
           : user.role === 'INTERVIEWEE'
             ? { candidateId: user.candidateId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
-            : {
-                ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
-                OR: [
-                  { candidate: { agencyId: user.agencyId ?? '__missing__' } },
-                                  ],
-              },
+            : request.query.jobId
+              ? { jobId: request.query.jobId }
+              : {
+                  OR: [
+                    { candidate: { agencyId: user.agencyId ?? '__missing__' } },
+                  ],
+                },
       include: {
         ...interviewInclude,
         evaluations: {
