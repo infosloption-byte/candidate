@@ -488,10 +488,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setCandidateSearch('');
     setJobId(jobFilterId || '');
     setScheduleCandidates(developmentMode && jobFilterId ? state.jobCandidates.filter((item) => item.jobId === jobFilterId).map((item) => item.candidate) : developmentMode ? state.candidates : []);
-    if (jobFilterId) {
-      const selectedJob = jobs.find((job) => job.id === jobFilterId);
-      if (selectedJob) setAgencyId(selectedJob.agencyId);
-    }
+    // Jobs are global; keep the current agency context for interviewer selection.
     setCriterionGroupIds([]);
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
