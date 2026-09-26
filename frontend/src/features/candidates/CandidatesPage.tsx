@@ -11,12 +11,16 @@ import { SelectMenu } from '../../shared/components/SelectMenu';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, OnboardingStatus, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, Job, JobCandidate, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 import { CandidateProfilePanel, type CandidateProfileHistory } from './CandidateProfilePanel';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
-interface Props { role: UserRole; }
+interface Props {
+  role: UserRole;
+  initialJobId?: string | null;
+  onJobChange?: (jobId: string | null) => void;
+}
 
 const emptyForm = { name: '', birthdate: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
@@ -74,12 +78,14 @@ const parseCsvRows = (input: string): string[][] => {
   return rows;
 };
 
-export const CandidatesPage = ({ role }: Props) => {
+export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
+  const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
+  const [jobId, setJobId] = useState(initialJobId ?? '');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [profileForm, setProfileForm] = useState(emptyForm);
@@ -118,29 +124,46 @@ export const CandidatesPage = ({ role }: Props) => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const bulkFileRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
+    setJobId(initialJobId ?? '');
+  }, [initialJobId]);
+
+  useEffect(() => {
     if (developmentMode) {
-      setCandidates(state.candidates);
       setAgencies(state.agencies);
+      setJobs(state.jobs);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      apiFetch<Job[]>('/jobs'),
+      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
+    ])
+      .then(([jobResult, agencyResult]) => {
+        if (cancelled) return;
+        setJobs(jobResult);
+        if (role === 'ADMIN') setAgencies(agencyResult);
+      })
+      .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidate setup.'); });
+    return () => { cancelled = true; };
+  }, [developmentMode, role, state.jobs, state.agencies, user?.id]);
+
+  useEffect(() => {
+    if (developmentMode) {
+      const memberships = jobId ? state.jobCandidates.filter((item) => item.jobId === jobId) : [];
+      setCandidates(jobId ? memberships.map((item) => item.candidate) : state.candidates);
+      setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError('');
-    Promise.all([
-      apiFetch<Candidate[]>('/candidates'),
-      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
-    ])
-      .then(([candidateResult, agencyResult]) => {
-        if (cancelled) return;
-        setCandidates(candidateResult);
-        if (role === 'ADMIN') {
-          setAgencies(agencyResult);
-        }
-      })
+    const query = jobId ? '?jobId=' + encodeURIComponent(jobId) : '';
+    apiFetch<Candidate[]>('/candidates' + query)
+      .then((result) => { if (!cancelled) setCandidates(result); })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidates.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [developmentMode, role, state.candidates, state.agencies, user?.id]);
+  }, [developmentMode, jobId, state.candidates, state.jobCandidates, user?.id]);
 
   const candidate = useMemo(
     () => candidates.find((item) => item.id === (selectedCandidateId || user?.candidateId)),
@@ -427,8 +450,22 @@ export const CandidatesPage = ({ role }: Props) => {
         skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
         onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
       };
-      const created = developmentMode ? draft : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', { method: 'POST', body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills }) });
-      if (developmentMode) dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
+      const created = developmentMode
+        ? draft
+        : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', {
+            method: 'POST',
+            body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills, jobId: jobId || null }),
+          });
+      if (developmentMode) {
+        dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
+        if (jobId) {
+          const now = new Date().toISOString();
+          dispatch({
+            type: 'ADD_JOB_CANDIDATES',
+            memberships: [{ id: 'job-candidate-' + Date.now(), jobId, candidateId: created.id, status: 'POOL', statusUpdatedAt: now, createdAt: now, updatedAt: now, candidate: created }],
+          });
+        }
+      }
       setCandidates((current) => [created, ...current]);
       setForm(emptyForm);
       setShowForm(false);
@@ -449,7 +486,7 @@ export const CandidatesPage = ({ role }: Props) => {
     URL.revokeObjectURL(url);
   };
 
-  const importCandidates = async (file: File, targetAgencyId: string): Promise<boolean> => {
+  const importCandidates = async (file: File, targetAgencyId: string, targetJobId: string | null = jobId || null): Promise<boolean> => {
     if (!targetAgencyId) {
       setError('Select an agency workspace before importing candidates.');
       return false;
@@ -503,11 +540,28 @@ export const CandidatesPage = ({ role }: Props) => {
           };
         });
         created.forEach((candidate) => dispatch({ type: 'CREATE_CANDIDATE', candidate }));
+        if (targetJobId) {
+          const now = new Date().toISOString();
+          dispatch({
+            type: 'ADD_JOB_CANDIDATES',
+            memberships: created.map((candidate, index) => ({
+              id: 'job-candidate-import-' + Date.now() + '-' + index,
+              jobId: targetJobId,
+              candidateId: candidate.id,
+              status: 'POOL',
+              statusUpdatedAt: now,
+              createdAt: now,
+              updatedAt: now,
+              candidate,
+            }) satisfies JobCandidate),
+          });
+        }
         setCandidates((current) => [...created, ...current]);
         setSuccessTitle('Candidates imported');
         setSuccess(created.length + ' candidate(s) were added to the candidate pool.');
       } else {
-        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + targetAgencyId + '/candidates/bulk', {
+        const query = targetJobId ? '?jobId=' + encodeURIComponent(targetJobId) : '';
+        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + targetAgencyId + '/candidates/bulk' + query, {
           method: 'POST',
           headers: { 'content-type': 'text/csv' },
           body: csv,
@@ -551,7 +605,7 @@ export const CandidatesPage = ({ role }: Props) => {
       setError('Select a CSV file before continuing.');
       return;
     }
-    const imported = await importCandidates(importFile, importAgencyId);
+    const imported = await importCandidates(importFile, importAgencyId, jobId || null);
     if (imported) {
       setShowImportModal(false);
       setImportFile(null);
@@ -711,6 +765,7 @@ export const CandidatesPage = ({ role }: Props) => {
             <FormField label="Profession"><input className="field-input" value={form.profession} onChange={(event) => setForm({ ...form, profession: event.target.value })} /></FormField>
             <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
             {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
+            <div className="md:col-span-2"><FormField label="Job candidate pool" hint={jobId ? 'This candidate will also be added to the selected job.' : 'Optional. Select a job to place this candidate directly into its pool.'}><select className="field-input" value={jobId} onChange={(event) => { setJobId(event.target.value); onJobChange?.(event.target.value || null); }}><option value="">General candidate pool only</option>{jobs.filter((job) => job.status !== 'CLOSED').map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}</select></FormField></div>
             <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
           </div>
           <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
@@ -766,6 +821,14 @@ export const CandidatesPage = ({ role }: Props) => {
               </div>
 
               <div>
+                <div className="mb-3">
+                  <label className="field-label">Job candidate pool</label>
+                  <select className="field-input mt-1 w-full" value={jobId} onChange={(event) => { setJobId(event.target.value); onJobChange?.(event.target.value || null); }}>
+                    <option value="">General candidate pool only</option>
+                    {jobs.filter((job) => job.status !== 'CLOSED').map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
+                  </select>
+                  <p className="mt-1 text-[10px] text-slate-400">Imported candidates are immediately placed into the selected job pool.</p>
+                </div>
                 <div className="flex items-center justify-between gap-3">
                   <label className="field-label">CSV file</label>
                   <span className="text-[10px] text-slate-400">Max 2 MB</span>
@@ -885,6 +948,20 @@ export const CandidatesPage = ({ role }: Props) => {
                   />
                 </div>
               )}
+
+              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+                <label className="field-label">Job candidate pool</label>
+                <SelectMenu
+                  value={jobId}
+                  onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
+                  options={[
+                    { value: '', label: 'All candidates' },
+                    ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
+                  ]}
+                  ariaLabel="Filter candidates by job"
+                  className="mt-1"
+                />
+              </div>
 
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Status</label>
