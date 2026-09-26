@@ -1381,8 +1381,8 @@ export const InterviewsPage = ({ role }: Props) => {
                   </FormField>
 
                   <FormField label="Notes" hint="Optional">
-                    <textarea
-                      className="field-input min-h-20 resize-y"
+                    <input
+                      className="field-input"
                       value={form.notes}
                       onChange={(event) => setForm({ ...form, notes: event.target.value })}
                       placeholder="Interview instructions or notes…"
@@ -1445,7 +1445,7 @@ export const InterviewsPage = ({ role }: Props) => {
                   </FormField>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
                   <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
                     <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
                       {criterionGroupIds.length > 0 && (
