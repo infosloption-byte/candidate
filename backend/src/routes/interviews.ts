@@ -93,14 +93,15 @@ const normalizeInterviewRecord = <
 const canManage = (role: string, agencyId: string | null, interviewAgencyId: string): boolean =>
   role === 'ADMIN' || (role === 'AGENCY' && agencyId === interviewAgencyId);
 
-const getInterviewers = async (ids: string[], agencyId: string) => {
+const getInterviewers = async (ids: string[], agencyIds: string[]) => {
   const uniqueIds = [...new Set(ids)];
+  const uniqueAgencyIds = [...new Set(agencyIds)];
   return getPrisma().user.findMany({
     where: {
       id: { in: uniqueIds },
       role: 'INTERVIEWER',
       active: true,
-      OR: [{ agencyId }, { agencyId: null }],
+      OR: [{ agencyId: { in: uniqueAgencyIds } }, { agencyId: null }],
     },
     select: { id: true },
   });
@@ -345,12 +346,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
       }
 
-      const agencyIds = new Set(candidates.map((candidate) => candidate.agencyId));
-      if (agencyIds.size !== 1) {
-        return reply.code(400).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'Bulk interview candidates must belong to the same agency.' } });
+      const candidateAgencyIds = [...new Set(candidates.map((candidate) => candidate.agencyId))];
+      if (request.authUser!.role === 'AGENCY' && candidateAgencyIds.some((candidateAgencyId) => candidateAgencyId !== request.authUser!.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only schedule candidates belonging to your agency.' } });
       }
-      const agencyId = candidates[0]!.agencyId;
-      if (!canManage(request.authUser!.role, request.authUser!.agencyId, agencyId)) {
+      if (request.authUser!.role !== 'ADMIN' && request.authUser!.role !== 'AGENCY') {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule these candidates.' } });
       }
 
@@ -373,7 +373,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           select: { id: true, agencyId: true, title: true, location: true },
         });
         if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-        if (job.agencyId !== agencyId) return reply.code(409).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'The selected job does not belong to the candidate agency.' } });
+        if (candidateAgencyIds.length > 1) {
+          return reply.code(409).send({ success: false, error: { code: 'JOB_NOT_SUPPORTED_FOR_MULTI_AGENCY', message: 'A single job / position cannot be applied when candidates belong to multiple agencies.' } });
+        }
+        if (job.agencyId !== candidateAgencyIds[0]) return reply.code(409).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'The selected job does not belong to the candidate agency.' } });
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
@@ -458,7 +461,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       for (const result of created) {
         await recordAuditEvent({
           actorId: request.authUser!.id,
-          agencyId,
+          agencyId: result.candidate.agencyId,
           action: 'INTERVIEW_SCHEDULED',
           entityType: 'Interview',
           entityId: result.id,
@@ -518,7 +521,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, candidate.agencyId);
+      const interviewers = await getInterviewers(interviewerIds, [candidate.agencyId]);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
@@ -740,7 +743,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (!nextPanel.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'At least one interviewer is required.' } });
         if (nextScheduledAt.getTime() <= Date.now()) return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_TIME', message: 'Interview date and time must be in the future.' } });
 
-        const interviewers = await getInterviewers(nextPanel, agencyId);
+        const interviewers = await getInterviewers(nextPanel, [agencyId]);
         const activeIds = new Set(interviewers.map((item) => item.id));
         const existingPanelIds = new Set(existing.panel.map((item) => item.userId));
         if (nextPanel.some((userId) => !activeIds.has(userId) && !existingPanelIds.has(userId))) {
