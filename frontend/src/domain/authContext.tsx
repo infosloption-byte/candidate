@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   const value = useMemo(
     () => ({ user, loading, error, developmentMode, login, registerInterviewee, logout, refreshUser }),
-    [user, loading, error, developmentMode]);
+    [user, loading, error, developmentMode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
