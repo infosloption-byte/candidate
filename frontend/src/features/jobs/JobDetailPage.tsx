@@ -576,6 +576,14 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     }
   };
 
+  useEffect(() => {
+    setCandidatePoolPage(1);
+  }, [candidateAgencyFilter, candidatePoolSearch, candidateStatusFilter]);
+
+  useEffect(() => {
+    setInterviewPage(1);
+  }, [interviewSearch, interviewStatusFilter]);
+
   if (!jobId) return <StateMessage kind="empty" title={t('No job selected')} description={t('Choose a job from the Jobs page.')} />;
   if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading job" description="Fetching the job, candidate pool and interview activity." /></section>;
   if (!job) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title="Job not found" description={error || 'The requested job is unavailable.'} /></section>;
@@ -642,16 +650,6 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     .map((agency) => ({ id: agency.id, name: agency.name }));
 
   const interviewScheduleCandidates = job.candidatePool.map((membership) => membership.candidate);
-
-  useEffect(() => {
-    setCandidatePoolPage(1);
-  }, [candidateAgencyFilter, candidatePoolSearch, candidateStatusFilter]);
-
-  useEffect(() => {
-    setInterviewPage(1);
-  }, [interviewSearch, interviewStatusFilter]);
-
-
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
