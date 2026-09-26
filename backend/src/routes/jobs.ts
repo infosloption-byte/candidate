@@ -148,7 +148,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       const positions = normalizePositions(request.body.positions!);
       const openings = totalRequired(positions);
-      const requestedStatus = request.body.status ?? 'DRAFT';
+      const requestedStatus = 'PUBLISHED';
 
       const job = await getPrisma().job.create({
         data: {
