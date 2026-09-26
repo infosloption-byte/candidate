@@ -120,7 +120,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [listView, setListView] = useState<'cards' | 'table'>('table');
   const [candidatePage, setCandidatePage] = useState(1);
-  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
@@ -351,11 +351,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   };
 
   const filterOptions = useMemo(() => ({
-    countries: [...new Set(candidates.map((item) => item.country).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    professions: [...new Set(candidates.map((item) => item.profession).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    availabilities: [...new Set(candidates.map((item) => item.availability).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    visaStatuses: [...new Set(candidates.map((item) => item.visaStatus).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    locations: [...new Set(candidates.map((item) => item.currentLocation).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+    professions: [...new Set(candidates.map((item) => item.requestedProfession).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
   }), [candidates]);
 
   const passportMatches = (candidate: Candidate): boolean => {
@@ -374,34 +370,25 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
     const query = search.trim().toLowerCase();
     return candidates.filter((item) => {
       const matchesStatus = !statusFilter || item.status === statusFilter;
-      const matchesCountry = !countryFilter || item.country === countryFilter;
-      const matchesProfession = !professionFilter || item.profession === professionFilter;
-      const matchesAvailability = !availabilityFilter || item.availability === availabilityFilter;
-      const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
-      const matchesLocation = !locationFilter || item.currentLocation === locationFilter;
+      const matchesProfession = !professionFilter || item.requestedProfession === professionFilter;
       const matchesPassport = passportMatches(item);
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
+        item.firstName,
+        item.lastName,
         item.reference,
-        item.email ?? '',
-        item.phone ?? '',
-        item.alternatePhone ?? '',
+        item.agencyRegisterNo,
         item.passportNumber ?? '',
         item.passportExpiry ?? '',
         item.birthdate ?? '',
-        item.country ?? '',
-        item.currentLocation ?? '',
-        item.profession ?? '',
-        item.availability ?? '',
-        item.visaStatus ?? '',
-        item.skills.join(' '),
+        item.requestedProfession,
         item.status,
         item.onboardingStatus,
       ].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesAgency && matchesQuery;
+      return matchesStatus && matchesProfession && matchesPassport && matchesAgency && matchesQuery;
     });
-  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
+  }, [agencyId, candidates, passportFilter, professionFilter, role, search, statusFilter]);
 
   const sortedCandidates = useMemo(() => {
     const sorted = [...filteredCandidates];
@@ -427,7 +414,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
   useEffect(() => {
     setCandidatePage(1);
-  }, [agencyId, availabilityFilter, countryFilter, locationFilter, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter, visaStatusFilter]);
+  }, [agencyId, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter]);
 
   const createCandidate = async () => {
     if (!form.agencyRegisterNo.trim() || !form.firstName.trim() || !form.lastName.trim()) { setError('Agency register number, first name, and last name are required.'); return; }
