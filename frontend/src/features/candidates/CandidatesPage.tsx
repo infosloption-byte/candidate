@@ -665,7 +665,7 @@ const filterOptions = useMemo(() => ({
             <Card>
               <h2 className="text-sm font-black text-slate-950">Profile details</h2>
               <p className="mt-1 text-xs text-slate-400">Maintain the candidate intake details used for recruitment.</p>
-                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                          <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <FormField label="Agency Register No"><input className="field-input" value={profileForm.agencyRegisterNo} onChange={(event) => setProfileForm({ ...profileForm, agencyRegisterNo: event.target.value })} /></FormField>
                 <FormField label="First name"><input className="field-input" value={profileForm.firstName} onChange={(event) => setProfileForm({ ...profileForm, firstName: event.target.value })} /></FormField>
                 <FormField label="Last name"><input className="field-input" value={profileForm.lastName} onChange={(event) => setProfileForm({ ...profileForm, lastName: event.target.value })} /></FormField>
