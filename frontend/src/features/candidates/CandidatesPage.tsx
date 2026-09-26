@@ -1282,10 +1282,17 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                     <>
                       {activeDetailTab === 'overview' && (
                         <div className="space-y-7">
-                          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
-                            <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
+                                                    <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
+                            <div><p className="field-label">Agency Register No</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.agencyRegisterNo}</p></div>
+                            <div><p className="field-label">First name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.firstName}</p></div>
+                            <div><p className="field-label">Last name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.lastName}</p></div>
+                            <div><p className="field-label">Birth date</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p></div>
+                            <div><p className="field-label">Passport number</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p></div>
+                            <div><p className="field-label">Passport expiry</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                            <div><p className="field-label">Requested profession</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.requestedProfession}</p></div>
                             <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
-                          </div>
+                            <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
+                          </div></div>
 
                           <section className="border-t border-slate-200 pt-5 sm:pt-6">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
