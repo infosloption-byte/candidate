@@ -710,8 +710,8 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         </div>
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card>
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
+        <Card className="min-w-0">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -785,7 +785,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
           )}
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <div>
