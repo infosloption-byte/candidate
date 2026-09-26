@@ -1231,7 +1231,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   onChange={(value) => { setJobFilterId(value); onJobChange?.(value || null); }}
                   options={[
                     { value: '', label: 'All jobs' },
-                    ...jobs.filter((job) => job.status !== 'CLOSED' && (role === 'ADMIN' || job.agencyId === agencyId)).map((job) => ({ value: job.id, label: job.title })),
+                    ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
                   ]}
                   ariaLabel="Filter interviews by job"
                   className="mt-1"
