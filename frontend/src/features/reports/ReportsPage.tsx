@@ -124,7 +124,7 @@ export const ReportsPage = ({ role }: Props) => {
     const query = selectedJobId ? '?jobId=' + encodeURIComponent(selectedJobId) : '';
     Promise.all([
       apiFetch<Analytics>('/analytics/summary' + query),
-      apiFetch<Interview[]>('/interviews' + query),
+      apiFetch<Interview[]>('/interviews'),
     ])
       .then(async ([result, interviews]) => {
         if (cancelled) return;
