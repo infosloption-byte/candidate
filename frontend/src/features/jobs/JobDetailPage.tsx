@@ -10,6 +10,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { DatePicker } from '../../shared/components/DatePicker';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { CandidateMultiSelect } from '../interviews/CandidateMultiSelect';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, Job, JobCandidate, JobDetail, User, UserRole } from '../../domain/types';
@@ -23,7 +24,7 @@ interface JobDetailPageProps {
 
 const label = (value: string): string => value.replaceAll('_', ' ');
 const jobCode = (id: string): string => 'JOB-' + id.slice(0, 8).toUpperCase();
-const CANDIDATE_POOL_PAGE_SIZE = 8;
+const CANDIDATE_POOL_PAGE_SIZE = 6;
 const INTERVIEW_PAGE_SIZE = 6;
 
 const emptyCandidate = {
@@ -243,9 +244,12 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const [candidateSearch, setCandidateSearch] = useState('');
   const [candidatePoolSearch, setCandidatePoolSearch] = useState('');
   const [candidateAgencyFilter, setCandidateAgencyFilter] = useState('');
+  const [candidateStatusFilter, setCandidateStatusFilter] = useState('');
   const [candidatePoolPage, setCandidatePoolPage] = useState(1);
   const [interviewSearch, setInterviewSearch] = useState('');
+  const [interviewStatusFilter, setInterviewStatusFilter] = useState('');
   const [interviewPage, setInterviewPage] = useState(1);
+  const [interviewAgencyId, setInterviewAgencyId] = useState('');
   const [interviewers, setInterviewers] = useState<User[]>([]);
   const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>([]);
@@ -460,6 +464,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     setSelectedInterviewers([]);
     setSelectedCriteriaGroups([]);
     setCandidateSearch('');
+    setInterviewAgencyId(job.candidatePool.find((item) => item.candidate.agencyId)?.candidate.agencyId ?? '');
     setScheduleForm({ ...defaultInterview, scheduledAt: toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)), location: job.location ?? '' });
     try {
       if (developmentMode) {
@@ -584,6 +589,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     const query = candidatePoolSearch.trim().toLowerCase();
     const candidate = membership.candidate;
     if (candidateAgencyFilter && candidate.agencyId !== candidateAgencyFilter) return false;
+    if (candidateStatusFilter && membership.status !== candidateStatusFilter) return false;
     if (!query) return true;
     return [
       candidate.name,
@@ -624,6 +630,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
 
   const filteredInterviews = job.interviews.filter((interview) => {
     const query = interviewSearch.trim().toLowerCase();
+    if (interviewStatusFilter && interview.status !== interviewStatusFilter) return false;
     if (!query) return true;
     const candidate = interview.candidate;
     return [
@@ -646,6 +653,22 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     (safeInterviewPage - 1) * INTERVIEW_PAGE_SIZE,
     safeInterviewPage * INTERVIEW_PAGE_SIZE,
   );
+
+  const interviewAgencyOptions = [...new Set(job.candidatePool.map((membership) => membership.candidate.agencyId))]
+    .map((agencyId) => agencies.find((item) => item.id === agencyId) ?? { id: agencyId, name: agencyId, slug: agencyId, status: 'ACTIVE' as const, userCount: 0, jobCount: 0, candidateCount: 0 })
+    .map((agency) => ({ id: agency.id, name: agency.name }));
+
+  const interviewScheduleCandidates = job.candidatePool.map((membership) => membership.candidate);
+
+  useEffect(() => {
+    setCandidatePoolPage(1);
+  }, [candidateAgencyFilter, candidatePoolSearch, candidateStatusFilter]);
+
+  useEffect(() => {
+    setInterviewPage(1);
+  }, [interviewSearch, interviewStatusFilter]);
+
+
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
