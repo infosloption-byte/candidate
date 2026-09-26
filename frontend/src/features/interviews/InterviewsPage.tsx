@@ -16,6 +16,7 @@ import { CandidateProfilePanel } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
 import { CriterionResponseField } from './CriterionResponseField';
 import { InterviewActionMenu } from './InterviewActionMenu';
+import { CandidateMultiSelect } from './CandidateMultiSelect';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
@@ -393,25 +394,30 @@ export const InterviewsPage = ({ role }: Props) => {
     setInterviewPage(1);
   }, [agencyFilter, search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
 
-  const availableCandidates = useMemo(
-    () => candidates.filter((candidate) => candidate.agencyId === agencyId && !['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(candidate.status)),
-    [agencyId, candidates],
+  const selectedCandidates = useMemo(
+    () => selectedCandidateIds
+      .map((id) => candidates.find((candidate) => candidate.id === id))
+      .filter((candidate): candidate is Candidate => Boolean(candidate)),
+    [candidates, selectedCandidateIds],
   );
+
+  const selectedAgencyIds = useMemo(
+    () => [...new Set(selectedCandidates.map((candidate) => candidate.agencyId))],
+    [selectedCandidates],
+  );
+
+  const mixedAgencySelection = selectedAgencyIds.length > 1;
 
   const availableJobs = useMemo(
-    () => jobs.filter((job) => job.agencyId === agencyId && job.status !== 'CLOSED'),
-    [agencyId, jobs],
+    () => mixedAgencySelection
+      ? []
+      : jobs.filter((job) => job.agencyId === agencyId && job.status !== 'CLOSED'),
+    [agencyId, jobs, mixedAgencySelection],
   );
 
-  const selectableCandidates = useMemo(() => {
-    const query = candidateSearch.trim().toLowerCase();
-    return availableCandidates.filter((candidate) => {
-      if (editingInterviewId && candidate.id === candidateId) return false;
-      if (!query) return true;
-      return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.profession ?? '', candidate.email ?? '', candidate.phone ?? '']
-        .some((value) => value.toLowerCase().includes(query));
-    });
-  }, [availableCandidates, candidateSearch, candidateId, editingInterviewId]);
+  useEffect(() => {
+    if (mixedAgencySelection) setJobId('');
+  }, [mixedAgencySelection]);
 
   const toggleCandidateSelection = (id: string) => {
     setSelectedCandidateIds((current) => current.includes(id)
@@ -429,12 +435,6 @@ export const InterviewsPage = ({ role }: Props) => {
       return next;
     });
   };
-
-  const selectAllVisibleCandidates = () => {
-    setSelectedCandidateIds((current) => [...new Set([...current, ...selectableCandidates.map((candidate) => candidate.id)])]);
-  };
-
-  const clearCandidateSelection = () => setSelectedCandidateIds([]);
 
   const closeScheduleForm = () => {
     setShowScheduleForm(false);
@@ -1291,19 +1291,19 @@ export const InterviewsPage = ({ role }: Props) => {
       {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
         <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
           <button type="button" aria-label="Close interview form" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeScheduleForm} />
-          <div ref={scheduleFormTrapRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" tabIndex={-1} className="relative z-10 flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:rounded-3xl sm:border sm:border-slate-200">
-            <header className="shrink-0 border-b border-slate-200 px-4 py-4 sm:px-6">
+          <div ref={scheduleFormTrapRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" tabIndex={-1} className="relative z-10 flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border sm:border-slate-200">
+            <header className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p>
-                  <h2 id="schedule-interview-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">Assign candidates, choose the interview setup, then select the panel.</p>
+                  <h2 id="schedule-interview-title" className="mt-0.5 text-lg font-black text-slate-950 sm:text-xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
+                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Select candidates, configure the interview, then assign the panel.</p>
                 </div>
                 <Button size="sm" variant="secondary" className="px-2.5" onClick={closeScheduleForm}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
               </div>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6">
-              <div className="grid gap-4 md:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
+              <div className="grid gap-3 md:grid-cols-2">
                 {role === 'ADMIN' && (
                   <div className="md:col-span-2">
                     <FormField label="Agency workspace" hint="Select the agency whose candidate pool you want to schedule from.">
@@ -1312,7 +1312,6 @@ export const InterviewsPage = ({ role }: Props) => {
                         onChange={(value) => {
                           setAgencyId(value);
                           setPanel([]);
-                          setSelectedCandidateIds([]);
                           setCandidateSearch('');
                         }}
                         options={[
@@ -1327,73 +1326,64 @@ export const InterviewsPage = ({ role }: Props) => {
                         {editingInterviewId ? (
               <>
                 <FormField label="Current candidate">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? candidateId}</p>
-                    <p className="mt-1 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
                   </div>
                 </FormField>
                 <div className="md:col-span-2">
-                  <FormField label="Also schedule for other candidates" hint="Optional. Selected candidates receive new interviews in consecutive time slots after this interview.">
-                    <div className="rounded-2xl border border-slate-200 bg-white">
-                      <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
-                        <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates to add…" />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
-                          <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
-                        </div>
-                      </div>
-                      <div className="max-h-56 overflow-y-auto p-2">
-                        {selectableCandidates.map((candidate) => (
-                          <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
-                            <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
-                              <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · Passport: {candidate.passportNumber ?? 'Not provided'} · {statusLabel(candidate.status)}</span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                      <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} additional candidate(s) selected</div>
-                    </div>
+                  <FormField label="Additional candidates" hint="Select candidates from different agencies. Existing selections stay selected when you switch the browse agency.">
+                    <CandidateMultiSelect
+                      candidates={candidates}
+                      agencyOptions={agencyOptions}
+                      activeAgencyId={agencyId}
+                      selectedIds={selectedCandidateIds}
+                      search={candidateSearch}
+                      editingCandidateId={candidateId}
+                      onAgencyChange={(value) => {
+                        setAgencyId(value);
+                        setCandidateSearch('');
+                      }}
+                      onSearchChange={setCandidateSearch}
+                      onToggle={toggleCandidateSelection}
+                      onRemove={(id) => toggleCandidateSelection(id)}
+                      onClear={() => setSelectedCandidateIds([])}
+                    />
+                    {mixedAgencySelection && (
+                      <p className="mt-1.5 text-[10px] font-bold text-amber-700">Multiple agencies selected. Job / position will remain empty for this multi-agency schedule.</p>
+                    )}
                   </FormField>
                 </div>
               </>
             ) : (
               <div className="md:col-span-2">
-                <FormField label="Candidates" hint="Select one or more candidates. Each candidate receives an individual interview in consecutive time slots starting at the selected time.">
-                  <div className="rounded-2xl border border-slate-200 bg-white">
-                    <div className="flex flex-col gap-2 border-b border-slate-100 p-3 sm:flex-row">
-                      <input className="field-input flex-1" value={candidateSearch} onChange={(event) => setCandidateSearch(event.target.value)} placeholder="Search candidates…" />
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={selectAllVisibleCandidates}>Select visible</Button>
-                        <Button size="sm" variant="ghost" onClick={clearCandidateSelection}>Clear</Button>
-                      </div>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto p-2">
-                      {selectableCandidates.map((candidate) => (
-                        <label key={candidate.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
-                          <input type="checkbox" checked={selectedCandidateIds.includes(candidate.id)} onChange={() => toggleCandidateSelection(candidate.id)} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-xs font-bold text-slate-800">{candidate.reference} — {candidate.name}</span>
-                            <span className="block truncate text-[10px] text-slate-400">{candidate.profession ?? 'Profession not set'} · {statusLabel(candidate.status)}</span>
-                          </span>
-                        </label>
-                      ))}
-                      {!agencyId
-                        ? <p className="p-4 text-center text-xs text-slate-400">Select an agency workspace to load candidates.</p>
-                        : !selectableCandidates.length
-                          ? <p className="p-4 text-center text-xs text-slate-400">No candidates match this agency or search.</p>
-                          : null}
-                    </div>
-                    <div className="border-t border-slate-100 px-3 py-2 text-[10px] font-bold text-slate-500">{selectedCandidateIds.length} candidate(s) selected</div>
-                  </div>
+                <FormField label="Candidates" hint="Browse an agency, click candidates to move them into the selected panel, then switch agencies without losing previous selections.">
+                  <CandidateMultiSelect
+                    candidates={candidates}
+                    agencyOptions={agencyOptions}
+                    activeAgencyId={agencyId}
+                    selectedIds={selectedCandidateIds}
+                    search={candidateSearch}
+                    onAgencyChange={(value) => {
+                      setAgencyId(value);
+                      setCandidateSearch('');
+                    }}
+                    onSearchChange={setCandidateSearch}
+                    onToggle={toggleCandidateSelection}
+                    onRemove={(id) => toggleCandidateSelection(id)}
+                    onClear={() => setSelectedCandidateIds([])}
+                  />
+                  {mixedAgencySelection && (
+                    <p className="mt-1.5 text-[10px] font-bold text-amber-700">Multiple agencies selected. Job / position is disabled because a single job belongs to one agency.</p>
+                  )}
                 </FormField>
               </div>
             )}
-            <FormField label="Job / position" hint="Optional">
+            <FormField label="Job / position" hint={mixedAgencySelection ? 'Disabled when candidates belong to multiple agencies.' : 'Optional'}>
               <SelectMenu
-                value={jobId}
+                value={mixedAgencySelection ? '' : jobId}
                 onChange={setJobId}
+                disabled={mixedAgencySelection}
                 options={[
                   { value: '', label: 'No specific job' },
                   ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
@@ -1463,15 +1453,17 @@ export const InterviewsPage = ({ role }: Props) => {
               </div>
               <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
             </FormField>
-            <FormField label="Date & time">
-              <DatePicker
-                value={form.scheduledAt}
-                onChange={(value) => setForm({ ...form, scheduledAt: value })}
-                showTime
-                placeholder="Select interview date & time"
-                ariaLabel="Interview date and time"
-              />
-            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Date & time">
+                <DatePicker
+                  value={form.scheduledAt}
+                  onChange={(value) => setForm({ ...form, scheduledAt: value })}
+                  showTime
+                  placeholder="Select interview date & time"
+                  ariaLabel="Interview date and time"
+                />
+              </FormField>
+            </div>
             <FormField label="Duration (minutes)">
               <input type="number" min="15" max="480" className="field-input" value={form.durationMins} onChange={(event) => setForm({ ...form, durationMins: event.target.value })} />
             </FormField>
@@ -1513,7 +1505,7 @@ export const InterviewsPage = ({ role }: Props) => {
               </FormField>
             </div>
           </div>
-              <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-4 sm:px-6">
+              <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-3 sm:px-5">
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
                   <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
