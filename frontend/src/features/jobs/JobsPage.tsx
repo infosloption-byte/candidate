@@ -486,7 +486,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={closeForm} disabled={saving}>Cancel</Button>
               <Button
-                disabled={saving || (!developmentMode && !agencyId)}
+                disabled={saving || positionRows.length === 0}
                 onClick={() => void saveJob()}
               >
                 {saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create draft'}
