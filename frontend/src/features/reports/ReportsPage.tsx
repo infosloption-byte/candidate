@@ -11,6 +11,8 @@ import { useRecruitment } from '../../domain/recruitmentContext';
 
 interface Props { role: UserRole; }
 
+type JobFilterOption = Pick<Job, 'id' | 'title' | 'location' | 'status'>;
+
 interface Analytics {
   scope: UserRole;
   selectedJob?: { id: string; title: string; location: string | null; status: string } | null;
@@ -59,7 +61,7 @@ export const ReportsPage = ({ role }: Props) => {
   const { developmentMode } = useAuth();
   const { state } = useRecruitment();
   const [data, setData] = useState<Analytics | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<JobFilterOption[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
