@@ -159,7 +159,15 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         ? { ...job, status: nextStatus as Job['status'], publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt }
         : await apiFetch<Job>('/jobs/' + job.id, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) });
       if (developmentMode) dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
-      setJobs((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setJobs((current) => current.map((item) => item.id === updated.id
+        ? {
+            ...item,
+            ...updated,
+            candidateCount: updated.candidateCount ?? item.candidateCount,
+            interviewCount: updated.interviewCount ?? item.interviewCount,
+            filledCount: updated.filledCount ?? item.filledCount,
+          }
+        : item));
       setSuccessTitle(nextStatus === 'PUBLISHED' ? 'Job published' : 'Job closed');
       setSuccess('"' + job.title + '" is now ' + nextStatus.toLowerCase() + '.');
     } catch (requestError: unknown) {
@@ -188,7 +196,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     const query = search.trim().toLowerCase();
     if (!query) return available;
     return available.filter((job) => [job.title, job.description ?? '', job.location ?? '', job.status].some((value) => value.toLowerCase().includes(query)));
-  }, [jobs, role, search]);
+  }, [displayJobs, role, search]);
 
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
