@@ -84,40 +84,58 @@ export const DashboardPage = ({ role }: Props) => {
   const [error, setError] = useState('');
 
   const developmentAnalytics = useMemo<Analytics>(() => {
+    const selectedJob = selectedJobId ? state.jobs.find((item) => item.id === selectedJobId) : undefined;
+    const memberships = selectedJob ? state.jobCandidates.filter((item) => item.jobId === selectedJob.id) : [];
+    const memberIds = new Set(memberships.map((item) => item.candidateId));
+    const candidates = selectedJob ? state.candidates.filter((item) => memberIds.has(item.id)) : state.candidates;
+    const interviews = selectedJob ? state.interviews.filter((item) => item.jobId === selectedJob.id) : state.interviews;
     const candidateStatuses = Object.fromEntries(
       ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE']
-        .map((status) => [status, state.candidates.filter((item) => item.status === status).length]),
+        .map((status) => [status, candidates.filter((item) => item.status === status).length]),
     );
     const interviewStatuses = Object.fromEntries(
       ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW']
-        .map((status) => [status, state.interviews.filter((item) => item.status === status).length]),
+        .map((status) => [status, interviews.filter((item) => item.status === status).length]),
     );
     const interviewTypes = Object.fromEntries(
       ['SCREENING', 'TECHNICAL', 'PRACTICAL', 'FINAL']
-        .map((type) => [type, state.interviews.filter((item) => item.type === type).length]),
+        .map((type) => [type, interviews.filter((item) => item.type === type).length]),
     );
+    const interviewView = (item: Interview) => ({
+      id: item.id,
+      status: item.status,
+      type: item.type,
+      scheduledAt: item.scheduledAt,
+      candidate: {
+        name: item.candidate?.name ?? item.candidateId,
+        reference: item.candidate?.reference ?? item.candidateId,
+        passportNumber: item.candidate?.passportNumber ?? state.candidates.find((candidate) => candidate.id === item.candidateId)?.passportNumber ?? null,
+      },
+      job: item.job ? { id: item.job.id, title: item.job.title, location: item.job.location } : selectedJob ? { id: selectedJob.id, title: selectedJob.title, location: selectedJob.location } : null,
+    });
     return {
       scope: role,
+      selectedJob: selectedJob ? { id: selectedJob.id, title: selectedJob.title, location: selectedJob.location, status: selectedJob.status } : null,
       counts: {
         agencies: state.agencies.length,
         activeAgencies: state.agencies.filter((item) => item.status === 'ACTIVE').length,
-        candidates: role === 'INTERVIEWER' ? 0 : state.candidates.length,
-        jobs: role === 'INTERVIEWER' ? 0 : state.jobs.length,
-        publishedJobs: role === 'INTERVIEWER' ? 0 : state.jobs.filter((item) => item.status === 'PUBLISHED').length,
-        interviews: state.interviews.length,
-        submittedEvaluations: state.interviews.filter((item) => item.status === 'COMPLETED').length,
-        draftEvaluations: state.interviews.filter((item) => item.status === 'IN_PROGRESS').length,
-        pendingDecisions: state.candidates.filter((item) => item.status === 'INTERVIEW_COMPLETED').length,
+        candidates: selectedJob ? candidates.length : role === 'INTERVIEWER' ? 0 : candidates.length,
+        jobs: selectedJob ? 1 : role === 'INTERVIEWER' ? 0 : state.jobs.length,
+        publishedJobs: selectedJob ? (selectedJob.status === 'PUBLISHED' ? 1 : 0) : role === 'INTERVIEWER' ? 0 : state.jobs.filter((item) => item.status === 'PUBLISHED').length,
+        interviews: interviews.length,
+        submittedEvaluations: interviews.filter((item) => item.status === 'COMPLETED').length,
+        draftEvaluations: interviews.filter((item) => item.status === 'IN_PROGRESS').length,
+        pendingDecisions: candidates.filter((item) => item.status === 'INTERVIEW_COMPLETED').length,
       },
       candidateStatuses,
       interviewStatuses,
       interviewTypes,
       averageScorePoints: null,
-      recentCandidates: state.candidates.slice(0, 8).map((item) => ({ id: item.id, name: item.name, reference: item.reference, profession: item.profession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
-      recentInterviews: state.interviews.slice(0, 8).map((item) => ({ id: item.id, status: item.status, type: item.type, scheduledAt: item.scheduledAt, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId } })),
-      upcomingInterviews: state.interviews.filter((item) => item.status === 'SCHEDULED' && new Date(item.scheduledAt).getTime() >= Date.now()).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).slice(0, 8).map((item) => ({ id: item.id, scheduledAt: item.scheduledAt, type: item.type, candidate: { name: item.candidate?.name ?? item.candidateId, reference: item.candidate?.reference ?? item.candidateId, passportNumber: item.candidate?.passportNumber ?? state.candidates.find(candidate => candidate.id === item.candidateId)?.passportNumber ?? null } })),
+      recentCandidates: candidates.slice(0, 8).map((item) => ({ id: item.id, name: item.name, reference: item.reference, profession: item.profession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
+      recentInterviews: interviews.slice(0, 8).map(interviewView),
+      upcomingInterviews: interviews.filter((item) => item.status === 'SCHEDULED' && new Date(item.scheduledAt).getTime() >= Date.now()).sort((left, right) => left.scheduledAt.localeCompare(right.scheduledAt)).slice(0, 8).map(interviewView),
     };
-  }, [role, state]);
+  }, [role, selectedJobId, state]);
 
   useEffect(() => {
     if (developmentMode) {
