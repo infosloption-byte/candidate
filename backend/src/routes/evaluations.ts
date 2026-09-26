@@ -253,7 +253,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.interviewId },
         include: {
           panel: { select: { userId: true } },
-          candidate: { select: { id: true, agencyId: true, name: true, reference: true, profession: true, birthdate: true } },
+          candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, reference: true, requestedProfession: true, birthdate: true } },
           criterionGroup: { select: { id: true, name: true, category: true, description: true } },
           evaluations: {
             include: {
