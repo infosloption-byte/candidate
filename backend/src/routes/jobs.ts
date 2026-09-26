@@ -359,6 +359,52 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
   );
 
   app.delete<{ Params: JobParams }>(
+    '/jobs/:id/permanent',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const existing = await getPrisma().job.findUnique({
+        where: { id: request.params.id },
+        select: {
+          id: true,
+          title: true,
+          candidatePool: { select: { status: true } },
+          interviews: { select: { id: true } },
+        },
+      });
+      if (!existing) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      }
+
+      if (existing.interviews.length) {
+        return reply.code(409).send({
+          success: false,
+          error: { code: 'JOB_HAS_INTERVIEWS', message: 'This job cannot be deleted because it has interview records. Close the job instead.' },
+        });
+      }
+
+      if (existing.candidatePool.some((item) => item.status === 'HIRED')) {
+        return reply.code(409).send({
+          success: false,
+          error: { code: 'JOB_HAS_HIRED_CANDIDATES', message: 'This job cannot be deleted because it has hired candidates.' },
+        });
+      }
+
+      await getPrisma().job.delete({ where: { id: existing.id } });
+
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        agencyId: request.authUser!.agencyId,
+        action: 'JOB_DELETED',
+        entityType: 'Job',
+        entityId: existing.id,
+        summary: 'Deleted job "' + existing.title + '".',
+      });
+
+      return reply.send({ success: true, data: { deleted: true, id: existing.id } });
+    },
+  );
+
+  app.delete<{ Params: JobParams }>(
     '/jobs/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
