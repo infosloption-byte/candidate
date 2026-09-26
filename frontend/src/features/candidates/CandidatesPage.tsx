@@ -283,18 +283,22 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   useEffect(() => {
     if (!candidate) return;
     setProfileForm({
-      name: candidate.name,
+      agencyRegisterNo: candidate.agencyRegisterNo,
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
       birthdate: candidate.birthdate ? candidate.birthdate.slice(0, 10) : '',
+      passportNumber: candidate.passportNumber ?? '',
+      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
+      requestedProfession: candidate.requestedProfession,
+      name: candidate.name,
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
       alternatePhone: candidate.alternatePhone ?? '',
       country: candidate.country ?? '',
-      passportNumber: candidate.passportNumber ?? '',
-      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
       currentLocation: candidate.currentLocation ?? '',
       availability: candidate.availability ?? '',
       visaStatus: candidate.visaStatus ?? '',
-      profession: candidate.requestedProfession ?? '',
+      profession: candidate.requestedProfession,
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
     });
