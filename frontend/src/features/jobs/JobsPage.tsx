@@ -197,8 +197,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         description: form.description.trim() || null,
         location: form.location.trim() || null,
         openings,
-        status: 'DRAFT',
-        publishedAt: null,
+        status: 'PUBLISHED',
+        publishedAt: new Date().toISOString(),
       };
 
       const created = developmentMode
@@ -210,6 +210,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               description: draft.description,
               location: draft.location,
               positions: normalizedPositions,
+              status: 'PUBLISHED',
             }),
           });
 
@@ -217,7 +218,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       setJobs((current) => [created, ...current]);
       closeForm();
       setSuccessTitle('Job created');
-      setSuccess('"' + created.title + '" was created as a draft.');
+      setSuccess('"' + created.title + '" is now published and ready for recruitment.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to save the job.');
     } finally {
@@ -226,7 +227,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   };
 
   const setStatus = async (job: Job) => {
-    const nextStatus = job.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
+    if (job.status !== 'PUBLISHED') return;
+    const nextStatus = 'CLOSED';
     const filledCount = job.filledCount ?? 0;
 
     if (nextStatus === 'CLOSED' && filledCount < job.openings) {
@@ -240,7 +242,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         ? {
             ...job,
             status: nextStatus as Job['status'],
-            publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt,
+            publishedAt: job.publishedAt ?? new Date().toISOString(),
           }
         : await apiFetch<Job>('/jobs/' + job.id, {
             method: 'PATCH',
@@ -257,8 +259,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             filledCount: updated.filledCount ?? item.filledCount,
           }
         : item));
-      setSuccessTitle(nextStatus === 'PUBLISHED' ? 'Job published' : 'Job closed');
-      setSuccess('"' + job.title + '" is now ' + nextStatus.toLowerCase() + '.');
+      setSuccessTitle('Job closed');
+      setSuccess('"' + job.title + '" is now closed.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the job.');
     }
@@ -319,7 +321,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
   const jobStatusOptions = [
     { value: '', label: 'All statuses' },
-    { value: 'DRAFT', label: 'Draft' },
     { value: 'PUBLISHED', label: 'Published' },
     { value: 'CLOSED', label: 'Closed' },
   ];
@@ -329,37 +330,31 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       <Button
         variant="secondary"
         size="sm"
-        className="!size-10 !min-h-10 !p-0"
-        title="Open job"
-        aria-label="Open job"
-        onClick={() => onOpenJob?.(job.id)}
+        className="!size-9 !min-h-9 !p-0"
+        title="Edit job"
+        aria-label="Edit job"
+        onClick={(event) => {
+          event.stopPropagation();
+          beginEdit(job);
+        }}
       >
-        <Icon name="eye" size={16} />
+        <Icon name="pencil" size={15} />
       </Button>
-      {role !== 'INTERVIEWEE' && (
-        <>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="!size-10 !min-h-10 !p-0"
-            title="Edit job"
-            aria-label="Edit job"
-            onClick={() => beginEdit(job)}
-          >
-            <Icon name="pencil" size={16} />
-          </Button>
-          <Button
-            variant={job.status === 'PUBLISHED' && (job.filledCount ?? 0) >= job.openings ? 'danger' : 'secondary'}
-            size="sm"
-            className="!size-10 !min-h-10 !p-0"
-            title={job.status === 'PUBLISHED' ? 'Close job' : 'Publish job'}
-            aria-label={job.status === 'PUBLISHED' ? 'Close job' : 'Publish job'}
-            disabled={job.status === 'PUBLISHED' && (job.filledCount ?? 0) < job.openings}
-            onClick={() => void setStatus(job)}
-          >
-            <Icon name={job.status === 'PUBLISHED' ? 'lock' : 'send'} size={16} />
-          </Button>
-        </>
+      {role !== 'INTERVIEWEE' && job.status === 'PUBLISHED' && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="!size-9 !min-h-9 !p-0"
+          title="Close job"
+          aria-label="Close job"
+          disabled={(job.filledCount ?? 0) < job.openings}
+          onClick={(event) => {
+            event.stopPropagation();
+            void setStatus(job);
+          }}
+        >
+          <Icon name="lock" size={15} />
+        </Button>
       )}
     </div>
   );
@@ -722,20 +717,31 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             const positions = job.positions ?? [{ id: job.id + '-position', jobId: job.id, position: job.title, requiredCount: job.openings, sortOrder: 0 }];
 
             return (
-              <Card key={job.id}>
-                <div className="flex min-h-[25rem] flex-col">
+              <Card
+                key={job.id}
+                role="button"
+                tabIndex={0}
+                aria-label={'Open job ' + job.title}
+                className="cursor-pointer transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                onClick={() => onOpenJob?.(job.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpenJob?.(job.id);
+                  }
+                }}
+              >
+                <div className="flex min-h-[24rem] flex-col">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-50 text-cyan-700">
-                          <Icon name="briefcase" size={17} />
-                        </span>
-                        <div className="min-w-0">
-                          <h2 className="truncate text-base font-black text-slate-950">{job.title}</h2>
-                          <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">
-                            {job.location ?? 'Location not set'}
-                          </p>
-                        </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-50 text-cyan-700">
+                        <Icon name="briefcase" size={17} />
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="truncate text-base font-black text-slate-950">{job.title}</h2>
+                        <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">
+                          {job.location ?? 'Location not set'}
+                        </p>
                       </div>
                     </div>
                     <div className="shrink-0">
@@ -743,32 +749,20 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     </div>
                   </div>
 
-                  {role !== 'INTERVIEWEE' && (
-                    <div className="mt-3 flex justify-end border-b border-slate-100 pb-3">
-                      {renderJobActions(job)}
-                    </div>
-                  )}
-
-                  <div className="mt-3 min-h-[2.75rem]">
-                    <p className="line-clamp-2 text-xs leading-5 text-slate-500">
-                      {job.description ?? 'No description provided for this opening.'}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
-                    <div className="min-w-0 rounded-xl bg-white px-3 py-2.5">
+                  <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
+                    <div className="rounded-xl bg-white px-3 py-2.5">
                       <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Required</p>
                       <p className="mt-1 text-sm font-black text-slate-900">{job.openings}</p>
                       <p className="text-[9px] font-semibold text-slate-400">workers</p>
                     </div>
-                    <div className="min-w-0 rounded-xl bg-white px-3 py-2.5">
+                    <div className="rounded-xl bg-white px-3 py-2.5">
                       <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p>
                       <p className="mt-1 text-sm font-black text-slate-900">{positions.length}</p>
                       <p className="text-[9px] font-semibold text-slate-400">{positions.length === 1 ? 'role' : 'roles'}</p>
                     </div>
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Worker progress</p>
@@ -786,7 +780,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     </p>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <Icon name="users" size={13} />
@@ -810,38 +804,22 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex-1 rounded-2xl border border-slate-100 bg-white p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Position requirements</p>
-                      <span className="text-[9px] font-bold text-slate-400">{positions.length} {positions.length === 1 ? 'position' : 'positions'}</span>
-                    </div>
-                    <div className="mt-2 space-y-1.5">
-                      {positions.slice(0, 3).map((position) => (
-                        <div key={position.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
-                          <span className="min-w-0 truncate text-[10px] font-bold text-slate-700">{position.position}</span>
-                          <span className="shrink-0 rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-black text-cyan-700">{position.requiredCount}</span>
-                        </div>
-                      ))}
-                      {positions.length > 3 && (
-                        <p className="pt-0.5 text-[9px] font-semibold text-slate-400">+ {positions.length - 3} more position(s)</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
                     <div className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-400">
                       <Icon name="clock" size={12} />
                       <span className="truncate">
-                        {job.publishedAt ? 'Published ' + new Date(job.publishedAt).toLocaleDateString() : 'Draft · not published'}
+                        Created {job.createdAt
+                          ? new Date(job.createdAt).toLocaleDateString()
+                          : job.publishedAt
+                            ? new Date(job.publishedAt).toLocaleDateString()
+                            : '—'}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      className="shrink-0 text-[10px] font-extrabold text-cyan-700 hover:text-cyan-800"
-                      onClick={() => onOpenJob?.(job.id)}
-                    >
-                      View details
-                    </button>
+                    {role !== 'INTERVIEWEE' && job.status === 'PUBLISHED' && (
+                      <div onClick={(event) => event.stopPropagation()}>
+                        {renderJobActions(job)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
