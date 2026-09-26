@@ -16,21 +16,25 @@ interface DatePickerProps {
 const pad = (value: number): string => String(value).padStart(2, '0');
 
 const parseDateValue = (value: string): Date | null => {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})/.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
+  const datePart = value.trim().slice(0, 10);
+  const parts = datePart.split('-');
+  if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]) - 1;
+  const day = Number(parts[2]);
+  if (!year || month < 0 || month > 11 || day < 1 || day > 31) return null;
   const date = new Date(year, month, day);
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+  return date;
 };
 
 const parseTimeValue = (value: string): { hour: number; minute: number } => {
-  const match = /T(\\d{2}):(\\d{2})/.exec(value);
-  if (!match) return { hour: 9, minute: 0 };
+  const timePart = value.includes('T') ? value.split('T')[1] ?? '' : '';
+  const parts = timePart.split(':');
+  if (parts.length < 2 || parts.some((part) => !/^\d+$/.test(part))) return { hour: 9, minute: 0 };
   return {
-    hour: Math.min(23, Math.max(0, Number(match[1]))),
-    minute: Math.min(59, Math.max(0, Number(match[2]))),
+    hour: Math.min(23, Math.max(0, Number(parts[0]))),
+    minute: Math.min(59, Math.max(0, Number(parts[1]))),
   };
 };
 
