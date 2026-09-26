@@ -548,29 +548,25 @@ const importCandidates = async (file: File, targetAgencyId: string, targetJobId:
           const index = indexOf(...names);
           return index >= 0 ? values[index]?.trim() ?? '' : '';
         };
-        if (indexOf('name') < 0) throw new Error('CSV must contain a name column.');
+        const requiredHeaders = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const missingHeader = requiredHeaders.find((name) => indexOf(name) < 0);
+        if (missingHeader) throw new Error('CSV is missing the required column: ' + missingHeader);
         const created: Candidate[] = rows.slice(1).map((values, index) => {
-          const experienceRaw = read(values, 'experienceyears', 'experience');
-          const experienceYears = experienceRaw ? Number(experienceRaw) : null;
-          const birthdate = read(values, 'birthdate', 'birth_date', 'dateofbirth', 'date_of_birth', 'dob');
+          const firstName = read(values, 'firstname');
+          const lastName = read(values, 'lastname');
           return {
             id: 'candidate-import-' + Date.now() + '-' + index,
             agencyId: targetAgencyId,
             reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
-            name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
-            birthdate: birthdate || null,
-            email: read(values, 'email') || null,
-            phone: read(values, 'phone', 'contactnumber', 'contact_number') || null,
-            alternatePhone: read(values, 'alternatephone', 'alternate_phone') || null,
-            country: read(values, 'country', 'nationality') || null,
-            passportNumber: read(values, 'passportnumber', 'passport_number') || null,
-            passportExpiry: read(values, 'passportexpiry', 'passport_expiry') || null,
-            currentLocation: read(values, 'currentlocation', 'current_location', 'location') || null,
-            availability: read(values, 'availability') || null,
-            visaStatus: read(values, 'visastatus', 'visa_status') || null,
-            profession: read(values, 'profession') || null,
-            experienceYears: Number.isFinite(experienceYears) ? experienceYears : null,
-            skills: read(values, 'skills').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
+            agencyRegisterNo: read(values, 'agencyregisterno'),
+            firstName,
+            lastName,
+            name: [firstName, lastName].filter(Boolean).join(' ') || 'Imported Candidate ' + (index + 1),
+            birthdate: read(values, 'birthdate') || null,
+            passportNumber: read(values, 'passportnumber') || null,
+            passportExpiry: read(values, 'passportexpiry') || null,
+            requestedProfession: read(values, 'requestedprofession'),
+            skills: [],
             onboardingStatus: 'NOT_STARTED',
             source: 'BULK_IMPORTED',
             status: 'POOL',
