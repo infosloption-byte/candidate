@@ -551,37 +551,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             />
           </div>
 
-          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-            <label className="field-label">Sort</label>
-            <div className="mt-1 flex min-w-0 gap-1.5">
-              <SelectMenu
-                value={sortBy}
-                onChange={(value) => setSortBy(value as typeof sortBy)}
-                options={[
-                  { value: 'created', label: 'Latest' },
-                  { value: 'title', label: 'Title' },
-                  { value: 'openings', label: 'Required workers' },
-                  { value: 'filled', label: 'Filled workers' },
-                  { value: 'interviews', label: 'Interviews' },
-                ]}
-                ariaLabel="Sort jobs by"
-                className="min-w-0 flex-1"
-              />
-              <button
-                type="button"
-                title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
-                aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
-                className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-                onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-                  {sortDirection === 'asc'
-                    ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
 
         {showAdvancedFilters && (
@@ -596,31 +565,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                   ariaLabel="Filter jobs by status"
                   className="mt-1"
                 />
-              </div>
-              <div>
-                <label className="field-label">Sort by</label>
-                <SelectMenu
-                  value={sortBy}
-                  onChange={(value) => setSortBy(value as typeof sortBy)}
-                  options={[
-                    { value: 'created', label: 'Latest' },
-                    { value: 'title', label: 'Title' },
-                    { value: 'openings', label: 'Required workers' },
-                    { value: 'filled', label: 'Filled workers' },
-                    { value: 'interviews', label: 'Interviews' },
-                  ]}
-                  ariaLabel="Sort jobs by"
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
-                  onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
-                >
-                  {sortDirection === 'asc' ? 'Ascending' : 'Descending'} order
-                </button>
               </div>
             </div>
           </div>
@@ -646,6 +590,36 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
           <div className="flex items-center justify-between gap-3 sm:justify-end">
             <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visibleJobs.length}</span> job(s)</p>
+
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">Sort</span>
+              <SelectMenu
+                value={sortBy}
+                onChange={(value) => setSortBy(value as typeof sortBy)}
+                options={[
+                  { value: 'created', label: 'Latest' },
+                  { value: 'title', label: 'Title' },
+                  { value: 'openings', label: 'Required workers' },
+                  { value: 'filled', label: 'Filled workers' },
+                  { value: 'interviews', label: 'Interviews' },
+                ]}
+                ariaLabel="Sort jobs by"
+                className="w-32 sm:w-36"
+              />
+              <button
+                type="button"
+                title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
+                aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
+                className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                  {sortDirection === 'asc'
+                    ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                </svg>
+              </button>
+            </div>
 
             {(search || statusFilter) && (
               <button
