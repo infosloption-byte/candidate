@@ -663,9 +663,15 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         }
 
         if (requestedJob && requestedFinalStatus) {
+          const jobCandidateStatus =
+            request.body.status === 'PASSED'
+              ? 'PASSED'
+              : request.body.status === 'REJECTED'
+                ? 'REJECTED'
+                : 'HIRED';
           await tx.jobCandidate.update({
             where: { jobId_candidateId: { jobId: requestedJob.id, candidateId: existing.id } },
-            data: { status: request.body.status!, statusUpdatedAt: new Date() },
+            data: { status: jobCandidateStatus, statusUpdatedAt: new Date() },
           });
           if (request.body.status === 'HIRED') {
             const hiredCount = await tx.jobCandidate.count({ where: { jobId: requestedJob.id, status: 'HIRED' } });
