@@ -1,29 +1,91 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
-import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
 import { Card } from '../../shared/components/Card';
+import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
+import { StatusPill } from '../../shared/components/StatusPill';
+import { SelectMenu } from '../../shared/components/SelectMenu';
+import { DatePicker } from '../../shared/components/DatePicker';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
-import type { Job, JobDetail, JobCandidate, JobStatus, UserRole } from '../../domain/types';
+import type { Agency, Candidate, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, Job, JobCandidate, JobDetail, User, UserRole } from '../../domain/types';
 
 interface JobDetailPageProps {
   role: UserRole;
   jobId: string | null;
   onBack: () => void;
-  onCandidates: (jobId: string) => void;
-  onInterviews: (jobId: string) => void;
 }
 
 const label = (value: string): string => value.replaceAll('_', ' ');
+const jobCode = (id: string): string => 'JOB-' + id.slice(0, 8).toUpperCase();
 
-const toJobDetailFromState = (
-  job: Job,
-  memberships: JobCandidate[],
-  interviews: JobDetail['interviews'],
-): JobDetail => {
+const emptyCandidate = {
+  name: '',
+  birthdate: '',
+  email: '',
+  phone: '',
+  alternatePhone: '',
+  country: '',
+  passportNumber: '',
+  passportExpiry: '',
+  currentLocation: '',
+  availability: '',
+  visaStatus: '',
+  profession: '',
+  experienceYears: '0',
+  skills: '',
+};
+
+const defaultInterview = {
+  type: 'TECHNICAL' as Interview['type'],
+  scheduledAt: '',
+  durationMins: '45',
+  location: '',
+  notes: '',
+};
+
+const toDateTimeLocal = (date: Date): string => {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+};
+
+const parseCsv = (input: string): string[][] => {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let quoted = false;
+  const pushField = () => { row.push(field); field = ''; };
+  const pushRow = () => { if (row.length || field) { pushField(); rows.push(row); row = []; } };
+  for (let i = 0; i < input.length; i += 1) {
+    const char = input[i];
+    if (char === '"') {
+      if (quoted && input[i + 1] === '"') { field += '"'; i += 1; }
+      else quoted = !quoted;
+    } else if (!quoted && char === ',') pushField();
+    else if (!quoted && (char === '\n' || char === '\r')) {
+      if (char === '\r' && input[i + 1] === '\n') i += 1;
+      pushRow();
+    } else field += char;
+  }
+  if (quoted) throw new Error('CSV contains an unclosed quoted field.');
+  if (field || row.length) pushRow();
+  return rows;
+};
+
+const rowsToCandidates = (csv: string): Array<Record<string, string>> => {
+  const rows = parseCsv(csv);
+  if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate.');
+  const headers = rows[0].map((value) => value.trim().toLowerCase().replace(/\s+/g, ''));
+  return rows.slice(1).filter((row) => row.some(Boolean)).map((row) =>
+    Object.fromEntries(headers.map((header, index) => [header, (row[index] ?? '').trim()])),
+  );
+};
+
+const toJobDetailFromState = (job: Job, memberships: JobCandidate[], interviews: Interview[]): JobDetail => {
   const candidatePool = memberships.filter((item) => item.jobId === job.id);
   const jobInterviews = interviews.filter((item) => item.jobId === job.id);
   return {
@@ -36,18 +98,78 @@ const toJobDetailFromState = (
   };
 };
 
-export const JobDetailPage = ({ role, jobId, onBack, onCandidates, onInterviews }: JobDetailPageProps) => {
-  const { developmentMode } = useAuth();
+const buildAssignments = (groups: InterviewCriterionGroup[], selectedIds: string[]): InterviewCriterionAssignment[] => {
+  let sortOrder = 0;
+  const result: InterviewCriterionAssignment[] = [];
+  const seen = new Set<string>();
+  for (const group of groups.filter((item) => selectedIds.includes(item.id))) {
+    for (const item of group.criteria) {
+      if (seen.has(item.criterionId)) continue;
+      seen.add(item.criterionId);
+      result.push({
+        id: 'assignment-' + Date.now() + '-' + sortOrder,
+        interviewId: undefined,
+        criterionId: item.criterionId,
+        groupId: group.id,
+        name: item.criterion.name,
+        description: item.criterion.description,
+        maxPoints: item.criterion.maxPoints,
+        responseType: item.criterion.responseType,
+        required: item.criterion.required,
+        options: item.criterion.options,
+        sortOrder: sortOrder++,
+      });
+    }
+  }
+  return result;
+};
+
+export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
+  const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(Boolean(jobId));
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
 
-  const stateJob = useMemo(
-    () => (jobId ? state.jobs.find((item) => item.id === jobId) : undefined),
-    [jobId, state.jobs],
-  );
+  const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
+  const [candidateForm, setCandidateForm] = useState(emptyCandidate);
+  const [candidateAgencyId, setCandidateAgencyId] = useState(user?.agencyId ?? '');
+  const [candidateSaving, setCandidateSaving] = useState(false);
+  const [candidateModal, setCandidateModal] = useState(false);
+  const [uploadModal, setUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadAgencyId, setUploadAgencyId] = useState(user?.agencyId ?? '');
+  const [uploading, setUploading] = useState(false);
+
+  const [scheduleModal, setScheduleModal] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState(defaultInterview);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const [interviewers, setInterviewers] = useState<User[]>([]);
+  const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
+  const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>([]);
+  const [selectedCriteriaGroups, setSelectedCriteriaGroups] = useState<string[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const candidateTrap = useFocusTrap<HTMLDivElement>({ enabled: candidateModal, onEscape: () => setCandidateModal(false) });
+  const uploadTrap = useFocusTrap<HTMLDivElement>({ enabled: uploadModal, onEscape: () => setUploadModal(false) });
+  const scheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: scheduleModal, onEscape: () => setScheduleModal(false) });
+
+  const stateJob = useMemo(() => (jobId ? state.jobs.find((item) => item.id === jobId) : undefined), [jobId, state.jobs]);
+
+  const refreshJob = async () => {
+    if (!jobId) return;
+    if (developmentMode) {
+      const current = state.jobs.find((item) => item.id === jobId);
+      if (current) setJob(toJobDetailFromState(current, state.jobCandidates, state.interviews));
+      return;
+    }
+    const result = await apiFetch<JobDetail>('/jobs/' + jobId);
+    setJob(result);
+  };
 
   useEffect(() => {
     if (!jobId) {
@@ -55,207 +177,479 @@ export const JobDetailPage = ({ role, jobId, onBack, onCandidates, onInterviews 
       setLoading(false);
       return;
     }
-
     if (developmentMode) {
       if (!stateJob) {
         setJob(null);
-        setLoading(false);
-        return;
+      } else {
+        setJob(toJobDetailFromState(stateJob, state.jobCandidates, state.interviews));
       }
-      setJob(toJobDetailFromState(stateJob, state.jobCandidates, state.interviews));
       setLoading(false);
-      setError('');
       return;
     }
-
     let cancelled = false;
     setLoading(true);
     setError('');
     apiFetch<JobDetail>('/jobs/' + jobId)
-      .then((result) => {
-        if (!cancelled) setJob(result);
-      })
-      .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load the job.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .then((result) => { if (!cancelled) setJob(result); })
+      .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load the job.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [developmentMode, jobId, state.interviews, state.jobCandidates, stateJob]);
 
-  const setJobStatus = async (nextStatus: JobStatus) => {
-    if (!job) return;
-    if (nextStatus === 'CLOSED' && (job.filledCount ?? 0) < job.openings) {
-      setError('The job can only be closed after all required openings have been filled.');
+  useEffect(() => {
+    if (developmentMode) {
+      setAgencies(state.agencies);
       return;
     }
+    if (role === 'ADMIN') {
+      apiFetch<Agency[]>('/agencies').then(setAgencies).catch(() => undefined);
+    }
+  }, [developmentMode, role, state.agencies]);
+
+  const canManage = role === 'ADMIN' || role === 'AGENCY';
+
+  const openCandidateModal = () => {
+    setCandidateForm(emptyCandidate);
+    setCandidateAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? '');
+    setCandidateModal(true);
+    setError('');
+  };
+
+  const createCandidate = async () => {
+    if (!job || !candidateForm.name.trim() || !candidateAgencyId) return;
+    setCandidateSaving(true);
+    setError('');
+    try {
+      const payload = {
+        ...candidateForm,
+        experienceYears: Number(candidateForm.experienceYears) || 0,
+        skills: candidateForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+        jobId: job.id,
+      };
+      if (developmentMode) {
+        const id = 'candidate-' + Date.now();
+        const candidate: Candidate = {
+          id,
+          agencyId: candidateAgencyId,
+          reference: 'CA-' + Date.now().toString().slice(-6),
+          name: payload.name.trim(),
+          birthdate: payload.birthdate || null,
+          email: payload.email.trim() || null,
+          phone: payload.phone.trim() || null,
+          alternatePhone: payload.alternatePhone.trim() || null,
+          country: payload.country.trim() || null,
+          passportNumber: payload.passportNumber.trim() || null,
+          passportExpiry: payload.passportExpiry || null,
+          currentLocation: payload.currentLocation.trim() || null,
+          availability: payload.availability.trim() || null,
+          visaStatus: payload.visaStatus.trim() || null,
+          profession: payload.profession.trim() || null,
+          experienceYears: payload.experienceYears,
+          skills: payload.skills,
+          onboardingStatus: 'NOT_STARTED',
+          source: 'AGENCY_ADDED',
+          status: 'POOL',
+          statusUpdatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const membership: JobCandidate = {
+          id: 'job-candidate-' + Date.now(),
+          jobId: job.id,
+          candidateId: candidate.id,
+          status: 'POOL',
+          statusUpdatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          candidate,
+        };
+        dispatch({ type: 'CREATE_CANDIDATE', candidate });
+        dispatch({ type: 'ADD_JOB_CANDIDATES', memberships: [membership] });
+      } else {
+        const created = await apiFetch<Candidate>('/agencies/' + candidateAgencyId + '/candidates', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        void created;
+      }
+      setCandidateModal(false);
+      setSuccess('Candidate added to this job.');
+      await refreshJob();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to add candidate.');
+    } finally {
+      setCandidateSaving(false);
+    }
+  };
+
+  const uploadCandidates = async () => {
+    if (!job || !uploadFile || !uploadAgencyId) return;
+    setUploading(true);
+    setError('');
+    try {
+      const csv = await uploadFile.text();
+      if (developmentMode) {
+        const rows = rowsToCandidates(csv);
+        const memberships: JobCandidate[] = [];
+        for (const row of rows) {
+          const id = 'candidate-' + Date.now() + '-' + memberships.length;
+          const candidate: Candidate = {
+            id,
+            agencyId: uploadAgencyId,
+            reference: 'CA-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
+            name: row.name || row.fullname || 'Unnamed candidate',
+            birthdate: row.birthdate || row.dob || null,
+            email: row.email || null,
+            phone: row.phone || row.contactnumber || null,
+            alternatePhone: row.alternatephone || null,
+            country: row.country || row.nationality || null,
+            passportNumber: row.passportnumber || row.passport || null,
+            passportExpiry: row.passportexpiry || null,
+            currentLocation: row.currentlocation || row.location || null,
+            availability: row.availability || null,
+            visaStatus: row.visastatus || null,
+            profession: row.profession || null,
+            experienceYears: Number(row.experienceyears || row.experience || 0) || 0,
+            skills: (row.skills || '').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
+            onboardingStatus: 'NOT_STARTED',
+            source: 'BULK_IMPORTED',
+            status: 'POOL',
+            statusUpdatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          memberships.push({
+            id: 'job-candidate-' + id,
+            jobId: job.id,
+            candidateId: id,
+            status: 'POOL',
+            statusUpdatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            candidate,
+          });
+          dispatch({ type: 'CREATE_CANDIDATE', candidate });
+        }
+        dispatch({ type: 'ADD_JOB_CANDIDATES', memberships });
+      } else {
+        await apiFetch<{ importedCount: number }>('/agencies/' + uploadAgencyId + '/candidates/bulk?jobId=' + encodeURIComponent(job.id), {
+          method: 'POST',
+          headers: { 'content-type': 'text/csv' },
+          body: csv,
+        });
+      }
+      setUploadModal(false);
+      setUploadFile(null);
+      setSuccess('Candidates uploaded to this job.');
+      await refreshJob();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to upload candidates.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openScheduleModal = async () => {
+    if (!job) return;
+    setError('');
+    setSuccess('');
+    setSelectedCandidateIds(job.candidatePool.filter((item) => !['HIRED', 'REJECTED', 'INACTIVE'].includes(item.candidate.status)).map((item) => item.candidateId));
+    setSelectedInterviewers([]);
+    setSelectedCriteriaGroups([]);
+    setCandidateSearch('');
+    setScheduleForm({ ...defaultInterview, scheduledAt: toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)), location: job.location ?? '' });
+    try {
+      if (developmentMode) {
+        const groups = state.interviewCriterionGroups.filter((item) => item.active);
+        setCriteriaGroups(groups);
+        const agencyIds = [...new Set(job.candidatePool.map((item) => item.candidate.agencyId))];
+        setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && (item.agencyId === null || agencyIds.includes(item.agencyId))));
+      } else {
+        const agencyIds = [...new Set(job.candidatePool.map((item) => item.candidate.agencyId))];
+        const [groups, ...interviewerResults] = await Promise.all([
+          apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
+          ...agencyIds.map((agencyId) => apiFetch<User[]>('/interviewers?agencyId=' + encodeURIComponent(agencyId))),
+        ]);
+        const uniqueInterviewers = [...new Map(interviewerResults.flat().map((item) => [item.id, item])).values()];
+        setCriteriaGroups(groups.filter((item) => item.active));
+        setInterviewers(uniqueInterviewers.filter((item) => item.active));
+      }
+      setScheduleModal(true);
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load interview setup.');
+    }
+  };
+
+  const scheduleInterviews = async () => {
+    if (!job) return;
+    const candidateIds = selectedCandidateIds;
+    const durationMins = Number(scheduleForm.durationMins) || 45;
+    if (!candidateIds.length) { setError('Select at least one candidate.'); return; }
+    if (!scheduleForm.scheduledAt) { setError('Select an interview date and time.'); return; }
+    if (!selectedInterviewers.length) { setError('Select at least one interviewer.'); return; }
+    if (!selectedCriteriaGroups.length) { setError('Select at least one interview criteria group.'); return; }
+
+    setScheduleSaving(true);
+    setError('');
+    try {
+      if (developmentMode) {
+        const assignments = buildAssignments(criteriaGroups, selectedCriteriaGroups);
+        candidateIds.forEach((candidateId, index) => {
+          const candidate = job.candidatePool.find((item) => item.candidateId === candidateId)?.candidate;
+          if (!candidate) return;
+          const interview: Interview = {
+            id: 'interview-' + Date.now() + '-' + index,
+            candidateId,
+            jobId: job.id,
+            type: scheduleForm.type,
+            status: 'SCHEDULED',
+            scheduledAt: new Date(new Date(scheduleForm.scheduledAt).getTime() + index * durationMins * 60_000).toISOString(),
+            durationMins,
+            location: scheduleForm.location.trim() || null,
+            notes: scheduleForm.notes.trim() || null,
+            panelUserIds: selectedInterviewers,
+            criterionGroupId: selectedCriteriaGroups[0] ?? null,
+            criterionGroupIds: selectedCriteriaGroups,
+            criterionGroups: criteriaGroups.filter((group) => selectedCriteriaGroups.includes(group.id)).map((group, index) => ({ ...group, sortOrder: index })),
+            criterionAssignments: assignments,
+            candidate,
+          };
+          dispatch({ type: 'SCHEDULE_INTERVIEW', interview });
+        });
+      } else {
+        await apiFetch('/interviews/bulk', {
+          method: 'POST',
+          body: JSON.stringify({
+            candidateIds,
+            jobId: job.id,
+            type: scheduleForm.type,
+            scheduledAt: new Date(scheduleForm.scheduledAt).toISOString(),
+            durationMins,
+            location: scheduleForm.location.trim() || null,
+            notes: scheduleForm.notes.trim() || null,
+            interviewerIds: selectedInterviewers,
+            criterionGroupIds: selectedCriteriaGroups,
+          }),
+        });
+      }
+      setScheduleModal(false);
+      setSuccess(candidateIds.length + ' interview(s) scheduled.');
+      await refreshJob();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to schedule interviews.');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const deleteJob = async () => {
+    if (!job) return;
     setActionBusy(true);
     setError('');
     try {
-      const updated = developmentMode
-        ? { ...job, status: nextStatus, publishedAt: nextStatus === 'PUBLISHED' ? (job.publishedAt ?? new Date().toISOString()) : job.publishedAt }
-        : await apiFetch<JobDetail>('/jobs/' + job.id, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: nextStatus }),
-          });
-
-      if (developmentMode) dispatch({ type: 'SET_JOB_STATUS', jobId: job.id, status: nextStatus });
-      setJob((current) => current ? { ...current, ...updated } : updated);
+      if (developmentMode) {
+        dispatch({ type: 'DELETE_JOB', jobId: job.id });
+      } else {
+        await apiFetch('/jobs/' + job.id + '/permanent', { method: 'DELETE' });
+      }
+      setDeleteConfirm(false);
+      setSuccess('Job deleted.');
+      onBack();
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to update the job.');
+      setError(requestError instanceof Error ? requestError.message : 'Unable to delete the job.');
     } finally {
       setActionBusy(false);
     }
   };
 
-  if (!jobId) {
-    return <StateMessage kind="empty" title="No job selected" description="Choose a job from the Jobs page." />;
-  }
-
-  if (loading) {
-    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading job" description="Fetching the job, candidate pool and interview activity." /></section>;
-  }
-
-  if (!job) {
-    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title="Job not found" description={error || 'The requested job is unavailable.'} /></section>;
-  }
+  if (!jobId) return <StateMessage kind="empty" title="No job selected" description="Choose a job from the Jobs page." />;
+  if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading job" description="Fetching the job, candidate pool and interview activity." /></section>;
+  if (!job) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title="Job not found" description={error || 'The requested job is unavailable.'} /></section>;
 
   const filledCount = job.filledCount ?? job.candidatePool.filter((item) => item.status === 'HIRED').length;
   const candidateCount = job.candidateCount ?? job.candidatePool.length;
   const interviewCount = job.interviewCount ?? job.interviews.length;
   const progress = job.openings ? Math.min(100, Math.round((filledCount / job.openings) * 100)) : 0;
   const positions = job.positions?.length ? job.positions.slice().sort((a, b) => a.sortOrder - b.sortOrder) : [{ id: job.id + '-position', jobId: job.id, position: job.title, requiredCount: job.openings, sortOrder: 0 }];
-  const canManage = role === 'ADMIN' || role === 'AGENCY';
+  const filteredCandidates = job.candidatePool.filter((membership) => {
+    const query = candidateSearch.trim().toLowerCase();
+    if (!query) return true;
+    const candidate = membership.candidate;
+    return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.profession ?? '', candidate.country ?? ''].some((value) => value.toLowerCase().includes(query));
+  });
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="secondary" size="sm" onClick={onBack}>
-          <Icon name="chevron-left" size={15} /> Jobs
-        </Button>
+        <Button variant="secondary" size="sm" onClick={onBack}><Icon name="chevron-left" size={15} /> Jobs</Button>
         {canManage && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onClick={() => onCandidates(job.id)} disabled={job.status === 'CLOSED'}>
-              <Icon name="users" size={15} /> Add candidates
-            </Button>
-            <Button size="sm" onClick={() => onInterviews(job.id)} disabled={job.status === 'CLOSED' || candidateCount === 0}>
-              <Icon name="calendar" size={15} /> Schedule interviews
-            </Button>
-            {job.status === 'DRAFT' && <Button variant="secondary" size="sm" disabled={actionBusy} onClick={() => void setJobStatus('PUBLISHED')}>Publish job</Button>}
-            {job.status === 'PUBLISHED' && (
-              <Button variant="danger" size="sm" disabled={actionBusy || filledCount < job.openings} onClick={() => void setJobStatus('CLOSED')}>
-                Close job
-              </Button>
-            )}
+          <div className="flex items-center gap-1.5">
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Add candidate" aria-label="Add candidate" disabled={job.status === 'CLOSED'} onClick={openCandidateModal}><Icon name="plus" size={16} /></Button>
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Upload candidates" aria-label="Upload candidates" disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }}><Icon name="download" size={16} /></Button>
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Schedule interview" aria-label="Schedule interview" disabled={job.status === 'CLOSED' || candidateCount === 0} onClick={() => void openScheduleModal()}><Icon name="calendar" size={16} /></Button>
+            <Button variant="danger" size="sm" className="!size-10 !min-h-10 !p-0" title="Delete job" aria-label="Delete job" onClick={() => setDeleteConfirm(true)}><Icon name="x" size={16} /></Button>
           </div>
         )}
       </div>
 
-      {error && <StateMessage kind="error" title="Job action failed" description={error} />}
+      {error && <StateMessage kind="error" title="Job action failed" description={error} floating={candidateModal || uploadModal || scheduleModal} />}
+      {success && <StateMessage kind="success" title="Saved" description={success} />}
 
       <Card>
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill value={job.status} />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{job.title}</h1>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[10px] font-black text-slate-600"><Icon name="briefcase" size={12} /> {jobCode(job.id)}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500"><Icon name="map-pin" size={12} /> {job.location || 'Location not set'}</span>
             </div>
-            <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{job.title}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{job.description || 'No job note provided.'}</p>
+            {job.description && <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-500">{job.description}</p>}
           </div>
           <div className="w-full shrink-0 lg:w-72">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Worker requirement</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Worker progress</p>
               <p className="text-sm font-black text-slate-950">{filledCount} / {job.openings}</p>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: progress + '%' }} />
-            </div>
-            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{job.openings - filledCount > 0 ? (job.openings - filledCount) + ' opening(s) remaining' : 'All openings filled'}</p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-500" style={{ width: progress + '%' }} /></div>
+            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{job.openings - filledCount > 0 ? job.openings - filledCount + ' opening(s) remaining' : 'All openings filled'}</p>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 text-sm font-bold text-slate-800">{job.location || 'Not set'}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p><p className="mt-1 text-sm font-bold text-slate-800">{positions.length}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Required workers</p><p className="mt-1 text-sm font-bold text-slate-800">{job.openings}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidates</p><p className="mt-1 text-sm font-bold text-slate-800">{candidateCount}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviews</p><p className="mt-1 text-sm font-bold text-slate-800">{interviewCount}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Published</p><p className="mt-1 text-sm font-bold text-slate-800">{job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : 'Draft'}</p></div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p><p className="mt-1 text-sm font-black text-slate-800">{positions.length}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Required workers</p><p className="mt-1 text-sm font-black text-slate-800">{job.openings}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidates</p><p className="mt-1 text-sm font-black text-slate-800">{candidateCount}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviews</p><p className="mt-1 text-sm font-black text-slate-800">{interviewCount}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Created</p><p className="mt-1 text-sm font-black text-slate-800">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}</p></div>
         </div>
-        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Position requirements</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {positions.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3.5 py-3 shadow-sm">
-                <span className="truncate text-xs font-bold text-slate-800">{item.position}</span>
-                <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{item.requiredCount} required</span>
-              </div>
-            ))}
-          </div>
+
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+              <tr><th className="px-4 py-3">Position</th><th className="px-4 py-3">Required workers</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {positions.map((item) => <tr key={item.id}><td className="px-4 py-3 font-bold text-slate-800">{item.position}</td><td className="px-4 py-3 font-black text-slate-900">{item.requiredCount}</td></tr>)}
+            </tbody>
+          </table>
         </div>
       </Card>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-black text-slate-950">Candidate pool</h2>
-              <p className="mt-1 text-xs text-slate-400">Candidates collected specifically for this job.</p>
-            </div>
-            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{candidateCount}</span>
-          </div>
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Candidate pool</h2><p className="mt-1 text-xs text-slate-400">Candidates collected specifically for this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{candidateCount}</span></div>
           <div className="mt-4 space-y-2.5">
             {job.candidatePool.length ? job.candidatePool.map((membership) => (
               <div key={membership.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · {membership.candidate.profession || 'Profession not set'} · {membership.candidate.agencyId}</p>
-                </div>
+                <div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</p></div>
                 <StatusPill value={membership.status} />
               </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center">
-                <p className="text-sm font-bold text-slate-700">No candidates in this job pool yet.</p>
-                <p className="mt-1 text-xs text-slate-400">Use Add candidates to collect matching workers from the candidate pool.</p>
-              </div>
-            )}
+            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No candidates in this job pool yet.</p></div>}
           </div>
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-black text-slate-950">Interview activity</h2>
-              <p className="mt-1 text-xs text-slate-400">Every interview attached to this job.</p>
-            </div>
-            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{interviewCount}</span>
-          </div>
+          <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Interview activity</h2><p className="mt-1 text-xs text-slate-400">Every interview attached to this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{interviewCount}</span></div>
           <div className="mt-4 space-y-2.5">
             {job.interviews.length ? job.interviews.map((interview) => (
-              <div key={interview.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? interview.candidateId}</p>
-                    <p className="mt-0.5 text-[10px] text-slate-400">{label(interview.type)} · {new Date(interview.scheduledAt).toLocaleString()}</p>
-                  </div>
-                  <StatusPill value={interview.status} />
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-slate-400">
-                  <span>{interview.durationMins} min</span>
-                  <span>·</span>
-                  <span>{interview.panel?.length ?? interview.panelUserIds.length} interviewer(s)</span>
-                </div>
-              </div>
-            )) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center">
-                <p className="text-sm font-bold text-slate-700">No interviews scheduled yet.</p>
-                <p className="mt-1 text-xs text-slate-400">Once candidates are in the pool, schedule their interviews from here.</p>
-              </div>
-            )}
+              <div key={interview.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? interview.candidateId}</p><p className="mt-0.5 text-[10px] text-slate-400">{label(interview.type)} · {new Date(interview.scheduledAt).toLocaleString()}</p></div><StatusPill value={interview.status} /></div><div className="mt-2 text-[10px] font-semibold text-slate-400">{interview.durationMins} min · {interview.panel?.length ?? interview.panelUserIds.length} interviewer(s)</div></div>
+            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No interviews scheduled yet.</p></div>}
           </div>
         </Card>
       </div>
+
+      {candidateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close add candidate dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setCandidateModal(false)} />
+          <div ref={candidateTrap} role="dialog" aria-modal="true" className="relative z-10 my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate</p><h2 className="mt-1 text-lg font-black text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Create a candidate and place them directly into this job pool.</p></div><button type="button" className="grid size-9 place-items-center rounded-xl text-xl text-slate-400 hover:bg-slate-100" onClick={() => setCandidateModal(false)} aria-label="Close">×</button></div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
+              <FormField label="Full name"><input className="field-input" value={candidateForm.name} onChange={(e) => setCandidateForm({ ...candidateForm, name: e.target.value })} /></FormField>
+              <FormField label="Birthdate"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
+              <FormField label="Country / nationality"><input className="field-input" value={candidateForm.country} onChange={(e) => setCandidateForm({ ...candidateForm, country: e.target.value })} /></FormField>
+              <FormField label="Contact number"><input className="field-input" value={candidateForm.phone} onChange={(e) => setCandidateForm({ ...candidateForm, phone: e.target.value })} /></FormField>
+              <FormField label="Alternate contact number"><input className="field-input" value={candidateForm.alternatePhone} onChange={(e) => setCandidateForm({ ...candidateForm, alternatePhone: e.target.value })} /></FormField>
+              <FormField label="Email"><input type="email" className="field-input" value={candidateForm.email} onChange={(e) => setCandidateForm({ ...candidateForm, email: e.target.value })} /></FormField>
+              <FormField label="Passport number"><input className="field-input" value={candidateForm.passportNumber} onChange={(e) => setCandidateForm({ ...candidateForm, passportNumber: e.target.value })} /></FormField>
+              <FormField label="Passport expiry"><input type="date" className="field-input" value={candidateForm.passportExpiry} onChange={(e) => setCandidateForm({ ...candidateForm, passportExpiry: e.target.value })} /></FormField>
+              <FormField label="Current location"><input className="field-input" value={candidateForm.currentLocation} onChange={(e) => setCandidateForm({ ...candidateForm, currentLocation: e.target.value })} /></FormField>
+              <FormField label="Availability"><input className="field-input" value={candidateForm.availability} onChange={(e) => setCandidateForm({ ...candidateForm, availability: e.target.value })} /></FormField>
+              <FormField label="Visa / work status"><input className="field-input" value={candidateForm.visaStatus} onChange={(e) => setCandidateForm({ ...candidateForm, visaStatus: e.target.value })} /></FormField>
+              <FormField label="Profession"><input className="field-input" value={candidateForm.profession} onChange={(e) => setCandidateForm({ ...candidateForm, profession: e.target.value })} /></FormField>
+              <FormField label="Experience years"><input type="number" min="0" className="field-input" value={candidateForm.experienceYears} onChange={(e) => setCandidateForm({ ...candidateForm, experienceYears: e.target.value })} /></FormField>
+              <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={candidateForm.skills} onChange={(e) => setCandidateForm({ ...candidateForm, skills: e.target.value })} /></FormField></div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.name.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
+          </div>
+        </div>
+      )}
+
+      {uploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close upload dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setUploadModal(false)} />
+          <div ref={uploadTrap} role="dialog" aria-modal="true" className="relative z-10 my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate import</p><h2 className="mt-1 text-lg font-black text-slate-950">Upload candidates</h2><p className="mt-1 text-xs leading-5 text-slate-500">Import candidates directly into this job pool using the platform CSV format.</p>
+            <div className="mt-5 space-y-4">
+              {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={uploadAgencyId} onChange={setUploadAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Import agency" /></FormField>}
+              <FormField label="CSV file"><input type="file" accept=".csv,text/csv" className="field-input" onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)} /></FormField>
+              {uploadFile && <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{uploadFile.name}</div>}
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setUploadModal(false)}>Cancel</Button><Button disabled={uploading || !uploadFile || !uploadAgencyId} onClick={() => void uploadCandidates()}>{uploading ? 'Uploading…' : 'Upload candidates'}</Button></div>
+          </div>
+        </div>
+      )}
+
+      {scheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close schedule dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setScheduleModal(false)} />
+          <div ref={scheduleTrap} role="dialog" aria-modal="true" className="relative z-10 flex w-full max-w-4xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <header className="shrink-0 border-b border-slate-200 px-5 py-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p><h2 className="mt-1 text-lg font-black text-slate-950">Schedule interview</h2><p className="mt-1 text-xs text-slate-500">Select candidates, interview settings, criteria and the interviewer panel.</p></header>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <FormField label="Interview type"><SelectMenu value={scheduleForm.type} onChange={(value) => setScheduleForm({ ...scheduleForm, type: value as Interview['type'] })} options={[{ value: 'SCREENING', label: 'Screening' }, { value: 'TECHNICAL', label: 'Technical' }, { value: 'PRACTICAL', label: 'Practical' }, { value: 'FINAL', label: 'Final' }]} ariaLabel="Interview type" /></FormField>
+                <FormField label="Date & time"><DatePicker value={scheduleForm.scheduledAt} onChange={(value) => setScheduleForm({ ...scheduleForm, scheduledAt: value })} showTime placeholder="Select date and time" ariaLabel="Interview date and time" /></FormField>
+                <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={scheduleForm.durationMins} onChange={(e) => setScheduleForm({ ...scheduleForm, durationMins: e.target.value })} /></FormField>
+                <FormField label="Location"><input className="field-input" value={scheduleForm.location} onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })} /></FormField>
+                <FormField label="Notes"><input className="field-input" value={scheduleForm.notes} onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })} /></FormField>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center justify-between gap-3"><div><p className="field-label">Candidates</p><p className="mt-1 text-[10px] text-slate-400">Select candidates already assigned to this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{selectedCandidateIds.length} selected</span></div>
+                <input className="field-input mt-2" value={candidateSearch} onChange={(e) => setCandidateSearch(e.target.value)} placeholder="Search name, reference, passport or profession…" />
+                <div className="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200">
+                  {filteredCandidates.map((membership) => {
+                    const disabled = ['HIRED', 'REJECTED', 'INACTIVE'].includes(membership.candidate.status);
+                    const checked = selectedCandidateIds.includes(membership.candidateId);
+                    return <label key={membership.candidateId} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50">
+                      <input type="checkbox" disabled={disabled} checked={checked} onChange={() => setSelectedCandidateIds((current) => checked ? current.filter((id) => id !== membership.candidateId) : [...current, membership.candidateId])} />
+                      <span className="min-w-0 flex-1"><span className="block truncate text-xs font-black text-slate-800">{membership.candidate.name}</span><span className="block truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</span></span>
+                    </label>;
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                <div><p className="field-label">Interviewers</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{interviewers.length ? interviewers.map((item) => { const checked = selectedInterviewers.includes(item.id); return <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input type="checkbox" checked={checked} onChange={() => setSelectedInterviewers((current) => checked ? current.filter((id) => id !== item.id) : [...current, item.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this job's candidate agencies.</p>}</div></div>
+                <div><p className="field-label">Criteria groups</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{criteriaGroups.length ? criteriaGroups.map((group) => { const checked = selectedCriteriaGroups.includes(group.id); return <label key={group.id} className="flex cursor-pointer items-start gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input className="mt-0.5" type="checkbox" checked={checked} onChange={() => setSelectedCriteriaGroups((current) => checked ? current.filter((id) => id !== group.id) : [...current, group.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{group.name}</span><span className="block text-[10px] text-slate-400">{group.criteria.length} criteria</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active criteria groups are available.</p>}</div></div>
+              </div>
+            </div>
+            <footer className="shrink-0 border-t border-slate-200 bg-slate-50/70 px-5 py-3"><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setScheduleModal(false)}>Cancel</Button><Button disabled={scheduleSaving} onClick={() => void scheduleInterviews()}>{scheduleSaving ? 'Scheduling…' : 'Schedule interview'}</Button></div></footer>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={deleteConfirm}
+        title="Delete this job?"
+        description="The job will be permanently removed. Jobs with interview records or hired candidates cannot be deleted."
+        confirmLabel="Delete job"
+        cancelLabel="Keep job"
+        danger
+        busy={actionBusy}
+        onCancel={() => { if (!actionBusy) setDeleteConfirm(false); }}
+        onConfirm={() => void deleteJob()}
+      />
     </section>
   );
 };
