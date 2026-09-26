@@ -84,6 +84,7 @@ export interface Job {
   openings: number;
   status: JobStatus;
   publishedAt: string | null;
+  createdAt?: string;
   positions?: JobPosition[];
   candidateCount?: number;
   interviewCount?: number;
