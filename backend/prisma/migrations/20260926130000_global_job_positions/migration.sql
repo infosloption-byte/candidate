@@ -34,5 +34,5 @@ WHERE NOT EXISTS (
 );
 
 -- Jobs are no longer owned by an agency.
-UPDATE `Job` SET `agencyId` = NULL;
 ALTER TABLE `Job` MODIFY COLUMN `agencyId` VARCHAR(36) NULL;
+UPDATE `Job` SET `agencyId` = NULL;
