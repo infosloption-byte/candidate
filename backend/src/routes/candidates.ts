@@ -499,13 +499,6 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         where: { candidateId: existing.id },
         select: { id: true },
       });
-      if (linkedAccount && request.body.email !== undefined && !request.body.email?.trim()) {
-        return reply.code(400).send({
-          success: false,
-          error: { code: 'EMAIL_REQUIRED_FOR_ACCOUNT', message: 'A candidate linked to an Interviewee account must keep an email address.' },
-        });
-      }
-
       if (request.body.status !== undefined && (canManage || (canSetFinalStatus && requestedFinalStatus))) {
         const lifecycleManagedByWorkflow = ['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED'].includes(request.body.status);
         if (lifecycleManagedByWorkflow) {
@@ -589,13 +582,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           select: candidateSelect,
         });
 
-        if (linkedAccount && (data.name !== undefined || data.email !== undefined)) {
+        if (linkedAccount && (data.firstName !== undefined || data.lastName !== undefined)) {
+          const nextFirstName = data.firstName !== undefined ? String(data.firstName) : existing.firstName;
+          const nextLastName = data.lastName !== undefined ? String(data.lastName) : existing.lastName;
           await tx.user.update({
             where: { id: linkedAccount.id },
-            data: {
-              ...(data.name !== undefined ? { name: data.name as string } : {}),
-              ...(data.email !== undefined ? { email: data.email as string } : {}),
-            },
+            data: { name: [nextFirstName, nextLastName].map((value) => value.trim()).filter(Boolean).join(' ') },
           });
         }
 
@@ -640,7 +632,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         if ((error as { code?: string }).code === 'P2002') {
           return reply.code(409).send({
             success: false,
-            error: { code: 'USER_EMAIL_EXISTS', message: 'The candidate email is already used by another account.' },
+            error: { code: 'AGENCY_REGISTER_EXISTS', message: 'The agency register number is already registered for this agency.' },
           });
         }
         throw error;
@@ -656,7 +648,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           ? 'Changed candidate "' + withCandidateDisplayName(candidate).name + '" status to ' + candidate.status + '.'
           : 'Updated candidate "' + withCandidateDisplayName(candidate).name + '".',
       });
-      return reply.send({ success: true, data: candidate });
+      return reply.send({ success: true, data: withCandidateDisplayName(candidate) });
     },
   );
 };
