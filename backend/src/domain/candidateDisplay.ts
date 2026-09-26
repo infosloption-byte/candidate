@@ -9,4 +9,5 @@ export const getCandidateDisplayName = ({ firstName, lastName }: CandidateNamePa
 export const withCandidateDisplayName = <T extends CandidateNameParts>(candidate: T): T & { name: string } => ({
   ...candidate,
   name: getCandidateDisplayName(candidate),
+  skills: [],
 });
