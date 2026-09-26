@@ -1,23 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
+import { requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
-import { validateJobInput, type JobInput } from '../domain/jobValidation.js';
+import { validateJobInput, type JobInput, type JobPositionInput } from '../domain/jobValidation.js';
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
 import { recordAuditEvent } from '../lib/audit.js';
-import { notifyAgencyUsers } from '../lib/notifications.js';
 
-interface JobParams {
-  id: string;
-}
-
-interface AgencyJobParams {
-  agencyId: string;
-}
-
-interface JobCandidatesBody {
-  candidateIds?: string[];
-}
-
+interface JobParams { id: string; }
+interface JobCandidatesBody { candidateIds?: string[]; }
 
 const candidateSelect = {
   id: true,
@@ -45,15 +34,24 @@ const candidateSelect = {
   updatedAt: true,
 } as const;
 
-const canManageJob = (role: string, userAgencyId: string | null, jobAgencyId: string): boolean =>
-  role === 'ADMIN' || (role === 'AGENCY' && userAgencyId === jobAgencyId);
+const normalizePositions = (positions: JobPositionInput[] = []) =>
+  positions.map((item, index) => ({
+    position: item.position!.trim(),
+    requiredCount: item.requiredCount!,
+    sortOrder: index,
+  }));
+
+const totalRequired = (positions: Array<{ requiredCount: number }>): number =>
+  positions.reduce((sum, item) => sum + item.requiredCount, 0);
 
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-
-    if (user.role === 'INTERVIEWER' || user.role === 'INTERVIEWEE') {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Jobs are managed internally and are not part of the candidate workflow.' } });
+    if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+      return reply.code(403).send({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Jobs are available only to recruitment managers.' },
+      });
     }
 
     const jobs = await getPrisma().job.findMany({
@@ -64,7 +62,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       }),
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
       include: {
-        agency: { select: { id: true, name: true, slug: true } },
+        positions: { orderBy: { sortOrder: 'asc' } },
         _count: { select: { candidatePool: true, interviews: true } },
         candidatePool: {
           where: { status: 'HIRED' },
@@ -75,8 +73,10 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
     return reply.send({
       success: true,
-      data: jobs.map(({ candidatePool, _count, ...job }) => ({
+      data: jobs.map(({ candidatePool, _count, positions, ...job }) => ({
         ...job,
+        positions,
+        openings: totalRequired(positions),
         candidateCount: _count.candidatePool,
         interviewCount: _count.interviews,
         filledCount: candidatePool.length,
@@ -85,9 +85,15 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get<{ Params: JobParams }>('/jobs/:id', { preHandler: requireAuth }, async (request, reply) => {
+    const user = request.authUser!;
+    if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+    }
+
     const job = await getPrisma().job.findUnique({
       where: { id: request.params.id },
       include: {
+        positions: { orderBy: { sortOrder: 'asc' } },
         agency: { select: { id: true, name: true, slug: true, status: true } },
         candidatePool: {
           orderBy: { createdAt: 'desc' },
@@ -116,30 +122,14 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
     }
 
-    const user = request.authUser!;
-    const canRead =
-      user.role === 'ADMIN'
-      || (user.role === 'AGENCY' && user.agencyId === job.agencyId);
-
-    if (!canRead) {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
-    }
-
     const hiredCount = job.candidatePool.filter((item) => item.status === 'HIRED').length;
     return reply.send({
       success: true,
       data: {
         ...job,
-        candidatePool: job.candidatePool.map((item) => ({
-          id: item.id,
-          jobId: item.jobId,
-          candidateId: item.candidateId,
-          status: item.status,
-          statusUpdatedAt: item.statusUpdatedAt,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          candidate: item.candidate,
-        })),
+        positions: job.positions,
+        openings: totalRequired(job.positions),
+        candidatePool: job.candidatePool,
         candidateCount: job.candidatePool.length,
         interviewCount: job.interviews.length,
         filledCount: hiredCount,
@@ -147,53 +137,44 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.post<{ Params: AgencyJobParams; Body: JobInput }>(
-    '/agencies/:agencyId/jobs',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+  app.post<{ Body: JobInput }>(
+    '/jobs',
+    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const errors = validateJobInput(request.body, 'create');
       if (errors.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_JOB', message: errors.join(' ') } });
       }
 
-      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
-      if (!agency) {
-        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
-      }
-      if (agency.status !== 'ACTIVE') {
-        return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Jobs cannot be created for an inactive agency.' } });
-      }
-
+      const positions = normalizePositions(request.body.positions!);
+      const openings = totalRequired(positions);
       const requestedStatus = request.body.status ?? 'DRAFT';
 
       const job = await getPrisma().job.create({
         data: {
-          agencyId: agency.id,
+          agencyId: null,
           title: request.body.title!.trim(),
           description: request.body.description?.trim() || null,
           location: request.body.location?.trim() || null,
-          openings: request.body.openings ?? 1,
+          openings,
           status: requestedStatus,
           publishedAt: requestedStatus === 'PUBLISHED' ? new Date() : null,
+          positions: { create: positions },
         },
-        include: { agency: { select: { id: true, name: true, slug: true } } },
+        include: {
+          positions: { orderBy: { sortOrder: 'asc' } },
+        },
       });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: agency.id,
+        agencyId: request.authUser!.agencyId,
         action: 'JOB_CREATED',
         entityType: 'Job',
         entityId: job.id,
-        summary: 'Created job "' + job.title + '".',
+        summary: 'Created job "' + job.title + '" with ' + positions.length + ' position type(s).',
       });
-      if (job.status === 'PUBLISHED') {
-        await notifyAgencyUsers(
-          agency.id,
-          { type: 'JOB_PUBLISHED', title: 'New job published', message: '"' + job.title + '" is now available as an internal position for interview scheduling.' },
-          ['AGENCY'],
-        );
-      }
+
       return reply.code(201).send({ success: true, data: job });
     },
   );
@@ -202,14 +183,12 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     '/jobs/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
-      const existing = await getPrisma().job.findUnique({ where: { id: request.params.id } });
-
+      const existing = await getPrisma().job.findUnique({
+        where: { id: request.params.id },
+        include: { positions: { orderBy: { sortOrder: 'asc' } } },
+      });
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      }
-
-      if (request.authUser!.role === 'AGENCY' && request.authUser!.agencyId !== existing.agencyId) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
       const errors = validateJobInput(request.body, 'update');
@@ -217,41 +196,23 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_JOB', message: errors.join(' ') } });
       }
 
-      const data: {
-        title?: string;
-        description?: string | null;
-        location?: string | null;
-        openings?: number;
-        status?: JobInput['status'];
-        publishedAt?: Date | null;
-      } = {};
-
-      if (request.body.title !== undefined) data.title = request.body.title.trim();
-      if (request.body.description !== undefined) data.description = request.body.description?.trim() || null;
-      if (request.body.location !== undefined) data.location = request.body.location?.trim() || null;
-      if (request.body.openings !== undefined) data.openings = request.body.openings;
-
-      if (request.body.status !== undefined) {
-        data.status = request.body.status;
-        if (request.body.status === 'PUBLISHED') {
-          data.publishedAt = existing.publishedAt ?? new Date();
-        } else if (request.body.status === 'DRAFT') {
-          data.publishedAt = null;
-        }
-      }
+      const nextPositions = request.body.positions !== undefined
+        ? normalizePositions(request.body.positions)
+        : existing.positions;
+      const nextOpenings = totalRequired(nextPositions);
 
       if (request.body.status === 'CLOSED' && existing.status !== 'CLOSED') {
         const filledCount = await getPrisma().jobCandidate.count({
           where: { jobId: existing.id, status: 'HIRED' },
         });
-        if (filledCount < existing.openings) {
+        if (filledCount < nextOpenings) {
           return reply.code(409).send({
             success: false,
             error: {
               code: 'JOB_NOT_FILLED',
-              message: 'The job cannot be closed until all required openings are filled.',
+              message: 'The job cannot be closed until all required workers are filled.',
               filledCount,
-              openings: existing.openings,
+              openings: nextOpenings,
             },
           });
         }
@@ -259,25 +220,38 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       const job = await getPrisma().job.update({
         where: { id: existing.id },
-        data,
-        include: { agency: { select: { id: true, name: true, slug: true } } },
+        data: {
+          ...(request.body.title !== undefined ? { title: request.body.title.trim() } : {}),
+          ...(request.body.description !== undefined ? { description: request.body.description?.trim() || null } : {}),
+          ...(request.body.location !== undefined ? { location: request.body.location?.trim() || null } : {}),
+          ...(request.body.positions !== undefined ? {
+            openings: nextOpenings,
+            positions: {
+              deleteMany: {},
+              create: nextPositions,
+            },
+          } : {}),
+          ...(request.body.status !== undefined ? {
+            status: request.body.status,
+            publishedAt: request.body.status === 'PUBLISHED'
+              ? (existing.publishedAt ?? new Date())
+              : request.body.status === 'DRAFT' ? null : existing.publishedAt,
+          } : {}),
+        },
+        include: {
+          positions: { orderBy: { sortOrder: 'asc' } },
+        },
       });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: existing.agencyId,
+        agencyId: request.authUser!.agencyId,
         action: 'JOB_UPDATED',
         entityType: 'Job',
         entityId: job.id,
         summary: 'Updated job "' + job.title + '".',
       });
-      if (request.body.status === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
-        await notifyAgencyUsers(
-          existing.agencyId,
-          { type: 'JOB_PUBLISHED', title: 'Job published', message: '"' + job.title + '" is now available as an internal position for interview scheduling.' },
-          ['AGENCY'],
-        );
-      }
+
       return reply.send({ success: true, data: job });
     },
   );
@@ -288,12 +262,9 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, agencyId: true, title: true, status: true },
+        select: { id: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (!canManageJob(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
-      }
       if (job.status === 'CLOSED') {
         return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Candidates cannot be added to a closed job.' } });
       }
@@ -305,13 +276,10 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       const candidates = await getPrisma().candidate.findMany({
         where: { id: { in: candidateIds } },
-        select: { id: true, agencyId: true, name: true },
+        select: { id: true },
       });
       if (candidates.length !== candidateIds.length) {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
-      }
-      if (request.authUser!.role === 'AGENCY' && candidates.some((candidate) => candidate.agencyId !== request.authUser!.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only add candidates from your agency.' } });
       }
 
       const existing = await getPrisma().jobCandidate.findMany({
@@ -323,17 +291,13 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       if (toCreate.length) {
         await getPrisma().jobCandidate.createMany({
-          data: toCreate.map((candidateId) => ({
-            jobId: job.id,
-            candidateId,
-            status: 'POOL',
-          })),
+          data: toCreate.map((candidateId) => ({ jobId: job.id, candidateId, status: 'POOL' })),
         });
       }
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: job.agencyId,
+        agencyId: request.authUser!.agencyId,
         action: 'JOB_CANDIDATES_ADDED',
         entityType: 'Job',
         entityId: job.id,
@@ -353,18 +317,17 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, agencyId: true, title: true },
+        select: { id: true, title: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (!canManageJob(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
-      }
 
       const membership = await getPrisma().jobCandidate.findUnique({
         where: { jobId_candidateId: { jobId: job.id, candidateId: request.params.candidateId } },
         select: { status: true },
       });
-      if (!membership) return reply.code(404).send({ success: false, error: { code: 'JOB_CANDIDATE_NOT_FOUND', message: 'Candidate is not in this job pool.' } });
+      if (!membership) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_CANDIDATE_NOT_FOUND', message: 'Candidate is not in this job pool.' } });
+      }
 
       const scheduledInterview = await getPrisma().interview.findFirst({
         where: {
@@ -384,7 +347,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: job.agencyId,
+        agencyId: request.authUser!.agencyId,
         action: 'JOB_CANDIDATE_REMOVED',
         entityType: 'Job',
         entityId: job.id,
@@ -399,25 +362,32 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     '/jobs/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
-      const existing = await getPrisma().job.findUnique({ where: { id: request.params.id } });
+      const existing = await getPrisma().job.findUnique({
+        where: { id: request.params.id },
+        include: { positions: true },
+      });
+      if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
 
-      if (!existing) {
-        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      }
-
-      if (request.authUser!.role === 'AGENCY' && request.authUser!.agencyId !== existing.agencyId) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      const filledCount = await getPrisma().jobCandidate.count({
+        where: { jobId: existing.id, status: 'HIRED' },
+      });
+      const openings = totalRequired(existing.positions);
+      if (filledCount < openings) {
+        return reply.code(409).send({
+          success: false,
+          error: { code: 'JOB_NOT_FILLED', message: 'The job cannot be closed until all required workers are filled.', filledCount, openings },
+        });
       }
 
       const job = await getPrisma().job.update({
         where: { id: existing.id },
         data: { status: 'CLOSED' },
-        include: { agency: { select: { id: true, name: true, slug: true } } },
+        include: { positions: { orderBy: { sortOrder: 'asc' } } },
       });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: existing.agencyId,
+        agencyId: request.authUser!.agencyId,
         action: 'JOB_CLOSED',
         entityType: 'Job',
         entityId: job.id,
