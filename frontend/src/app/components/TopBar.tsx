@@ -30,6 +30,7 @@ const titles: Record<AppView, string> = {
   calendar: 'Calendar',
   reports: 'Reports',
   jobs: 'Jobs',
+  'job-detail': 'Job',
   candidates: 'Candidates',
   interviews: 'Interviews',
   criteria: 'Interview Criteria',
