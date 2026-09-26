@@ -59,6 +59,9 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     }
 
     if (request.query.jobId) {
+      if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Job-scoped candidate lists are available only to recruitment managers.' } });
+      }
       const job = await getPrisma().job.findUnique({
         where: { id: request.query.jobId },
         select: { id: true, agencyId: true, status: true },
