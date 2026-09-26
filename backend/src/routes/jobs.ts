@@ -18,7 +18,6 @@ interface JobCandidatesBody {
   candidateIds?: string[];
 }
 
-const jobCandidateStatuses = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED'] as const;
 
 const candidateSelect = {
   id: true,
