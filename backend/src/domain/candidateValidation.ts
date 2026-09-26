@@ -36,6 +36,15 @@ export const validateCandidateInput = (
     validateRequiredText(input.passportNumber, 'Passport number', 60, errors);
     validateRequiredText(input.passportExpiry, 'Passport expiry date', 10, errors);
     validateRequiredText(input.requestedProfession, 'Requested profession', 120, errors);
+  } else if (mode === 'update') {
+    for (const [field, label] of [
+      ['agencyRegisterNo', 'Agency register number'],
+      ['firstName', 'First name'],
+      ['lastName', 'Last name'],
+      ['requestedProfession', 'Requested profession'],
+    ] as const) {
+      if (input[field] !== undefined && !input[field]?.trim()) errors.push(label + ' cannot be empty.');
+    }
   } else if (mode === 'self') {
     validateRequiredText(input.firstName, 'First name', 100, errors);
     validateRequiredText(input.lastName, 'Last name', 100, errors);
