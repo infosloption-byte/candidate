@@ -28,20 +28,13 @@ const CANDIDATE_POOL_PAGE_SIZE = 6;
 const INTERVIEW_PAGE_SIZE = 6;
 
 const emptyCandidate = {
-  name: '',
+  agencyRegisterNo: '',
+  firstName: '',
+  lastName: '',
   birthdate: '',
-  email: '',
-  phone: '',
-  alternatePhone: '',
-  country: '',
   passportNumber: '',
   passportExpiry: '',
-  currentLocation: '',
-  availability: '',
-  visaStatus: '',
-  profession: '',
-  experienceYears: '0',
-  skills: '',
+  requestedProfession: '',
 };
 
 const defaultInterview = {
@@ -399,27 +392,27 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       const csv = await uploadFile.text();
       if (developmentMode) {
         const rows = rowsToCandidates(csv);
+        const required = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const missing = required.find((item) => !(item in (rows[0] ?? {})));
+        if (missing) throw new Error('CSV is missing the required column: ' + missing);
         const memberships: JobCandidate[] = [];
         for (const row of rows) {
           const id = 'candidate-' + Date.now() + '-' + memberships.length;
+          const firstName = row.firstname || '';
+          const lastName = row.lastname || '';
           const candidate: Candidate = {
             id,
             agencyId: uploadAgencyId,
             reference: 'CA-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
-            name: row.name || row.fullname || 'Unnamed candidate',
-            birthdate: row.birthdate || row.dob || null,
-            email: row.email || null,
-            phone: row.phone || row.contactnumber || null,
-            alternatePhone: row.alternatephone || null,
-            country: row.country || row.nationality || null,
-            passportNumber: row.passportnumber || row.passport || null,
+            agencyRegisterNo: row.agencyregisterno || '',
+            firstName,
+            lastName,
+            name: [firstName, lastName].filter(Boolean).join(' '),
+            birthdate: row.birthdate || null,
+            passportNumber: row.passportnumber || null,
             passportExpiry: row.passportexpiry || null,
-            currentLocation: row.currentlocation || row.location || null,
-            availability: row.availability || null,
-            visaStatus: row.visastatus || null,
-            profession: row.profession || null,
-            experienceYears: Number(row.experienceyears || row.experience || 0) || 0,
-            skills: (row.skills || '').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
+            requestedProfession: row.requestedprofession || '',
+            skills: [],
             onboardingStatus: 'NOT_STARTED',
             source: 'BULK_IMPORTED',
             status: 'POOL',
@@ -437,9 +430,10 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
             updatedAt: new Date().toISOString(),
             candidate,
           });
-          dispatch({ type: 'CREATE_CANDIDATE', candidate });
         }
+        memberships.forEach((membership) => dispatch({ type: 'CREATE_CANDIDATE', candidate: membership.candidate }));
         dispatch({ type: 'ADD_JOB_CANDIDATES', memberships });
+        setSuccess('Imported ' + memberships.length + ' candidate(s) into this job.');
       } else {
         await apiFetch<{ importedCount: number }>('/agencies/' + uploadAgencyId + '/candidates/bulk?jobId=' + encodeURIComponent(job.id), {
           method: 'POST',
