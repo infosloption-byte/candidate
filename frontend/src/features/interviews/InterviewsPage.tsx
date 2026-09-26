@@ -868,15 +868,13 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
             requestError instanceof ApiError &&
             requestError.status === 409 &&
             requestError.code === 'INTERVIEW_NOT_STARTABLE' &&
-            requestError.message.toLowerCase().includes('currently in progress');
+            requestError.message.toLowerCase().includes('only scheduled interviews can be started');
 
           if (!alreadyInProgress) throw requestError;
 
           // Another assigned interviewer may have already started the shared panel session.
-          // Refresh the interview/evaluation instead of blocking the second interviewer.
-          current = (await apiFetch<InterviewRecord>('/interviews/' + interview.id)).status === 'IN_PROGRESS'
-            ? interview
-            : current;
+          // Continue by loading this interviewer's own evaluation workspace.
+          current = { ...current, status: 'IN_PROGRESS' };
         }
       }
       const result = await apiFetch<{
