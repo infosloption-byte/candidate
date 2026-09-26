@@ -545,14 +545,18 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <FormField label="Group name">
                   <input className="field-input" value={groupForm.name} onChange={(event) => setGroupForm({ ...groupForm, name: event.target.value })} placeholder="Mason — Technical interview" />
                 </FormField>
-                <FormField label="Job / trade category" hint="Helps find the right scorecard when scheduling.">
-                  <input className="field-input" value={groupForm.category} onChange={(event) => setGroupForm({ ...groupForm, category: event.target.value })} placeholder="Masonry / Skilled Trades" />
-                </FormField>
-                <div className="md:col-span-2">
-                  <FormField label="Description">
-                    <textarea className="field-input min-h-20 resize-y" value={groupForm.description} onChange={(event) => setGroupForm({ ...groupForm, description: event.target.value })} placeholder="What this interview scorecard is intended to assess…" />
-                  </FormField>
-                </div>
+                {modalMode === 'EDIT_GROUP' && (
+                  <>
+                    <FormField label="Job / trade category" hint="Helps find the right scorecard when scheduling.">
+                      <input className="field-input" value={groupForm.category} onChange={(event) => setGroupForm({ ...groupForm, category: event.target.value })} placeholder="Masonry / Skilled Trades" />
+                    </FormField>
+                    <div className="md:col-span-2">
+                      <FormField label="Description">
+                        <textarea className="field-input min-h-20 resize-y" value={groupForm.description} onChange={(event) => setGroupForm({ ...groupForm, description: event.target.value })} placeholder="What this interview scorecard is intended to assess…" />
+                      </FormField>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div>
