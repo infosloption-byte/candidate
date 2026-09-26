@@ -21,7 +21,7 @@ interface AgencyRecord extends Agency {
 type ActiveTab = 'system-users' | 'agencies' | 'interviewers';
 type SystemUserRole = 'ADMIN' | 'AGENCY';
 type InterviewerScope = 'AGENCY' | 'GLOBAL';
-type ModalMode = 'SYSTEM_USER' | 'AGENCY' | 'INTERVIEWER' | null;
+type ModalMode = 'SYSTEM_USER' | 'EDIT_SYSTEM_USER' | 'AGENCY' | 'INTERVIEWER' | null;
 
 const emptySystemUser = { name: '', email: '', password: '', role: 'AGENCY' as SystemUserRole, agencyId: '' };
 const emptyAgency = { name: '', slug: '' };
@@ -66,7 +66,7 @@ const AdminModal = ({
 };
 
 export const AgenciesPage = () => {
-  const { user, developmentMode } = useAuth();
+  const { user, developmentMode, refreshUser } = useAuth();
   const { state } = useRecruitment();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('system-users');
@@ -81,6 +81,7 @@ export const AgenciesPage = () => {
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [systemUserForm, setSystemUserForm] = useState(emptySystemUser);
+  const [currentEditingSystemUserId, setCurrentEditingSystemUserId] = useState<string | null>(null);
   const [agencyForm, setAgencyForm] = useState(emptyAgency);
   const [interviewerForm, setInterviewerForm] = useState(emptyInterviewer);
 
@@ -128,9 +129,74 @@ export const AgenciesPage = () => {
 
   const openCreateSystemUser = () => {
     setSystemUserForm({ ...emptySystemUser });
+    setCurrentEditingSystemUserId(null);
     setError('');
     setSuccess('');
     setModalMode('SYSTEM_USER');
+  };
+
+  const openEditSystemUserWithId = (item: User) => {
+    setCurrentEditingSystemUserId(item.id);
+    openEditSystemUser(item);
+  };
+
+  const openEditSystemUser = (item: User) => {
+    setSystemUserForm({
+      name: item.name,
+      email: item.email,
+      password: '',
+      role: item.role as SystemUserRole,
+      agencyId: item.agencyId ?? '',
+    });
+    setError('');
+    setSuccess('');
+    setModalMode('EDIT_SYSTEM_USER');
+  };
+
+  const updateSystemUser = async () => {
+    if (!systemUserForm.name.trim() || !systemUserForm.email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+    if (systemUserForm.password && systemUserForm.password.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const target = systemUsers.find((item) => item.id === currentEditingSystemUserId);
+      if (!target) {
+        setError('The selected system user is no longer available.');
+        return;
+      }
+
+      if (developmentMode) {
+        const updated: User = { ...target, name: systemUserForm.name.trim(), email: systemUserForm.email.trim() };
+        setSystemUsers((current) => current.map((row) => row.id === updated.id ? updated : row));
+      } else {
+        const updated = await apiFetch<User>('/system-users/' + target.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: systemUserForm.name.trim(),
+            email: systemUserForm.email.trim(),
+            ...(systemUserForm.password ? { password: systemUserForm.password } : {}),
+          }),
+        });
+        setSystemUsers((current) => current.map((row) => row.id === updated.id ? updated : row));
+        if (updated.id === user?.id) await refreshUser();
+      }
+
+      setSystemUserForm({ ...emptySystemUser });
+      setModalMode(null);
+      setSuccess('System user account was updated.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the system user.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openCreateAgency = () => {
@@ -389,14 +455,19 @@ export const AgenciesPage = () => {
       key: 'actions',
       header: 'Actions',
       render: (item: User) => (
-        <Button
-          size="sm"
-          variant={item.active ? 'danger' : 'secondary'}
-          onClick={() => void toggleSystemUser(item)}
-          disabled={item.id === user?.id}
-        >
-          {item.active ? 'Deactivate' : 'Activate'}
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => openEditSystemUserWithId(item)}>
+            Edit account
+          </Button>
+          <Button
+            size="sm"
+            variant={item.active ? 'danger' : 'secondary'}
+            onClick={() => void toggleSystemUser(item)}
+            disabled={item.id === user?.id}
+          >
+            {item.active ? 'Deactivate' : 'Activate'}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -592,6 +663,32 @@ export const AgenciesPage = () => {
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button disabled={saving} onClick={() => void createSystemUser()}>{saving ? 'Creating…' : 'Create user'}</Button>
+          </div>
+        </AdminModal>
+      )}
+
+      {modalMode === 'EDIT_SYSTEM_USER' && (
+        <AdminModal
+          title="Edit user account"
+          description="Update the user's email or profile name, or set a new password. Leave the password blank to keep the current password."
+          onClose={closeModal}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Name">
+              <input className="field-input" value={systemUserForm.name} onChange={(event) => setSystemUserForm({ ...systemUserForm, name: event.target.value })} placeholder="Operations Manager" />
+            </FormField>
+            <FormField label="Email">
+              <input type="email" className="field-input" value={systemUserForm.email} onChange={(event) => setSystemUserForm({ ...systemUserForm, email: event.target.value })} placeholder="manager@example.com" />
+            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="New password" hint="Optional. Enter 8-128 characters to replace the current password.">
+                <input type="password" className="field-input" value={systemUserForm.password} onChange={(event) => setSystemUserForm({ ...systemUserForm, password: event.target.value })} autoComplete="new-password" />
+              </FormField>
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void updateSystemUser()}>{saving ? 'Saving…' : 'Save changes'}</Button>
           </div>
         </AdminModal>
       )}
