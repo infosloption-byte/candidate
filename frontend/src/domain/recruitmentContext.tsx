@@ -15,6 +15,7 @@ interface RecruitmentState {
 
 type RecruitmentAction =
   | { type: 'CREATE_JOB'; job: Job }
+  | { type: 'DELETE_JOB'; jobId: string }
   | { type: 'SET_JOB_STATUS'; jobId: string; status: Job['status'] }
   | { type: 'ADD_JOB_CANDIDATES'; memberships: JobCandidate[] }
   | { type: 'SET_JOB_CANDIDATE_STATUS'; jobId: string; candidateId: string; status: JobCandidate['status'] }
@@ -46,6 +47,13 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
   switch (action.type) {
     case 'CREATE_JOB':
       return { ...state, jobs: [action.job, ...state.jobs] };
+    case 'DELETE_JOB':
+      return {
+        ...state,
+        jobs: state.jobs.filter((job) => job.id !== action.jobId),
+        jobCandidates: state.jobCandidates.filter((item) => item.jobId !== action.jobId),
+        interviews: state.interviews.filter((item) => item.jobId !== action.jobId),
+      };
     case 'SET_JOB_STATUS':
       return { ...state, jobs: state.jobs.map((job) => job.id === action.jobId ? { ...job, status: action.status } : job) };
     case 'ADD_JOB_CANDIDATES':
