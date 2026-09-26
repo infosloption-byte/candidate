@@ -1098,7 +1098,22 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
             body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null, jobId: targetJobId }),
           });
 
-      if (developmentMode) dispatch({ type: 'SET_CANDIDATE_STATUS', candidateId: candidate.id, status });
+      if (developmentMode) {
+        dispatch({ type: 'SET_CANDIDATE_STATUS', candidateId: candidate.id, status });
+        if (targetJobId && ['PASSED', 'REJECTED', 'HIRED'].includes(status)) {
+          dispatch({
+            type: 'SET_JOB_CANDIDATE_STATUS',
+            jobId: targetJobId,
+            candidateId: candidate.id,
+            status: status as 'PASSED' | 'REJECTED' | 'HIRED',
+          });
+          if (status === 'HIRED') {
+            const job = state.jobs.find((item) => item.id === targetJobId);
+            const filled = state.jobCandidates.filter((item) => item.jobId === targetJobId && item.candidateId !== candidate.id && item.status === 'HIRED').length + 1;
+            if (job && filled >= job.openings) dispatch({ type: 'SET_JOB_STATUS', jobId: targetJobId, status: 'CLOSED' });
+          }
+        }
+      }
 
       setCandidates((current) => current.map((item) => item.id === updated.id ? updated : item));
       setInterviews((current) => current.map((item) => item.candidateId === updated.id
