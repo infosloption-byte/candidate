@@ -380,7 +380,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, agencyId);
+      const interviewers = await getInterviewers(interviewerIds, candidateAgencyIds);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
