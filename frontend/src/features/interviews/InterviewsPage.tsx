@@ -487,9 +487,11 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setSelectedCandidateIds([]);
     setCandidateSearch('');
     setJobId(jobFilterId || '');
-    const selectedJob = jobs.find((job) => job.id === jobFilterId);
-    if (selectedJob) setAgencyId(selectedJob.agencyId);
     setScheduleCandidates(developmentMode && jobFilterId ? state.jobCandidates.filter((item) => item.jobId === jobFilterId).map((item) => item.candidate) : developmentMode ? state.candidates : []);
+    if (jobFilterId) {
+      const selectedJob = jobs.find((job) => job.id === jobFilterId);
+      if (selectedJob) setAgencyId(selectedJob.agencyId);
+    }
     setCriterionGroupIds([]);
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
