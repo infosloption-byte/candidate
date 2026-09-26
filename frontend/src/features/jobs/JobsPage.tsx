@@ -304,6 +304,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     });
   }, [displayJobs, role, search, sortBy, sortDirection, statusFilter]);
 
+  const jobTotalPages = Math.max(1, Math.ceil(visibleJobs.length / JOBS_PAGE_SIZE));
   const activeJobPage = Math.min(jobPage, jobTotalPages);
   const paginatedJobs = useMemo(
     () => visibleJobs.slice((activeJobPage - 1) * JOBS_PAGE_SIZE, activeJobPage * JOBS_PAGE_SIZE),
