@@ -65,15 +65,26 @@ export interface Candidate {
   updatedAt?: string;
 }
 
+export interface JobPosition {
+  id: string;
+  jobId: string;
+  position: string;
+  requiredCount: number;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Job {
   id: string;
-  agencyId: string;
+  agencyId: string | null;
   title: string;
   description: string | null;
   location: string | null;
   openings: number;
   status: JobStatus;
   publishedAt: string | null;
+  positions?: JobPosition[];
   candidateCount?: number;
   interviewCount?: number;
   filledCount?: number;
