@@ -295,7 +295,44 @@ dbTest('admin can manage unified system users and interviewer types', async () =
   const createdAgencyUserBody = json<{ data: { id: string; role: string; agencyId: string | null } }>(createdAgencyUser);
   assert.equal(createdAgencyUserBody.data.role, 'AGENCY');
   assert.equal(createdAgencyUserBody.data.agencyId, agencyBId);
+  const editableUser = await app.inject({
+    method: 'POST',
+    url: '/api/v1/system-users',
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable User',
+      email: 'qa-editable-user-' + suffix + '@buildhire.local',
+      password,
+      role: 'ADMIN',
+    },
+  });
+  assert.equal(editableUser.statusCode, 201);
+  const editableUserBody = json<{ data: { id: string; email: string } }>(editableUser);
+
+  const updatedEditableUser = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/system-users/' + editableUserBody.data.id,
+    headers: { cookie: adminCookie },
+    payload: {
+      name: 'QA Editable User Updated',
+      email: 'qa-editable-user-updated-' + suffix + '@buildhire.local',
+      password: 'UpdatedIntegrationPassword456!',
+    },
+  });
+  assert.equal(updatedEditableUser.statusCode, 200);
+  const updatedEditableUserBody = json<{ data: { id: string; name: string; email: string; role: string } }>(updatedEditableUser);
+  assert.equal(updatedEditableUserBody.data.name, 'QA Editable User Updated');
+  assert.equal(updatedEditableUserBody.data.email, 'qa-editable-user-updated-' + suffix + '@buildhire.local');
+  assert.equal(updatedEditableUserBody.data.role, 'ADMIN');
+
+  const storedEditableUser = await prisma.user.findUnique({ where: { id: editableUserBody.data.id } });
+  assert.ok(storedEditableUser);
+  assert.notEqual(storedEditableUser!.passwordHash, password);
+  const editableUserCookie = await login(updatedEditableUserBody.data.email, 'UpdatedIntegrationPassword456!');
+  assert.match(editableUserCookie, /buildhire_session=/);
+
   await prisma.user.delete({ where: { id: createdAgencyUserBody.data.id } });
+  await prisma.user.delete({ where: { id: editableUserBody.data.id } });
 
   const agencyCreateSystemUser = await app.inject({
     method: 'POST',
