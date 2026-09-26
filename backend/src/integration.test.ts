@@ -104,7 +104,7 @@ before(async () => {
     const candidateUser = await tx.user.create({
       data: {
         candidateId: candidate.id,
-        name: candidate.name,
+        name: 'QA Candidate',
         email: emails.interviewee,
         passwordHash,
         role: 'INTERVIEWEE',
