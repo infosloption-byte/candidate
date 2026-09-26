@@ -611,23 +611,6 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE,
   );
 
-  const interviewCandidateOptions = job.candidatePool.filter((membership) => {
-    const query = candidateSearch.trim().toLowerCase();
-    if (!query) return true;
-    const candidate = membership.candidate;
-    return [
-      candidate.name,
-      candidate.reference,
-      candidate.passportNumber ?? '',
-      candidate.profession ?? '',
-      candidate.country ?? '',
-      candidate.email ?? '',
-      candidate.phone ?? '',
-      candidate.currentLocation ?? '',
-      ...(candidate.skills ?? []),
-    ].some((value) => value.toLowerCase().includes(query));
-  });
-
   const filteredInterviews = job.interviews.filter((interview) => {
     const query = interviewSearch.trim().toLowerCase();
     if (interviewStatusFilter && interview.status !== interviewStatusFilter) return false;
@@ -739,7 +722,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               </div>
               <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{candidateCount}</span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+            <div className="grid gap-2 sm:grid-cols-2">
               <div className="relative">
                 <input
                   className="field-input pl-9"
@@ -761,6 +744,22 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                   ariaLabel="Filter candidate pool by agency"
                 />
               )}
+              <SelectMenu
+                value={candidateStatusFilter}
+                onChange={setCandidateStatusFilter}
+                options={[
+                  { value: '', label: 'All candidate statuses' },
+                  { value: 'POOL', label: 'Pool' },
+                  { value: 'READY_FOR_INTERVIEW', label: 'Ready for interview' },
+                  { value: 'INTERVIEW_SCHEDULED', label: 'Interview scheduled' },
+                  { value: 'INTERVIEW_COMPLETED', label: 'Interview completed' },
+                  { value: 'PASSED', label: 'Passed' },
+                  { value: 'REJECTED', label: 'Rejected' },
+                  { value: 'ON_HOLD', label: 'On hold' },
+                  { value: 'HIRED', label: 'Hired' },
+                ]}
+                ariaLabel="Filter candidate pool by status"
+              />
             </div>
           </div>
           <div className="mt-4 space-y-2.5">
@@ -797,15 +796,30 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               </div>
               <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{interviewCount}</span>
             </div>
-            <div className="relative">
-              <input
-                className="field-input pl-9"
-                value={interviewSearch}
-                onChange={(event) => setInterviewSearch(event.target.value)}
-                placeholder="Search candidate, passport, interviewer, status, type, location…"
-                aria-label="Search job interviews"
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="relative">
+                <input
+                  className="field-input pl-9"
+                  value={interviewSearch}
+                  onChange={(event) => setInterviewSearch(event.target.value)}
+                  placeholder="Search candidate, passport, interviewer, status, type, location…"
+                  aria-label="Search job interviews"
+                />
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
+              </div>
+              <SelectMenu
+                value={interviewStatusFilter}
+                onChange={setInterviewStatusFilter}
+                options={[
+                  { value: '', label: 'All interview statuses' },
+                  { value: 'SCHEDULED', label: 'Scheduled' },
+                  { value: 'IN_PROGRESS', label: 'In progress' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                  { value: 'CANCELLED', label: 'Cancelled' },
+                  { value: 'NO_SHOW', label: 'No show' },
+                ]}
+                ariaLabel="Filter job interviews by status"
               />
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
             </div>
           </div>
           <div className="mt-4 space-y-2.5">
@@ -905,18 +919,25 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               </div>
 
               <div className="mt-5">
-                <div className="flex items-center justify-between gap-3"><div><p className="field-label">Candidates</p><p className="mt-1 text-[10px] text-slate-400">Select candidates already assigned to this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{selectedCandidateIds.length} selected</span></div>
-                <input className="field-input mt-2" value={candidateSearch} onChange={(e) => setCandidateSearch(e.target.value)} placeholder="Search name, reference, passport or profession…" />
-                <div className="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200">
-                  {interviewCandidateOptions.map((membership) => {
-                    const disabled = ['HIRED', 'REJECTED', 'INACTIVE'].includes(membership.candidate.status);
-                    const checked = selectedCandidateIds.includes(membership.candidateId);
-                    return <label key={membership.candidateId} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50">
-                      <input type="checkbox" disabled={disabled} checked={checked} onChange={() => setSelectedCandidateIds((current) => checked ? current.filter((id) => id !== membership.candidateId) : [...current, membership.candidateId])} />
-                      <span className="min-w-0 flex-1"><span className="block truncate text-xs font-black text-slate-800">{membership.candidate.name}</span><span className="block truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</span></span>
-                    </label>;
-                  })}
-                </div>
+                <FormField label="Candidates" hint="Browse an agency, search candidates, then move them into the selected panel. The selected job is used as the candidate pool.">
+                  <CandidateMultiSelect
+                    candidates={interviewScheduleCandidates}
+                    agencyOptions={interviewAgencyOptions}
+                    activeAgencyId={interviewAgencyId}
+                    selectedIds={selectedCandidateIds}
+                    search={candidateSearch}
+                    onAgencyChange={(value) => {
+                      setInterviewAgencyId(value);
+                      setCandidateSearch('');
+                    }}
+                    onSearchChange={setCandidateSearch}
+                    onToggle={(candidateId) => setSelectedCandidateIds((current) => current.includes(candidateId)
+                      ? current.filter((id) => id !== candidateId)
+                      : [...current, candidateId])}
+                    onRemove={(candidateId) => setSelectedCandidateIds((current) => current.filter((id) => id !== candidateId))}
+                    onClear={() => setSelectedCandidateIds([])}
+                  />
+                </FormField>
               </div>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
