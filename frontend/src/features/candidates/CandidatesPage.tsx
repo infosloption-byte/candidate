@@ -764,8 +764,8 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
             <FormField label="Visa / work status"><select className="field-input" value={form.visaStatus} onChange={(event) => setForm({ ...form, visaStatus: event.target.value })}><option value="">Select status</option><option value="Available">Available</option><option value="Required">Required</option><option value="In process">In process</option><option value="Expired">Expired</option><option value="Not applicable">Not applicable</option></select></FormField>
             <FormField label="Profession"><input className="field-input" value={form.profession} onChange={(event) => setForm({ ...form, profession: event.target.value })} /></FormField>
             <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
+            <div className="md:col-span-2"><FormField label="Job / position" hint={jobId ? 'This candidate will also be added to the selected job.' : 'Select the job this candidate is being considered for.'}><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
             {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
-            <div className="md:col-span-2"><FormField label="Job candidate pool" hint={jobId ? 'This candidate will also be added to the selected job.' : 'Optional. Select a job to place this candidate directly into its pool.'}><select className="field-input" value={jobId} onChange={(event) => { setJobId(event.target.value); onJobChange?.(event.target.value || null); }}><option value="">General candidate pool only</option>{jobs.filter((job) => job.status !== 'CLOSED').map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}</select></FormField></div>
             <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
           </div>
           <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
@@ -806,6 +806,21 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
             <div className="mt-5 space-y-4">
               <div>
+                <label className="field-label">Job / position</label>
+                <SelectMenu
+                  value={jobId}
+                  onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
+                  options={[
+                    { value: '', label: 'General candidate pool only' },
+                    ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
+                  ]}
+                  ariaLabel="Select import job"
+                  className="mt-1"
+                />
+                <p className="mt-1 text-[10px] text-slate-400">Imported candidates are immediately placed into the selected job pool.</p>
+              </div>
+
+              <div>
                 <label className="field-label">Agency</label>
                 <select className="field-input mt-1 w-full" value={importAgencyId} onChange={(event) => setImportAgencyId(event.target.value)} disabled={role !== 'ADMIN'}>
                   <option value="">Select an agency</option>
@@ -821,14 +836,6 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
               </div>
 
               <div>
-                <div className="mb-3">
-                  <label className="field-label">Job candidate pool</label>
-                  <select className="field-input mt-1 w-full" value={jobId} onChange={(event) => { setJobId(event.target.value); onJobChange?.(event.target.value || null); }}>
-                    <option value="">General candidate pool only</option>
-                    {jobs.filter((job) => job.status !== 'CLOSED').map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
-                  </select>
-                  <p className="mt-1 text-[10px] text-slate-400">Imported candidates are immediately placed into the selected job pool.</p>
-                </div>
                 <div className="flex items-center justify-between gap-3">
                   <label className="field-label">CSV file</label>
                   <span className="text-[10px] text-slate-400">Max 2 MB</span>
