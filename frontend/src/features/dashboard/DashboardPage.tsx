@@ -191,7 +191,7 @@ export const DashboardPage = ({ role }: Props) => {
 
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl sm:p-8 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-5 rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl sm:p-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live workspace</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Good to see you, {user?.name ?? 'there'}</h1>
@@ -205,8 +205,8 @@ export const DashboardPage = ({ role }: Props) => {
                   : 'Your interview desk at a glance — upcoming panels, evaluation workload and completed interviews.'}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="min-w-52">
+        <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center lg:w-auto">
+          <div className="min-w-0 sm:min-w-52">
             <SelectMenu
               value={selectedJobId}
               onChange={setSelectedJobId}
@@ -217,7 +217,7 @@ export const DashboardPage = ({ role }: Props) => {
               ariaLabel="Filter dashboard by job"
             />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300 sm:whitespace-nowrap">
             Updated {new Date().toLocaleString()}
           </div>
         </div>
@@ -263,9 +263,9 @@ export const DashboardPage = ({ role }: Props) => {
           <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Upcoming interviews</h2><p className="mt-1 text-xs text-slate-400">The next panel sessions requiring attention.</p></div><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{upcomingInterviews.length} shown</span></div>
           <div className="mt-5 divide-y divide-slate-100">
             {upcomingInterviews.length ? upcomingInterviews.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 text-xs text-slate-400">{item.candidate.reference} · Passport: {item.candidate.passportNumber ?? 'Not provided'} · {statusLabel(item.type)}{item.job?.title ? ' · ' + item.job.title : ''}</p></div>
-                <div className="shrink-0 text-right"><p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString()}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(item.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
+              <div key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 break-words text-xs leading-5 text-slate-400">{item.candidate.reference} · Passport: {item.candidate.passportNumber ?? 'Not provided'} · {statusLabel(item.type)}{item.job?.title ? ' · ' + item.job.title : ''}</p></div>
+                <div className="shrink-0 text-left sm:text-right"><p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString()}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(item.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
               </div>
             )) : <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-xs text-slate-400">No upcoming interviews.</p>}
           </div>
@@ -283,7 +283,7 @@ export const DashboardPage = ({ role }: Props) => {
         </Card>
 
         {role !== 'INTERVIEWER' ? (
-          <Card>
+          <Card className="min-w-0">
             <h2 className="text-base font-black text-slate-950">Decision queue</h2>
             <p className="mt-1 text-xs text-slate-400">Candidates that reached interview completion.</p>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -293,7 +293,7 @@ export const DashboardPage = ({ role }: Props) => {
             </div>
           </Card>
         ) : (
-          <Card>
+          <Card className="min-w-0">
             <h2 className="text-base font-black text-slate-950">My interview desk</h2>
             <p className="mt-1 text-xs text-slate-400">Keep the panel moving from scheduled to submitted.</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
