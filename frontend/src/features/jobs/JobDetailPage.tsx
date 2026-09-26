@@ -22,6 +22,8 @@ interface JobDetailPageProps {
 
 const label = (value: string): string => value.replaceAll('_', ' ');
 const jobCode = (id: string): string => 'JOB-' + id.slice(0, 8).toUpperCase();
+const CANDIDATE_POOL_PAGE_SIZE = 8;
+const INTERVIEW_PAGE_SIZE = 6;
 
 const emptyCandidate = {
   name: '',
@@ -148,6 +150,11 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const [scheduleForm, setScheduleForm] = useState(defaultInterview);
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
+  const [candidatePoolSearch, setCandidatePoolSearch] = useState('');
+  const [candidateAgencyFilter, setCandidateAgencyFilter] = useState('');
+  const [candidatePoolPage, setCandidatePoolPage] = useState(1);
+  const [interviewSearch, setInterviewSearch] = useState('');
+  const [interviewPage, setInterviewPage] = useState(1);
   const [interviewers, setInterviewers] = useState<User[]>([]);
   const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>([]);
@@ -159,6 +166,11 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const scheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: scheduleModal, onEscape: () => setScheduleModal(false) });
 
   const stateJob = useMemo(() => (jobId ? state.jobs.find((item) => item.id === jobId) : undefined), [jobId, state.jobs]);
+
+  useEffect(() => {
+    setCandidatePoolPage(1);
+    setInterviewPage(1);
+  }, [jobId, candidatePoolSearch, candidateAgencyFilter, interviewSearch]);
 
   const refreshJob = async () => {
     if (!jobId) return;
@@ -472,11 +484,53 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const progress = job.openings ? Math.min(100, Math.round((filledCount / job.openings) * 100)) : 0;
   const positions = job.positions?.length ? job.positions.slice().sort((a, b) => a.sortOrder - b.sortOrder) : [{ id: job.id + '-position', jobId: job.id, position: job.title, requiredCount: job.openings, sortOrder: 0 }];
   const filteredCandidates = job.candidatePool.filter((membership) => {
-    const query = candidateSearch.trim().toLowerCase();
-    if (!query) return true;
+    const query = candidatePoolSearch.trim().toLowerCase();
     const candidate = membership.candidate;
-    return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.profession ?? '', candidate.country ?? ''].some((value) => value.toLowerCase().includes(query));
+    if (candidateAgencyFilter && candidate.agencyId !== candidateAgencyFilter) return false;
+    if (!query) return true;
+    return [
+      candidate.name,
+      candidate.reference,
+      candidate.passportNumber ?? '',
+      candidate.profession ?? '',
+      candidate.country ?? '',
+      candidate.email ?? '',
+      candidate.phone ?? '',
+      candidate.currentLocation ?? '',
+      candidate.visaStatus ?? '',
+      ...(candidate.skills ?? []),
+    ].some((value) => value.toLowerCase().includes(query));
   });
+  const candidatePageCount = Math.max(1, Math.ceil(filteredCandidates.length / CANDIDATE_POOL_PAGE_SIZE));
+  const safeCandidatePage = Math.min(candidatePoolPage, candidatePageCount);
+  const pagedCandidates = filteredCandidates.slice(
+    (safeCandidatePage - 1) * CANDIDATE_POOL_PAGE_SIZE,
+    safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE,
+  );
+
+  const filteredInterviews = job.interviews.filter((interview) => {
+    const query = interviewSearch.trim().toLowerCase();
+    if (!query) return true;
+    const candidate = interview.candidate;
+    return [
+      candidate?.name ?? '',
+      candidate?.reference ?? '',
+      candidate?.passportNumber ?? '',
+      candidate?.profession ?? '',
+      candidate?.country ?? '',
+      interview.type,
+      interview.status,
+      interview.location ?? '',
+      interview.notes ?? '',
+      new Date(interview.scheduledAt).toLocaleString(),
+    ].some((value) => value.toLowerCase().includes(query));
+  });
+  const interviewPageCount = Math.max(1, Math.ceil(filteredInterviews.length / INTERVIEW_PAGE_SIZE));
+  const safeInterviewPage = Math.min(interviewPage, interviewPageCount);
+  const pagedInterviews = filteredInterviews.slice(
+    (safeInterviewPage - 1) * INTERVIEW_PAGE_SIZE,
+    safeInterviewPage * INTERVIEW_PAGE_SIZE,
+  );
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
@@ -537,24 +591,109 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
-          <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Candidate pool</h2><p className="mt-1 text-xs text-slate-400">Candidates collected specifically for this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{candidateCount}</span></div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-black text-slate-950">Candidate pool</h2>
+                <p className="mt-1 text-xs text-slate-400">Candidates collected specifically for this job.</p>
+              </div>
+              <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{candidateCount}</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+              <div className="relative">
+                <input
+                  className="field-input pl-9"
+                  value={candidatePoolSearch}
+                  onChange={(event) => setCandidatePoolSearch(event.target.value)}
+                  placeholder="Search candidates by name, passport, contact, profession…"
+                  aria-label="Search candidate pool"
+                />
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
+              </div>
+              {role === 'ADMIN' && (
+                <SelectMenu
+                  value={candidateAgencyFilter}
+                  onChange={setCandidateAgencyFilter}
+                  options={[
+                    { value: '', label: 'All agencies' },
+                    ...agencies.map((item) => ({ value: item.id, label: item.name })),
+                  ]}
+                  ariaLabel="Filter candidate pool by agency"
+                />
+              )}
+            </div>
+          </div>
           <div className="mt-4 space-y-2.5">
-            {job.candidatePool.length ? job.candidatePool.map((membership) => (
+            {filteredCandidates.length ? pagedCandidates.map((membership) => (
               <div key={membership.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</p></div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</p>
+                </div>
                 <StatusPill value={membership.status} />
               </div>
-            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No candidates in this job pool yet.</p></div>}
+            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">{job.candidatePool.length ? 'No candidates match the current search or agency filter.' : 'No candidates in this job pool yet.'}</p></div>}
           </div>
+          {filteredCandidates.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 text-[10px] font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+              <span>Showing {(safeCandidatePage - 1) * CANDIDATE_POOL_PAGE_SIZE + 1}-{Math.min(safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE, filteredCandidates.length)} of {filteredCandidates.length}</span>
+              {candidatePageCount > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Button size="sm" variant="secondary" className="!min-h-8 !px-2.5 !py-1 text-[10px]" disabled={safeCandidatePage === 1} onClick={() => setCandidatePoolPage((value) => Math.max(1, value - 1))}>Previous</Button>
+                  <span className="min-w-16 text-center font-black text-slate-600">Page {safeCandidatePage} / {candidatePageCount}</span>
+                  <Button size="sm" variant="secondary" className="!min-h-8 !px-2.5 !py-1 text-[10px]" disabled={safeCandidatePage === candidatePageCount} onClick={() => setCandidatePoolPage((value) => Math.min(candidatePageCount, value + 1))}>Next</Button>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Interview activity</h2><p className="mt-1 text-xs text-slate-400">Every interview attached to this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{interviewCount}</span></div>
-          <div className="mt-4 space-y-2.5">
-            {job.interviews.length ? job.interviews.map((interview) => (
-              <div key={interview.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? interview.candidateId}</p><p className="mt-0.5 text-[10px] text-slate-400">{label(interview.type)} · {new Date(interview.scheduledAt).toLocaleString()}</p></div><StatusPill value={interview.status} /></div><div className="mt-2 text-[10px] font-semibold text-slate-400">{interview.durationMins} min · {interview.panel?.length ?? interview.panelUserIds.length} interviewer(s)</div></div>
-            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No interviews scheduled yet.</p></div>}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-black text-slate-950">Interview activity</h2>
+                <p className="mt-1 text-xs text-slate-400">Every interview attached to this job.</p>
+              </div>
+              <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{interviewCount}</span>
+            </div>
+            <div className="relative">
+              <input
+                className="field-input pl-9"
+                value={interviewSearch}
+                onChange={(event) => setInterviewSearch(event.target.value)}
+                placeholder="Search interviews by candidate, passport, status, type…"
+                aria-label="Search job interviews"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
+            </div>
           </div>
+          <div className="mt-4 space-y-2.5">
+            {filteredInterviews.length ? pagedInterviews.map((interview) => (
+              <div key={interview.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? interview.candidateId}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-slate-400">{label(interview.type)} · {new Date(interview.scheduledAt).toLocaleString()} · {interview.candidate?.passportNumber ? 'Passport: ' + interview.candidate.passportNumber : 'Passport not provided'}</p>
+                  </div>
+                  <StatusPill value={interview.status} />
+                </div>
+                <div className="mt-2 text-[10px] font-semibold text-slate-400">{interview.durationMins} min · {interview.panel?.length ?? interview.panelUserIds.length} interviewer(s)</div>
+              </div>
+            )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">{job.interviews.length ? 'No interviews match the current search.' : 'No interviews scheduled yet.'}</p></div>}
+          </div>
+          {filteredInterviews.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 text-[10px] font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+              <span>Showing {(safeInterviewPage - 1) * INTERVIEW_PAGE_SIZE + 1}-{Math.min(safeInterviewPage * INTERVIEW_PAGE_SIZE, filteredInterviews.length)} of {filteredInterviews.length}</span>
+              {interviewPageCount > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Button size="sm" variant="secondary" className="!min-h-8 !px-2.5 !py-1 text-[10px]" disabled={safeInterviewPage === 1} onClick={() => setInterviewPage((value) => Math.max(1, value - 1))}>Previous</Button>
+                  <span className="min-w-16 text-center font-black text-slate-600">Page {safeInterviewPage} / {interviewPageCount}</span>
+                  <Button size="sm" variant="secondary" className="!min-h-8 !px-2.5 !py-1 text-[10px]" disabled={safeInterviewPage === interviewPageCount} onClick={() => setInterviewPage((value) => Math.min(interviewPageCount, value + 1))}>Next</Button>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
