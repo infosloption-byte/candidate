@@ -28,10 +28,10 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   AGENCY: [
     { label: 'Operations', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
       { view: 'interviews', label: 'Interviews', icon: 'calendar' },
       { view: 'reports', label: 'Reports', icon: 'chart' },
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
     ]},
     { label: 'Administration', items: [
       { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
