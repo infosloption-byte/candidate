@@ -1,4 +1,4 @@
-import type { Agency, Candidate, Interview, InterviewCriterion, InterviewEvaluation, Job, JobCandidate, JobPosition, User } from './types';
+import type { Agency, Candidate, Interview, InterviewCriterion, InterviewEvaluation, Job, JobCandidate, User } from './types';
 
 export const agencies: Agency[] = [
   { id: 'agency-1', name: 'BuildHire Recruitment', slug: 'buildhire', status: 'ACTIVE', userCount: 8, jobCount: 12, candidateCount: 146 },
@@ -21,19 +21,53 @@ export const candidates: Candidate[] = [
 ];
 
 export const jobs: Job[] = [
-  { id: 'job-1', agencyId: null, title: 'Dubai Tower Project', description: 'Recruitment for masonry and general labour roles.', location: 'Dubai, UAE', openings: 7, status: 'PUBLISHED', publishedAt: '2026-09-16T08:00:00.000Z', candidateCount: 2, interviewCount: 1, filledCount: 0 },
-  { id: 'job-2', agencyId: null, title: 'Doha Industrial Expansion', description: 'Structural welding and fabrication recruitment.', location: 'Doha, Qatar', openings: 4, status: 'PUBLISHED', publishedAt: '2026-09-15T08:00:00.000Z' },
-  { id: 'job-3', agencyId: null, title: 'Colombo Mall', description: 'Formwork and shuttering carpentry recruitment.', location: 'Colombo, Sri Lanka', openings: 3, status: 'DRAFT', publishedAt: null },
+  {
+    id: 'job-1',
+    agencyId: null,
+    title: 'Dubai Tower Project',
+    description: 'Recruitment for masonry and general labour roles.',
+    location: 'Dubai, UAE',
+    openings: 7,
+    positions: [
+      { id: 'job-position-1', jobId: 'job-1', position: 'Mason', requiredCount: 2, sortOrder: 0 },
+      { id: 'job-position-2', jobId: 'job-1', position: 'Labour', requiredCount: 5, sortOrder: 1 },
+    ],
+    status: 'PUBLISHED',
+    publishedAt: '2026-09-16T08:00:00.000Z',
+    candidateCount: 2,
+    interviewCount: 1,
+    filledCount: 0,
+  },
+  {
+    id: 'job-2',
+    agencyId: null,
+    title: 'Doha Industrial Expansion',
+    description: 'Structural welding and fabrication recruitment.',
+    location: 'Doha, Qatar',
+    openings: 4,
+    positions: [
+      { id: 'job-position-3', jobId: 'job-2', position: 'Welder', requiredCount: 4, sortOrder: 0 },
+    ],
+    status: 'PUBLISHED',
+    publishedAt: '2026-09-15T08:00:00.000Z',
+  },
+  {
+    id: 'job-3',
+    agencyId: null,
+    title: 'Colombo Mall',
+    description: 'Formwork and shuttering carpentry recruitment.',
+    location: 'Colombo, Sri Lanka',
+    openings: 3,
+    positions: [
+      { id: 'job-position-4', jobId: 'job-3', position: 'Shuttering Carpenter', requiredCount: 3, sortOrder: 0 },
+    ],
+    status: 'DRAFT',
+    publishedAt: null,
+  },
 ];
 
 
 
-export const jobPositions: JobPosition[] = [
-  { id: 'job-position-1', jobId: 'job-1', position: 'Mason', requiredCount: 2, sortOrder: 0 },
-  { id: 'job-position-2', jobId: 'job-1', position: 'Labour', requiredCount: 5, sortOrder: 1 },
-  { id: 'job-position-3', jobId: 'job-2', position: 'Welder', requiredCount: 4, sortOrder: 0 },
-  { id: 'job-position-4', jobId: 'job-3', position: 'Shuttering Carpenter', requiredCount: 3, sortOrder: 0 },
-];
 
 export const jobCandidates: JobCandidate[] = [
   {
