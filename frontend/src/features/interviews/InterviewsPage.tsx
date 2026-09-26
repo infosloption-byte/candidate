@@ -29,6 +29,7 @@ interface Props {
 type InterviewRecord = Interview;
 
 const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
+const interviewerDecisionStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
 const INTERVIEWS_PAGE_SIZE = 10;
 
 const defaultForm = {
@@ -1027,8 +1028,18 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         const result = await apiFetch<{ interviewCompleted: boolean; evaluation: { status: 'SUBMITTED' }; summary: typeof evaluationSummary }>('/interviews/' + interview.id + '/evaluation/submit', { method: 'POST' });
         setEvaluationStatus('SUBMITTED');
         if (result.summary) setEvaluationSummary(result.summary);
-        closeAfterSubmit = result.interviewCompleted;
-        setInterviews((current) => current.map((item) => item.id === interview.id ? { ...item, status: result.interviewCompleted ? 'COMPLETED' : item.status, completedAt: result.interviewCompleted ? new Date().toISOString() : item.completedAt } : item));
+
+        // Always refresh the shared interview after submission so every interviewer
+        // sees the latest panel evaluations and candidate workflow status.
+        const refreshed = await apiFetch<InterviewRecord>('/interviews/' + interview.id);
+        setInterviews((current) => current.map((item) => item.id === refreshed.id ? { ...item, ...refreshed } : item));
+        setCandidates((current) => current.map((item) => item.id === refreshed.candidateId ? { ...item, ...(refreshed.candidate ?? {}) } : item));
+        setEvaluationLastSaved(Date.now());
+
+        // Keep the workspace open after the final panel submission. This is where
+        // the authorized interviewer records the final candidate decision.
+        setEvaluationDetail(refreshed as InterviewDetail);
+        closeAfterSubmit = false;
       }
       setEvaluationLastSaved(Date.now());
       if (closeAfterSubmit) {
@@ -2083,7 +2094,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                             onChange={(event) => setStatusDrafts((current) => ({ ...current, [activeCandidate.id]: event.target.value as CandidateStatus }))}
                           >
                             <option value="">Select final status</option>
-                            {candidateFinalStatuses.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
+                            {(role === 'INTERVIEWER' ? interviewerDecisionStatuses : candidateFinalStatuses).map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
                           </select>
                         </FormField>
                         <FormField label="Reason" hint="Optional">
