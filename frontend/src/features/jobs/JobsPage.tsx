@@ -324,21 +324,40 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     { value: 'CLOSED', label: 'Closed' },
   ];
 
-  const renderJobActions = (job: Job, compact = false) => (
-    <div className="flex flex-wrap gap-2">
-      <Button variant="secondary" size="sm" onClick={() => onOpenJob?.(job.id)}>
-        Open job
+  const renderJobActions = (job: Job, _compact = false) => (
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant="secondary"
+        size="sm"
+        className="!size-10 !min-h-10 !p-0"
+        title="Open job"
+        aria-label="Open job"
+        onClick={() => onOpenJob?.(job.id)}
+      >
+        <Icon name="eye" size={16} />
       </Button>
       {role !== 'INTERVIEWEE' && (
         <>
-          <Button variant="secondary" size="sm" onClick={() => beginEdit(job)}>Edit</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="!size-10 !min-h-10 !p-0"
+            title="Edit job"
+            aria-label="Edit job"
+            onClick={() => beginEdit(job)}
+          >
+            <Icon name="pencil" size={16} />
+          </Button>
           <Button
             variant={job.status === 'PUBLISHED' && (job.filledCount ?? 0) >= job.openings ? 'danger' : 'secondary'}
             size="sm"
+            className="!size-10 !min-h-10 !p-0"
+            title={job.status === 'PUBLISHED' ? 'Close job' : 'Publish job'}
+            aria-label={job.status === 'PUBLISHED' ? 'Close job' : 'Publish job'}
             disabled={job.status === 'PUBLISHED' && (job.filledCount ?? 0) < job.openings}
             onClick={() => void setStatus(job)}
           >
-            {job.status === 'PUBLISHED' ? 'Close' : 'Publish'}
+            <Icon name={job.status === 'PUBLISHED' ? 'lock' : 'send'} size={16} />
           </Button>
         </>
       )}
@@ -704,65 +723,128 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
             return (
               <Card key={job.id}>
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-lg font-black text-slate-950">{job.title}</h2>
-                      <StatusPill value={job.status} />
+                <div className="flex min-h-[25rem] flex-col">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-50 text-cyan-700">
+                          <Icon name="briefcase" size={17} />
+                        </span>
+                        <div className="min-w-0">
+                          <h2 className="truncate text-base font-black text-slate-950">{job.title}</h2>
+                          <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">
+                            {job.location ?? 'Location not set'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="mt-2 line-clamp-2 max-w-3xl text-sm text-slate-500">
-                      {job.description ?? 'No description provided.'}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-500">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="size-1.5 rounded-full bg-cyan-500" />
-                        {job.location ?? 'Location not set'}
-                      </span>
-                      <span>{positions.length} position{positions.length === 1 ? '' : 's'}</span>
-                      <span>{job.openings} required</span>
-                      <span>{candidateCount} candidate{candidateCount === 1 ? '' : 's'}</span>
-                      <span>{interviewCount} interview{interviewCount === 1 ? '' : 's'}</span>
+                    <div className="shrink-0">
+                      <StatusPill value={job.status} />
                     </div>
                   </div>
 
                   {role !== 'INTERVIEWEE' && (
-                    <div className="shrink-0">
+                    <div className="mt-3 flex justify-end border-b border-slate-100 pb-3">
                       {renderJobActions(job)}
                     </div>
                   )}
-                </div>
 
-                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Worker progress</p>
-                      <p className="mt-1 text-sm font-black text-slate-900">
-                        {filledCount} / {job.openings} filled
-                      </p>
+                  <div className="mt-3 min-h-[2.75rem]">
+                    <p className="line-clamp-2 text-xs leading-5 text-slate-500">
+                      {job.description ?? 'No description provided for this opening.'}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
+                    <div className="min-w-0 rounded-xl bg-white px-3 py-2.5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Required</p>
+                      <p className="mt-1 text-sm font-black text-slate-900">{job.openings}</p>
+                      <p className="text-[9px] font-semibold text-slate-400">workers</p>
                     </div>
-                    <span className="text-xs font-black text-slate-600">{fillPercent}%</span>
+                    <div className="min-w-0 rounded-xl bg-white px-3 py-2.5">
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p>
+                      <p className="mt-1 text-sm font-black text-slate-900">{positions.length}</p>
+                      <p className="text-[9px] font-semibold text-slate-400">{positions.length === 1 ? 'role' : 'roles'}</p>
+                    </div>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: fillPercent + '%' }} />
-                  </div>
-                </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate pool</p>
-                    <p className="mt-1 text-sm font-black text-slate-800">{candidateCount}</p>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Worker progress</p>
+                        <p className="mt-1 text-xs font-black text-slate-900">{filledCount} / {job.openings} filled</p>
+                      </div>
+                      <span className="text-xs font-black text-slate-600">{fillPercent}%</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-slate-900 transition-all" style={{ width: fillPercent + '%' }} />
+                    </div>
+                    <p className="mt-1.5 text-[9px] font-semibold text-slate-400">
+                      {job.openings - filledCount > 0
+                        ? (job.openings - filledCount) + ' opening(s) remaining'
+                        : 'All required openings filled'}
+                    </p>
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Interviews</p>
-                    <p className="mt-1 text-sm font-black text-slate-800">{interviewCount}</p>
+
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Icon name="users" size={13} />
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Candidates</span>
+                      </div>
+                      <p className="mt-1 text-sm font-black text-slate-900">{candidateCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Icon name="calendar" size={13} />
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Interviews</span>
+                      </div>
+                      <p className="mt-1 text-sm font-black text-slate-900">{interviewCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Icon name="target" size={13} />
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Filled</span>
+                      </div>
+                      <p className="mt-1 text-sm font-black text-slate-900">{filledCount}</p>
+                    </div>
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filled</p>
-                    <p className="mt-1 text-sm font-black text-slate-800">{filledCount} / {job.openings}</p>
+
+                  <div className="mt-3 flex-1 rounded-2xl border border-slate-100 bg-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Position requirements</p>
+                      <span className="text-[9px] font-bold text-slate-400">{positions.length} {positions.length === 1 ? 'position' : 'positions'}</span>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      {positions.slice(0, 3).map((position) => (
+                        <div key={position.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
+                          <span className="min-w-0 truncate text-[10px] font-bold text-slate-700">{position.position}</span>
+                          <span className="shrink-0 rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-black text-cyan-700">{position.requiredCount}</span>
+                        </div>
+                      ))}
+                      {positions.length > 3 && (
+                        <p className="pt-0.5 text-[9px] font-semibold text-slate-400">+ {positions.length - 3} more position(s)</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <div className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-400">
+                      <Icon name="clock" size={12} />
+                      <span className="truncate">
+                        {job.publishedAt ? 'Published ' + new Date(job.publishedAt).toLocaleDateString() : 'Draft · not published'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="shrink-0 text-[10px] font-extrabold text-cyan-700 hover:text-cyan-800"
+                      onClick={() => onOpenJob?.(job.id)}
+                    >
+                      View details
+                    </button>
                   </div>
                 </div>
               </Card>
-            );
           })}
         </div>
       )}
