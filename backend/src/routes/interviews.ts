@@ -37,7 +37,7 @@ const interviewInclude = {
       statusUpdatedAt: true,
     },
   },
-  job: { select: { id: true, agencyId: true, title: true, location: true, status: true } },
+  job: { select: { id: true, title: true, location: true, status: true } },
   panel: {
     select: {
       userId: true,
@@ -293,7 +293,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     const user = request.authUser!;
     const allowed =
       user.role === 'ADMIN'
-      || (user.role === 'AGENCY' && (user.agencyId === interview.candidate.agencyId || user.agencyId === interview.job?.agencyId))
+      || user.role === 'AGENCY'
       || (user.role === 'INTERVIEWER' && interview.panel.some((item) => item.userId === user.id))
       || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidate.id);
 
@@ -354,9 +354,6 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const candidateAgencyIds = [...new Set(candidates.map((candidate) => candidate.agencyId))];
-      if (request.authUser!.role === 'AGENCY' && candidateAgencyIds.some((candidateAgencyId) => candidateAgencyId !== request.authUser!.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only schedule candidates belonging to your agency.' } });
-      }
       if (request.authUser!.role !== 'ADMIN' && request.authUser!.role !== 'AGENCY') {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule these candidates.' } });
       }
@@ -379,14 +376,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const job = await getPrisma().job.findUnique({
         where: { id: request.body.jobId },
-        select: { id: true, agencyId: true, title: true, location: true, openings: true, status: true },
+        select: { id: true, title: true, location: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       if (job.status === 'CLOSED') return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Interviews cannot be scheduled for a closed job.' } });
-      if (!canManage(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule interviews for this job.' } });
-      }
-
       const memberships = await getPrisma().jobCandidate.findMany({
         where: { jobId: job.id, candidateId: { in: candidateIds } },
         select: { candidateId: true, status: true },
@@ -401,7 +394,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, [job.agencyId]);
+      const interviewers = await getInterviewers(interviewerIds, candidateAgencyIds);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
@@ -541,14 +534,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const job = await getPrisma().job.findUnique({
         where: { id: request.body.jobId },
-        select: { id: true, agencyId: true, title: true, location: true, openings: true, status: true },
+        select: { id: true, title: true, location: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       if (job.status === 'CLOSED') return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Interviews cannot be scheduled for a closed job.' } });
-      if (!canManage(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule interviews for this job.' } });
-      }
-
       const membership = await getPrisma().jobCandidate.findUnique({
         where: { jobId_candidateId: { jobId: job.id, candidateId: candidate.id } },
         select: { status: true },
@@ -558,7 +547,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, [job.agencyId]);
+      const interviewers = await getInterviewers(interviewerIds, [candidate.agencyId]);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
@@ -672,7 +661,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
       const assignedInterviewer = user.role === 'INTERVIEWER' && existing.panel.some((participant) => participant.userId === user.id);
-      const managedByAgency = canManage(user.role, user.agencyId, existing.job?.agencyId ?? existing.candidate.agencyId);
+      const managedByAgency = user.role === 'ADMIN' || user.role === 'AGENCY' || canManage(user.role, user.agencyId, existing.candidate.agencyId);
       if (!assignedInterviewer && !managedByAgency) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to change this interview status.' } });
       }
@@ -759,8 +748,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
-      const agencyId = existing.job?.agencyId ?? existing.candidate.agencyId;
-      if (!canManage(request.authUser!.role, request.authUser!.agencyId, agencyId)) {
+      const agencyId = existing.candidate.agencyId;
+      if (!canManage(request.authUser!.role, request.authUser!.agencyId, agencyId) && request.authUser!.role !== 'ADMIN' && request.authUser!.role !== 'AGENCY') {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this interview.' } });
       }
 
