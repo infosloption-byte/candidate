@@ -2,69 +2,50 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateCandidateInput } from './candidateValidation.js';
 
-test('candidate validation requires a usable name', () => {
+const validCandidate = {
+  agencyRegisterNo: 'AGR-1001',
+  firstName: 'Kamal',
+  lastName: 'Perera',
+  birthdate: '1990-01-15',
+  passportNumber: 'N1234567',
+  passportExpiry: '2031-06-30',
+  requestedProfession: 'Mason',
+};
+
+test('candidate validation requires the seven intake fields', () => {
   assert.deepEqual(
-    validateCandidateInput({ name: 'A' }, 'create'),
-    ['Candidate name must be at least 2 characters.'],
+    validateCandidateInput({ firstName: 'Kamal', lastName: 'Perera' }, 'create'),
+    [
+      'Agency register number is required.',
+      'Birth date is required.',
+      'Passport number is required.',
+      'Passport expiry date is required.',
+      'Requested profession is required.',
+    ],
   );
 });
 
-test('candidate validation accepts a normal candidate profile', () => {
+test('candidate validation accepts the canonical candidate intake payload', () => {
+  assert.deepEqual(validateCandidateInput(validCandidate, 'create'), []);
+});
+
+test('candidate validation rejects future birth dates', () => {
   assert.deepEqual(
-    validateCandidateInput({
-      name: 'Kamal Perera',
-      email: 'kamal@example.com',
-      experienceYears: 8,
-      skills: ['Masonry', 'Tile'],
-    }, 'create'),
-    [],
+    validateCandidateInput({ ...validCandidate, birthdate: '2999-01-01' }, 'create'),
+    ['Birth date cannot be in the future.'],
   );
 });
 
-test('candidate validation rejects invalid experience', () => {
+test('candidate validation rejects malformed passport expiry dates', () => {
   assert.deepEqual(
-    validateCandidateInput({ name: 'Kamal Perera', experienceYears: -1 }, 'create'),
-    ['Experience years must be a whole number between 0 and 60.'],
+    validateCandidateInput({ ...validCandidate, passportExpiry: 'not-a-date' }, 'create'),
+    ['Passport expiry date is invalid.'],
   );
 });
 
-test('candidate validation accepts extended identity and work-readiness fields', () => {
+test('candidate validation rejects empty required fields on update', () => {
   assert.deepEqual(
-    validateCandidateInput({
-      name: 'Ruwan Fernando',
-      phone: '+94 77 123 4567',
-      alternatePhone: '+94 76 234 5678',
-      country: 'Sri Lanka',
-      passportNumber: 'N9087654',
-      passportExpiry: '2031-06-30',
-      currentLocation: 'Colombo, Sri Lanka',
-      availability: 'Immediately',
-      visaStatus: 'Required',
-      profession: 'Mason',
-      experienceYears: 7,
-      skills: ['Masonry', 'Tile'],
-    }, 'create'),
-    [],
-  );
-});
-
-test('candidate validation rejects malformed passport expiry date', () => {
-  assert.deepEqual(
-    validateCandidateInput({ name: 'Ruwan Fernando', passportExpiry: 'not-a-date' }, 'create'),
-    ['Candidate passport expiry date is invalid.'],
-  );
-});
-
-test('candidate validation accepts a valid birthdate', () => {
-  assert.deepEqual(
-    validateCandidateInput({ name: 'Ruwan Fernando', birthdate: '1994-08-17' }, 'create'),
-    [],
-  );
-});
-
-test('candidate validation rejects a future birthdate', () => {
-  assert.deepEqual(
-    validateCandidateInput({ name: 'Ruwan Fernando', birthdate: '2999-01-01' }, 'create'),
-    ['Candidate birthdate cannot be in the future.'],
+    validateCandidateInput({ firstName: ' ' }, 'update'),
+    ['First name cannot be empty.'],
   );
 });

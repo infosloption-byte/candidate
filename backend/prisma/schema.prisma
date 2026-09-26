@@ -143,20 +143,13 @@ model Candidate {
   id               String           @id @default(uuid()) @db.VarChar(36)
   agencyId         String           @db.VarChar(36)
   reference        String           @db.VarChar(32)
-  name             String           @db.VarChar(160)
+  agencyRegisterNo String           @db.VarChar(60)
+  firstName        String           @db.VarChar(100)
+  lastName         String           @db.VarChar(100)
   birthdate        DateTime?
-  email            String?          @db.VarChar(191)
-  phone            String?          @db.VarChar(60)
-  alternatePhone   String?          @db.VarChar(60)
-  country          String?          @db.VarChar(100)
   passportNumber   String?          @db.VarChar(60)
   passportExpiry   DateTime?
-  currentLocation  String?          @db.VarChar(160)
-  availability     String?          @db.VarChar(80)
-  visaStatus       String?          @db.VarChar(80)
-  profession       String?          @db.VarChar(120)
-  experienceYears  Int?
-  skills           Json
+  requestedProfession String        @db.VarChar(120)
   onboardingStatus OnboardingStatus @default(NOT_STARTED)
   source           CandidateSource  @default(AGENCY_ADDED)
   status           CandidateStatus  @default(POOL)
@@ -172,14 +165,11 @@ model Candidate {
   jobMemberships JobCandidate[]
 
   @@unique([agencyId, reference])
-  @@index([agencyId, name])
-  @@index([agencyId, profession])
-  @@index([agencyId, country])
+  @@unique([agencyId, agencyRegisterNo])
+  @@index([agencyId, firstName, lastName])
+  @@index([agencyId, requestedProfession])
   @@index([agencyId, passportNumber])
-  @@index([agencyId, visaStatus])
-  @@index([agencyId, availability])
 }
-
 model JobCandidate {
   id              String             @id @default(uuid()) @db.VarChar(36)
   jobId           String             @db.VarChar(36)

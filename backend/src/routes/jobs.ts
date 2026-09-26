@@ -4,6 +4,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput, type JobPositionInput } from '../domain/jobValidation.js';
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
 import { recordAuditEvent } from '../lib/audit.js';
+import { withCandidateDisplayName } from '../domain/candidateDisplay.js';
 
 interface JobParams { id: string; }
 interface JobCandidatesBody { candidateIds?: string[]; }
@@ -12,20 +13,13 @@ const candidateSelect = {
   id: true,
   agencyId: true,
   reference: true,
-  name: true,
+  agencyRegisterNo: true,
+  firstName: true,
+  lastName: true,
   birthdate: true,
-  email: true,
-  phone: true,
-  alternatePhone: true,
-  country: true,
   passportNumber: true,
   passportExpiry: true,
-  currentLocation: true,
-  availability: true,
-  visaStatus: true,
-  profession: true,
-  experienceYears: true,
-  skills: true,
+  requestedProfession: true,
   onboardingStatus: true,
   source: true,
   status: true,
@@ -129,7 +123,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         ...job,
         positions: job.positions,
         openings: totalRequired(job.positions),
-        candidatePool: job.candidatePool,
+        candidatePool: job.candidatePool.map((item) => ({ ...item, candidate: withCandidateDisplayName(item.candidate) })),
+        interviews: job.interviews.map((item) => ({ ...item, candidate: withCandidateDisplayName(item.candidate) })),
         candidateCount: job.candidatePool.length,
         interviewCount: job.interviews.length,
         filledCount: hiredCount,

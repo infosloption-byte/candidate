@@ -41,7 +41,7 @@ interface Analytics {
     id: string;
     name: string;
     reference: string;
-    profession: string | null;
+    requestedProfession: string | null;
     status: CandidateStatus;
     statusUpdatedAt: string;
   }>;
@@ -256,7 +256,7 @@ export const DashboardPage = ({ role }: Props) => {
         id: item.id,
         name: item.name,
         reference: item.reference,
-        profession: item.profession,
+        requestedProfession: item.requestedProfession,
         status: item.status,
         statusUpdatedAt: item.statusUpdatedAt,
       })),
@@ -560,7 +560,7 @@ export const DashboardPage = ({ role }: Props) => {
                   <div key={candidate.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
                     <div className="min-w-0">
                       <p className="truncate text-xs font-black text-slate-900">{candidate.name}</p>
-                      <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{candidate.reference}{candidate.profession ? ' · ' + candidate.profession : ''}</p>
+                      <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{candidate.reference}{candidate.requestedProfession ? ' · ' + candidate.requestedProfession : ''}</p>
                     </div>
                     <div className="shrink-0 text-right">
                       <StatusPill value={candidate.status} />

@@ -28,20 +28,13 @@ const CANDIDATE_POOL_PAGE_SIZE = 6;
 const INTERVIEW_PAGE_SIZE = 6;
 
 const emptyCandidate = {
-  name: '',
+  agencyRegisterNo: '',
+  firstName: '',
+  lastName: '',
   birthdate: '',
-  email: '',
-  phone: '',
-  alternatePhone: '',
-  country: '',
   passportNumber: '',
   passportExpiry: '',
-  currentLocation: '',
-  availability: '',
-  visaStatus: '',
-  profession: '',
-  experienceYears: '0',
-  skills: '',
+  requestedProfession: '',
 };
 
 const defaultInterview = {
@@ -70,7 +63,7 @@ const buildJobReportHtml = (
   interviews: Interview[],
 ) => {
   const positionRows = positions.map((item) => '<tr><td>' + escapeReportHtml(item.position) + '</td><td>' + item.requiredCount + '</td></tr>').join('');
-  const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.profession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
+  const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.requestedProfession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
   const interviewRows = interviews.map((item) => '<tr><td>' + escapeReportHtml(item.candidate?.name || item.candidateId) + '</td><td>' + escapeReportHtml(item.candidate?.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.type) + '</td><td>' + escapeReportHtml(item.status) + '</td><td>' + escapeReportHtml(new Date(item.scheduledAt).toLocaleString()) + '</td></tr>').join('');
   return '<!doctype html><html><head><meta charset="utf-8"><title>BuildHire - ' + escapeReportHtml(job.title) + '</title><style>' +
     'body{font-family:Arial,sans-serif;color:#0f172a;margin:32px;font-size:12px}' +
@@ -323,36 +316,29 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   };
 
   const createCandidate = async () => {
-    if (!job || !candidateForm.name.trim() || !candidateAgencyId) return;
+    if (!job || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId) {
+      setError('Agency register number, first name, last name, birth date, passport details, requested profession, and agency are required.');
+      return;
+    }
     setCandidateSaving(true);
     setError('');
     try {
-      const payload = {
-        ...candidateForm,
-        experienceYears: Number(candidateForm.experienceYears) || 0,
-        skills: candidateForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-        jobId: job.id,
-      };
       if (developmentMode) {
         const id = 'candidate-' + Date.now();
+        const name = [candidateForm.firstName.trim(), candidateForm.lastName.trim()].join(' ');
         const candidate: Candidate = {
           id,
           agencyId: candidateAgencyId,
           reference: 'CA-' + Date.now().toString().slice(-6),
-          name: payload.name.trim(),
-          birthdate: payload.birthdate || null,
-          email: payload.email.trim() || null,
-          phone: payload.phone.trim() || null,
-          alternatePhone: payload.alternatePhone.trim() || null,
-          country: payload.country.trim() || null,
-          passportNumber: payload.passportNumber.trim() || null,
-          passportExpiry: payload.passportExpiry || null,
-          currentLocation: payload.currentLocation.trim() || null,
-          availability: payload.availability.trim() || null,
-          visaStatus: payload.visaStatus.trim() || null,
-          profession: payload.profession.trim() || null,
-          experienceYears: payload.experienceYears,
-          skills: payload.skills,
+          agencyRegisterNo: candidateForm.agencyRegisterNo.trim(),
+          firstName: candidateForm.firstName.trim(),
+          lastName: candidateForm.lastName.trim(),
+          name,
+          birthdate: candidateForm.birthdate || null,
+          passportNumber: candidateForm.passportNumber.trim() || null,
+          passportExpiry: candidateForm.passportExpiry || null,
+          requestedProfession: candidateForm.requestedProfession.trim(),
+          skills: [],
           onboardingStatus: 'NOT_STARTED',
           source: 'AGENCY_ADDED',
           status: 'POOL',
@@ -363,7 +349,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         const membership: JobCandidate = {
           id: 'job-candidate-' + Date.now(),
           jobId: job.id,
-          candidateId: candidate.id,
+          candidateId: id,
           status: 'POOL',
           statusUpdatedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -373,13 +359,22 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         dispatch({ type: 'CREATE_CANDIDATE', candidate });
         dispatch({ type: 'ADD_JOB_CANDIDATES', memberships: [membership] });
       } else {
-        const created = await apiFetch<Candidate>('/agencies/' + candidateAgencyId + '/candidates', {
+        await apiFetch<Candidate>('/agencies/' + candidateAgencyId + '/candidates', {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            agencyRegisterNo: candidateForm.agencyRegisterNo.trim(),
+            firstName: candidateForm.firstName.trim(),
+            lastName: candidateForm.lastName.trim(),
+            birthdate: candidateForm.birthdate,
+            passportNumber: candidateForm.passportNumber.trim(),
+            passportExpiry: candidateForm.passportExpiry,
+            requestedProfession: candidateForm.requestedProfession.trim(),
+            jobId: job.id,
+          }),
         });
-        void created;
       }
       setCandidateModal(false);
+      setCandidateForm(emptyCandidate);
       setSuccess('Candidate added to this job.');
       await refreshJob();
     } catch (requestError: unknown) {
@@ -397,27 +392,27 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       const csv = await uploadFile.text();
       if (developmentMode) {
         const rows = rowsToCandidates(csv);
+        const required = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const missing = required.find((item) => !(item in (rows[0] ?? {})));
+        if (missing) throw new Error('CSV is missing the required column: ' + missing);
         const memberships: JobCandidate[] = [];
         for (const row of rows) {
           const id = 'candidate-' + Date.now() + '-' + memberships.length;
+          const firstName = row.firstname || '';
+          const lastName = row.lastname || '';
           const candidate: Candidate = {
             id,
             agencyId: uploadAgencyId,
             reference: 'CA-' + Math.random().toString(36).slice(2, 8).toUpperCase(),
-            name: row.name || row.fullname || 'Unnamed candidate',
-            birthdate: row.birthdate || row.dob || null,
-            email: row.email || null,
-            phone: row.phone || row.contactnumber || null,
-            alternatePhone: row.alternatephone || null,
-            country: row.country || row.nationality || null,
-            passportNumber: row.passportnumber || row.passport || null,
+            agencyRegisterNo: row.agencyregisterno || '',
+            firstName,
+            lastName,
+            name: [firstName, lastName].filter(Boolean).join(' '),
+            birthdate: row.birthdate || null,
+            passportNumber: row.passportnumber || null,
             passportExpiry: row.passportexpiry || null,
-            currentLocation: row.currentlocation || row.location || null,
-            availability: row.availability || null,
-            visaStatus: row.visastatus || null,
-            profession: row.profession || null,
-            experienceYears: Number(row.experienceyears || row.experience || 0) || 0,
-            skills: (row.skills || '').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
+            requestedProfession: row.requestedprofession || '',
+            skills: [],
             onboardingStatus: 'NOT_STARTED',
             source: 'BULK_IMPORTED',
             status: 'POOL',
@@ -435,9 +430,10 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
             updatedAt: new Date().toISOString(),
             candidate,
           });
-          dispatch({ type: 'CREATE_CANDIDATE', candidate });
         }
+        memberships.forEach((membership) => dispatch({ type: 'CREATE_CANDIDATE', candidate: membership.candidate }));
         dispatch({ type: 'ADD_JOB_CANDIDATES', memberships });
+        setSuccess('Imported ' + memberships.length + ' candidate(s) into this job.');
       } else {
         await apiFetch<{ importedCount: number }>('/agencies/' + uploadAgencyId + '/candidates/bulk?jobId=' + encodeURIComponent(job.id), {
           method: 'POST',
@@ -601,17 +597,15 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     if (!query) return true;
     return [
       candidate.name,
+      candidate.firstName,
+      candidate.lastName,
       candidate.reference,
+      candidate.agencyRegisterNo,
+      candidate.birthdate ?? '',
       candidate.passportNumber ?? '',
-      candidate.profession ?? '',
-      candidate.country ?? '',
-      candidate.email ?? '',
-      candidate.phone ?? '',
-      candidate.currentLocation ?? '',
-      candidate.visaStatus ?? '',
-      ...(candidate.skills ?? []),
-    ].some((value) => value.toLowerCase().includes(query));
-  });
+      candidate.passportExpiry ?? '',
+      candidate.requestedProfession,
+    ].some((value) => value.toLowerCase().includes(query));});
   const candidatePageCount = Math.max(1, Math.ceil(filteredCandidates.length / CANDIDATE_POOL_PAGE_SIZE));
   const safeCandidatePage = Math.min(candidatePoolPage, candidatePageCount);
   const pagedCandidates = filteredCandidates.slice(
@@ -628,7 +622,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       candidate?.name ?? '',
       candidate?.reference ?? '',
       candidate?.passportNumber ?? '',
-      candidate?.profession ?? '',
+      candidate?.requestedProfession ?? '',
       candidate?.country ?? '',
       interview.type,
       interview.status,
@@ -765,7 +759,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <div key={membership.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.requestedProfession || 'Profession not set'}</p>
                 </div>
                 <StatusPill value={membership.status} />
               </div>
@@ -856,27 +850,18 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
             <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate</p><h2 className="mt-1 text-lg font-black text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Create a candidate and place them directly into this job pool.</p></div><button type="button" className="grid size-9 place-items-center rounded-xl text-xl text-slate-400 hover:bg-slate-100" onClick={() => setCandidateModal(false)} aria-label="Close">×</button></div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
-                  <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
-                </FormField>
+                <FormField label="Job / position"><SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled /></FormField>
               </div>
               {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
-              <FormField label="Full name"><input className="field-input" value={candidateForm.name} onChange={(e) => setCandidateForm({ ...candidateForm, name: e.target.value })} /></FormField>
-              <FormField label="Birthdate"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
-              <FormField label="Country / nationality"><input className="field-input" value={candidateForm.country} onChange={(e) => setCandidateForm({ ...candidateForm, country: e.target.value })} /></FormField>
-              <FormField label="Contact number"><input className="field-input" value={candidateForm.phone} onChange={(e) => setCandidateForm({ ...candidateForm, phone: e.target.value })} /></FormField>
-              <FormField label="Alternate contact number"><input className="field-input" value={candidateForm.alternatePhone} onChange={(e) => setCandidateForm({ ...candidateForm, alternatePhone: e.target.value })} /></FormField>
-              <FormField label="Email"><input type="email" className="field-input" value={candidateForm.email} onChange={(e) => setCandidateForm({ ...candidateForm, email: e.target.value })} /></FormField>
+              <FormField label="Agency Register No"><input className="field-input" value={candidateForm.agencyRegisterNo} onChange={(e) => setCandidateForm({ ...candidateForm, agencyRegisterNo: e.target.value })} /></FormField>
+              <FormField label="First name"><input className="field-input" value={candidateForm.firstName} onChange={(e) => setCandidateForm({ ...candidateForm, firstName: e.target.value })} /></FormField>
+              <FormField label="Last name"><input className="field-input" value={candidateForm.lastName} onChange={(e) => setCandidateForm({ ...candidateForm, lastName: e.target.value })} /></FormField>
+              <FormField label="Birth date"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
               <FormField label="Passport number"><input className="field-input" value={candidateForm.passportNumber} onChange={(e) => setCandidateForm({ ...candidateForm, passportNumber: e.target.value })} /></FormField>
               <FormField label="Passport expiry"><input type="date" className="field-input" value={candidateForm.passportExpiry} onChange={(e) => setCandidateForm({ ...candidateForm, passportExpiry: e.target.value })} /></FormField>
-              <FormField label="Current location"><input className="field-input" value={candidateForm.currentLocation} onChange={(e) => setCandidateForm({ ...candidateForm, currentLocation: e.target.value })} /></FormField>
-              <FormField label="Availability"><input className="field-input" value={candidateForm.availability} onChange={(e) => setCandidateForm({ ...candidateForm, availability: e.target.value })} /></FormField>
-              <FormField label="Visa / work status"><input className="field-input" value={candidateForm.visaStatus} onChange={(e) => setCandidateForm({ ...candidateForm, visaStatus: e.target.value })} /></FormField>
-              <FormField label="Profession"><input className="field-input" value={candidateForm.profession} onChange={(e) => setCandidateForm({ ...candidateForm, profession: e.target.value })} /></FormField>
-              <FormField label="Experience years"><input type="number" min="0" className="field-input" value={candidateForm.experienceYears} onChange={(e) => setCandidateForm({ ...candidateForm, experienceYears: e.target.value })} /></FormField>
-              <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={candidateForm.skills} onChange={(e) => setCandidateForm({ ...candidateForm, skills: e.target.value })} /></FormField></div>
+              <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={candidateForm.requestedProfession} onChange={(e) => setCandidateForm({ ...candidateForm, requestedProfession: e.target.value })} /></FormField></div>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.name.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
+<div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
           </div>
         </div>
       )}
