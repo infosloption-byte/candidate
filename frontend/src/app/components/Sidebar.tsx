@@ -14,10 +14,10 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
   ADMIN: [
     { label: 'Operations', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
       { view: 'candidates', label: 'Candidates', icon: 'users' },
       { view: 'interviews', label: 'Interviews', icon: 'calendar' },
       { view: 'reports', label: 'Reports', icon: 'chart' },
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
     ]},
     { label: 'Administration', items: [
       { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
@@ -94,7 +94,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
           )}
           <div className="space-y-1">
             {group.items.map((item) => {
-              const active = activeView === item.view;
+              const active = activeView === item.view || (item.view === 'jobs' && activeView === 'job-detail');
               return (
                 <button
                   key={item.view}
