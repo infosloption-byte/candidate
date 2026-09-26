@@ -11,11 +11,14 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Job, UserRole } from '../../domain/types';
 
-interface JobsPageProps { role: UserRole; }
+interface JobsPageProps {
+  role: UserRole;
+  onOpenJob?: (jobId: string) => void;
+}
 
 const emptyForm = { title: '', description: '', location: '', openings: '1' };
 
-export const JobsPage = ({ role }: JobsPageProps) => {
+export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
@@ -264,15 +267,18 @@ export const JobsPage = ({ role }: JobsPageProps) => {
                 </div>
                 {role !== 'INTERVIEWEE' && (
                   <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => onOpenJob?.(job.id)}>Open job</Button>
                     <Button variant="secondary" size="sm" onClick={() => beginEdit(job)}>Edit</Button>
-                    <Button variant="secondary" size="sm" onClick={() => void setStatus(job)}>{job.status === 'PUBLISHED' ? 'Close' : 'Publish'}</Button>
+                    <Button variant={job.status === 'PUBLISHED' && (job.filledCount ?? 0) >= job.openings ? 'danger' : 'secondary'} size="sm" disabled={job.status === 'PUBLISHED' && (job.filledCount ?? 0) < job.openings} onClick={() => void setStatus(job)}>{job.status === 'PUBLISHED' ? 'Close' : 'Publish'}</Button>
                   </div>
                 )}
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 text-sm font-bold text-slate-800">{job.location ?? 'Not set'}</p></div>
                 <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Openings</p><p className="mt-1 text-sm font-bold text-slate-800">{job.openings}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published</p><p className="mt-1 text-sm font-bold text-slate-800">{job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : 'Draft'}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate pool</p><p className="mt-1 text-sm font-bold text-slate-800">{job.candidateCount ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filled</p><p className="mt-1 text-sm font-bold text-slate-800">{job.filledCount ?? 0} / {job.openings}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Interviews</p><p className="mt-1 text-sm font-bold text-slate-800">{job.interviewCount ?? 0}</p></div>
               </div>
             </Card>
           ))}
