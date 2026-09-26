@@ -343,10 +343,9 @@ export const InterviewsPage = ({ role }: Props) => {
   };
 
   useEffect(() => {
-    if (role !== 'INTERVIEWER') return;
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
-  }, [role]);
+  }, []);
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -1575,7 +1574,7 @@ export const InterviewsPage = ({ role }: Props) => {
                         <p className="mt-1 text-sm font-bold text-slate-800">{statusLabel(interview.type)}</p>
                       </div>
                       <div className="border-b border-slate-100 px-3.5 py-3">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Location</p>
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Venue / location</p>
                         <p className="mt-1 text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</p>
                       </div>
 
