@@ -353,7 +353,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     if (!job) return;
     setError('');
     setSuccess('');
-    setSelectedCandidateIds(job.candidatePool.filter((item) => !['HIRED', 'REJECTED', 'INACTIVE'].includes(item.candidate.status)).map((item) => item.candidateId));
+    setSelectedCandidateIds([]);
     setSelectedInterviewers([]);
     setSelectedCriteriaGroups([]);
     setCandidateSearch('');
