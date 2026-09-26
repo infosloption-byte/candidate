@@ -63,7 +63,7 @@ const buildJobReportHtml = (
   interviews: Interview[],
 ) => {
   const positionRows = positions.map((item) => '<tr><td>' + escapeReportHtml(item.position) + '</td><td>' + item.requiredCount + '</td></tr>').join('');
-  const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.profession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
+  const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.requestedProfession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
   const interviewRows = interviews.map((item) => '<tr><td>' + escapeReportHtml(item.candidate?.name || item.candidateId) + '</td><td>' + escapeReportHtml(item.candidate?.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.type) + '</td><td>' + escapeReportHtml(item.status) + '</td><td>' + escapeReportHtml(new Date(item.scheduledAt).toLocaleString()) + '</td></tr>').join('');
   return '<!doctype html><html><head><meta charset="utf-8"><title>BuildHire - ' + escapeReportHtml(job.title) + '</title><style>' +
     'body{font-family:Arial,sans-serif;color:#0f172a;margin:32px;font-size:12px}' +
@@ -599,7 +599,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       candidate.name,
       candidate.reference,
       candidate.passportNumber ?? '',
-      candidate.profession ?? '',
+      candidate.requestedProfession ?? '',
       candidate.country ?? '',
       candidate.email ?? '',
       candidate.phone ?? '',
@@ -624,7 +624,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       candidate?.name ?? '',
       candidate?.reference ?? '',
       candidate?.passportNumber ?? '',
-      candidate?.profession ?? '',
+      candidate?.requestedProfession ?? '',
       candidate?.country ?? '',
       interview.type,
       interview.status,
@@ -761,7 +761,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <div key={membership.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-900">{membership.candidate.name}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.profession || 'Profession not set'}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{membership.candidate.reference} · Passport: {membership.candidate.passportNumber || 'Not provided'} · {membership.candidate.requestedProfession || 'Profession not set'}</p>
                 </div>
                 <StatusPill value={membership.status} />
               </div>
