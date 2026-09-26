@@ -100,7 +100,7 @@ const toJobDetailFromState = (job: Job, memberships: JobCandidate[], interviews:
   };
 };
 
-const normalizeCriteriaGroupName = (value: string): string => value.trim().toLowerCase().replace(/\\s+/g, ' ');
+const normalizeCriteriaGroupName = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, ' ');
 
 const orderCriteriaGroups = (groups: InterviewCriterionGroup[]): InterviewCriterionGroup[] => {
   const priority = ['personal', 'experience', 'skills and capabilities'];
@@ -535,6 +535,23 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE,
   );
 
+  const interviewCandidateOptions = job.candidatePool.filter((membership) => {
+    const query = candidateSearch.trim().toLowerCase();
+    if (!query) return true;
+    const candidate = membership.candidate;
+    return [
+      candidate.name,
+      candidate.reference,
+      candidate.passportNumber ?? '',
+      candidate.profession ?? '',
+      candidate.country ?? '',
+      candidate.email ?? '',
+      candidate.phone ?? '',
+      candidate.currentLocation ?? '',
+      ...(candidate.skills ?? []),
+    ].some((value) => value.toLowerCase().includes(query));
+  });
+
   const filteredInterviews = job.interviews.filter((interview) => {
     const query = interviewSearch.trim().toLowerCase();
     if (!query) return true;
@@ -796,7 +813,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                 <div className="flex items-center justify-between gap-3"><div><p className="field-label">Candidates</p><p className="mt-1 text-[10px] text-slate-400">Select candidates already assigned to this job.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{selectedCandidateIds.length} selected</span></div>
                 <input className="field-input mt-2" value={candidateSearch} onChange={(e) => setCandidateSearch(e.target.value)} placeholder="Search name, reference, passport or profession…" />
                 <div className="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200">
-                  {filteredCandidates.map((membership) => {
+                  {interviewCandidateOptions.map((membership) => {
                     const disabled = ['HIRED', 'REJECTED', 'INACTIVE'].includes(membership.candidate.status);
                     const checked = selectedCandidateIds.includes(membership.candidateId);
                     return <label key={membership.candidateId} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0 hover:bg-slate-50">
