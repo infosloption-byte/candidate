@@ -350,7 +350,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const candidates = await getPrisma().candidate.findMany({
         where: { id: { in: candidateIds } },
-        select: { id: true, agencyId: true, name: true, status: true },
+        select: { id: true, agencyId: true, firstName: true, lastName: true, status: true },
       });
       if (candidates.length !== candidateIds.length) {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
@@ -368,7 +368,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           error: {
             code: 'CANDIDATES_NOT_AVAILABLE',
             message: 'One or more selected candidates have a final or inactive status.',
-            candidates: unavailable.map((candidate) => ({ id: candidate.id, name: candidate.name, status: candidate.status })),
+            candidates: unavailable.map((candidate) => ({ id: candidate.id, name: getCandidateDisplayName(candidate), status: candidate.status })),
           },
         });
       }
@@ -429,7 +429,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             success: false,
             error: {
               code: 'SCHEDULE_CONFLICT',
-              message: 'Schedule conflict for "' + candidate.name + '" at ' + slot.scheduledAt.toISOString() + '.',
+              message: 'Schedule conflict for "' + getCandidateDisplayName(candidate) + '" at ' + slot.scheduledAt.toISOString() + '.',
             },
           });
         }
