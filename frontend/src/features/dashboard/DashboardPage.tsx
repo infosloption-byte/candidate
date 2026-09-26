@@ -8,6 +8,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { CandidateStatus, Interview, InterviewStatus, InterviewType, Job, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
@@ -78,6 +79,7 @@ const BarList = ({ values, labels }: { values: Record<string, number>; labels: s
 
 export const DashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
+  const { t } = useLanguage();
   const { state } = useRecruitment();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [jobs, setJobs] = useState<JobFilterOption[]>([]);
@@ -194,10 +196,10 @@ export const DashboardPage = ({ role }: Props) => {
       <div className="flex flex-col gap-5 rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl sm:p-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live workspace</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Good to see you, {user?.name ?? 'there'}</h1>
+          <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{t('Good to see you,')} {user?.name ?? t('there')}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
             {selectedJobId
-              ? 'Job-scoped recruitment intelligence for ' + (activeJob?.title ?? analytics.selectedJob?.title ?? 'the selected job') + '.'
+              ? t('Job-scoped recruitment intelligence for') + ' ' + (activeJob?.title ?? analytics.selectedJob?.title ?? t('the selected job')) + '.'
               : role === 'ADMIN'
                 ? 'System-wide recruitment intelligence across agencies, candidates, jobs and interview panels.'
                 : role === 'AGENCY'
@@ -218,7 +220,7 @@ export const DashboardPage = ({ role }: Props) => {
             />
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300 sm:whitespace-nowrap">
-            Updated {new Date().toLocaleString()}
+            {t('Updated')} {new Date().toLocaleString()}
           </div>
         </div>
       </div>
