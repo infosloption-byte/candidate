@@ -484,6 +484,17 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
             data: { status: 'COMPLETED', completedAt: new Date() },
           });
 
+          if (interview.jobId) {
+            await tx.jobCandidate.updateMany({
+              where: {
+                jobId: interview.jobId,
+                candidateId: interview.candidateId,
+                status: { notIn: ['HIRED', 'PASSED', 'REJECTED'] },
+              },
+              data: { status: 'INTERVIEW_COMPLETED', statusUpdatedAt: new Date() },
+            });
+          }
+
           if (!['PASSED', 'REJECTED', 'HIRED', 'INACTIVE'].includes(interview.candidate.status)) {
             await tx.candidate.update({
               where: { id: interview.candidateId },
