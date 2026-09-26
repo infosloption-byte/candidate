@@ -7,7 +7,7 @@ import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
 import { apiFetch } from '../../shared/lib/api';
-import type { JobDetail, JobCandidate, JobStatus, UserRole } from '../../domain/types';
+import type { Job, JobDetail, JobCandidate, JobStatus, UserRole } from '../../domain/types';
 
 interface JobDetailPageProps {
   role: UserRole;
@@ -20,7 +20,7 @@ interface JobDetailPageProps {
 const label = (value: string): string => value.replaceAll('_', ' ');
 
 const toJobDetailFromState = (
-  job: JobDetail,
+  job: Job,
   memberships: JobCandidate[],
   interviews: JobDetail['interviews'],
 ): JobDetail => {
