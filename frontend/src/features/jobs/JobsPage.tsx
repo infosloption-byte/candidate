@@ -23,8 +23,6 @@ interface JobsPageProps {
 const emptyForm = { title: '', description: '', location: '', openings: '1' };
 const JOBS_PAGE_SIZE = 10;
 
-const label = (value: string): string => value.replaceAll('_', ' ');
-
 export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
