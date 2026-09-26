@@ -698,6 +698,19 @@ dbTest('multiple interviewers can independently save and submit one shared inter
   assert.equal(detailsBody.data.evaluations.length, 2);
   assert.ok(detailsBody.data.evaluations.some((item) => item.interviewerId === interviewerId));
   assert.ok(detailsBody.data.evaluations.some((item) => item.interviewerId === globalInterviewerId));
+
+  const finalDecision = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/candidates/' + panelCandidate.id,
+    headers: { cookie: secondCookie },
+    payload: {
+      status: 'PASSED',
+      statusReason: 'Panel evaluation completed by both interviewers.',
+    },
+  });
+  assert.equal(finalDecision.statusCode, 200);
+  const finalDecisionBody = json<{ data: { status: string } }>(finalDecision);
+  assert.equal(finalDecisionBody.data.status, 'PASSED');
 });
 
 dbTest('bulk interview scheduling creates consecutive interview slots for selected candidates', async () => {
