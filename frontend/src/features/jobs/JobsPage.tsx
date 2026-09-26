@@ -840,24 +840,56 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               key: 'job',
               header: 'Job',
               render: (job) => (
-                <div className="min-w-56">
+                <div className="min-w-64">
                   <div className="flex items-center gap-2">
-                    <p className="font-black text-slate-900">{job.title}</p>
-                    <StatusPill value={job.status} />
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-cyan-50 text-cyan-700">
+                      <Icon name="briefcase" size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-black text-slate-900">{job.title}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">{job.location ?? 'Location not set'}</p>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-400">{job.location ?? 'Location not set'}</p>
                 </div>
               ),
             },
             {
-              key: 'requirement',
-              header: 'Workers',
+              key: 'code',
+              header: 'Job code',
+              render: (job) => (
+                <span className="font-mono text-[10px] font-black tracking-wide text-slate-600">
+                  JOB-{job.id.slice(0, 8).toUpperCase()}
+                </span>
+              ),
+            },
+            {
+              key: 'required',
+              header: 'Required',
               render: (job) => (
                 <div>
-                  <p className="font-black text-slate-800">{job.filledCount ?? 0} / {job.openings}</p>
-                  <p className="mt-0.5 text-[10px] text-slate-400">filled</p>
+                  <p className="font-black text-slate-800">{job.openings}</p>
+                  <p className="text-[10px] text-slate-400">workers · {job.positions?.length ?? 1} {(job.positions?.length ?? 1) === 1 ? 'position' : 'positions'}</p>
                 </div>
               ),
+            },
+            {
+              key: 'progress',
+              header: 'Progress',
+              render: (job) => {
+                const filled = job.filledCount ?? 0;
+                const percent = Math.min(100, Math.round((filled / Math.max(1, job.openings)) * 100));
+                return (
+                  <div className="min-w-32">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-black text-slate-800">{filled} / {job.openings}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{percent}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-slate-900" style={{ width: percent + '%' }} />
+                    </div>
+                  </div>
+                );
+              },
             },
             {
               key: 'candidates',
@@ -870,12 +902,44 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               render: (job) => <span className="font-bold text-slate-700">{job.interviewCount ?? 0}</span>,
             },
             {
+              key: 'filled',
+              header: 'Filled',
+              render: (job) => <span className="font-bold text-slate-700">{job.filledCount ?? 0}</span>,
+            },
+            {
+              key: 'created',
+              header: 'Created',
+              render: (job) => (
+                <span className="whitespace-nowrap text-[10px] font-semibold text-slate-500">
+                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : '—'}
+                </span>
+              ),
+            },
+            {
               key: 'actions',
               header: 'Actions',
               className: 'whitespace-nowrap',
-              render: (job) => renderJobActions(job, true),
+              render: (job) => (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="!size-9 !min-h-9 !p-0"
+                    title="View job"
+                    aria-label="View job"
+                    onClick={() => onOpenJob?.(job.id)}
+                  >
+                    <Icon name="eye" size={15} />
+                  </Button>
+                  {role !== 'INTERVIEWEE' && (
+                    <div onClick={(event) => event.stopPropagation()}>
+                      {renderJobActions(job, true)}
+                    </div>
+                  )}
+                </div>
+              ),
             },
-          ]}
+          ]}}
         />
       )}
 
