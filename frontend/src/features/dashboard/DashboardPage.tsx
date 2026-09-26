@@ -226,10 +226,10 @@ export const DashboardPage = ({ role }: Props) => {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {role === 'ADMIN' && <StatCard label="Agencies" value={counts.agencies} hint={counts.activeAgencies + ' active'} icon="users" />}
-        {role !== 'INTERVIEWER' && <StatCard label="Candidates" value={counts.candidates} hint={(counts.pendingDecisions) + ' awaiting decision'} icon="users" />}
-        {role !== 'INTERVIEWER' && <StatCard label="Open jobs" value={counts.publishedJobs} hint={counts.jobs + ' total positions'} icon="briefcase" />}
-        <StatCard label="Interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' scheduled'} icon="calendar" />
+        {role === 'ADMIN' && <StatCard label="Agencies" value={counts.agencies} hint={counts.activeAgencies + ' ' + t('active')} icon="users" />}
+        {role !== 'INTERVIEWER' && <StatCard label="Candidates" value={counts.candidates} hint={counts.pendingDecisions + ' ' + t('awaiting decision')} icon="users" />}
+        {role !== 'INTERVIEWER' && <StatCard label="Open jobs" value={counts.publishedJobs} hint={counts.jobs + ' ' + t('total positions')} icon="briefcase" />}
+        <StatCard label="Interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' ' + t('scheduled')} icon="calendar" />
         <StatCard label="Completion" value={completionRate + '%'} hint={(interviewStatuses.IN_PROGRESS ?? 0) + ' currently in progress'} icon="target" />
       </div>
 
@@ -262,7 +262,7 @@ export const DashboardPage = ({ role }: Props) => {
         </Card>
 
         <Card className="lg:col-span-2">
-          <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Upcoming interviews</h2><p className="mt-1 text-xs text-slate-400">The next panel sessions requiring attention.</p></div><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{upcomingInterviews.length} shown</span></div>
+          <div className="flex items-end justify-between gap-3"><div><h2 className="text-base font-black text-slate-950">Upcoming interviews</h2><p className="mt-1 text-xs text-slate-400">The next panel sessions requiring attention.</p></div><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{upcomingInterviews.length} {t('shown')}</span></div>
           <div className="mt-5 divide-y divide-slate-100">
             {upcomingInterviews.length ? upcomingInterviews.map((item) => (
               <div key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
