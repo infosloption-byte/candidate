@@ -97,7 +97,7 @@ const downloadJobExcel = (
   interviews: Interview[],
 ) => {
   const html = buildJobReportHtml(job, positions, candidatePool, interviews);
-  const blob = new Blob(['\\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
