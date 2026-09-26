@@ -294,7 +294,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
       currentLocation: candidate.currentLocation ?? '',
       availability: candidate.availability ?? '',
       visaStatus: candidate.visaStatus ?? '',
-      profession: candidate.profession ?? '',
+      profession: candidate.requestedProfession ?? '',
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
     });
@@ -302,55 +302,35 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
   const saveOwnProfile = async () => {
     if (!candidate) return;
-    const experienceYears = Number(profileForm.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
-      setError('Experience years must be a whole number between 0 and 60.');
+    if (!profileForm.firstName.trim() || !profileForm.lastName.trim()) { setError('First and last name are required.'); return; }
+    if (!profileForm.birthdate.trim() || !profileForm.passportNumber.trim() || !profileForm.passportExpiry.trim() || !profileForm.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
       return;
     }
-    if (profileForm.name.trim().length < 2) {
-      setError('Full name must be at least 2 characters.');
-      return;
-    }
-
     setSaving(true);
     setError('');
     try {
       const updated = developmentMode
         ? {
             ...candidate,
-            name: profileForm.name.trim(),
+            agencyRegisterNo: profileForm.agencyRegisterNo.trim() || candidate.agencyRegisterNo,
+            firstName: profileForm.firstName.trim(),
+            lastName: profileForm.lastName.trim(),
+            name: [profileForm.firstName.trim(), profileForm.lastName.trim()].filter(Boolean).join(' '),
             birthdate: profileForm.birthdate.trim() || null,
-            email: profileForm.email.trim() || null,
-            phone: profileForm.phone.trim() || null,
-            alternatePhone: profileForm.alternatePhone.trim() || null,
-            country: profileForm.country.trim() || null,
             passportNumber: profileForm.passportNumber.trim() || null,
             passportExpiry: profileForm.passportExpiry.trim() || null,
-            currentLocation: profileForm.currentLocation.trim() || null,
-            availability: profileForm.availability.trim() || null,
-            visaStatus: profileForm.visaStatus.trim() || null,
-            profession: profileForm.profession.trim() || null,
-            experienceYears,
-            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-            onboardingStatus: 'SUBMITTED' as const,
+            requestedProfession: profileForm.requestedProfession.trim(),
           }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({
-              name: profileForm.name.trim(),
+              firstName: profileForm.firstName.trim(),
+              lastName: profileForm.lastName.trim(),
               birthdate: profileForm.birthdate.trim() || null,
-              email: profileForm.email.trim() || null,
-              phone: profileForm.phone.trim() || null,
-              alternatePhone: profileForm.alternatePhone.trim() || null,
-              country: profileForm.country.trim() || null,
               passportNumber: profileForm.passportNumber.trim() || null,
               passportExpiry: profileForm.passportExpiry.trim() || null,
-              currentLocation: profileForm.currentLocation.trim() || null,
-              availability: profileForm.availability.trim() || null,
-              visaStatus: profileForm.visaStatus.trim() || null,
-              profession: profileForm.profession.trim() || null,
-              experienceYears,
-              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+              requestedProfession: profileForm.requestedProfession.trim(),
               onboardingStatus: 'SUBMITTED',
             }),
           });
@@ -654,13 +634,12 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
   const saveManagedProfile = async () => {
     if (!candidate) return;
-    const experienceYears = Number(profileForm.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
-      setError('Experience years must be a whole number between 0 and 60.');
+    if (!profileForm.agencyRegisterNo.trim() || !profileForm.firstName.trim() || !profileForm.lastName.trim()) {
+      setError('Agency register number and full name are required.');
       return;
     }
-    if (profileForm.name.trim().length < 2) {
-      setError('Full name must be at least 2 characters.');
+    if (!profileForm.birthdate.trim() || !profileForm.passportNumber.trim() || !profileForm.passportExpiry.trim() || !profileForm.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
       return;
     }
 
@@ -670,38 +649,25 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
       const updated = developmentMode
         ? {
             ...candidate,
-            name: profileForm.name.trim(),
+            agencyRegisterNo: profileForm.agencyRegisterNo.trim(),
+            firstName: profileForm.firstName.trim(),
+            lastName: profileForm.lastName.trim(),
+            name: [profileForm.firstName.trim(), profileForm.lastName.trim()].filter(Boolean).join(' '),
             birthdate: profileForm.birthdate.trim() || null,
-            email: profileForm.email.trim() || null,
-            phone: profileForm.phone.trim() || null,
-            alternatePhone: profileForm.alternatePhone.trim() || null,
-            country: profileForm.country.trim() || null,
             passportNumber: profileForm.passportNumber.trim() || null,
             passportExpiry: profileForm.passportExpiry.trim() || null,
-            currentLocation: profileForm.currentLocation.trim() || null,
-            availability: profileForm.availability.trim() || null,
-            visaStatus: profileForm.visaStatus.trim() || null,
-            profession: profileForm.profession.trim() || null,
-            experienceYears,
-            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            requestedProfession: profileForm.requestedProfession.trim(),
           }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({
-              name: profileForm.name.trim(),
+              agencyRegisterNo: profileForm.agencyRegisterNo.trim(),
+              firstName: profileForm.firstName.trim(),
+              lastName: profileForm.lastName.trim(),
               birthdate: profileForm.birthdate.trim() || null,
-              email: profileForm.email.trim() || null,
-              phone: profileForm.phone.trim() || null,
-              alternatePhone: profileForm.alternatePhone.trim() || null,
-              country: profileForm.country.trim() || null,
               passportNumber: profileForm.passportNumber.trim() || null,
               passportExpiry: profileForm.passportExpiry.trim() || null,
-              currentLocation: profileForm.currentLocation.trim() || null,
-              availability: profileForm.availability.trim() || null,
-              visaStatus: profileForm.visaStatus.trim() || null,
-              profession: profileForm.profession.trim() || null,
-              experienceYears,
-              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+              requestedProfession: profileForm.requestedProfession.trim(),
             }),
           });
 
@@ -790,24 +756,16 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
           <div ref={candidateFormModalRef} role="dialog" aria-modal="true" aria-labelledby="new-candidate-title" tabIndex={-1} className="relative z-10 my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-5">
                       <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></FormField>
-            <FormField label="Birthdate"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
-            <FormField label="Country / nationality"><input className="field-input" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} placeholder="Sri Lanka" /></FormField>
-            <FormField label="Contact number"><input className="field-input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} autoComplete="tel" /></FormField>
-            <FormField label="Alternate contact number"><input className="field-input" value={form.alternatePhone} onChange={(event) => setForm({ ...form, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
-            <FormField label="Email"><input type="email" className="field-input" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} autoComplete="email" /></FormField>
-            <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} placeholder="Passport number" /></FormField>
-            <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
-            <FormField label="Current location"><input className="field-input" value={form.currentLocation} onChange={(event) => setForm({ ...form, currentLocation: event.target.value })} placeholder="Colombo, Sri Lanka" /></FormField>
-            <FormField label="Availability"><select className="field-input" value={form.availability} onChange={(event) => setForm({ ...form, availability: event.target.value })}><option value="">Select availability</option><option value="Immediately">Immediately</option><option value="Within 2 weeks">Within 2 weeks</option><option value="Within 1 month">Within 1 month</option><option value="Not available">Not available</option></select></FormField>
-            <FormField label="Visa / work status"><select className="field-input" value={form.visaStatus} onChange={(event) => setForm({ ...form, visaStatus: event.target.value })}><option value="">Select status</option><option value="Available">Available</option><option value="Required">Required</option><option value="In process">In process</option><option value="Expired">Expired</option><option value="Not applicable">Not applicable</option></select></FormField>
-            <FormField label="Profession"><input className="field-input" value={form.profession} onChange={(event) => setForm({ ...form, profession: event.target.value })} /></FormField>
-            <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
-            <div className="md:col-span-2"><FormField label="Job / position" hint={jobId ? 'This candidate will also be added to the selected job.' : 'Select the job this candidate is being considered for.'}><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
-            {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
-            <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
-          </div>
-          <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
+             <FormField label="Agency Register No"><input className="field-input" value={form.agencyRegisterNo} onChange={(event) => setForm({ ...form, agencyRegisterNo: event.target.value })} /></FormField>
+             <FormField label="First name"><input className="field-input" value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} autoComplete="given-name" /></FormField>
+             <FormField label="Last name"><input className="field-input" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} autoComplete="family-name" /></FormField>
+             <FormField label="Birth date"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
+             <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
+             <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
+             <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
+             {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
+             <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
+           </div><div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
 
           </div>
         </div>
@@ -924,7 +882,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
               <div className="grid size-16 place-items-center rounded-2xl bg-cyan-50 text-lg font-black text-cyan-700">{candidate.name.slice(0, 2).toUpperCase()}</div>
               <h2 className="mt-4 text-xl font-black text-slate-950">{candidate.name}</h2>
               <p className="mt-1 text-xs font-semibold text-slate-500">Birthdate: {candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
-              <p className="mt-1 text-sm text-slate-500">{candidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 text-sm text-slate-500">{candidate.requestedProfession ?? 'Profession not set'}</p>
               <div className="mt-5 flex flex-wrap gap-2"><StatusPill value={candidate.status} /><StatusPill value={candidate.onboardingStatus} /></div>
               <p className="mt-4 text-xs text-slate-500">Reference <span className="font-bold text-slate-800">{candidate.reference}</span></p>
             </Card>
@@ -1350,7 +1308,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                         <StatusPill value={candidate.onboardingStatus} />
                       </div>
                       <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
-                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
+                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
