@@ -26,6 +26,7 @@ interface AuthContextValue {
   login: (input: LoginInput) => Promise<void>;
   registerInterviewee: (input: RegisterIntervieweeInput) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,6 +92,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setDevelopmentMode(false);
   };
 
+  const refreshUser = async (): Promise<void> => {
+    const result = await apiFetch<{ user: User }>('/auth/me');
+    setUser(result.user);
+    setDevelopmentMode(false);
+  };
+
   const logout = async (): Promise<void> => {
     setError(null);
 
@@ -102,8 +109,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   const value = useMemo(
-    () => ({ user, loading, error, developmentMode, login, registerInterviewee, logout }),
-    [user, loading, error, developmentMode],
+    () => ({ user, loading, error, developmentMode, login, registerInterviewee, logout, refreshUser }),
+    [user, loading, error, developmentMode]);
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
