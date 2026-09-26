@@ -69,12 +69,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     setLoading(true);
     setError('');
 
-    const requests: [Promise<Job[]>, Promise<Agency[]>] = [
-      apiFetch<Job[]>('/jobs'),
-    ];
-
-    Promise.all(requests)
-      .then(([jobResult]) => {
+    apiFetch<Job[]>('/jobs')
+      .then((jobResult) => {
         if (cancelled) return;
         setJobs(jobResult);
       })
@@ -160,6 +156,13 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               description: form.description.trim() || null,
               location: form.location.trim() || null,
               openings,
+              positions: normalizedPositions.map((item, index) => ({
+                id: current.positions?.[index]?.id ?? 'job-position-' + current.id + '-' + index,
+                jobId: current.id,
+                position: item.position,
+                requiredCount: item.requiredCount,
+                sortOrder: index,
+              })),
             }
           : await apiFetch<Job>('/jobs/' + editingJobId, {
               method: 'PATCH',
