@@ -6,7 +6,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
-export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'birthdate' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt'>;
+export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'agencyRegisterNo' | 'firstName' | 'lastName' | 'name' | 'birthdate' | 'passportNumber' | 'passportExpiry' | 'requestedProfession' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills'>;
 
 export interface CandidateProfileHistory {
   profile?: {
@@ -87,14 +87,18 @@ export const CandidateProfilePanel = ({
   const [candidateOverride, setCandidateOverride] = useState<CandidateProfileData | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
+    agencyRegisterNo: '',
+    firstName: '',
+    lastName: '',
     name: '',
     birthdate: '',
+    passportNumber: '',
+    passportExpiry: '',
+    requestedProfession: '',
     email: '',
     phone: '',
     alternatePhone: '',
     country: '',
-    passportNumber: '',
-    passportExpiry: '',
     currentLocation: '',
     availability: '',
     visaStatus: '',
@@ -120,18 +124,22 @@ export const CandidateProfilePanel = ({
   useEffect(() => {
     if (!candidate) return;
     setProfileForm({
+      agencyRegisterNo: candidate.agencyRegisterNo,
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
       name: candidate.name,
       birthdate: candidate.birthdate ? candidate.birthdate.slice(0, 10) : '',
+      passportNumber: candidate.passportNumber ?? '',
+      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
+      requestedProfession: candidate.requestedProfession,
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
       alternatePhone: candidate.alternatePhone ?? '',
       country: candidate.country ?? '',
-      passportNumber: candidate.passportNumber ?? '',
-      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
       currentLocation: candidate.currentLocation ?? '',
       availability: candidate.availability ?? '',
       visaStatus: candidate.visaStatus ?? '',
-      profession: candidate.profession ?? '',
+      profession: candidate.requestedProfession,
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
     });
@@ -172,55 +180,29 @@ export const CandidateProfilePanel = ({
 
   const saveProfile = async () => {
     if (!currentCandidate || (role !== 'ADMIN' && role !== 'AGENCY')) return;
-    const experienceYears = Number(profileForm.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
-      setError('Experience years must be a whole number between 0 and 60.');
-      return;
-    }
-    if (profileForm.name.trim().length < 2) {
-      setError('Full name must be at least 2 characters.');
+    if (!profileForm.firstName.trim() || !profileForm.lastName.trim() || !profileForm.birthdate.trim() || !profileForm.passportNumber.trim() || !profileForm.passportExpiry.trim() || !profileForm.requestedProfession.trim()) {
+      setError('First name, last name, birth date, passport details, and requested profession are required.');
       return;
     }
 
     setSavingProfile(true);
     setError('');
     try {
+      const payload = {
+        agencyRegisterNo: profileForm.agencyRegisterNo.trim() || currentCandidate.agencyRegisterNo,
+        firstName: profileForm.firstName.trim(),
+        lastName: profileForm.lastName.trim(),
+        birthdate: profileForm.birthdate.trim() || null,
+        passportNumber: profileForm.passportNumber.trim() || null,
+        passportExpiry: profileForm.passportExpiry.trim() || null,
+        requestedProfession: profileForm.requestedProfession.trim(),
+      };
       const updated = apiEnabled
-        ? await apiFetch<CandidateProfileData>('/candidates/' + currentCandidate.id, {
-            method: 'PATCH',
-            body: JSON.stringify({
-              name: profileForm.name.trim(),
-              birthdate: profileForm.birthdate.trim() || null,
-              email: profileForm.email.trim() || null,
-              phone: profileForm.phone.trim() || null,
-              alternatePhone: profileForm.alternatePhone.trim() || null,
-              country: profileForm.country.trim() || null,
-              passportNumber: profileForm.passportNumber.trim() || null,
-              passportExpiry: profileForm.passportExpiry.trim() || null,
-              currentLocation: profileForm.currentLocation.trim() || null,
-              availability: profileForm.availability.trim() || null,
-              visaStatus: profileForm.visaStatus.trim() || null,
-              profession: profileForm.profession.trim() || null,
-              experienceYears,
-              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-            }),
-          })
+        ? await apiFetch<CandidateProfileData>('/candidates/' + currentCandidate.id, { method: 'PATCH', body: JSON.stringify(payload) })
         : {
             ...currentCandidate,
-            name: profileForm.name.trim(),
-            birthdate: profileForm.birthdate.trim() || null,
-            email: profileForm.email.trim() || null,
-            phone: profileForm.phone.trim() || null,
-            alternatePhone: profileForm.alternatePhone.trim() || null,
-            country: profileForm.country.trim() || null,
-            passportNumber: profileForm.passportNumber.trim() || null,
-            passportExpiry: profileForm.passportExpiry.trim() || null,
-            currentLocation: profileForm.currentLocation.trim() || null,
-            availability: profileForm.availability.trim() || null,
-            visaStatus: profileForm.visaStatus.trim() || null,
-            profession: profileForm.profession.trim() || null,
-            experienceYears,
-            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            ...payload,
+            name: [payload.firstName, payload.lastName].filter(Boolean).join(' '),
           };
       setCandidateOverride(updated);
       setEditingProfile(false);
@@ -405,7 +387,7 @@ export const CandidateProfilePanel = ({
                 <StatusPill value={displayCandidate.status} />
                 <StatusPill value={displayCandidate.onboardingStatus} />
               </div>
-              <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Birthdate: {displayCandidate.birthdate ? new Date(displayCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 break-words text-xs text-slate-500">{displayCandidate.reference} · Birthdate: {displayCandidate.birthdate ? new Date(displayCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {value(displayCandidate.passportNumber)} · {displayCandidate.requestedProfession ?? 'Profession not set'}</p>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" aria-label="Minimize candidate profile" title="Minimize" className="rounded-lg px-2 py-1.5 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={onMinimize}>−</button>
@@ -450,7 +432,7 @@ export const CandidateProfilePanel = ({
                 <Field label="Current location">{value(displayCandidate.currentLocation)}</Field>
                 <Field label="Visa / work status">{value(displayCandidate.visaStatus)}</Field>
                 <Field label="Availability">{value(displayCandidate.availability)}</Field>
-                <Field label="Profession">{value(displayCandidate.profession)}</Field>
+                <Field label="Profession">{value(displayCandidate.requestedProfession)}</Field>
                 <Field label="Experience">{displayCandidate.experienceYears === null ? 'Not provided' : displayCandidate.experienceYears + ' years'}</Field>
                 <Field label="Email">{value(displayCandidate.email)}</Field>
                 <Field label="Contact number">{value(displayCandidate.phone)}</Field>
