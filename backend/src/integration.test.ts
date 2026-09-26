@@ -85,11 +85,13 @@ before(async () => {
       data: {
         agencyId: agencyA.id,
         reference: 'QA-' + suffix,
-        name: 'QA Candidate',
-        email: emails.interviewee,
-        profession: 'Mason',
-        experienceYears: 5,
-        skills: ['Masonry'],
+        agencyRegisterNo: 'AGR-' + suffix,
+        firstName: 'QA',
+        lastName: 'Candidate',
+        birthdate: new Date('1990-01-15'),
+        passportNumber: 'P' + suffix.slice(-8).toUpperCase(),
+        passportExpiry: new Date('2031-01-15'),
+        requestedProfession: 'Mason',
         onboardingStatus: 'COMPLETED',
         source: 'AGENCY_ADDED',
         status: 'POOL',
@@ -102,7 +104,7 @@ before(async () => {
     const candidateUser = await tx.user.create({
       data: {
         candidateId: candidate.id,
-        name: candidate.name,
+        name: 'QA Candidate',
         email: emails.interviewee,
         passwordHash,
         role: 'INTERVIEWEE',
@@ -232,11 +234,13 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
     url: '/api/v1/agencies/' + agencyBId + '/candidates',
     headers: { cookie: adminCookie },
     payload: {
-      name: 'Admin Added Candidate',
-      email: 'admin-added-' + suffix + '@buildhire.local',
-      profession: 'Welder',
-      experienceYears: 3,
-      skills: ['Welding'],
+      agencyRegisterNo: 'ADMIN-' + suffix,
+       firstName: 'Admin',
+       lastName: 'Added Candidate',
+       birthdate: '1992-02-02',
+       passportNumber: 'PA' + suffix.slice(-7).toUpperCase(),
+       passportExpiry: '2032-02-02',
+       requestedProfession: 'Welder',
     },
   });
   assert.equal(adminCreatesForAgency.statusCode, 201);
@@ -514,12 +518,16 @@ dbTest('global interviewer can be assigned to an agency interview and sees the a
     data: {
       agencyId: agencyAId,
       reference: 'GLOBAL-I-' + suffix,
-      name: 'Global Interviewer Candidate',
-      profession: 'Welder',
-      status: 'POOL',
-      source: 'AGENCY_ADDED',
-      onboardingStatus: 'COMPLETED',
-      skills: ['Welding'],
+      agencyRegisterNo: 'GLOBAL-I-' + suffix,
+       firstName: 'Global',
+       lastName: 'Interviewer Candidate',
+       birthdate: new Date('1991-01-15'),
+       passportNumber: 'PG' + suffix.slice(-7).toUpperCase(),
+       passportExpiry: new Date('2031-01-15'),
+       requestedProfession: 'Welder',
+       status: 'POOL',
+       source: 'AGENCY_ADDED',
+       onboardingStatus: 'COMPLETED',
     },
     select: { id: true },
   });
@@ -563,12 +571,16 @@ dbTest('multiple interviewers can independently save and submit one shared inter
     data: {
       agencyId: agencyAId,
       reference: 'PANEL-I-' + suffix,
-      name: 'Multi Interviewer Candidate',
-      profession: 'Electrician',
-      status: 'POOL',
-      source: 'AGENCY_ADDED',
-      onboardingStatus: 'COMPLETED',
-      skills: ['Electrical'],
+      agencyRegisterNo: 'PANEL-I-' + suffix,
+       firstName: 'Multi',
+       lastName: 'Interviewer Candidate',
+       birthdate: new Date('1991-02-15'),
+       passportNumber: 'PE' + suffix.slice(-7).toUpperCase(),
+       passportExpiry: new Date('2031-02-15'),
+       requestedProfession: 'Electrician',
+       status: 'POOL',
+       source: 'AGENCY_ADDED',
+       onboardingStatus: 'COMPLETED',
     },
     select: { id: true },
   });
@@ -721,12 +733,16 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
     data: {
       agencyId: agencyAId,
       reference: 'BULK-I-' + suffix + '-1',
-      name: 'Bulk Interview Candidate One',
-      profession: 'Mason',
-      status: 'POOL',
-      source: 'AGENCY_ADDED',
-      onboardingStatus: 'COMPLETED',
-      skills: ['Masonry'],
+      agencyRegisterNo: 'BULK-I-' + suffix + '-1',
+       firstName: 'Bulk',
+       lastName: 'Interview Candidate One',
+       birthdate: new Date('1992-03-15'),
+       passportNumber: 'PB' + suffix.slice(-7).toUpperCase(),
+       passportExpiry: new Date('2032-03-15'),
+       requestedProfession: 'Mason',
+       status: 'POOL',
+       source: 'AGENCY_ADDED',
+       onboardingStatus: 'COMPLETED',
     },
     select: { id: true },
   });
@@ -734,12 +750,16 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
     data: {
       agencyId: agencyAId,
       reference: 'BULK-I-' + suffix + '-2',
-      name: 'Bulk Interview Candidate Two',
-      profession: 'Welder',
-      status: 'POOL',
-      source: 'AGENCY_ADDED',
-      onboardingStatus: 'COMPLETED',
-      skills: ['Welding'],
+      agencyRegisterNo: 'BULK-I-' + suffix + '-2',
+       firstName: 'Bulk',
+       lastName: 'Interview Candidate Two',
+       birthdate: new Date('1992-04-15'),
+       passportNumber: 'PC' + suffix.slice(-7).toUpperCase(),
+       passportExpiry: new Date('2032-04-15'),
+       requestedProfession: 'Welder',
+       status: 'POOL',
+       source: 'AGENCY_ADDED',
+       onboardingStatus: 'COMPLETED',
     },
     select: { id: true },
   });
@@ -766,16 +786,14 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
   assert.equal(body.data.importedCount, 2);
   assert.equal(new Date(body.data.candidates[1]!.scheduledAt).getTime() - new Date(body.data.candidates[0]!.scheduledAt).getTime(), 30 * 60 * 1000);
 });
-dbTest('agency bulk candidate import preserves profile fields and rejects duplicate emails', async () => {
+dbTest('agency bulk candidate import preserves the seven intake fields and rejects duplicate register numbers', async () => {
   assert.ok(app);
 
   const agencyCookie = await login(emails.agencyA);
-  const firstEmail = 'bulk-one-' + suffix + '@buildhire.local';
-  const secondEmail = 'bulk-two-' + suffix + '@buildhire.local';
   const csv = [
-    'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills',
-    'Bulk Candidate One,' + firstEmail + ',+94 77 100 1001,+94 76 100 1001,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,8,"Masonry,Blockwork,Plastering"',
-    'Bulk Candidate Two,' + secondEmail + ',+94 77 100 1002,+94 76 100 1002,Sri Lanka,N7654321,2030-06-30,Kandy,Within 2 weeks,In process,Structural Welder,12,"Arc Welding,Steel Fabrication"',
+    'agencyRegisterNo,firstName,lastName,birthdate,passportNumber,passportExpiry,requestedProfession',
+    'BULK-001,Bulk,Candidate One,1990-01-15,N1234567,2031-12-31,Mason',
+    'BULK-002,Bulk,Candidate Two,1988-05-10,N7654321,2030-06-30,Structural Welder',
   ].join('\n') + '\n';
 
   const importResponse = await app.inject({
@@ -786,26 +804,22 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
   });
   assert.equal(importResponse.statusCode, 201);
 
-  const importBody = json<{ data: { importedCount: number; candidates: Array<{ name: string; email: string | null; phone: string | null; alternatePhone: string | null; country: string | null; passportNumber: string | null; passportExpiry: string | null; currentLocation: string | null; availability: string | null; visaStatus: string | null; experienceYears: number | null; skills: unknown }> } }>(importResponse);
+  const importBody = json<{ data: { importedCount: number; candidates: Array<{ name: string; agencyRegisterNo: string; firstName: string; lastName: string; birthdate: string | null; passportNumber: string | null; passportExpiry: string | null; requestedProfession: string }> } }>(importResponse);
   assert.equal(importBody.data.importedCount, 2);
   assert.deepEqual(
     importBody.data.candidates.map((item) => ({
       name: item.name,
-      email: item.email,
-      phone: item.phone,
-      alternatePhone: item.alternatePhone,
-      country: item.country,
+      agencyRegisterNo: item.agencyRegisterNo,
+      firstName: item.firstName,
+      lastName: item.lastName,
+      birthdate: item.birthdate,
       passportNumber: item.passportNumber,
       passportExpiry: item.passportExpiry,
-      currentLocation: item.currentLocation,
-      availability: item.availability,
-      visaStatus: item.visaStatus,
-      experienceYears: item.experienceYears,
-      skills: item.skills,
+      requestedProfession: item.requestedProfession,
     })),
     [
-      { name: 'Bulk Candidate One', email: firstEmail, phone: '+94 77 100 1001', alternatePhone: '+94 76 100 1001', country: 'Sri Lanka', passportNumber: 'N1234567', passportExpiry: '2031-12-31T00:00:00.000Z', currentLocation: 'Colombo', availability: 'Immediately', visaStatus: 'Required', experienceYears: 8, skills: ['Masonry', 'Blockwork', 'Plastering'] },
-      { name: 'Bulk Candidate Two', email: secondEmail, phone: '+94 77 100 1002', alternatePhone: '+94 76 100 1002', country: 'Sri Lanka', passportNumber: 'N7654321', passportExpiry: '2030-06-30T00:00:00.000Z', currentLocation: 'Kandy', availability: 'Within 2 weeks', visaStatus: 'In process', experienceYears: 12, skills: ['Arc Welding', 'Steel Fabrication'] },
+      { name: 'Bulk Candidate One', agencyRegisterNo: 'BULK-001', firstName: 'Bulk', lastName: 'Candidate One', birthdate: '1990-01-15T00:00:00.000Z', passportNumber: 'N1234567', passportExpiry: '2031-12-31T00:00:00.000Z', requestedProfession: 'Mason' },
+      { name: 'Bulk Candidate Two', agencyRegisterNo: 'BULK-002', firstName: 'Bulk', lastName: 'Candidate Two', birthdate: '1988-05-10T00:00:00.000Z', passportNumber: 'N7654321', passportExpiry: '2030-06-30T00:00:00.000Z', requestedProfession: 'Structural Welder' },
     ],
   );
 
@@ -814,8 +828,8 @@ dbTest('agency bulk candidate import preserves profile fields and rejects duplic
     url: '/api/v1/agencies/' + agencyAId + '/candidates/bulk',
     headers: { cookie: agencyCookie, 'content-type': 'text/csv' },
     payload: [
-      'name,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills',
-      'Duplicate Candidate,' + firstEmail + ',+94 77 100 1003,,Sri Lanka,N0000000,2032-01-01,Colombo,Immediately,Required,Mason,3,"Masonry"',
+      'agencyRegisterNo,firstName,lastName,birthdate,passportNumber,passportExpiry,requestedProfession',
+      'BULK-001,Duplicate,Candidate,1990-01-01,N0000000,2032-01-01,Mason',
     ].join('\n') + '\n',
   });
   assert.equal(duplicateResponse.statusCode, 400);
@@ -1057,11 +1071,10 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
     url: '/api/v1/candidates/' + candidateId,
     headers: { cookie: await login(emails.admin) },
     payload: {
-      name: 'QA Candidate Updated',
-      email: 'qa-interviewee-updated-' + suffix + '@buildhire.local',
-      profession: 'Senior Mason',
-      experienceYears: 6,
-      skills: ['Masonry', 'Finishing'],
+      firstName: 'QA Updated',
+       lastName: 'Candidate',
+       passportNumber: 'NU' + suffix.slice(-7).toUpperCase(),
+       requestedProfession: 'Senior Mason',
     },
   });
   assert.equal(candidateProfileUpdate.statusCode, 200);

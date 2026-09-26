@@ -22,7 +22,26 @@ interface Props {
   onJobChange?: (jobId: string | null) => void;
 }
 
-const emptyForm = { name: '', birthdate: '', email: '', phone: '', alternatePhone: '', country: '', passportNumber: '', passportExpiry: '', currentLocation: '', availability: '', visaStatus: '', profession: '', experienceYears: '0', skills: '' };
+const emptyForm = {
+  agencyRegisterNo: '',
+  firstName: '',
+  lastName: '',
+  birthdate: '',
+  passportNumber: '',
+  passportExpiry: '',
+  requestedProfession: '',
+  name: '',
+  email: '',
+  phone: '',
+  alternatePhone: '',
+  country: '',
+  currentLocation: '',
+  availability: '',
+  visaStatus: '',
+  profession: '',
+  experienceYears: '0',
+  skills: '',
+};
 const statusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 
 const label = (value: string): string => value.replaceAll('_', ' ');
@@ -101,7 +120,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [listView, setListView] = useState<'cards' | 'table'>('table');
   const [candidatePage, setCandidatePage] = useState(1);
-  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'experience' | 'passport' | 'status'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'profession' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
@@ -264,78 +283,62 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   useEffect(() => {
     if (!candidate) return;
     setProfileForm({
-      name: candidate.name,
+      agencyRegisterNo: candidate.agencyRegisterNo,
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
       birthdate: candidate.birthdate ? candidate.birthdate.slice(0, 10) : '',
+      passportNumber: candidate.passportNumber ?? '',
+      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
+      requestedProfession: candidate.requestedProfession,
+      name: candidate.name,
       email: candidate.email ?? '',
       phone: candidate.phone ?? '',
       alternatePhone: candidate.alternatePhone ?? '',
       country: candidate.country ?? '',
-      passportNumber: candidate.passportNumber ?? '',
-      passportExpiry: candidate.passportExpiry ? candidate.passportExpiry.slice(0, 10) : '',
       currentLocation: candidate.currentLocation ?? '',
       availability: candidate.availability ?? '',
       visaStatus: candidate.visaStatus ?? '',
-      profession: candidate.profession ?? '',
+      profession: candidate.requestedProfession,
       experienceYears: String(candidate.experienceYears ?? 0),
       skills: candidate.skills.join(', '),
-    });
+    });;
   }, [candidate?.birthdate, candidate?.id, candidate?.name, candidate?.email, candidate?.phone, candidate?.alternatePhone, candidate?.country, candidate?.passportNumber, candidate?.passportExpiry, candidate?.currentLocation, candidate?.availability, candidate?.visaStatus, candidate?.profession, candidate?.experienceYears, candidate?.skills]);
 
   const saveOwnProfile = async () => {
     if (!candidate) return;
-    const experienceYears = Number(profileForm.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
-      setError('Experience years must be a whole number between 0 and 60.');
+    if (!profileForm.firstName.trim() || !profileForm.lastName.trim()) { setError('First and last name are required.'); return; }
+    if (!profileForm.birthdate.trim() || !profileForm.passportNumber.trim() || !profileForm.passportExpiry.trim() || !profileForm.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
       return;
     }
-    if (profileForm.name.trim().length < 2) {
-      setError('Full name must be at least 2 characters.');
-      return;
-    }
-
     setSaving(true);
     setError('');
     try {
       const updated = developmentMode
         ? {
             ...candidate,
-            name: profileForm.name.trim(),
+            agencyRegisterNo: profileForm.agencyRegisterNo.trim() || candidate.agencyRegisterNo,
+            firstName: profileForm.firstName.trim(),
+            lastName: profileForm.lastName.trim(),
+            name: [profileForm.firstName.trim(), profileForm.lastName.trim()].filter(Boolean).join(' '),
             birthdate: profileForm.birthdate.trim() || null,
-            email: profileForm.email.trim() || null,
-            phone: profileForm.phone.trim() || null,
-            alternatePhone: profileForm.alternatePhone.trim() || null,
-            country: profileForm.country.trim() || null,
             passportNumber: profileForm.passportNumber.trim() || null,
             passportExpiry: profileForm.passportExpiry.trim() || null,
-            currentLocation: profileForm.currentLocation.trim() || null,
-            availability: profileForm.availability.trim() || null,
-            visaStatus: profileForm.visaStatus.trim() || null,
-            profession: profileForm.profession.trim() || null,
-            experienceYears,
-            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+            requestedProfession: profileForm.requestedProfession.trim(),
             onboardingStatus: 'SUBMITTED' as const,
           }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
             body: JSON.stringify({
-              name: profileForm.name.trim(),
+              firstName: profileForm.firstName.trim(),
+              lastName: profileForm.lastName.trim(),
               birthdate: profileForm.birthdate.trim() || null,
-              email: profileForm.email.trim() || null,
-              phone: profileForm.phone.trim() || null,
-              alternatePhone: profileForm.alternatePhone.trim() || null,
-              country: profileForm.country.trim() || null,
               passportNumber: profileForm.passportNumber.trim() || null,
               passportExpiry: profileForm.passportExpiry.trim() || null,
-              currentLocation: profileForm.currentLocation.trim() || null,
-              availability: profileForm.availability.trim() || null,
-              visaStatus: profileForm.visaStatus.trim() || null,
-              profession: profileForm.profession.trim() || null,
-              experienceYears,
-              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
+              requestedProfession: profileForm.requestedProfession.trim(),
               onboardingStatus: 'SUBMITTED',
             }),
           });
-
       if (developmentMode) dispatch({ type: 'UPDATE_CANDIDATE', candidate: updated });
       setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
       setSuccessTitle('Profile saved');
@@ -347,12 +350,54 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
     }
   };
 
-  const filterOptions = useMemo(() => ({
-    countries: [...new Set(candidates.map((item) => item.country).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    professions: [...new Set(candidates.map((item) => item.profession).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    availabilities: [...new Set(candidates.map((item) => item.availability).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    visaStatuses: [...new Set(candidates.map((item) => item.visaStatus).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
-    locations: [...new Set(candidates.map((item) => item.currentLocation).filter(Boolean))].sort((a, b) => a!.localeCompare(b!)) as string[],
+const saveManagedProfile = async () => {
+    if (!candidate) return;
+    if (!profileForm.agencyRegisterNo.trim() || !profileForm.firstName.trim() || !profileForm.lastName.trim()) { setError('Agency register number and full name are required.'); return; }
+    if (!profileForm.birthdate.trim() || !profileForm.passportNumber.trim() || !profileForm.passportExpiry.trim() || !profileForm.requestedProfession.trim()) {
+      setError('Birth date, passport details, and requested profession are required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const updated = developmentMode
+        ? {
+            ...candidate,
+            agencyRegisterNo: profileForm.agencyRegisterNo.trim(),
+            firstName: profileForm.firstName.trim(),
+            lastName: profileForm.lastName.trim(),
+            name: [profileForm.firstName.trim(), profileForm.lastName.trim()].filter(Boolean).join(' '),
+            birthdate: profileForm.birthdate.trim() || null,
+            passportNumber: profileForm.passportNumber.trim() || null,
+            passportExpiry: profileForm.passportExpiry.trim() || null,
+            requestedProfession: profileForm.requestedProfession.trim(),
+          }
+        : await apiFetch<Candidate>('/candidates/' + candidate.id, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              agencyRegisterNo: profileForm.agencyRegisterNo.trim(),
+              firstName: profileForm.firstName.trim(),
+              lastName: profileForm.lastName.trim(),
+              birthdate: profileForm.birthdate.trim() || null,
+              passportNumber: profileForm.passportNumber.trim() || null,
+              passportExpiry: profileForm.passportExpiry.trim() || null,
+              requestedProfession: profileForm.requestedProfession.trim(),
+            }),
+          });
+      if (developmentMode) dispatch({ type: 'UPDATE_CANDIDATE', candidate: updated });
+      setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
+      setEditingCandidateProfile(false);
+      setSuccessTitle('Candidate profile updated');
+      setSuccess('"' + updated.name + '" profile details were saved.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the candidate profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+const filterOptions = useMemo(() => ({
+    professions: [...new Set(candidates.map((item) => item.requestedProfession).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
   }), [candidates]);
 
   const passportMatches = (candidate: Candidate): boolean => {
@@ -371,34 +416,25 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
     const query = search.trim().toLowerCase();
     return candidates.filter((item) => {
       const matchesStatus = !statusFilter || item.status === statusFilter;
-      const matchesCountry = !countryFilter || item.country === countryFilter;
-      const matchesProfession = !professionFilter || item.profession === professionFilter;
-      const matchesAvailability = !availabilityFilter || item.availability === availabilityFilter;
-      const matchesVisa = !visaStatusFilter || item.visaStatus === visaStatusFilter;
-      const matchesLocation = !locationFilter || item.currentLocation === locationFilter;
+      const matchesProfession = !professionFilter || item.requestedProfession === professionFilter;
       const matchesPassport = passportMatches(item);
       const matchesAgency = role !== 'ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
+        item.firstName,
+        item.lastName,
         item.reference,
-        item.email ?? '',
-        item.phone ?? '',
-        item.alternatePhone ?? '',
+        item.agencyRegisterNo,
+        item.birthdate ?? '',
         item.passportNumber ?? '',
         item.passportExpiry ?? '',
-        item.birthdate ?? '',
-        item.country ?? '',
-        item.currentLocation ?? '',
-        item.profession ?? '',
-        item.availability ?? '',
-        item.visaStatus ?? '',
-        item.skills.join(' '),
+        item.requestedProfession,
         item.status,
         item.onboardingStatus,
       ].some((value) => value.toLowerCase().includes(query));
-      return matchesStatus && matchesCountry && matchesProfession && matchesAvailability && matchesVisa && matchesLocation && matchesPassport && matchesAgency && matchesQuery;
+      return matchesStatus && matchesProfession && matchesPassport && matchesAgency && matchesQuery;
     });
-  }, [agencyId, availabilityFilter, candidates, countryFilter, locationFilter, passportFilter, professionFilter, role, search, statusFilter, visaStatusFilter]);
+  }, [agencyId, candidates, passportFilter, professionFilter, role, search, statusFilter]);
 
   const sortedCandidates = useMemo(() => {
     const sorted = [...filteredCandidates];
@@ -406,8 +442,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
     sorted.sort((left, right) => {
       let result = 0;
       if (sortBy === 'name') result = compareText(left.name, right.name);
-      if (sortBy === 'profession') result = compareText(left.profession ?? '', right.profession ?? '');
-      if (sortBy === 'experience') result = (left.experienceYears ?? -1) - (right.experienceYears ?? -1);
+      if (sortBy === 'profession') result = compareText(left.requestedProfession, right.requestedProfession);
       if (sortBy === 'passport') result = compareText(left.passportNumber ?? '', right.passportNumber ?? '');
       if (sortBy === 'status') result = compareText(left.status, right.status);
       return sortDirection === 'asc' ? result : -result;
@@ -424,259 +459,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
   useEffect(() => {
     setCandidatePage(1);
-  }, [agencyId, availabilityFilter, countryFilter, locationFilter, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter, visaStatusFilter]);
-
-  const createCandidate = async () => {
-    if (form.name.trim().length < 2) { setError('Candidate name must be at least 2 characters.'); return; }
-    if (!developmentMode && !agencyId) { setError('Select an agency workspace.'); return; }
-    setSaving(true);
-    setError('');
-    try {
-      const draft: Candidate = {
-        id: 'candidate-' + Date.now(), agencyId: agencyId || 'agency-1', reference: 'CA-' + String(candidates.length + 1).padStart(4, '0'),
-        name: form.name.trim(),
-        birthdate: form.birthdate.trim() || null,
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        alternatePhone: form.alternatePhone.trim() || null,
-        country: form.country.trim() || null,
-        passportNumber: form.passportNumber.trim() || null,
-        passportExpiry: form.passportExpiry.trim() || null,
-        currentLocation: form.currentLocation.trim() || null,
-        availability: form.availability.trim() || null,
-        visaStatus: form.visaStatus.trim() || null,
-        profession: form.profession.trim() || null,
-        experienceYears: Math.max(0, Number(form.experienceYears) || 0),
-        skills: form.skills.split(',').map((item) => item.trim()).filter(Boolean),
-        onboardingStatus: 'NOT_STARTED', source: 'AGENCY_ADDED', status: 'POOL', statusUpdatedAt: new Date().toISOString(),
-      };
-      const created = developmentMode
-        ? draft
-        : await apiFetch<Candidate>('/agencies/' + agencyId + '/candidates', {
-            method: 'POST',
-            body: JSON.stringify({ name: draft.name, birthdate: draft.birthdate, email: draft.email, phone: draft.phone, alternatePhone: draft.alternatePhone, country: draft.country, passportNumber: draft.passportNumber, passportExpiry: draft.passportExpiry, currentLocation: draft.currentLocation, availability: draft.availability, visaStatus: draft.visaStatus, profession: draft.profession, experienceYears: draft.experienceYears, skills: draft.skills, jobId: jobId || null }),
-          });
-      if (developmentMode) {
-        dispatch({ type: 'CREATE_CANDIDATE', candidate: created });
-        if (jobId) {
-          const now = new Date().toISOString();
-          dispatch({
-            type: 'ADD_JOB_CANDIDATES',
-            memberships: [{ id: 'job-candidate-' + Date.now(), jobId, candidateId: created.id, status: 'POOL', statusUpdatedAt: now, createdAt: now, updatedAt: now, candidate: created }],
-          });
-        }
-      }
-      setCandidates((current) => [created, ...current]);
-      setForm(emptyForm);
-      setShowForm(false);
-      setSuccessTitle('Candidate added');
-      setSuccess('"' + created.name + '" is now in the candidate pool.');
-    } catch (requestError: unknown) { setError(requestError instanceof Error ? requestError.message : 'Unable to create the candidate.'); }
-    finally { setSaving(false); }
-  };
-
-  const downloadCsvTemplate = () => {
-    const csv = 'name,birthdate,email,phone,alternatePhone,country,passportNumber,passportExpiry,currentLocation,availability,visaStatus,profession,experienceYears,skills\nExample Candidate,1990-01-15,example@example.com,+94 77 000 0000,+94 76 000 0000,Sri Lanka,N1234567,2031-12-31,Colombo,Immediately,Required,Mason,5,"Masonry,Tile,Plaster"\n';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'buildhire-candidate-import-template.csv';
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importCandidates = async (file: File, targetAgencyId: string, targetJobId: string | null = jobId || null): Promise<boolean> => {
-    if (!targetAgencyId) {
-      setError('Select an agency workspace before importing candidates.');
-      return false;
-    }
-    if (file.size > 2_000_000) {
-      setError('CSV must be 2 MB or smaller.');
-      return false;
-    }
-
-    setBulkImporting(true);
-    setError('');
-    setSuccess('');
-    try {
-      const csv = await file.text();
-      if (developmentMode) {
-        const rows = parseCsvRows(csv);
-        if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
-        const header = rows[0].map((item, index) => (index === 0 ? item.replace(/^\uFEFF/, '') : item).trim().toLowerCase());
-        const indexOf = (...names: string[]) => names.map((name) => header.indexOf(name)).find((index) => index >= 0) ?? -1;
-        const read = (values: string[], ...names: string[]) => {
-          const index = indexOf(...names);
-          return index >= 0 ? values[index]?.trim() ?? '' : '';
-        };
-        if (indexOf('name') < 0) throw new Error('CSV must contain a name column.');
-        const created: Candidate[] = rows.slice(1).map((values, index) => {
-          const experienceRaw = read(values, 'experienceyears', 'experience');
-          const experienceYears = experienceRaw ? Number(experienceRaw) : null;
-          const birthdate = read(values, 'birthdate', 'birth_date', 'dateofbirth', 'date_of_birth', 'dob');
-          return {
-            id: 'candidate-import-' + Date.now() + '-' + index,
-            agencyId: targetAgencyId,
-            reference: 'CA-' + String(candidates.length + index + 1).padStart(4, '0'),
-            name: read(values, 'name') || 'Imported Candidate ' + (index + 1),
-            birthdate: birthdate || null,
-            email: read(values, 'email') || null,
-            phone: read(values, 'phone', 'contactnumber', 'contact_number') || null,
-            alternatePhone: read(values, 'alternatephone', 'alternate_phone') || null,
-            country: read(values, 'country', 'nationality') || null,
-            passportNumber: read(values, 'passportnumber', 'passport_number') || null,
-            passportExpiry: read(values, 'passportexpiry', 'passport_expiry') || null,
-            currentLocation: read(values, 'currentlocation', 'current_location', 'location') || null,
-            availability: read(values, 'availability') || null,
-            visaStatus: read(values, 'visastatus', 'visa_status') || null,
-            profession: read(values, 'profession') || null,
-            experienceYears: Number.isFinite(experienceYears) ? experienceYears : null,
-            skills: read(values, 'skills').split(/[,;|]/).map((item) => item.trim()).filter(Boolean),
-            onboardingStatus: 'NOT_STARTED',
-            source: 'BULK_IMPORTED',
-            status: 'POOL',
-            statusUpdatedAt: new Date().toISOString(),
-          };
-        });
-        created.forEach((candidate) => dispatch({ type: 'CREATE_CANDIDATE', candidate }));
-        if (targetJobId) {
-          const now = new Date().toISOString();
-          dispatch({
-            type: 'ADD_JOB_CANDIDATES',
-            memberships: created.map((candidate, index) => ({
-              id: 'job-candidate-import-' + Date.now() + '-' + index,
-              jobId: targetJobId,
-              candidateId: candidate.id,
-              status: 'POOL',
-              statusUpdatedAt: now,
-              createdAt: now,
-              updatedAt: now,
-              candidate,
-            }) satisfies JobCandidate),
-          });
-        }
-        setCandidates((current) => [...created, ...current]);
-        setSuccessTitle('Candidates imported');
-        setSuccess(created.length + ' candidate(s) were added to the candidate pool.');
-      } else {
-        const query = targetJobId ? '?jobId=' + encodeURIComponent(targetJobId) : '';
-        const result = await apiFetch<{ importedCount: number; candidates: Candidate[] }>('/agencies/' + targetAgencyId + '/candidates/bulk' + query, {
-          method: 'POST',
-          headers: { 'content-type': 'text/csv' },
-          body: csv,
-        });
-        setCandidates((current) => [...result.candidates, ...current]);
-        setSuccessTitle('Candidates imported');
-        setSuccess(result.importedCount + ' candidate(s) were added to the candidate pool.');
-      }
-      return true;
-    } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to import the CSV.');
-      return false;
-    } finally {
-      setBulkImporting(false);
-      if (bulkFileRef.current) bulkFileRef.current.value = '';
-    }
-  };
-
-  const openImportModal = () => {
-    setImportAgencyId(role === 'ADMIN' ? '' : agencyId);
-    setImportFile(null);
-    setShowImportModal(true);
-    setError('');
-  };
-
-  const closeImportModal = () => {
-    if (bulkImporting) return;
-    setShowImportModal(false);
-    setImportAgencyId('');
-    setImportFile(null);
-    setError('');
-    if (bulkFileRef.current) bulkFileRef.current.value = '';
-  };
-
-  const proceedImport = async () => {
-    if (!importAgencyId) {
-      setError('Select an agency before importing the CSV.');
-      return;
-    }
-    if (!importFile) {
-      setError('Select a CSV file before continuing.');
-      return;
-    }
-    const imported = await importCandidates(importFile, importAgencyId, jobId || null);
-    if (imported) {
-      setShowImportModal(false);
-      setImportFile(null);
-      if (bulkFileRef.current) bulkFileRef.current.value = '';
-    }
-  };
-
-  const saveManagedProfile = async () => {
-    if (!candidate) return;
-    const experienceYears = Number(profileForm.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 60) {
-      setError('Experience years must be a whole number between 0 and 60.');
-      return;
-    }
-    if (profileForm.name.trim().length < 2) {
-      setError('Full name must be at least 2 characters.');
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-    try {
-      const updated = developmentMode
-        ? {
-            ...candidate,
-            name: profileForm.name.trim(),
-            birthdate: profileForm.birthdate.trim() || null,
-            email: profileForm.email.trim() || null,
-            phone: profileForm.phone.trim() || null,
-            alternatePhone: profileForm.alternatePhone.trim() || null,
-            country: profileForm.country.trim() || null,
-            passportNumber: profileForm.passportNumber.trim() || null,
-            passportExpiry: profileForm.passportExpiry.trim() || null,
-            currentLocation: profileForm.currentLocation.trim() || null,
-            availability: profileForm.availability.trim() || null,
-            visaStatus: profileForm.visaStatus.trim() || null,
-            profession: profileForm.profession.trim() || null,
-            experienceYears,
-            skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-          }
-        : await apiFetch<Candidate>('/candidates/' + candidate.id, {
-            method: 'PATCH',
-            body: JSON.stringify({
-              name: profileForm.name.trim(),
-              birthdate: profileForm.birthdate.trim() || null,
-              email: profileForm.email.trim() || null,
-              phone: profileForm.phone.trim() || null,
-              alternatePhone: profileForm.alternatePhone.trim() || null,
-              country: profileForm.country.trim() || null,
-              passportNumber: profileForm.passportNumber.trim() || null,
-              passportExpiry: profileForm.passportExpiry.trim() || null,
-              currentLocation: profileForm.currentLocation.trim() || null,
-              availability: profileForm.availability.trim() || null,
-              visaStatus: profileForm.visaStatus.trim() || null,
-              profession: profileForm.profession.trim() || null,
-              experienceYears,
-              skills: profileForm.skills.split(',').map((item) => item.trim()).filter(Boolean),
-            }),
-          });
-
-      if (developmentMode) dispatch({ type: 'UPDATE_CANDIDATE', candidate: updated });
-      setCandidates((items) => items.map((item) => item.id === updated.id ? updated : item));
-      setEditingCandidateProfile(false);
-      setSuccessTitle('Candidate profile updated');
-      setSuccess('"' + updated.name + '" profile details were saved.');
-    } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to update the candidate profile.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  }, [agencyId, passportFilter, professionFilter, role, search, sortBy, sortDirection, statusFilter]);
 
   const updateStatus = async () => {
     if (!candidate || !statusDraft || statusDraft === candidate.status) return;
@@ -707,10 +490,11 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
-    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p><p className="mt-1 text-[10px] text-slate-400">Birthdate: {item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p></div> },
-    { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
-    { key: 'passport', header: 'Passport', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.passportNumber ?? 'Not provided'}</span> },
-    { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
+    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference}</p></div> },
+    { key: 'agencyRegisterNo', header: 'Agency Register No', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.agencyRegisterNo}</span> },
+    { key: 'birthdate', header: 'Birth date', render: (item: Candidate) => <span className="text-xs text-slate-600">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</span> },
+    { key: 'passport', header: 'Passport', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{displayPassport(item.passportNumber)}</p><p className="mt-1 text-[10px] text-slate-400">Exp. {item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div> },
+    { key: 'requestedProfession', header: 'Requested profession', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
     { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
@@ -750,25 +534,18 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
           <button type="button" aria-label="Close new candidate dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setShowForm(false)} />
           <div ref={candidateFormModalRef} role="dialog" aria-modal="true" aria-labelledby="new-candidate-title" tabIndex={-1} className="relative z-10 my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-5">
                       <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Full name"><input className="field-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></FormField>
-            <FormField label="Birthdate"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
-            <FormField label="Country / nationality"><input className="field-input" value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })} placeholder="Sri Lanka" /></FormField>
-            <FormField label="Contact number"><input className="field-input" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} autoComplete="tel" /></FormField>
-            <FormField label="Alternate contact number"><input className="field-input" value={form.alternatePhone} onChange={(event) => setForm({ ...form, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
-            <FormField label="Email"><input type="email" className="field-input" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} autoComplete="email" /></FormField>
-            <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} placeholder="Passport number" /></FormField>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <FormField label="Agency Register No"><input className="field-input" value={form.agencyRegisterNo} onChange={(event) => setForm({ ...form, agencyRegisterNo: event.target.value })} /></FormField>
+            <FormField label="First name"><input className="field-input" value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} autoComplete="given-name" /></FormField>
+            <FormField label="Last name"><input className="field-input" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} autoComplete="family-name" /></FormField>
+            <FormField label="Birth date"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
+            <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
             <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
-            <FormField label="Current location"><input className="field-input" value={form.currentLocation} onChange={(event) => setForm({ ...form, currentLocation: event.target.value })} placeholder="Colombo, Sri Lanka" /></FormField>
-            <FormField label="Availability"><select className="field-input" value={form.availability} onChange={(event) => setForm({ ...form, availability: event.target.value })}><option value="">Select availability</option><option value="Immediately">Immediately</option><option value="Within 2 weeks">Within 2 weeks</option><option value="Within 1 month">Within 1 month</option><option value="Not available">Not available</option></select></FormField>
-            <FormField label="Visa / work status"><select className="field-input" value={form.visaStatus} onChange={(event) => setForm({ ...form, visaStatus: event.target.value })}><option value="">Select status</option><option value="Available">Available</option><option value="Required">Required</option><option value="In process">In process</option><option value="Expired">Expired</option><option value="Not applicable">Not applicable</option></select></FormField>
-            <FormField label="Profession"><input className="field-input" value={form.profession} onChange={(event) => setForm({ ...form, profession: event.target.value })} /></FormField>
-            <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={form.experienceYears} onChange={(event) => setForm({ ...form, experienceYears: event.target.value })} /></FormField>
-            <div className="md:col-span-2"><FormField label="Job / position" hint={jobId ? 'This candidate will also be added to the selected job.' : 'Select the job this candidate is being considered for.'}><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
+            <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
             {role === 'ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
-            <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={form.skills} onChange={(event) => setForm({ ...form, skills: event.target.value })} placeholder="Masonry, Tile, Plaster" /></FormField></div>
+            <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
           </div>
-          <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
+<div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
 
           </div>
         </div>
@@ -885,30 +662,22 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
               <div className="grid size-16 place-items-center rounded-2xl bg-cyan-50 text-lg font-black text-cyan-700">{candidate.name.slice(0, 2).toUpperCase()}</div>
               <h2 className="mt-4 text-xl font-black text-slate-950">{candidate.name}</h2>
               <p className="mt-1 text-xs font-semibold text-slate-500">Birthdate: {candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
-              <p className="mt-1 text-sm text-slate-500">{candidate.profession ?? 'Profession not set'}</p>
+              <p className="mt-1 text-sm text-slate-500">{candidate.requestedProfession ?? 'Profession not set'}</p>
               <div className="mt-5 flex flex-wrap gap-2"><StatusPill value={candidate.status} /><StatusPill value={candidate.onboardingStatus} /></div>
               <p className="mt-4 text-xs text-slate-500">Reference <span className="font-bold text-slate-800">{candidate.reference}</span></p>
             </Card>
             <Card>
               <h2 className="text-sm font-black text-slate-950">Profile details</h2>
-              <p className="mt-1 text-xs text-slate-400">Keep your contact, passport, location, work status, profession, experience, and skills up to date.</p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} autoComplete="name" /></FormField>
-                <FormField label="Birthdate"><input type="date" className="field-input" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm({ ...profileForm, birthdate: event.target.value })} /></FormField>
-                <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
-                <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} autoComplete="tel" /></FormField>
-                <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} autoComplete="tel" /></FormField>
-                <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} autoComplete="email" /></FormField>
+              <p className="mt-1 text-xs text-slate-400">Maintain the candidate intake details used for recruitment.</p>
+                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <FormField label="Agency Register No"><input className="field-input" value={profileForm.agencyRegisterNo} onChange={(event) => setProfileForm({ ...profileForm, agencyRegisterNo: event.target.value })} /></FormField>
+                <FormField label="First name"><input className="field-input" value={profileForm.firstName} onChange={(event) => setProfileForm({ ...profileForm, firstName: event.target.value })} /></FormField>
+                <FormField label="Last name"><input className="field-input" value={profileForm.lastName} onChange={(event) => setProfileForm({ ...profileForm, lastName: event.target.value })} /></FormField>
+                <FormField label="Birth date"><input type="date" className="field-input" value={profileForm.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setProfileForm({ ...profileForm, birthdate: event.target.value })} /></FormField>
                 <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
                 <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
-                <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
-                <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} placeholder="Immediately / Within 2 weeks" /></FormField>
-                <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} placeholder="Available / Required / In process" /></FormField>
-                <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} placeholder="Mason, Welder…" /></FormField>
-                <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                <div className="sm:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
-              </div>
-              <div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
+                <div className="sm:col-span-2"><FormField label="Requested profession"><input className="field-input" value={profileForm.requestedProfession} onChange={(event) => setProfileForm({ ...profileForm, requestedProfession: event.target.value })} /></FormField></div>
+              </div><div className="mt-5 flex justify-end"><Button disabled={saving} onClick={() => void saveOwnProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button></div>
               <div className="mt-6 border-t border-slate-100 pt-6"><CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} /></div>
             </Card>
           </div>
@@ -923,7 +692,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                   className="field-input mt-1 w-full"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Name, reference, passport, contact, location or skill…"
+                  placeholder="Name, register no, passport or profession…"
                 />
               </div>
 
@@ -988,92 +757,25 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
             {showAdvancedFilters && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <label className="field-label">Country</label>
-                    <SelectMenu
-                      value={countryFilter}
-                      onChange={setCountryFilter}
-                      options={[
-                        { value: '', label: 'All countries' },
-                        ...filterOptions.countries.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by country"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Profession</label>
-                    <SelectMenu
-                      value={professionFilter}
-                      onChange={setProfessionFilter}
-                      options={[
-                        { value: '', label: 'All professions' },
-                        ...filterOptions.professions.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by profession"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Availability</label>
-                    <SelectMenu
-                      value={availabilityFilter}
-                      onChange={setAvailabilityFilter}
-                      options={[
-                        { value: '', label: 'Any availability' },
-                        ...filterOptions.availabilities.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by availability"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Visa / work status</label>
-                    <SelectMenu
-                      value={visaStatusFilter}
-                      onChange={setVisaStatusFilter}
-                      options={[
-                        { value: '', label: 'Any visa status' },
-                        ...filterOptions.visaStatuses.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by visa or work status"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Location</label>
-                    <SelectMenu
-                      value={locationFilter}
-                      onChange={setLocationFilter}
-                      options={[
-                        { value: '', label: 'All locations' },
-                        ...filterOptions.locations.map((value) => ({ value, label: value })),
-                      ]}
-                      ariaLabel="Filter by location"
-                      className="mt-1"
-                    />
+                    <label className="field-label">Requested profession</label>
+                    <SelectMenu value={professionFilter} onChange={setProfessionFilter} options={[{ value: '', label: 'All professions' }, ...filterOptions.professions.map((value) => ({ value, label: value }))]} ariaLabel="Filter by requested profession" className="mt-1" />
                   </div>
                   <div>
                     <label className="field-label">Passport expiry</label>
-                    <SelectMenu
-                      value={passportFilter}
-                      onChange={setPassportFilter}
-                      options={[
-                        { value: '', label: 'Any passport status' },
-                        { value: 'expired', label: 'Expired' },
-                        { value: '30d', label: 'Expires in 30 days' },
-                        { value: '90d', label: 'Expires in 90 days' },
-                        { value: 'valid', label: 'Valid beyond 90 days' },
-                        { value: 'missing', label: 'Missing expiry' },
-                      ]}
-                      ariaLabel="Filter by passport expiry"
-                      className="mt-1"
-                    />
+                    <SelectMenu value={passportFilter} onChange={setPassportFilter} options={[
+                      { value: '', label: 'Any passport status' },
+                      { value: 'expired', label: 'Expired' },
+                      { value: '30d', label: 'Expires in 30 days' },
+                      { value: '90d', label: 'Expires in 90 days' },
+                      { value: 'valid', label: 'Valid beyond 90 days' },
+                      { value: 'missing', label: 'Missing expiry' },
+                    ]} ariaLabel="Filter by passport expiry" className="mt-1" />
                   </div>
                 </div>
               </div>
-            )}
+            )}}
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
@@ -1126,7 +828,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                   </button>
                 </div>
 
-                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                {(search || statusFilter || professionFilter || passportFilter) && (
                   <button
                     type="button"
                     title="Clear filters"
@@ -1202,7 +904,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                           </div>
                           <StatusPill value={item.status} />
                         </div>
-                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.profession ?? 'Profession not set'}</p>
+                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.requestedProfession ?? 'Profession not set'}</p>
                       </div>
                     </div>
 
@@ -1311,7 +1013,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                         <StatusPill value={candidate.onboardingStatus} />
                       </div>
                       <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
-                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.profession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
+                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
                     </div>
                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (

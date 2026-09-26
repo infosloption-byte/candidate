@@ -32,7 +32,7 @@ interface Analytics {
   interviewStatuses: Record<string, number>;
   interviewTypes: Record<string, number>;
   averageScorePoints: number | null;
-  recentCandidates: Array<{ id: string; name: string; reference: string; profession: string | null; status: CandidateStatus; statusUpdatedAt: string }>;
+  recentCandidates: Array<{ id: string; name: string; reference: string; requestedProfession: string | null; status: CandidateStatus; statusUpdatedAt: string }>;
   recentInterviews: Array<{
     id: string;
     status: InterviewStatus;
@@ -98,7 +98,7 @@ export const ReportsPage = ({ role }: Props) => {
       interviewStatuses: Object.fromEntries(interviewStatuses.map((status) => [status, interviews.filter((item) => item.status === status).length])),
       interviewTypes: Object.fromEntries(interviewTypes.map((type) => [type, interviews.filter((item) => item.type === type).length])),
       averageScorePoints: null,
-      recentCandidates: candidates.slice(0, 10).map((item) => ({ id: item.id, name: item.name, reference: item.reference, profession: item.profession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
+      recentCandidates: candidates.slice(0, 10).map((item) => ({ id: item.id, name: item.name, reference: item.reference, requestedProfession: item.requestedProfession, status: item.status, statusUpdatedAt: item.statusUpdatedAt })),
       recentInterviews: interviews.slice(0, 10).map((item) => ({
         id: item.id,
         status: item.status,

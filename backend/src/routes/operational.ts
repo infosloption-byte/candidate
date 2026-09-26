@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { requireAuth, requireRole } from '../lib/auth.js';
+import { getCandidateDisplayName } from '../domain/candidateDisplay.js';
 import { getPrisma } from '../lib/prisma.js';
 
 const candidateStatuses = [
@@ -154,9 +155,10 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
           take: 8,
           select: {
             id: true,
-            name: true,
+            firstName: true,
+            lastName: true,
             reference: true,
-            profession: true,
+            requestedProfession: true,
             status: true,
             statusUpdatedAt: true,
           },
@@ -170,7 +172,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             status: true,
             type: true,
             scheduledAt: true,
-            candidate: { select: { name: true, reference: true, passportNumber: true } },
+            candidate: { select: { firstName: true, lastName: true, reference: true, passportNumber: true } },
             job: { select: { id: true, title: true, location: true } },
           },
         }),
@@ -186,7 +188,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             id: true,
             scheduledAt: true,
             type: true,
-            candidate: { select: { name: true, reference: true, passportNumber: true } },
+            candidate: { select: { firstName: true, lastName: true, reference: true, passportNumber: true } },
             job: { select: { id: true, title: true, location: true } },
           },
         }),

@@ -43,26 +43,32 @@ export interface Candidate {
   id: string;
   agencyId: string;
   reference: string;
+  agencyRegisterNo: string;
+  firstName: string;
+  lastName: string;
   name: string;
   birthdate?: string | null;
-  email: string | null;
-  phone: string | null;
-  alternatePhone: string | null;
-  country: string | null;
   passportNumber: string | null;
   passportExpiry: string | null;
-  currentLocation: string | null;
-  availability: string | null;
-  visaStatus: string | null;
-  profession: string | null;
-  experienceYears: number | null;
-  skills: string[];
+  requestedProfession: string;
   onboardingStatus: OnboardingStatus;
   source: CandidateSource;
   status: CandidateStatus;
   statusUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
+
+  // Legacy read compatibility for older UI surfaces while they are phased out.
+  email?: string | null;
+  phone?: string | null;
+  alternatePhone?: string | null;
+  country?: string | null;
+  currentLocation?: string | null;
+  availability?: string | null;
+  visaStatus?: string | null;
+  profession?: string | null;
+  experienceYears?: number | null;
+  skills: string[];
 }
 
 export interface JobPosition {

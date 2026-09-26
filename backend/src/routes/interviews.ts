@@ -6,6 +6,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { rangesOverlap, validateInterviewInput, type InterviewInput } from '../domain/interviewValidation.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { createNotifications, notifyCandidateAccount } from '../lib/notifications.js';
+import { getCandidateDisplayName, withCandidateDisplayName } from '../domain/candidateDisplay.js';
 
 interface InterviewParams { id: string; }
 interface CandidateInterviewParams { candidateId: string; }
@@ -74,6 +75,7 @@ const interviewInclude = {
 
 const normalizeInterviewRecord = <
   T extends {
+    candidate: { firstName: string; lastName: string };
     criterionGroups: Array<{
       sortOrder: number;
       group: { id: string; name: string; category: string | null; description: string | null; active: boolean };
@@ -81,6 +83,7 @@ const normalizeInterviewRecord = <
   },
 >(interview: T) => ({
   ...interview,
+  candidate: withCandidateDisplayName(interview.candidate),
   criterionGroupIds: interview.criterionGroups
     .slice()
     .sort((left, right) => left.sortOrder - right.sortOrder)
@@ -347,7 +350,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const candidates = await getPrisma().candidate.findMany({
         where: { id: { in: candidateIds } },
-        select: { id: true, agencyId: true, name: true, status: true },
+        select: { id: true, agencyId: true, firstName: true, lastName: true, status: true },
       });
       if (candidates.length !== candidateIds.length) {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
@@ -365,7 +368,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           error: {
             code: 'CANDIDATES_NOT_AVAILABLE',
             message: 'One or more selected candidates have a final or inactive status.',
-            candidates: unavailable.map((candidate) => ({ id: candidate.id, name: candidate.name, status: candidate.status })),
+            candidates: unavailable.map((candidate) => ({ id: candidate.id, name: getCandidateDisplayName(candidate), status: candidate.status })),
           },
         });
       }
@@ -426,7 +429,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
             success: false,
             error: {
               code: 'SCHEDULE_CONFLICT',
-              message: 'Schedule conflict for "' + candidate.name + '" at ' + slot.scheduledAt.toISOString() + '.',
+              message: 'Schedule conflict for "' + getCandidateDisplayName(candidate) + '" at ' + slot.scheduledAt.toISOString() + '.',
             },
           });
         }
@@ -483,13 +486,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           action: 'INTERVIEW_SCHEDULED',
           entityType: 'Interview',
           entityId: result.id,
-          summary: 'Scheduled ' + result.type + ' interview for "' + result.candidate.name + '".',
+          summary: 'Scheduled ' + result.type + ' interview for "' + getCandidateDisplayName(result.candidate) + '".',
         });
         await createNotifications(result.panel.map((participant) => ({
           userId: participant.userId,
           type: 'INTERVIEW_SCHEDULED',
           title: 'Interview scheduled',
-          message: 'Your panel interview for "' + result.candidate.name + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
+          message: 'Your panel interview for "' + getCandidateDisplayName(result.candidate) + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
         })));
         await notifyCandidateAccount(
           result.candidate.id,
@@ -623,13 +626,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         action: 'INTERVIEW_SCHEDULED',
         entityType: 'Interview',
         entityId: result.id,
-        summary: 'Scheduled ' + result.type + ' interview for "' + result.candidate.name + '".',
+        summary: 'Scheduled ' + result.type + ' interview for "' + getCandidateDisplayName(result.candidate) + '".',
       });
       await createNotifications(result.panel.map((participant) => ({
         userId: participant.userId,
         type: 'INTERVIEW_SCHEDULED',
         title: 'Interview scheduled',
-        message: 'Your panel interview for "' + result.candidate.name + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
+        message: 'Your panel interview for "' + getCandidateDisplayName(result.candidate) + '" is scheduled for ' + result.scheduledAt.toISOString() + '.',
       })));
       await notifyCandidateAccount(
         result.candidate.id,
@@ -653,7 +656,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const existing = await getPrisma().interview.findUnique({
         where: { id: request.params.id },
         include: {
-          candidate: { select: { id: true, agencyId: true, name: true, status: true } },
+          candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
           job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
@@ -701,8 +704,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const auditAction = requestedStatus === 'CANCELLED' ? 'INTERVIEW_CANCELLED' : 'INTERVIEW_NO_SHOW';
       const auditSummary = requestedStatus === 'CANCELLED'
-        ? 'Cancelled interview for "' + result.candidate.name + '".'
-        : 'Recorded no-show for interview with "' + result.candidate.name + '".';
+        ? 'Cancelled interview for "' + getCandidateDisplayName(result.candidate) + '".'
+        : 'Recorded no-show for interview with "' + getCandidateDisplayName(result.candidate) + '".';
       await recordAuditEvent({
         actorId: user.id,
         agencyId: existing.candidate.agencyId,
@@ -716,8 +719,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         type: 'INTERVIEW_UPDATED',
         title: requestedStatus === 'CANCELLED' ? 'Interview cancelled' : 'Interview marked no-show',
         message: requestedStatus === 'CANCELLED'
-          ? 'The interview for "' + result.candidate.name + '" has been cancelled.'
-          : 'The interview for "' + result.candidate.name + '" has been marked as a no-show.',
+          ? 'The interview for "' + getCandidateDisplayName(result.candidate) + '" has been cancelled.'
+          : 'The interview for "' + getCandidateDisplayName(result.candidate) + '" has been marked as a no-show.',
       })));
       await notifyCandidateAccount(
         result.candidate.id,
@@ -741,7 +744,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const existing = await getPrisma().interview.findUnique({
         where: { id: request.params.id },
         include: {
-          candidate: { select: { id: true, agencyId: true, name: true, status: true } },
+          candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
           job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
@@ -869,14 +872,14 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
                 : 'INTERVIEW_UPDATED';
       const auditSummary =
         auditAction === 'INTERVIEW_CANCELLED'
-          ? 'Cancelled interview for "' + result.candidate.name + '".'
+          ? 'Cancelled interview for "' + getCandidateDisplayName(result.candidate) + '".'
           : auditAction === 'INTERVIEW_NO_SHOW'
-            ? 'Recorded no-show for interview with "' + result.candidate.name + '".'
+            ? 'Recorded no-show for interview with "' + getCandidateDisplayName(result.candidate) + '".'
             : auditAction === 'INTERVIEW_RESCHEDULED'
-              ? 'Rescheduled interview for "' + result.candidate.name + '".'
+              ? 'Rescheduled interview for "' + getCandidateDisplayName(result.candidate) + '".'
               : auditAction === 'INTERVIEW_PANEL_UPDATED'
-                ? 'Updated interview panel for "' + result.candidate.name + '".'
-                : 'Updated interview for "' + result.candidate.name + '".';
+                ? 'Updated interview panel for "' + getCandidateDisplayName(result.candidate) + '".'
+                : 'Updated interview for "' + getCandidateDisplayName(result.candidate) + '".';
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
@@ -890,7 +893,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         userId: participant.userId,
         type: 'INTERVIEW_UPDATED',
         title: 'Interview updated',
-        message: 'Your interview for "' + result.candidate.name + '" has been updated.',
+        message: 'Your interview for "' + getCandidateDisplayName(result.candidate) + '" has been updated.',
       })));
       await notifyCandidateAccount(
         result.candidate.id,

@@ -6,6 +6,7 @@ import { validateCandidateInput, type CandidateInput } from '../domain/candidate
 import { csvRowsToObjects } from '../domain/csv.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers } from '../lib/notifications.js';
+import { withCandidateDisplayName } from '../domain/candidateDisplay.js';
 
 interface CandidateParams { id: string; }
 interface AgencyCandidateParams { agencyId: string; }
@@ -16,20 +17,13 @@ const candidateSelect = {
   id: true,
   agencyId: true,
   reference: true,
-  name: true,
+  agencyRegisterNo: true,
+  firstName: true,
+  lastName: true,
   birthdate: true,
-  email: true,
-  phone: true,
-  alternatePhone: true,
-  country: true,
   passportNumber: true,
   passportExpiry: true,
-  currentLocation: true,
-  availability: true,
-  visaStatus: true,
-  profession: true,
-  experienceYears: true,
-  skills: true,
+  requestedProfession: true,
   onboardingStatus: true,
   source: true,
   status: true,
@@ -84,7 +78,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       select: candidateSelect,
       orderBy: { createdAt: 'desc' },
     });
-    return reply.send({ success: true, data: candidates });
+    return reply.send({ success: true, data: candidates.map(withCandidateDisplayName) });
   });
 
   app.get<{ Params: CandidateParams }>('/candidates/:id', { preHandler: requireAuth }, async (request, reply) => {
@@ -96,7 +90,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       || (user.role === 'INTERVIEWEE' && user.candidateId === candidate.id);
     if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
 
-    return reply.send({ success: true, data: candidate });
+    return reply.send({ success: true, data: withCandidateDisplayName(candidate) });
   });
 
   app.get<{ Params: CandidateParams }>(
@@ -221,20 +215,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           data: {
             agencyId: agency.id,
             reference: getReference(),
-            name: request.body.name!.trim(),
+            agencyRegisterNo: request.body.agencyRegisterNo!.trim(),
+            firstName: request.body.firstName!.trim(),
+            lastName: request.body.lastName!.trim(),
             birthdate: request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null,
-            email: request.body.email?.trim().toLowerCase() || null,
-            phone: request.body.phone?.trim() || null,
-            alternatePhone: request.body.alternatePhone?.trim() || null,
-            country: request.body.country?.trim() || null,
-            passportNumber: request.body.passportNumber?.trim() || null,
+            passportNumber: request.body.passportNumber!.trim(),
             passportExpiry: request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
-            currentLocation: request.body.currentLocation?.trim() || null,
-            availability: request.body.availability?.trim() || null,
-            visaStatus: request.body.visaStatus?.trim() || null,
-            profession: request.body.profession?.trim() || null,
-            experienceYears: request.body.experienceYears ?? null,
-            skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
+            requestedProfession: request.body.requestedProfession!.trim(),
             onboardingStatus: 'NOT_STARTED',
             source: 'AGENCY_ADDED',
             status: 'POOL',
@@ -259,9 +246,9 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_CREATED',
         entityType: 'Candidate',
         entityId: candidate.id,
-        summary: job ? 'Added candidate "' + candidate.name + '" to the candidate pool for "' + job.title + '".' : 'Added candidate "' + candidate.name + '" to the candidate pool.',
+        summary: job ? 'Added candidate "' + withCandidateDisplayName(candidate).name + '" to the candidate pool for "' + job.title + '".' : 'Added candidate "' + withCandidateDisplayName(candidate).name + '" to the candidate pool.',
       });
-      return reply.code(201).send({ success: true, data: candidate });
+      return reply.code(201).send({ success: true, data: withCandidateDisplayName(candidate) });
     },
   );
 
@@ -293,45 +280,35 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const errors: string[] = [];
-      const emails = new Set<string>();
+      const agencyRegisterNos = new Set<string>();
       const candidateInputs: CandidateInput[] = [];
 
       rows.forEach((row, index) => {
-        const email = row.email?.trim().toLowerCase() || null;
-        const skills = (row.skills ?? '').split(/[,;|]/).map((skill) => skill.trim()).filter(Boolean);
-        const experienceRaw = row.experienceyears?.trim() || row.experience?.trim() || '';
-        const experienceYears = experienceRaw ? Number(experienceRaw) : null;
-        const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
+        const agencyRegisterNo = row.agencyregisterno?.trim() || row.agency_register_no?.trim() || '';
         const birthdateRaw = row.birthdate?.trim() || row.birth_date?.trim() || row.dateofbirth?.trim() || row.date_of_birth?.trim() || row.dob?.trim() || '';
+        const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
         const input: CandidateInput = {
-          name: row.name,
+          agencyRegisterNo: agencyRegisterNo || null,
+          firstName: row.firstname || row.first_name || null,
+          lastName: row.lastname || row.last_name || null,
           birthdate: birthdateRaw || null,
-          email,
-          phone: row.phone || row.contactnumber || row.contact_number || null,
-          alternatePhone: row.alternatephone || row.alternate_phone || null,
-          country: row.country || row.nationality || null,
           passportNumber: row.passportnumber || row.passport_number || null,
           passportExpiry: passportExpiryRaw || null,
-          currentLocation: row.currentlocation || row.current_location || row.location || null,
-          availability: row.availability || null,
-          visaStatus: row.visastatus || row.visa_status || null,
-          profession: row.profession || null,
-          experienceYears,
-          skills,
+          requestedProfession: row.requestedprofession || row.requested_profession || row.profession || null,
         };
         const rowErrors = validateCandidateInput(input, 'create');
-        if (email && emails.has(email)) rowErrors.push('Email is duplicated in this file.');
-        if (email) emails.add(email);
+        if (agencyRegisterNo && agencyRegisterNos.has(agencyRegisterNo.toLowerCase())) rowErrors.push('Agency register number is duplicated in this file.');
+        if (agencyRegisterNo) agencyRegisterNos.add(agencyRegisterNo.toLowerCase());
         if (rowErrors.length) errors.push('Row ' + (index + 2) + ': ' + rowErrors.join(' '));
         candidateInputs.push(input);
       });
 
-      const existingEmails = emails.size
-        ? await getPrisma().candidate.findMany({ where: { agencyId: agency.id, email: { in: [...emails] } }, select: { email: true } })
+      const existingRegisterNos = agencyRegisterNos.size
+        ? await getPrisma().candidate.findMany({ where: { agencyId: agency.id, agencyRegisterNo: { in: [...agencyRegisterNos] } }, select: { agencyRegisterNo: true } })
         : [];
-      const existingEmailSet = new Set(existingEmails.map((item) => item.email).filter(Boolean).map((item) => item!.toLowerCase()));
+      const existingRegisterSet = new Set(existingRegisterNos.map((item) => item.agencyRegisterNo.toLowerCase()));
       candidateInputs.forEach((input, index) => {
-        if (input.email && existingEmailSet.has(input.email.toLowerCase())) errors.push('Row ' + (index + 2) + ': Email is already registered for this agency.');
+        if (input.agencyRegisterNo && existingRegisterSet.has(input.agencyRegisterNo.toLowerCase())) errors.push('Row ' + (index + 2) + ': Agency register number is already registered for this agency.');
       });
 
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'CSV_VALIDATION_FAILED', message: 'CSV import was not applied because one or more rows are invalid.', rows: errors } });
@@ -344,20 +321,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
             data: {
               agencyId: agency.id,
               reference: getReference(),
-              name: input.name!.trim(),
-              birthdate: input.birthdate?.trim() ? new Date(input.birthdate) : null,
-              email: input.email?.trim().toLowerCase() || null,
-              phone: input.phone?.trim() || null,
-              alternatePhone: input.alternatePhone?.trim() || null,
-              country: input.country?.trim() || null,
-              passportNumber: input.passportNumber?.trim() || null,
-              passportExpiry: input.passportExpiry?.trim() ? new Date(input.passportExpiry) : null,
-              currentLocation: input.currentLocation?.trim() || null,
-              availability: input.availability?.trim() || null,
-              visaStatus: input.visaStatus?.trim() || null,
-              profession: input.profession?.trim() || null,
-              experienceYears: input.experienceYears ?? null,
-              skills: input.skills ?? [],
+              agencyRegisterNo: input.agencyRegisterNo!.trim(),
+               firstName: input.firstName!.trim(),
+               lastName: input.lastName!.trim(),
+               birthdate: input.birthdate?.trim() ? new Date(input.birthdate) : null,
+               passportNumber: input.passportNumber!.trim(),
+               passportExpiry: input.passportExpiry?.trim() ? new Date(input.passportExpiry) : null,
+               requestedProfession: input.requestedProfession!.trim(),
               onboardingStatus: 'NOT_STARTED',
               source: 'BULK_IMPORTED',
               status: 'POOL',
@@ -409,20 +379,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           data: {
             agencyId: agency.id,
             reference: getReference(),
-            name: request.body.name!.trim(),
+            agencyRegisterNo: request.body.agencyRegisterNo?.trim() || getReference(),
+            firstName: request.body.firstName!.trim(),
+            lastName: request.body.lastName!.trim(),
             birthdate: request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null,
-              email: request.body.email?.trim().toLowerCase() || null,
-              phone: request.body.phone?.trim() || null,
-              alternatePhone: request.body.alternatePhone?.trim() || null,
-              country: request.body.country?.trim() || null,
-              passportNumber: request.body.passportNumber?.trim() || null,
-              passportExpiry: request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
-              currentLocation: request.body.currentLocation?.trim() || null,
-              availability: request.body.availability?.trim() || null,
-              visaStatus: request.body.visaStatus?.trim() || null,
-              profession: request.body.profession?.trim() || null,
-              experienceYears: request.body.experienceYears ?? null,
-            skills: (request.body.skills ?? []).map((skill) => skill.trim()).filter(Boolean),
+            passportNumber: request.body.passportNumber!.trim(),
+            passportExpiry: request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null,
+            requestedProfession: request.body.requestedProfession!.trim(),
             onboardingStatus: 'SUBMITTED',
             source: 'SELF_ONBOARDED',
             status: 'POOL',
@@ -497,7 +460,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         entityId: updated.id,
         summary: 'Updated birthdate for candidate "' + updated.name + '".',
       });
-      return reply.send({ success: true, data: updated });
+      return reply.send({ success: true, data: withCandidateDisplayName(updated) });
     },
   );
 
@@ -536,13 +499,6 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         where: { candidateId: existing.id },
         select: { id: true },
       });
-      if (linkedAccount && request.body.email !== undefined && !request.body.email?.trim()) {
-        return reply.code(400).send({
-          success: false,
-          error: { code: 'EMAIL_REQUIRED_FOR_ACCOUNT', message: 'A candidate linked to an Interviewee account must keep an email address.' },
-        });
-      }
-
       if (request.body.status !== undefined && (canManage || (canSetFinalStatus && requestedFinalStatus))) {
         const lifecycleManagedByWorkflow = ['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED'].includes(request.body.status);
         if (lifecycleManagedByWorkflow) {
@@ -601,20 +557,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const data: Record<string, unknown> = {};
-      if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.agencyRegisterNo !== undefined) data.agencyRegisterNo = request.body.agencyRegisterNo?.trim() || null;
+      if (request.body.firstName !== undefined) data.firstName = request.body.firstName?.trim() || null;
+      if (request.body.lastName !== undefined) data.lastName = request.body.lastName?.trim() || null;
       if (request.body.birthdate !== undefined) data.birthdate = request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null;
-      if (request.body.email !== undefined) data.email = request.body.email?.trim().toLowerCase() || null;
-      if (request.body.phone !== undefined) data.phone = request.body.phone?.trim() || null;
-      if (request.body.alternatePhone !== undefined) data.alternatePhone = request.body.alternatePhone?.trim() || null;
-      if (request.body.country !== undefined) data.country = request.body.country?.trim() || null;
       if (request.body.passportNumber !== undefined) data.passportNumber = request.body.passportNumber?.trim() || null;
       if (request.body.passportExpiry !== undefined) data.passportExpiry = request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null;
-      if (request.body.currentLocation !== undefined) data.currentLocation = request.body.currentLocation?.trim() || null;
-      if (request.body.availability !== undefined) data.availability = request.body.availability?.trim() || null;
-      if (request.body.visaStatus !== undefined) data.visaStatus = request.body.visaStatus?.trim() || null;
-      if (request.body.profession !== undefined) data.profession = request.body.profession?.trim() || null;
-      if (request.body.experienceYears !== undefined) data.experienceYears = request.body.experienceYears;
-      if (request.body.skills !== undefined) data.skills = request.body.skills.map((skill) => skill.trim()).filter(Boolean);
+      if (request.body.requestedProfession !== undefined) data.requestedProfession = request.body.requestedProfession?.trim() || null;
       if (request.body.onboardingStatus !== undefined && canManage) data.onboardingStatus = request.body.onboardingStatus;
       if (isSelf) data.onboardingStatus = 'SUBMITTED';
 
@@ -631,13 +580,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           select: candidateSelect,
         });
 
-        if (linkedAccount && (data.name !== undefined || data.email !== undefined)) {
+        if (linkedAccount && (data.firstName !== undefined || data.lastName !== undefined)) {
+          const nextFirstName = data.firstName !== undefined ? String(data.firstName) : existing.firstName;
+          const nextLastName = data.lastName !== undefined ? String(data.lastName) : existing.lastName;
           await tx.user.update({
             where: { id: linkedAccount.id },
-            data: {
-              ...(data.name !== undefined ? { name: data.name as string } : {}),
-              ...(data.email !== undefined ? { email: data.email as string } : {}),
-            },
+            data: { name: [nextFirstName, nextLastName].map((value) => value.trim()).filter(Boolean).join(' ') },
           });
         }
 
@@ -682,7 +630,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         if ((error as { code?: string }).code === 'P2002') {
           return reply.code(409).send({
             success: false,
-            error: { code: 'USER_EMAIL_EXISTS', message: 'The candidate email is already used by another account.' },
+            error: { code: 'AGENCY_REGISTER_EXISTS', message: 'The agency register number is already registered for this agency.' },
           });
         }
         throw error;
@@ -695,10 +643,10 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         entityType: 'Candidate',
         entityId: candidate.id,
         summary: request.body.status !== undefined && request.body.status !== existing.status
-          ? 'Changed candidate "' + candidate.name + '" status to ' + candidate.status + '.'
-          : 'Updated candidate "' + candidate.name + '".',
+          ? 'Changed candidate "' + withCandidateDisplayName(candidate).name + '" status to ' + candidate.status + '.'
+          : 'Updated candidate "' + withCandidateDisplayName(candidate).name + '".',
       });
-      return reply.send({ success: true, data: candidate });
+      return reply.send({ success: true, data: withCandidateDisplayName(candidate) });
     },
   );
 };
