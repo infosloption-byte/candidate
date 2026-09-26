@@ -299,7 +299,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
     return [...filtered].sort((left, right) => {
       let result = 0;
-      if (sortBy === 'created') result = (left.publishedAt ?? '').localeCompare(right.publishedAt ?? '');
+      if (sortBy === 'created') result = (left.createdAt ?? left.publishedAt ?? '').localeCompare(right.createdAt ?? right.publishedAt ?? '');
       if (sortBy === 'title') result = left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
       if (sortBy === 'openings') result = left.openings - right.openings;
       if (sortBy === 'filled') result = (left.filledCount ?? 0) - (right.filledCount ?? 0);
@@ -815,7 +815,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                             : '—'}
                       </span>
                     </div>
-                    {role !== 'INTERVIEWEE' && job.status === 'PUBLISHED' && (
+                    {role !== 'INTERVIEWEE' && (
                       <div onClick={(event) => event.stopPropagation()}>
                         {renderJobActions(job)}
                       </div>
