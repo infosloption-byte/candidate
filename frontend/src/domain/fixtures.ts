@@ -1,4 +1,4 @@
-import type { Agency, Candidate, Interview, InterviewCriterion, InterviewEvaluation, Job, User } from './types';
+import type { Agency, Candidate, Interview, InterviewCriterion, InterviewEvaluation, Job, JobCandidate, User } from './types';
 
 export const agencies: Agency[] = [
   { id: 'agency-1', name: 'BuildHire Recruitment', slug: 'buildhire', status: 'ACTIVE', userCount: 8, jobCount: 12, candidateCount: 146 },
@@ -21,9 +21,32 @@ export const candidates: Candidate[] = [
 ];
 
 export const jobs: Job[] = [
-  { id: 'job-1', agencyId: 'agency-1', title: 'Mason — Dubai Tower Project', description: 'General masonry and finishing work.', location: 'Dubai, UAE', openings: 5, status: 'PUBLISHED', publishedAt: '2026-09-16T08:00:00.000Z' },
+  { id: 'job-1', agencyId: 'agency-1', title: 'Mason — Dubai Tower Project', description: 'General masonry and finishing work.', location: 'Dubai, UAE', openings: 5, status: 'PUBLISHED', publishedAt: '2026-09-16T08:00:00.000Z', candidateCount: 2, interviewCount: 1, filledCount: 0 },
   { id: 'job-2', agencyId: 'agency-1', title: 'Welder — Doha Industrial Expansion', description: 'Structural welding and fabrication.', location: 'Doha, Qatar', openings: 4, status: 'PUBLISHED', publishedAt: '2026-09-15T08:00:00.000Z' },
   { id: 'job-3', agencyId: 'agency-1', title: 'Shuttering Carpenter — Colombo Mall', description: 'Formwork and shuttering carpentry.', location: 'Colombo, Sri Lanka', openings: 3, status: 'DRAFT', publishedAt: null },
+];
+
+export const jobCandidates: JobCandidate[] = [
+  {
+    id: 'job-candidate-1',
+    jobId: 'job-1',
+    candidateId: 'candidate-1',
+    status: 'INTERVIEW_SCHEDULED',
+    statusUpdatedAt: '2026-09-22T05:00:00.000Z',
+    createdAt: '2026-09-18T09:00:00.000Z',
+    updatedAt: '2026-09-22T05:00:00.000Z',
+    candidate: candidates[0]!,
+  },
+  {
+    id: 'job-candidate-2',
+    jobId: 'job-2',
+    candidateId: 'candidate-2',
+    status: 'INTERVIEW_COMPLETED',
+    statusUpdatedAt: '2026-09-20T05:00:00.000Z',
+    createdAt: '2026-09-18T10:00:00.000Z',
+    updatedAt: '2026-09-20T05:00:00.000Z',
+    candidate: candidates[1]!,
+  },
 ];
 
 export const interviewCriteria: InterviewCriterion[] = [
