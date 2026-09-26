@@ -20,7 +20,11 @@ import { CandidateMultiSelect } from './CandidateMultiSelect';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
-interface Props { role: UserRole; }
+interface Props {
+  role: UserRole;
+  initialJobId?: string | null;
+  onJobChange?: (jobId: string | null) => void;
+}
 
 type InterviewRecord = Interview;
 
@@ -182,7 +186,7 @@ const buildCriterionAssignments = (
 };
 
 
-export const InterviewsPage = ({ role }: Props) => {
+export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
@@ -198,7 +202,8 @@ export const InterviewsPage = ({ role }: Props) => {
   const [candidateId, setCandidateId] = useState('');
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
-  const [jobId, setJobId] = useState('');
+  const [jobId, setJobId] = useState(initialJobId ?? '');
+  const [jobFilterId, setJobFilterId] = useState(initialJobId ?? '');
   const [criterionGroupIds, setCriterionGroupIds] = useState<string[]>([]);
   const [panel, setPanel] = useState<string[]>([]);
   const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
@@ -249,6 +254,11 @@ export const InterviewsPage = ({ role }: Props) => {
   const [profileCandidate, setProfileCandidate] = useState<Candidate | null>(null);
   const [profileMinimized, setProfileMinimized] = useState(false);
   const [profileMaximized, setProfileMaximized] = useState(false);
+
+  useEffect(() => {
+    setJobFilterId(initialJobId ?? '');
+    if (initialJobId) setJobId(initialJobId);
+  }, [initialJobId]);
 
   useEffect(() => {
     if (developmentMode) {
@@ -383,10 +393,11 @@ export const InterviewsPage = ({ role }: Props) => {
       };
       const matchesSearch = !query || JSON.stringify(searchableRecord).toLowerCase().includes(query);
       const matchesAgency = !agencyFilter || candidate?.agencyId === agencyFilter;
+      const matchesJob = !jobFilterId || interview.jobId === jobFilterId;
       const matchesStatus = !statusFilter || interview.status === statusFilter;
       const matchesType = !typeFilter || interview.type === typeFilter;
       const matchesSchedule = scheduleFilter === 'all' || role !== 'INTERVIEWER' || scheduleBucket(interview) === scheduleFilter;
-      return matchesSearch && matchesAgency && matchesStatus && matchesType && matchesSchedule;
+      return matchesSearch && matchesAgency && matchesJob && matchesStatus && matchesType && matchesSchedule;
     });
 
     return [...base].sort((left, right) => {
@@ -398,7 +409,7 @@ export const InterviewsPage = ({ role }: Props) => {
       if (sortBy === 'status') result = left.status.localeCompare(right.status, undefined, { sensitivity: 'base' });
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [agencyFilter, candidates, interviews, jobs, now, role, scheduleFilter, search, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [agencyFilter, candidates, interviews, jobFilterId, jobs, now, role, scheduleFilter, search, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const interviewTotalPages = Math.max(1, Math.ceil(visible.length / INTERVIEWS_PAGE_SIZE));
   const activeInterviewPage = Math.min(interviewPage, interviewTotalPages);
@@ -409,7 +420,7 @@ export const InterviewsPage = ({ role }: Props) => {
 
   useEffect(() => {
     setInterviewPage(1);
-  }, [agencyFilter, search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
+  }, [agencyFilter, jobFilterId, search, scheduleFilter, sortBy, sortDirection, statusFilter, typeFilter]);
 
   const selectedCandidates = useMemo(
     () => selectedCandidateIds
@@ -426,15 +437,9 @@ export const InterviewsPage = ({ role }: Props) => {
   const mixedAgencySelection = selectedAgencyIds.length > 1;
 
   const availableJobs = useMemo(
-    () => mixedAgencySelection
-      ? []
-      : jobs.filter((job) => job.agencyId === agencyId && job.status !== 'CLOSED'),
-    [agencyId, jobs, mixedAgencySelection],
+    () => jobs.filter((job) => job.status !== 'CLOSED' && (role === 'ADMIN' || job.agencyId === agencyId)),
+    [agencyId, jobs, role],
   );
-
-  useEffect(() => {
-    if (mixedAgencySelection) setJobId('');
-  }, [mixedAgencySelection]);
 
   const toggleCandidateSelection = (id: string) => {
     setSelectedCandidateIds((current) => current.includes(id)
@@ -461,7 +466,9 @@ export const InterviewsPage = ({ role }: Props) => {
     setCandidateId('');
     setSelectedCandidateIds([]);
     setCandidateSearch('');
-    setJobId('');
+    setJobId(jobFilterId || '');
+    const selectedJob = jobs.find((job) => job.id === (jobFilterId || ''));
+    if (selectedJob) setAgencyId(selectedJob.agencyId);
     setCriterionGroupIds([]);
     setPanel([]);
     setResponseDrafts({});
@@ -545,6 +552,10 @@ export const InterviewsPage = ({ role }: Props) => {
     }
     if (panel.length === 0) {
       setError('Select at least one interviewer.');
+      return;
+    }
+    if (!jobId) {
+      setError('Select a job before scheduling the interview.');
       return;
     }
     if (!form.scheduledAt) {
@@ -1049,7 +1060,7 @@ export const InterviewsPage = ({ role }: Props) => {
     }
   };
 
-  const updateCandidateStatus = async (candidate: Pick<Candidate, 'id' | 'name' | 'status'>) => {
+  const updateCandidateStatus = async (candidate: Pick<Candidate, 'id' | 'name' | 'status'>, targetJobId: string | null = null) => {
     const status = statusDrafts[candidate.id];
     if (!status || status === candidate.status) return;
 
@@ -1063,7 +1074,7 @@ export const InterviewsPage = ({ role }: Props) => {
         ? { ...(currentCandidate as Candidate), status, statusUpdatedAt: new Date().toISOString() }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
-            body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null }),
+            body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null, jobId: targetJobId }),
           });
 
       if (developmentMode) dispatch({ type: 'SET_CANDIDATE_STATUS', candidateId: candidate.id, status });
@@ -1179,6 +1190,21 @@ export const InterviewsPage = ({ role }: Props) => {
           </button>
 
           <div id="mobile-interview-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
+            {(['ADMIN', 'AGENCY'].includes(role)) && (
+              <div className="mb-3">
+                <label className="field-label">Job</label>
+                <SelectMenu
+                  value={jobFilterId}
+                  onChange={(value) => { setJobFilterId(value); onJobChange?.(value || null); }}
+                  options={[
+                    { value: '', label: 'All jobs' },
+                    ...jobs.filter((job) => job.status !== 'CLOSED' && (role === 'ADMIN' || job.agencyId === agencyId)).map((job) => ({ value: job.id, label: job.title })),
+                  ]}
+                  ariaLabel="Filter interviews by job"
+                  className="mt-1"
+                />
+              </div>
+            )}
             {(['ADMIN', 'INTERVIEWER'].includes(role)) && (
               <>
                 <label className="field-label">Agency</label>
@@ -1323,11 +1349,16 @@ export const InterviewsPage = ({ role }: Props) => {
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                  <FormField label="Job / position" hint={mixedAgencySelection ? 'Disabled when candidates belong to multiple agencies.' : 'Optional'}>
+                  <FormField label="Job / position" hint="Select the job whose candidate pool contains the selected workers.">
                     <SelectMenu
-                      value={mixedAgencySelection ? '' : jobId}
-                      onChange={setJobId}
-                      disabled={mixedAgencySelection}
+                      value={jobId}
+                      onChange={(value) => {
+                        setJobId(value);
+                        const selectedJob = jobs.find((job) => job.id === value);
+                        if (selectedJob) setAgencyId(selectedJob.agencyId);
+                        setSelectedCandidateIds([]);
+                        setCandidateSearch('');
+                      }}
                       options={[
                         { value: '', label: 'No specific job' },
                         ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
@@ -1440,7 +1471,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       onClear={() => setSelectedCandidateIds([])}
                     />
                     {mixedAgencySelection && (
-                      <p className="mt-1.5 text-[10px] font-bold text-amber-700">Multiple agencies selected. Job / position is disabled because a single job belongs to one agency.</p>
+                      <p className="mt-1.5 text-[10px] font-bold text-amber-700">Candidates from multiple source agencies can be scheduled together when they are all members of this job pool.</p>
                     )}
                   </FormField>
                 )}
@@ -2022,7 +2053,7 @@ export const InterviewsPage = ({ role }: Props) => {
                           <Button
                             className="min-h-11 w-full sm:w-auto"
                             disabled={!statusDrafts[activeCandidate.id]}
-                            onClick={() => void updateCandidateStatus(activeCandidate)}
+                            onClick={() => void updateCandidateStatus(activeCandidate, evaluationFor ? (interviews.find((item) => item.id === evaluationFor)?.jobId ?? null) : null)}
                           >
                             Update status
                           </Button>
