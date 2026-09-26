@@ -1798,11 +1798,11 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
-                        <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My score</p>
-                        <p className="mt-0.5 text-[13px font-black text-cyan-700">
+                        <p className="mt-0.5 text-sm font-black text-cyan-700">
                           {evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
                           {' / '}
                           {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}
@@ -1810,7 +1810,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p>
-                        <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
                       </div>
                     </div>
                     <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3.5 sm:p-4">
@@ -1821,7 +1821,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</p>
-                          <p className="mt-0.5 text-[13px font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
+                          <p className="mt-0.5 text-sm font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
                         </div>
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p>
@@ -1847,7 +1847,7 @@ export const InterviewsPage = ({ role }: Props) => {
                               </Button>
                             </div>
                           ) : (
-                            <p className="mt-0.5 text-[13px font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
+                            <p className="mt-0.5 text-sm font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
                           )}
                         </div>
                       </div>
@@ -1902,11 +1902,11 @@ export const InterviewsPage = ({ role }: Props) => {
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel submissions</p>
-                            <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED').length ?? 0} / {evaluationDetail?.panel?.length ?? 0}</p>
+                            <p className="mt-0.5 text-sm font-black text-slate-900">{evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED').length ?? 0} / {evaluationDetail?.panel?.length ?? 0}</p>
                           </div>
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Final average</p>
-                            <p className="mt-0.5 text-[13px font-black text-cyan-700">{(() => {
+                            <p className="mt-0.5 text-sm font-black text-cyan-700">{(() => {
                               const submitted = evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED') ?? [];
                               const scoringAssignments = evaluationDetail?.criterionAssignments ?? [];
                               const max = scoringAssignments.reduce((sum, item) => sum + item.maxPoints, 0);
@@ -1917,7 +1917,7 @@ export const InterviewsPage = ({ role }: Props) => {
                           </div>
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Access</p>
-                            <p className="mt-0.5 text-[13px font-black text-slate-900">All panel scores</p>
+                            <p className="mt-0.5 text-sm font-black text-slate-900">All panel scores</p>
                           </div>
                         </div>
                         <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
@@ -1984,7 +1984,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
                       <div>
                         <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Final candidate decision</p>
-                        <h4 className="mt-0.5 text-[13px font-black text-slate-950">Record the candidate outcome</h4>
+                        <h4 className="mt-0.5 text-sm font-black text-slate-950">Record the candidate outcome</h4>
                         <p className="mt-1 text-[10px] leading-4 text-slate-500">The final score is calculated from the interviewer panel. Record the decision here so the system keeps who made it.</p>
                       </div>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
