@@ -485,9 +485,9 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         {canManage && (
           <div className="flex items-center gap-1.5">
             <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Add candidate" aria-label="Add candidate" disabled={job.status === 'CLOSED'} onClick={openCandidateModal}><Icon name="plus" size={16} /></Button>
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Upload candidates" aria-label="Upload candidates" disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }}><Icon name="download" size={16} /></Button>
+            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Upload candidates" aria-label="Upload candidates" disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }}><Icon name="upload" size={16} /></Button>
             <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Schedule interview" aria-label="Schedule interview" disabled={job.status === 'CLOSED' || candidateCount === 0} onClick={() => void openScheduleModal()}><Icon name="calendar" size={16} /></Button>
-            <Button variant="danger" size="sm" className="!size-10 !min-h-10 !p-0" title="Delete job" aria-label="Delete job" onClick={() => setDeleteConfirm(true)}><Icon name="x" size={16} /></Button>
+            <Button variant="danger" size="sm" className="!size-10 !min-h-10 !p-0" title="Delete job" aria-label="Delete job" onClick={() => setDeleteConfirm(true)}><Icon name="trash" size={16} /></Button>
           </div>
         )}
       </div>
