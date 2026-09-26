@@ -703,10 +703,11 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
-    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference} · {item.profession ?? 'Profession not set'}</p><p className="mt-1 text-[10px] text-slate-400">Birthdate: {item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p></div> },
-    { key: 'contact', header: 'Contact', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{item.phone ?? 'No contact number'}</p><p className="mt-1 text-[10px] text-slate-400">{item.country ?? 'Country not set'}</p></div> },
-    { key: 'passport', header: 'Passport', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.passportNumber ?? 'Not provided'}</span> },
-    { key: 'experience', header: 'Experience', render: (item: Candidate) => <span className="text-slate-600">{item.experienceYears ?? 0} years</span> },
+    { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference}</p></div> },
+    { key: 'agencyRegisterNo', header: 'Agency Register No', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.agencyRegisterNo}</span> },
+    { key: 'birthdate', header: 'Birth date', render: (item: Candidate) => <span className="text-xs text-slate-600">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</span> },
+    { key: 'passport', header: 'Passport', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{displayPassport(item.passportNumber)}</p><p className="mt-1 text-[10px] text-slate-400">Exp. {item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div> },
+    { key: 'requestedProfession', header: 'Requested profession', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
     { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
@@ -1115,7 +1116,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                           </div>
                           <StatusPill value={item.status} />
                         </div>
-                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.profession ?? 'Profession not set'}</p>
+                        <p className="mt-1 truncate text-[10px] text-slate-400">{item.requestedProfession}</p>
                       </div>
                     </div>
 
