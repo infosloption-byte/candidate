@@ -454,7 +454,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  app.patch<{ Params: { id: string }; Body: Pick<GlobalInterviewerBody, 'name' | 'active'> }>(
+  app.patch<{ Params: { id: string }; Body: Pick<GlobalInterviewerBody, 'name' | 'active'> & { email?: string; password?: string } }>(
     '/interviewers/:id',
     { preHandler: [requireAuth, requireRole('ADMIN')] },
     async (request, reply) => {
@@ -466,9 +466,16 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'INTERVIEWER_NOT_FOUND', message: 'Global interviewer not found.' } });
       }
 
-      const data: { name?: string; active?: boolean } = {};
+      const data: { name?: string; email?: string; passwordHash?: string; active?: boolean } = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.email !== undefined) data.email = request.body.email.trim().toLowerCase();
       if (request.body.active !== undefined) data.active = request.body.active;
+      if (request.body.password !== undefined) {
+        if (request.body.password.length < 8 || request.body.password.length > 128) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER_PASSWORD', message: 'Password must be 8-128 characters.' } });
+        }
+        data.passwordHash = await hashPassword(request.body.password);
+      }
 
       if (data.name === '') {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER', message: 'Interviewer name cannot be empty.' } });
@@ -476,12 +483,16 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       if (data.name !== undefined && (data.name.length < 2 || data.name.length > 160)) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER', message: 'Interviewer name must be 2-160 characters.' } });
       }
+      if (data.email !== undefined && (data.email.length > 191 || !emailPattern.test(data.email))) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEWER', message: 'Email must be valid and 191 characters or fewer.' } });
+      }
 
-      const user = await getPrisma().user.update({
-        where: { id: existing.id },
-        data,
-        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
-      });
+      try {
+        const user = await getPrisma().user.update({
+          where: { id: existing.id },
+          data,
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
@@ -492,7 +503,11 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         summary: 'Updated global interviewer "' + user.name + '".',
       });
 
-      return reply.send({ success: true, data: user });
+        return reply.send({ success: true, data: user });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        throw error;
+      }
     },
   );
 
@@ -564,7 +579,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  app.patch<{ Params: { agencyId: string; userId: string }; Body: Pick<UserBody, 'name' | 'role'> & { active?: boolean } }>(
+  app.patch<{ Params: { agencyId: string; userId: string }; Body: Pick<UserBody, 'name' | 'role'> & { email?: string; password?: string; active?: boolean } }>(
     '/agencies/:agencyId/users/:userId',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
@@ -584,10 +599,17 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_ROLE', message: 'Agency users can only have Agency or Interviewer roles.' } });
       }
 
-      const data: { name?: string; active?: boolean; role?: AgencyUserRole } = {};
+      const data: { name?: string; email?: string; passwordHash?: string; active?: boolean; role?: AgencyUserRole } = {};
       if (request.body.name !== undefined) data.name = request.body.name.trim();
+      if (request.body.email !== undefined) data.email = request.body.email.trim().toLowerCase();
       if (request.body.active !== undefined) data.active = request.body.active;
       if (request.body.role !== undefined) data.role = request.body.role;
+      if (request.body.password !== undefined) {
+        if (request.body.password.length < 8 || request.body.password.length > 128) {
+          return reply.code(400).send({ success: false, error: { code: 'INVALID_USER_PASSWORD', message: 'Password must be 8-128 characters.' } });
+        }
+        data.passwordHash = await hashPassword(request.body.password);
+      }
 
       if (data.name === '') {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'User name cannot be empty.' } });
@@ -595,12 +617,16 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       if (data.name !== undefined && data.name.length > 160) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'User name must be 160 characters or fewer.' } });
       }
+      if (data.email !== undefined && (data.email.length > 191 || !emailPattern.test(data.email))) {
+        return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Email must be valid and 191 characters or fewer.' } });
+      }
 
-      const updatedUser = await getPrisma().user.update({
-        where: { id: existing.id },
-        data,
-        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
-      });
+      try {
+        const updatedUser = await getPrisma().user.update({
+          where: { id: existing.id },
+          data,
+          select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
+        });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
@@ -609,8 +635,12 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         entityType: 'User',
         entityId: updatedUser.id,
         summary: 'Updated agency user "' + updatedUser.name + '".',
-      });
-      return reply.send({ success: true, data: updatedUser });
+        });
+        return reply.send({ success: true, data: updatedUser });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') return conflictResponse(reply, 'USER_EMAIL_EXISTS', 'Email is already in use.');
+        throw error;
+      }
     },
   );
 };
