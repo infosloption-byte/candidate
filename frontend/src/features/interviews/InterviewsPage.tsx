@@ -58,6 +58,56 @@ const isAgeCriterion = (name: string): boolean => {
   return normalized === 'age' || normalized === 'age criteria';
 };
 
+const formatDateOnly = (value?: string | null): string => {
+  if (!value) return 'Not provided';
+  const datePart = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return 'Not provided';
+  const [year, month, day] = datePart.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(date.getTime())) return 'Not provided';
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+};
+
+const calculateAgeBreakdown = (birthdate: string, referenceDate = new Date()): { years: number; months: number } | null => {
+  const datePart = birthdate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const dob = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(dob.getTime()) || dob.getTime() > referenceDate.getTime()) return null;
+
+  let years = referenceDate.getUTCFullYear() - dob.getUTCFullYear();
+  let months = referenceDate.getUTCMonth() - dob.getUTCMonth();
+  if (referenceDate.getUTCDate() < dob.getUTCDate()) months -= 1;
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  return { years, months };
+};
+
+const formatRemainingTime = (interview: Interview, referenceNow: number): string => {
+  if (interview.status === 'COMPLETED') return 'Completed';
+  if (interview.status === 'CANCELLED') return 'Cancelled';
+  if (interview.status === 'NO_SHOW') return 'No show';
+
+  const start = new Date(interview.scheduledAt).getTime();
+  const end = start + interview.durationMins * 60_000;
+  const diff = Math.max(0, (referenceNow < start ? start : end) - referenceNow);
+  const totalMinutes = Math.ceil(diff / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const remaining = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+  if (referenceNow < start) return `Starts in ${remaining}`;
+  if (referenceNow <= end) return interview.status === 'IN_PROGRESS' ? `Live · ${remaining} left` : `${remaining} remaining`;
+  return 'Expired';
+};
+
 const buildCriterionSections = (
   assignments: InterviewCriterionAssignment[],
   groups: Array<{ id: string; name: string }>,
@@ -1482,68 +1532,100 @@ export const InterviewsPage = ({ role }: Props) => {
           {paginatedInterviews.map((interview) => {
             const candidate = candidateFor(interview);
             const job = jobFor(interview);
-            const ownEvaluation = interview.evaluations?.find((item) => item.interviewerId === user?.id);
-            const alreadyEvaluated = ownEvaluation?.status === 'SUBMITTED';
-            const isAssignedInterviewer = role === 'INTERVIEWER';
+            const age = candidate?.birthdate ? calculateAgeBreakdown(candidate.birthdate, new Date(now)) : null;
+            const interviewCode = 'INT-' + interview.id.slice(0, 8).toUpperCase();
+
             return (
-              <Card key={interview.id} padded={false} className="p-4">
-                <div>
-                  <div className="min-w-0">
+              <Card key={interview.id} padded={false} className="overflow-visible">
+                <div className="p-4 sm:p-5">
+                  <header className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Interview code</p>
+                      <p className="mt-1 truncate font-mono text-xs font-black text-slate-900">{interviewCode}</p>
+                    </div>
+                    <StatusPill value={interview.status} />
+                  </header>
+
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="grid sm:grid-cols-2">
+                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidate</p>
+                        <p className="mt-1 text-sm font-black text-slate-900">{candidate?.name ?? interview.candidateId}</p>
+                      </div>
+                      <div className="border-b border-slate-100 px-3.5 py-3">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Passport</p>
+                        <p className="mt-1 break-all text-sm font-bold text-slate-800">{candidate?.passportNumber ?? 'Not provided'}</p>
+                      </div>
+
+                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate · Age</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                          {formatDateOnly(candidate?.birthdate)}
+                          {age ? <span className="ml-1.5 text-xs font-extrabold text-cyan-700">({age.years}y {age.months}m)</span> : null}
+                        </p>
+                      </div>
+                      <div className="border-b border-slate-100 px-3.5 py-3">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Schedule · Remaining</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleString()}</p>
+                        <p className="mt-1 text-xs font-extrabold text-cyan-700">{formatRemainingTime(interview, now)}</p>
+                      </div>
+
+                      <div className="border-b border-slate-100 px-3.5 py-3 sm:border-r">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview type</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{statusLabel(interview.type)}</p>
+                      </div>
+                      <div className="border-b border-slate-100 px-3.5 py-3">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Location</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</p>
+                      </div>
+
+                      <div className="px-3.5 py-3 sm:col-span-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviewer{(interview.panel?.length ?? 0) === 1 ? '' : 's'}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {interview.panel?.length
+                            ? interview.panel.map((participant) => (
+                                <span key={participant.userId} className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                                  {participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}
+                                </span>
+                              ))
+                            : <span className="text-xs font-semibold text-slate-400">No interviewer assigned</span>}
+                        </div>
+                        {job && <p className="mt-2 text-[10px] font-semibold text-slate-400">Position: {job.title}</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <footer className="relative mt-4 border-t border-slate-100 pt-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-black text-slate-950">{candidate?.name ?? interview.candidateId}</h2>
-                      <StatusPill value={interview.status} />
-                    </div>
-                    <p className="mt-1 text-xs font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Birthdate: {candidate?.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {candidate?.passportNumber ?? 'Not provided'} {job ? '· ' + job.title : '· General interview'}</p>
-                    <p className="mt-2 text-sm text-slate-600">{new Date(interview.scheduledAt).toLocaleString()} · {interview.durationMins} min · {interview.type}</p>
-                    <p className="mt-1 text-xs text-slate-400">{interview.location ?? 'Location not specified'}</p>
-                  </div>
+                      <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+                      </button>
 
-                  {interview.panel && interview.panel.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {interview.panel.map((participant) => (
-                        <span key={participant.userId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                          {participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                      {candidate && (
+                        <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
+                        </button>
+                      )}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
-                    <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
-                      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
-                    </button>
-                    {candidate && (
-                      <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
-                      </button>
-                    )}
-                    {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                      <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
-                      </button>
-                    )}
-                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
-                      <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
-                      </button>
-                    )}
-                    {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
-                      <InterviewActionMenu
-                        interview={interview}
-                        role={role}
-                        now={now}
-                        onStart={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
-                        onNoShow={() => requestInterviewStatusChange(interview, 'NO_SHOW')}
-                        onCancel={() => requestInterviewStatusChange(interview, 'CANCELLED')}
-                      />
-                    )}
-                    {isAssignedInterviewer && interview.status === 'COMPLETED' && (
-                      <span className="ml-auto text-[10px] font-bold text-slate-400">Completed</span>
-                    )}
-                  </div>
+                      {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                        <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
+                          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
+                        </button>
+                      )}
+
+                      {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
+                        <InterviewActionMenu
+                          interview={interview}
+                          role={role}
+                          now={now}
+                          onStart={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}
+                          onNoShow={() => requestInterviewStatusChange(interview, 'NO_SHOW')}
+                          onCancel={() => requestInterviewStatusChange(interview, 'CANCELLED')}
+                        />
+                      )}
+                    </div>
+                  </footer>
                 </div>
-
-
               </Card>
             );
           })}
@@ -1615,7 +1697,7 @@ export const InterviewsPage = ({ role }: Props) => {
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
                             </button>
                           )}
-                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && (
+                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
                             <InterviewActionMenu
                               interview={interview}
                               role={role}
