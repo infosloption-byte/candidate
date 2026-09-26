@@ -9,6 +9,7 @@ import {
   type DocumentUploadInput,
 } from '../domain/documentValidation.js';
 import { deleteDocument, readDocument, saveDocument } from '../lib/documentStorage.js';
+import { getCandidateDisplayName } from '../domain/candidateDisplay.js';
 
 interface CandidateParams {
   candidateId: string;
@@ -93,7 +94,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true, name: true },
+        select: { id: true, agencyId: true, firstName: true, lastName: true },
       });
 
       if (!candidate) {
@@ -153,7 +154,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
           action: 'CANDIDATE_DOCUMENT_UPLOADED',
           entityType: 'CandidateDocument',
           entityId: document.id,
-          summary: 'Uploaded "' + document.originalName + '" for candidate "' + candidate.name + '".',
+          summary: 'Uploaded "' + document.originalName + '" for candidate "' + getCandidateDisplayName(candidate) + '".',
         });
 
         return reply.code(201).send({ success: true, data: document });
@@ -232,7 +233,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: document.candidateId },
-        select: { agencyId: true, name: true },
+        select: { agencyId: true, firstName: true, lastName: true },
       });
 
       if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
@@ -251,7 +252,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_DOCUMENT_DELETED',
         entityType: 'CandidateDocument',
         entityId: document.id,
-        summary: 'Deleted "' + document.originalName + '" from candidate "' + candidate.name + '".',
+        summary: 'Deleted "' + document.originalName + '" from candidate "' + getCandidateDisplayName(candidate) + '".',
       });
 
       return reply.code(204).send();
