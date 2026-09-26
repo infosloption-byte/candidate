@@ -1021,7 +1021,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
           const requiredPanelSize = updated.panel?.length ?? updated.panelUserIds.length;
           const completed = allEvaluations.filter((item) => item.status === 'SUBMITTED').length >= requiredPanelSize;
           mergeInterview({ ...updated, status: completed ? 'COMPLETED' : 'IN_PROGRESS', completedAt: completed ? submittedAt : updated.completedAt, evaluations: allEvaluations });
-          closeAfterSubmit = completed;
+          closeAfterSubmit = false;
         }
         setEvaluationStatus('SUBMITTED');
       } else {
