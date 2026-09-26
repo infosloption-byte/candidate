@@ -17,7 +17,7 @@ import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsM
 import { CriterionResponseField } from './CriterionResponseField';
 import { InterviewActionMenu } from './InterviewActionMenu';
 import { CandidateMultiSelect } from './CandidateMultiSelect';
-import { apiFetch } from '../../shared/lib/api';
+import { ApiError, apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
 
 interface Props {
@@ -860,8 +860,24 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
       let current = interview;
       if (current.status === 'SCHEDULED') {
-        current = await apiFetch<InterviewRecord>('/interviews/' + interview.id + '/start', { method: 'POST' });
-        mergeInterview(current);
+        try {
+          current = await apiFetch<InterviewRecord>('/interviews/' + interview.id + '/start', { method: 'POST' });
+          mergeInterview(current);
+        } catch (requestError: unknown) {
+          const alreadyInProgress =
+            requestError instanceof ApiError &&
+            requestError.status === 409 &&
+            requestError.code === 'INTERVIEW_NOT_STARTABLE' &&
+            requestError.message.toLowerCase().includes('currently in progress');
+
+          if (!alreadyInProgress) throw requestError;
+
+          // Another assigned interviewer may have already started the shared panel session.
+          // Refresh the interview/evaluation instead of blocking the second interviewer.
+          current = (await apiFetch<InterviewRecord>('/interviews/' + interview.id)).status === 'IN_PROGRESS'
+            ? interview
+            : current;
+        }
       }
       const result = await apiFetch<{
         interview: InterviewRecord;
