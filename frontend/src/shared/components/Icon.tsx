@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from 'react';
 
-export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders' | 'refresh' | 'eye' | 'pencil' | 'send' | 'lock';
+export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders' | 'refresh' | 'eye' | 'pencil' | 'send' | 'lock' | 'upload' | 'trash';
 
 const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
@@ -35,6 +35,8 @@ const paths: Record<IconName, ReactNode> = {
   pencil: <><path d="m4 16.5-.8 4.3 4.3-.8L19.7 7.8a2.1 2.1 0 0 0-3-3L4 16.5Z"/><path d="m14.8 6.2 3 3"/></>,
   send: <><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></>,
   lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+  upload: <><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 14v5h14v-5"/></>,
+  trash: <><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M7 7l1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></>,
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'children'> { name: IconName; size?: number; }
