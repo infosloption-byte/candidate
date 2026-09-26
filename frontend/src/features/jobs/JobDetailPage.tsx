@@ -100,11 +100,30 @@ const toJobDetailFromState = (job: Job, memberships: JobCandidate[], interviews:
   };
 };
 
+const normalizeCriteriaGroupName = (value: string): string => value.trim().toLowerCase().replace(/\\s+/g, ' ');
+
+const orderCriteriaGroups = (groups: InterviewCriterionGroup[]): InterviewCriterionGroup[] => {
+  const priority = ['personal', 'experience', 'skills and capabilities'];
+  return groups
+    .map((group, index) => ({ group, index }))
+    .sort((left, right) => {
+      const leftPriority = priority.indexOf(normalizeCriteriaGroupName(left.group.name));
+      const rightPriority = priority.indexOf(normalizeCriteriaGroupName(right.group.name));
+      const normalizedLeftPriority = leftPriority === -1 ? priority.length : leftPriority;
+      const normalizedRightPriority = rightPriority === -1 ? priority.length : rightPriority;
+      if (normalizedLeftPriority !== normalizedRightPriority) return normalizedLeftPriority - normalizedRightPriority;
+      return left.index - right.index;
+    })
+    .map(({ group }) => group);
+};
+
 const buildAssignments = (groups: InterviewCriterionGroup[], selectedIds: string[]): InterviewCriterionAssignment[] => {
   let sortOrder = 0;
   const result: InterviewCriterionAssignment[] = [];
   const seen = new Set<string>();
-  for (const group of groups.filter((item) => selectedIds.includes(item.id))) {
+  for (const groupId of selectedIds) {
+    const group = groups.find((item) => item.id === groupId);
+    if (!group) continue;
     for (const item of group.criteria) {
       if (seen.has(item.criterionId)) continue;
       seen.add(item.criterionId);
@@ -125,6 +144,8 @@ const buildAssignments = (groups: InterviewCriterionGroup[], selectedIds: string
   }
   return result;
 };
+
+
 
 export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const { user, developmentMode } = useAuth();
@@ -372,8 +393,9 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     setScheduleForm({ ...defaultInterview, scheduledAt: toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)), location: job.location ?? '' });
     try {
       if (developmentMode) {
-        const groups = state.interviewCriterionGroups.filter((item) => item.active);
+        const groups = orderCriteriaGroups(state.interviewCriterionGroups.filter((item) => item.active));
         setCriteriaGroups(groups);
+        setSelectedCriteriaGroups(groups.map((item) => item.id));
         const agencyIds = [...new Set(job.candidatePool.map((item) => item.candidate.agencyId))];
         setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && (item.agencyId === null || agencyIds.includes(item.agencyId))));
       } else {
@@ -382,8 +404,10 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
           apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
           ...agencyIds.map((agencyId) => apiFetch<User[]>('/interviewers?agencyId=' + encodeURIComponent(agencyId))),
         ]);
+        const activeGroups = orderCriteriaGroups(groups.filter((item) => item.active));
         const uniqueInterviewers = [...new Map(interviewerResults.flat().map((item) => [item.id, item])).values()];
-        setCriteriaGroups(groups.filter((item) => item.active));
+        setCriteriaGroups(activeGroups);
+        setSelectedCriteriaGroups(activeGroups.map((item) => item.id));
         setInterviewers(uniqueInterviewers.filter((item) => item.active));
       }
       setScheduleModal(true);
@@ -422,7 +446,10 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
             panelUserIds: selectedInterviewers,
             criterionGroupId: selectedCriteriaGroups[0] ?? null,
             criterionGroupIds: selectedCriteriaGroups,
-            criterionGroups: criteriaGroups.filter((group) => selectedCriteriaGroups.includes(group.id)).map((group, index) => ({ ...group, sortOrder: index })),
+            criterionGroups: selectedCriteriaGroups
+              .map((groupId) => criteriaGroups.find((group) => group.id === groupId))
+              .filter((group): group is InterviewCriterionGroup => Boolean(group))
+              .map((group, index) => ({ ...group, sortOrder: index })),
             criterionAssignments: assignments,
             candidate,
           };
@@ -523,6 +550,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       interview.location ?? '',
       interview.notes ?? '',
       new Date(interview.scheduledAt).toLocaleString(),
+      ...(interview.panel ?? []).flatMap((panel) => [panel.user.name, panel.user.email]),
     ].some((value) => value.toLowerCase().includes(query));
   });
   const interviewPageCount = Math.max(1, Math.ceil(filteredInterviews.length / INTERVIEW_PAGE_SIZE));
@@ -662,7 +690,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                 className="field-input pl-9"
                 value={interviewSearch}
                 onChange={(event) => setInterviewSearch(event.target.value)}
-                placeholder="Search interviews by candidate, passport, status, type…"
+                placeholder="Search candidate, passport, interviewer, status, type, location…"
                 aria-label="Search job interviews"
               />
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
@@ -781,7 +809,59 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
 
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <div><p className="field-label">Interviewers</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{interviewers.length ? interviewers.map((item) => { const checked = selectedInterviewers.includes(item.id); return <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input type="checkbox" checked={checked} onChange={() => setSelectedInterviewers((current) => checked ? current.filter((id) => id !== item.id) : [...current, item.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this job's candidate agencies.</p>}</div></div>
-                <div><p className="field-label">Criteria groups</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{criteriaGroups.length ? criteriaGroups.map((group) => { const checked = selectedCriteriaGroups.includes(group.id); return <label key={group.id} className="flex cursor-pointer items-start gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input className="mt-0.5" type="checkbox" checked={checked} onChange={() => setSelectedCriteriaGroups((current) => checked ? current.filter((id) => id !== group.id) : [...current, group.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{group.name}</span><span className="block text-[10px] text-slate-400">{group.criteria.length} criteria</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active criteria groups are available.</p>}</div></div>
+                <div>
+                  <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
+                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                      {selectedCriteriaGroups.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
+                          {selectedCriteriaGroups.map((groupId, index) => {
+                            const group = criteriaGroups.find((item) => item.id === groupId);
+                            if (!group) return null;
+                            const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                            return (
+                              <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
+                                <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-extrabold text-slate-800">{group.name}</p>
+                                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
+                                </div>
+                                <button type="button" title="Move group up" aria-label={`Move ${group.name} up`} disabled={index === 0} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
+                                <button type="button" title="Move group down" aria-label={`Move ${group.name} down`} disabled={index === selectedCriteriaGroups.length - 1} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
+                                <button type="button" title="Remove group" aria-label={`Remove ${group.name}`} onClick={() => setSelectedCriteriaGroups((current) => current.filter((id) => id !== group.id))} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
+                        {criteriaGroups.length ? (
+                          <div className="grid gap-2">
+                            {orderCriteriaGroups(criteriaGroups).filter((group) => !selectedCriteriaGroups.includes(group.id)).map((group) => (
+                              <button
+                                key={group.id}
+                                type="button"
+                                onClick={() => setSelectedCriteriaGroups((current) => [...current, group.id])}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-xs font-extrabold text-slate-800">{group.name}</span>
+                                  <span className="mt-0.5 block truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
+                                </span>
+                                <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-1.5 text-[10px] font-bold text-slate-400">{selectedCriteriaGroups.length} group(s) selected</p>
+                  </FormField>
+                </div>
               </div>
             </div>
             <footer className="shrink-0 border-t border-slate-200 bg-slate-50/70 px-5 py-3"><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setScheduleModal(false)}>Cancel</Button><Button disabled={scheduleSaving} onClick={() => void scheduleInterviews()}>{scheduleSaving ? 'Scheduling…' : 'Schedule interview'}</Button></div></footer>
