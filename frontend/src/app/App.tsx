@@ -7,6 +7,7 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { JobsPage } from '../features/jobs/JobsPage';
+import { JobDetailPage } from '../features/jobs/JobDetailPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
 import { InterviewsPage } from '../features/interviews/InterviewsPage';
 import { AgenciesPage } from '../features/agencies/AgenciesPage';
@@ -68,9 +69,11 @@ const AuthenticatedApp = ({
   onLogout,
 }: AuthenticatedAppProps) => {
   const [activeView, setActiveView] = useState<AppView>(roleDefaults[role]);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveView(roleDefaults[role]);
+    setActiveJobId(null);
   }, [role]);
 
   const changeRole = (nextRole: UserRole) => {
@@ -78,13 +81,29 @@ const AuthenticatedApp = ({
     onDevelopmentRoleChange(nextRole);
   };
 
+  const navigate = (view: AppView, jobId: string | null = null) => {
+    setActiveView(view);
+    setActiveJobId(jobId);
+  };
+
   const content = (() => {
     switch (activeView) {
       case 'calendar': return <CalendarPage role={role} />;
       case 'reports': return <ReportsPage role={role} />;
-      case 'jobs': return <JobsPage role={role} />;
-      case 'candidates': return <CandidatesPage role={role} />;
-      case 'interviews': return <InterviewsPage role={role} />;
+      case 'jobs':
+        return <JobsPage role={role} onOpenJob={(jobId) => navigate('job-detail', jobId)} />;
+      case 'job-detail':
+        return <JobDetailPage
+          role={role}
+          jobId={activeJobId}
+          onBack={() => navigate('jobs')}
+          onCandidates={(jobId) => navigate('candidates', jobId)}
+          onInterviews={(jobId) => navigate('interviews', jobId)}
+        />;
+      case 'candidates':
+        return <CandidatesPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
+      case 'interviews':
+        return <InterviewsPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
       case 'agencies': return <AgenciesPage />;
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
@@ -98,7 +117,7 @@ const AuthenticatedApp = ({
       <AppShell
         role={role}
         activeView={activeView}
-        onNavigate={setActiveView}
+        onNavigate={(view) => navigate(view)}
         onRoleChange={changeRole}
         onLogout={onLogout}
         user={user}
