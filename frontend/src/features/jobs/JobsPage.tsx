@@ -182,12 +182,13 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         return;
       }
 
+      const draftId = 'job-' + Date.now();
       const draft: Job = {
-        id: 'job-' + Date.now(),
+        id: draftId,
         agencyId: null,
         positions: normalizedPositions.map((item, index) => ({
-          id: 'job-position-' + Date.now() + '-' + index,
-          jobId: 'job-' + Date.now(),
+          id: 'job-position-' + draftId + '-' + index,
+          jobId: draftId,
           position: item.position,
           requiredCount: item.requiredCount,
           sortOrder: index,
