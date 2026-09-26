@@ -852,27 +852,18 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
             <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate</p><h2 className="mt-1 text-lg font-black text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Create a candidate and place them directly into this job pool.</p></div><button type="button" className="grid size-9 place-items-center rounded-xl text-xl text-slate-400 hover:bg-slate-100" onClick={() => setCandidateModal(false)} aria-label="Close">×</button></div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
-                  <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
-                </FormField>
+                <FormField label="Job / position"><SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled /></FormField>
               </div>
               {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
-              <FormField label="Full name"><input className="field-input" value={candidateForm.name} onChange={(e) => setCandidateForm({ ...candidateForm, name: e.target.value })} /></FormField>
-              <FormField label="Birthdate"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
-              <FormField label="Country / nationality"><input className="field-input" value={candidateForm.country} onChange={(e) => setCandidateForm({ ...candidateForm, country: e.target.value })} /></FormField>
-              <FormField label="Contact number"><input className="field-input" value={candidateForm.phone} onChange={(e) => setCandidateForm({ ...candidateForm, phone: e.target.value })} /></FormField>
-              <FormField label="Alternate contact number"><input className="field-input" value={candidateForm.alternatePhone} onChange={(e) => setCandidateForm({ ...candidateForm, alternatePhone: e.target.value })} /></FormField>
-              <FormField label="Email"><input type="email" className="field-input" value={candidateForm.email} onChange={(e) => setCandidateForm({ ...candidateForm, email: e.target.value })} /></FormField>
+              <FormField label="Agency Register No"><input className="field-input" value={candidateForm.agencyRegisterNo} onChange={(e) => setCandidateForm({ ...candidateForm, agencyRegisterNo: e.target.value })} /></FormField>
+              <FormField label="First name"><input className="field-input" value={candidateForm.firstName} onChange={(e) => setCandidateForm({ ...candidateForm, firstName: e.target.value })} /></FormField>
+              <FormField label="Last name"><input className="field-input" value={candidateForm.lastName} onChange={(e) => setCandidateForm({ ...candidateForm, lastName: e.target.value })} /></FormField>
+              <FormField label="Birth date"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
               <FormField label="Passport number"><input className="field-input" value={candidateForm.passportNumber} onChange={(e) => setCandidateForm({ ...candidateForm, passportNumber: e.target.value })} /></FormField>
               <FormField label="Passport expiry"><input type="date" className="field-input" value={candidateForm.passportExpiry} onChange={(e) => setCandidateForm({ ...candidateForm, passportExpiry: e.target.value })} /></FormField>
-              <FormField label="Current location"><input className="field-input" value={candidateForm.currentLocation} onChange={(e) => setCandidateForm({ ...candidateForm, currentLocation: e.target.value })} /></FormField>
-              <FormField label="Availability"><input className="field-input" value={candidateForm.availability} onChange={(e) => setCandidateForm({ ...candidateForm, availability: e.target.value })} /></FormField>
-              <FormField label="Visa / work status"><input className="field-input" value={candidateForm.visaStatus} onChange={(e) => setCandidateForm({ ...candidateForm, visaStatus: e.target.value })} /></FormField>
-              <FormField label="Profession"><input className="field-input" value={candidateForm.profession} onChange={(e) => setCandidateForm({ ...candidateForm, profession: e.target.value })} /></FormField>
-              <FormField label="Experience years"><input type="number" min="0" className="field-input" value={candidateForm.experienceYears} onChange={(e) => setCandidateForm({ ...candidateForm, experienceYears: e.target.value })} /></FormField>
-              <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={candidateForm.skills} onChange={(e) => setCandidateForm({ ...candidateForm, skills: e.target.value })} /></FormField></div>
+              <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={candidateForm.requestedProfession} onChange={(e) => setCandidateForm({ ...candidateForm, requestedProfession: e.target.value })} /></FormField></div>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.name.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
+<div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
           </div>
         </div>
       )}
