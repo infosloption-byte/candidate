@@ -41,6 +41,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const [sortBy, setSortBy] = useState<'created' | 'title' | 'openings' | 'filled' | 'interviews'>('created');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [listView, setListView] = useState<'cards' | 'table'>('cards');
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [jobPage, setJobPage] = useState(1);
 
   const formModalOpen = showForm && role !== 'INTERVIEWEE';
@@ -511,7 +513,20 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             />
           </div>
 
-          <div className="min-w-0">
+          <button
+            type="button"
+            className="flex min-h-10 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm md:hidden"
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="mobile-job-filters"
+            onClick={() => setMobileFiltersOpen((value) => !value)}
+          >
+            <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+            </svg>
+          </button>
+
+          <div id="mobile-job-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Status</label>
             <SelectMenu
               value={statusFilter}
@@ -522,7 +537,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             />
           </div>
 
-          <div className="min-w-0">
+          <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
             <label className="field-label">Sort</label>
             <div className="mt-1 flex min-w-0 gap-1.5">
               <SelectMenu
@@ -553,47 +568,120 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               </button>
             </div>
           </div>
+        </div>
 
-          <div className="min-w-0">
-            <label className="field-label">View</label>
-            <div className="mt-1 inline-flex h-10 w-full items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
+        {showAdvancedFilters && (
+          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="field-label">Status</label>
+                <SelectMenu
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={jobStatusOptions}
+                  ariaLabel="Filter jobs by status"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="field-label">Sort by</label>
+                <SelectMenu
+                  value={sortBy}
+                  onChange={(value) => setSortBy(value as typeof sortBy)}
+                  options={[
+                    { value: 'created', label: 'Latest' },
+                    { value: 'title', label: 'Title' },
+                    { value: 'openings', label: 'Required workers' },
+                    { value: 'filled', label: 'Filled workers' },
+                    { value: 'interviews', label: 'Interviews' },
+                  ]}
+                  ariaLabel="Sort jobs by"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                  onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+                >
+                  {sortDirection === 'asc' ? 'Ascending' : 'Descending'} order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
+            <button
+              type="button"
+              title={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
+              aria-label={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
+              className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+              onClick={() => setShowAdvancedFilters((value) => !value)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M4 6h16M7 12h10M10 18h4" />
+              </svg>
+            </button>
+            <span className="text-[10px] font-bold text-slate-400">
+              {showAdvancedFilters ? 'Advanced filters' : 'More filters'}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visibleJobs.length}</span> job(s)</p>
+
+            {(search || statusFilter) && (
               <button
                 type="button"
+                title="Clear filters"
+                aria-label="Clear filters"
+                className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('');
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M3 6h18M6 12h12M10 18h4" />
+                  <path d="M7 6l1-2h8l1 2" />
+                </svg>
+              </button>
+            )}
+
+            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Job list view">
+              <button
+                type="button"
+                aria-label="Card view"
                 aria-pressed={listView === 'cards'}
-                className={`flex h-8 flex-1 items-center justify-center rounded-lg text-xs font-bold transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                title="Card view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 onClick={() => setListView('cards')}
               >
-                Cards
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="4" y="4" width="6" height="6" rx="1" />
+                  <rect x="14" y="4" width="6" height="6" rx="1" />
+                  <rect x="4" y="14" width="6" height="6" rx="1" />
+                  <rect x="14" y="14" width="6" height="6" rx="1" />
+                </svg>
               </button>
               <button
                 type="button"
+                aria-label="Table view"
                 aria-pressed={listView === 'table'}
-                className={`flex h-8 flex-1 items-center justify-center rounded-lg text-xs font-bold transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                title="Table view"
+                className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 onClick={() => setListView('table')}
               >
-                Table
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="4" y="5" width="16" height="14" rx="1" />
+                  <path d="M4 10h16M10 5v14" />
+                </svg>
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">
-            <span className="font-black text-slate-800">{visibleJobs.length}</span> job(s)
-          </p>
-
-          {(search || statusFilter) && (
-            <button
-              type="button"
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50"
-              onClick={() => {
-                setSearch('');
-                setStatusFilter('');
-              }}
-            >
-              Clear filters
-            </button>
-          )}
         </div>
       </div>
 
