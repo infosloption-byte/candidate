@@ -18,20 +18,13 @@ const interviewInclude = {
       id: true,
       agencyId: true,
       reference: true,
-      name: true,
+      agencyRegisterNo: true,
+      firstName: true,
+      lastName: true,
       birthdate: true,
-      email: true,
-      phone: true,
-      alternatePhone: true,
-      country: true,
       passportNumber: true,
       passportExpiry: true,
-      currentLocation: true,
-      availability: true,
-      visaStatus: true,
-      profession: true,
-      experienceYears: true,
-      skills: true,
+      requestedProfession: true,
       onboardingStatus: true,
       source: true,
       status: true,
@@ -520,7 +513,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true, name: true, status: true },
+        select: { id: true, agencyId: true, firstName: true, lastName: true, status: true },
       });
       if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
