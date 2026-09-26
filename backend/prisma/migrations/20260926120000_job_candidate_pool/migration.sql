@@ -16,46 +16,49 @@ CREATE TABLE `JobCandidate` (
   CONSTRAINT `JobCandidate_candidateId_fkey` FOREIGN KEY (`candidateId`) REFERENCES `Candidate`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Preserve the job context already present on historical interviews.
+-- Preserve job membership that can already be inferred from historical interviews.
 INSERT INTO `JobCandidate` (
   `id`, `jobId`, `candidateId`, `status`, `statusUpdatedAt`, `createdAt`, `updatedAt`
 )
 SELECT
-  LOWER(CONCAT(
-    HEX(RANDOM_BYTES(4)), '-',
-    HEX(RANDOM_BYTES(2)), '-',
-    HEX(RANDOM_BYTES(2)), '-',
-    HEX(RANDOM_BYTES(2)), '-',
-    HEX(RANDOM_BYTES(6))
-  )),
-  source.`jobId`,
-  source.`candidateId`,
-  source.`status`,
+  UUID(),
+  i.`jobId`,
+  i.`candidateId`,
+  'POOL',
   CURRENT_TIMESTAMP(3),
   CURRENT_TIMESTAMP(3),
   CURRENT_TIMESTAMP(3)
-FROM (
-  SELECT
-    i.`jobId`,
-    i.`candidateId`,
-    CASE
-      WHEN c.`status` = 'HIRED' THEN 'HIRED'
-      WHEN c.`status` = 'PASSED' THEN 'PASSED'
-      WHEN c.`status` = 'REJECTED' THEN 'REJECTED'
-      WHEN i.`status` IN ('SCHEDULED', 'IN_PROGRESS') THEN 'INTERVIEW_SCHEDULED'
-      WHEN i.`status` = 'COMPLETED' THEN 'INTERVIEW_COMPLETED'
-      WHEN i.`status` = 'NO_SHOW' THEN 'ON_HOLD'
-      ELSE 'READY_FOR_INTERVIEW'
-    END AS `status`
-  FROM `Interview` i
-  INNER JOIN `Candidate` c ON c.`id` = i.`candidateId`
-  WHERE i.`jobId` IS NOT NULL
-  GROUP BY i.`jobId`, i.`candidateId`, c.`status`, i.`status`
-  ORDER BY i.`jobId`, i.`candidateId`, MAX(i.`scheduledAt`) DESC
-) AS source
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM `JobCandidate` jc
-  WHERE jc.`jobId` = source.`jobId`
-    AND jc.`candidateId` = source.`candidateId`
-);
+FROM `Interview` i
+WHERE i.`jobId` IS NOT NULL
+GROUP BY i.`jobId`, i.`candidateId`;
+
+-- Set the membership status from the most recent interview/candidate state.
+UPDATE `JobCandidate` jc
+INNER JOIN (
+  SELECT latest.`jobId`, latest.`candidateId`, latest.`interviewStatus`, c.`status` AS `candidateStatus`
+  FROM `Interview` latest
+  INNER JOIN `Candidate` c ON c.`id` = latest.`candidateId`
+  INNER JOIN (
+    SELECT `jobId`, `candidateId`, MAX(`scheduledAt`) AS `maxScheduledAt`
+    FROM `Interview`
+    WHERE `jobId` IS NOT NULL
+    GROUP BY `jobId`, `candidateId`
+  ) latestSlot
+    ON latestSlot.`jobId` = latest.`jobId`
+    AND latestSlot.`candidateId` = latest.`candidateId`
+    AND latestSlot.`maxScheduledAt` = latest.`scheduledAt`
+) latest
+  ON latest.`jobId` = jc.`jobId`
+  AND latest.`candidateId` = jc.`candidateId`
+SET
+  jc.`status` = CASE
+    WHEN latest.`candidateStatus` = 'HIRED' THEN 'HIRED'
+    WHEN latest.`candidateStatus` = 'PASSED' THEN 'PASSED'
+    WHEN latest.`candidateStatus` = 'REJECTED' THEN 'REJECTED'
+    WHEN latest.`interviewStatus` IN ('SCHEDULED', 'IN_PROGRESS') THEN 'INTERVIEW_SCHEDULED'
+    WHEN latest.`interviewStatus` = 'COMPLETED' THEN 'INTERVIEW_COMPLETED'
+    WHEN latest.`interviewStatus` = 'NO_SHOW' THEN 'ON_HOLD'
+    ELSE 'READY_FOR_INTERVIEW'
+  END,
+  jc.`statusUpdatedAt` = CURRENT_TIMESTAMP(3),
+  jc.`updatedAt` = CURRENT_TIMESTAMP(3);
