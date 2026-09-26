@@ -49,7 +49,7 @@ export const CandidateMultiSelect = ({
     if (editingCandidateId && candidate.id === editingCandidateId) return false;
     if (selectedSet.has(candidate.id)) return false;
     if (!query) return true;
-    return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.profession ?? '', candidate.email ?? '', candidate.phone ?? '']
+    return [candidate.name, candidate.reference, candidate.passportNumber ?? '', candidate.requestedProfession ?? '', candidate.email ?? '', candidate.phone ?? '']
       .some((value) => value.toLowerCase().includes(query));
   }), [activeAgencyId, candidates, editingCandidateId, query, selectedSet]);
 
@@ -121,7 +121,7 @@ export const CandidateMultiSelect = ({
                 <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-cyan-700">+</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-bold text-slate-800">{candidate.name}</span>
-                  <span className="block truncate text-[10px] text-slate-400">{candidate.reference} · {candidate.profession ?? 'Profession not set'}</span>
+                  <span className="block truncate text-[10px] text-slate-400">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'}</span>
                 </span>
               </button>
             ))}
