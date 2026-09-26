@@ -9,6 +9,7 @@ import { createNotifications, notifyCandidateAccount } from '../lib/notification
 
 interface InterviewParams { id: string; }
 interface CandidateInterviewParams { candidateId: string; }
+interface InterviewListQuery { jobId?: string; }
 
 const interviewInclude = {
   candidate: {
@@ -241,17 +242,23 @@ const addCandidateStatusHistory = async (
 };
 
 export const interviewRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/interviews', { preHandler: requireAuth }, async (request, reply) => {
+  app.get<{ Querystring: InterviewListQuery }>('/interviews', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
 
     const interviews = await getPrisma().interview.findMany({
       where: user.role === 'ADMIN'
-        ? undefined
+        ? (request.query.jobId ? { jobId: request.query.jobId } : undefined)
         : user.role === 'INTERVIEWER'
-          ? { panel: { some: { userId: user.id } } }
+          ? { panel: { some: { userId: user.id } }, ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
           : user.role === 'INTERVIEWEE'
-            ? { candidateId: user.candidateId ?? '__missing__' }
-            : { candidate: { agencyId: user.agencyId ?? '__missing__' } },
+            ? { candidateId: user.candidateId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+            : {
+                ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
+                OR: [
+                  { candidate: { agencyId: user.agencyId ?? '__missing__' } },
+                  { job: { agencyId: user.agencyId ?? '__missing__' } },
+                ],
+              },
       include: {
         ...interviewInclude,
         evaluations: {
@@ -286,7 +293,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     const user = request.authUser!;
     const allowed =
       user.role === 'ADMIN'
-      || (user.role === 'AGENCY' && user.agencyId === interview.candidate.agencyId)
+      || (user.role === 'AGENCY' && (user.agencyId === interview.candidate.agencyId || user.agencyId === interview.job?.agencyId))
       || (user.role === 'INTERVIEWER' && interview.panel.some((item) => item.userId === user.id))
       || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidate.id);
 
@@ -366,21 +373,35 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      let job: { id: string; agencyId: string; title: string; location: string | null } | null = null;
-      if (request.body.jobId) {
-        job = await getPrisma().job.findUnique({
-          where: { id: request.body.jobId },
-          select: { id: true, agencyId: true, title: true, location: true },
+      if (!request.body.jobId) {
+        return reply.code(400).send({ success: false, error: { code: 'JOB_REQUIRED', message: 'Select a job before scheduling an interview.' } });
+      }
+
+      const job = await getPrisma().job.findUnique({
+        where: { id: request.body.jobId },
+        select: { id: true, agencyId: true, title: true, location: true, openings: true, status: true },
+      });
+      if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (job.status === 'CLOSED') return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Interviews cannot be scheduled for a closed job.' } });
+      if (!canManage(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule interviews for this job.' } });
+      }
+
+      const memberships = await getPrisma().jobCandidate.findMany({
+        where: { jobId: job.id, candidateId: { in: candidateIds } },
+        select: { candidateId: true, status: true },
+      });
+      const membershipIds = new Set(memberships.map((item) => item.candidateId));
+      const missingCandidates = candidateIds.filter((candidateId) => !membershipIds.has(candidateId));
+      if (missingCandidates.length) {
+        return reply.code(409).send({
+          success: false,
+          error: { code: 'CANDIDATES_NOT_IN_JOB_POOL', message: 'One or more selected candidates are not in the selected job pool.', candidateIds: missingCandidates },
         });
-        if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-        if (candidateAgencyIds.length > 1) {
-          return reply.code(409).send({ success: false, error: { code: 'JOB_NOT_SUPPORTED_FOR_MULTI_AGENCY', message: 'A single job / position cannot be applied when candidates belong to multiple agencies.' } });
-        }
-        if (job.agencyId !== candidateAgencyIds[0]) return reply.code(409).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'The selected job does not belong to the candidate agency.' } });
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, candidateAgencyIds);
+      const interviewers = await getInterviewers(interviewerIds, [job.agencyId]);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
@@ -443,6 +464,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           });
           await tx.candidate.update({
             where: { id: candidate.id },
+            data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
+          });
+          await tx.jobCandidate.update({
+            where: { jobId_candidateId: { jobId: job.id, candidateId: candidate.id } },
             data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
           });
           await addCandidateStatusHistory(
@@ -510,18 +535,30 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'CANDIDATE_NOT_AVAILABLE', message: 'A candidate with a final or inactive status cannot be scheduled for a new interview.' } });
       }
 
-      let job: { id: string; agencyId: string; title: string; location: string | null } | null = null;
-      if (request.body.jobId) {
-        job = await getPrisma().job.findUnique({
-          where: { id: request.body.jobId },
-          select: { id: true, agencyId: true, title: true, location: true },
-        });
-        if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-        if (job.agencyId !== candidate.agencyId) return reply.code(409).send({ success: false, error: { code: 'AGENCY_MISMATCH', message: 'The selected job does not belong to the candidate agency.' } });
+      if (!request.body.jobId) {
+        return reply.code(400).send({ success: false, error: { code: 'JOB_REQUIRED', message: 'Select a job before scheduling an interview.' } });
+      }
+
+      const job = await getPrisma().job.findUnique({
+        where: { id: request.body.jobId },
+        select: { id: true, agencyId: true, title: true, location: true, openings: true, status: true },
+      });
+      if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (job.status === 'CLOSED') return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Interviews cannot be scheduled for a closed job.' } });
+      if (!canManage(request.authUser!.role, request.authUser!.agencyId, job.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to schedule interviews for this job.' } });
+      }
+
+      const membership = await getPrisma().jobCandidate.findUnique({
+        where: { jobId_candidateId: { jobId: job.id, candidateId: candidate.id } },
+        select: { status: true },
+      });
+      if (!membership) {
+        return reply.code(409).send({ success: false, error: { code: 'CANDIDATE_NOT_IN_JOB_POOL', message: 'The candidate is not part of the selected job pool.' } });
       }
 
       const interviewerIds = [...new Set(request.body.interviewerIds!)];
-      const interviewers = await getInterviewers(interviewerIds, [candidate.agencyId]);
+      const interviewers = await getInterviewers(interviewerIds, [job.agencyId]);
       if (interviewers.length !== interviewerIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_PANEL', message: 'Every panel member must be an active interviewer assigned to the candidate agency or a global interviewer.' } });
       }
@@ -568,6 +605,10 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           where: { id: candidate.id },
           data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
           select: { status: true },
+        });
+        await tx.jobCandidate.update({
+          where: { jobId_candidateId: { jobId: job.id, candidateId: candidate.id } },
+          data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() },
         });
         await addCandidateStatusHistory(
           tx,
@@ -624,13 +665,14 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, name: true, status: true } },
+          job: { select: { id: true, agencyId: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
       const assignedInterviewer = user.role === 'INTERVIEWER' && existing.panel.some((participant) => participant.userId === user.id);
-      const managedByAgency = canManage(user.role, user.agencyId, existing.candidate.agencyId);
+      const managedByAgency = canManage(user.role, user.agencyId, existing.job?.agencyId ?? existing.candidate.agencyId);
       if (!assignedInterviewer && !managedByAgency) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to change this interview status.' } });
       }
@@ -653,6 +695,16 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (requestedStatus === 'NO_SHOW' && existing.candidate.status === 'INTERVIEW_SCHEDULED') {
           await tx.candidate.update({ where: { id: existing.candidateId }, data: { status: 'ON_HOLD', statusUpdatedAt: new Date() } });
           await addCandidateStatusHistory(tx, existing.candidateId, existing.candidate.status, 'ON_HOLD', 'Candidate was marked as a no-show for the interview.', user.id);
+        }
+
+        if (existing.jobId) {
+          await tx.jobCandidate.updateMany({
+            where: { jobId: existing.jobId, candidateId: existing.candidateId, status: { notIn: ['HIRED', 'PASSED', 'REJECTED'] } },
+            data: {
+              status: requestedStatus === 'CANCELLED' ? 'READY_FOR_INTERVIEW' : 'ON_HOLD',
+              statusUpdatedAt: new Date(),
+            },
+          });
         }
 
         return updated;
@@ -701,12 +753,13 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, name: true, status: true } },
+          job: { select: { id: true, agencyId: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
-      const agencyId = existing.candidate.agencyId;
+      const agencyId = existing.job?.agencyId ?? existing.candidate.agencyId;
       if (!canManage(request.authUser!.role, request.authUser!.agencyId, agencyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this interview.' } });
       }
@@ -793,6 +846,23 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         if (request.body.status === 'SCHEDULED' && existing.candidate.status !== 'INTERVIEW_SCHEDULED') {
           await tx.candidate.update({ where: { id: existing.candidateId }, data: { status: 'INTERVIEW_SCHEDULED', statusUpdatedAt: new Date() } });
           await addCandidateStatusHistory(tx, existing.candidateId, existing.candidate.status, 'INTERVIEW_SCHEDULED', 'Interview was rescheduled.', request.authUser!.id);
+        }
+
+        if (existing.jobId && request.body.status !== undefined) {
+          const jobCandidateStatus =
+            request.body.status === 'SCHEDULED'
+              ? 'INTERVIEW_SCHEDULED'
+              : request.body.status === 'CANCELLED'
+                ? 'READY_FOR_INTERVIEW'
+                : request.body.status === 'NO_SHOW'
+                  ? 'ON_HOLD'
+                  : null;
+          if (jobCandidateStatus) {
+            await tx.jobCandidate.updateMany({
+              where: { jobId: existing.jobId, candidateId: existing.candidateId, status: { notIn: ['HIRED', 'PASSED', 'REJECTED'] } },
+              data: { status: jobCandidateStatus, statusUpdatedAt: new Date() },
+            });
+          }
         }
 
         return updated;
