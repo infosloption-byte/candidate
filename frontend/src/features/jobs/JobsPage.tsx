@@ -681,8 +681,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
       {!loading && visibleJobs.length > 0 && (
         <Pagination
-          currentPage={activeJobPage}
-          totalPages={jobTotalPages}
+          page={activeJobPage}
+          pageSize={JOBS_PAGE_SIZE}
+          total={visibleJobs.length}
           onPageChange={setJobPage}
         />
       )}
