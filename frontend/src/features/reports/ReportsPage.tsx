@@ -213,26 +213,27 @@ export const ReportsPage = ({ role }: Props) => {
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeading
-          eyebrow="Business intelligence"
-          title="Reports & exports"
-          description={selectedJob ? 'Job-scoped operational reporting for ' + selectedJob.title + '.' : 'Operational statistics for candidate flow, jobs, interviews, evaluations and decisions.'}
-        />
-        <div className="flex flex-col gap-2 sm:flex-row print:hidden">
-          <div className="min-w-56">
-            <SelectMenu
-              value={selectedJobId}
-              onChange={setSelectedJobId}
-              options={[{ value: '', label: 'All jobs' }, ...jobs.map((job) => ({ value: job.id, label: job.title }))]}
-              ariaLabel="Filter reports by job"
-            />
-          </div>
-          <button onClick={() => downloadCsv(rows)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-black text-white"><Icon name="download" size={16} />Download CSV</button>
-          <button onClick={() => window.print()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-800"><Icon name="file" size={16} />Print / Save PDF</button>
+        <div className="min-w-0 flex-1">
+          <SectionHeading
+            eyebrow="Business intelligence"
+            title="Reports & exports"
+            description={selectedJob ? 'Job-scoped operational reporting for ' + selectedJob.title + '.' : 'Operational statistics for candidate flow, jobs, interviews, evaluations and decisions.'}
+          />
+        </div>
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 print:hidden sm:w-auto">
+          <SelectMenu
+            value={selectedJobId}
+            onChange={setSelectedJobId}
+            options={[{ value: '', label: 'All jobs' }, ...jobs.map((job) => ({ value: job.id, label: job.title }))]}
+            ariaLabel="Filter reports by job"
+            className="min-w-0 sm:w-56"
+          />
+          <button type="button" onClick={() => downloadCsv(rows)} className="grid size-11 place-items-center rounded-xl bg-slate-950 text-white shadow-sm transition hover:bg-slate-800" title="Download CSV" aria-label="Download CSV"><Icon name="download" size={17} /></button>
+          <button type="button" onClick={() => window.print()} className="grid size-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50" title="Print / Save PDF" aria-label="Print / Save PDF"><Icon name="file" size={17} /></button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[['Candidates', data.counts.candidates], ['Jobs', data.counts.jobs], ['Interviews', data.counts.interviews], ['Completion', completion + '%'], ['Finalised', finalised]].map(([label, value]) => (
           <Card key={String(label)}>
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
@@ -289,10 +290,19 @@ export const ReportsPage = ({ role }: Props) => {
 
       <Card>
         <div className="flex items-end justify-between gap-3">
-          <div><h2 className="text-base font-black text-slate-950">Recent interviews</h2><p className="mt-1 text-xs text-slate-400">Job context is included so interview activity can be traced back to the hiring request.</p></div>
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{data.recentInterviews.length} shown</span>
+          <div className="min-w-0"><h2 className="text-base font-black text-slate-950">Recent interviews</h2><p className="mt-1 text-xs text-slate-400">Job context is included so interview activity can be traced back to the hiring request.</p></div>
+          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">{data.recentInterviews.length} shown</span>
         </div>
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5 space-y-2.5 sm:hidden">
+          {data.recentInterviews.map((item) => (
+            <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5">
+              <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{item.candidate.name}</p><p className="mt-0.5 truncate text-[10px] text-slate-400">{item.candidate.reference} · {item.job?.title ?? 'No job'}</p></div><span className="shrink-0 rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-600">{item.status.replaceAll('_', ' ')}</span></div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><div className="rounded-xl bg-white px-2.5 py-2"><span className="font-black uppercase text-slate-400">Passport</span><p className="mt-0.5 font-bold text-slate-700">{item.candidate.passportNumber ?? 'Not provided'}</p></div><div className="rounded-xl bg-white px-2.5 py-2"><span className="font-black uppercase text-slate-400">Scheduled</span><p className="mt-0.5 font-bold text-slate-700">{new Date(item.scheduledAt).toLocaleString()}</p></div></div>
+            </div>
+          ))}
+          {!data.recentInterviews.length && <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400">No interview activity for the selected scope.</p>}
+        </div>
+        <div className="mt-5 hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[900px] text-left">
             <thead><tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400"><th className="px-3 py-3">Job</th><th className="px-3 py-3">Candidate</th><th className="px-3 py-3">Passport</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Scheduled</th></tr></thead>
             <tbody>
