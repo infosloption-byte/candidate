@@ -288,13 +288,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         const birthdateRaw = row.birthdate?.trim() || row.birth_date?.trim() || row.dateofbirth?.trim() || row.date_of_birth?.trim() || row.dob?.trim() || '';
         const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
         const input: CandidateInput = {
-          agencyRegisterNo: agencyRegisterNo || null,
-          firstName: row.firstname || row.first_name || null,
-          lastName: row.lastname || row.last_name || null,
-          birthdate: birthdateRaw || null,
-          passportNumber: row.passportnumber || row.passport_number || null,
-          passportExpiry: passportExpiryRaw || null,
-          requestedProfession: row.requestedprofession || row.requested_profession || row.profession || null,
+          agencyRegisterNo: agencyRegisterNo || undefined,
+          firstName: row.firstname || row.first_name || undefined,
+          lastName: row.lastname || row.last_name || undefined,
+          birthdate: birthdateRaw || undefined,
+          passportNumber: row.passportnumber || row.passport_number || undefined,
+          passportExpiry: passportExpiryRaw || undefined,
+          requestedProfession: row.requestedprofession || row.requested_profession || row.profession || undefined,
         };
         const rowErrors = validateCandidateInput(input, 'create');
         if (agencyRegisterNo && agencyRegisterNos.has(agencyRegisterNo.toLowerCase())) rowErrors.push('Agency register number is duplicated in this file.');
@@ -407,14 +407,14 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_SELF_SUBMITTED',
         entityType: 'Candidate',
         entityId: result.id,
-        summary: 'Candidate "' + result.name + '" completed self-onboarding and entered the candidate pool.',
+        summary: 'Candidate "' + withCandidateDisplayName(result).name + '" completed self-onboarding and entered the candidate pool.',
       });
       await notifyAgencyUsers(
         agency.id,
-        { type: 'CANDIDATE_SUBMITTED', title: 'Candidate profile submitted', message: '"' + result.name + '" submitted a profile for review.' },
+        { type: 'CANDIDATE_SUBMITTED', title: 'Candidate profile submitted', message: '"' + withCandidateDisplayName(result).name + '" submitted a profile for review.' },
         ['AGENCY'],
       );
-      return reply.code(201).send({ success: true, data: result });
+      return reply.code(201).send({ success: true, data: withCandidateDisplayName(result) });
     },
   );
 
@@ -458,7 +458,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         action: 'CANDIDATE_BIRTHDATE_UPDATED',
         entityType: 'Candidate',
         entityId: updated.id,
-        summary: 'Updated birthdate for candidate "' + updated.name + '".',
+        summary: 'Updated birthdate for candidate "' + withCandidateDisplayName(updated).name + '".',
       });
       return reply.send({ success: true, data: withCandidateDisplayName(updated) });
     },
@@ -557,13 +557,13 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const data: Record<string, unknown> = {};
-      if (request.body.agencyRegisterNo !== undefined) data.agencyRegisterNo = request.body.agencyRegisterNo?.trim() || null;
-      if (request.body.firstName !== undefined) data.firstName = request.body.firstName?.trim() || null;
-      if (request.body.lastName !== undefined) data.lastName = request.body.lastName?.trim() || null;
+      if (request.body.agencyRegisterNo !== undefined) data.agencyRegisterNo = request.body.agencyRegisterNo.trim();
+      if (request.body.firstName !== undefined) data.firstName = request.body.firstName.trim();
+      if (request.body.lastName !== undefined) data.lastName = request.body.lastName.trim();
       if (request.body.birthdate !== undefined) data.birthdate = request.body.birthdate?.trim() ? new Date(request.body.birthdate) : null;
       if (request.body.passportNumber !== undefined) data.passportNumber = request.body.passportNumber?.trim() || null;
       if (request.body.passportExpiry !== undefined) data.passportExpiry = request.body.passportExpiry?.trim() ? new Date(request.body.passportExpiry) : null;
-      if (request.body.requestedProfession !== undefined) data.requestedProfession = request.body.requestedProfession?.trim() || null;
+      if (request.body.requestedProfession !== undefined) data.requestedProfession = request.body.requestedProfession.trim();
       if (request.body.onboardingStatus !== undefined && canManage) data.onboardingStatus = request.body.onboardingStatus;
       if (isSelf) data.onboardingStatus = 'SUBMITTED';
 
