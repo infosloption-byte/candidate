@@ -21,7 +21,7 @@ interface AgencyRecord extends Agency {
 type ActiveTab = 'system-users' | 'agencies' | 'interviewers';
 type SystemUserRole = 'ADMIN' | 'AGENCY';
 type InterviewerScope = 'AGENCY' | 'GLOBAL';
-type ModalMode = 'SYSTEM_USER' | 'EDIT_SYSTEM_USER' | 'AGENCY' | 'INTERVIEWER' | null;
+type ModalMode = 'SYSTEM_USER' | 'EDIT_SYSTEM_USER' | 'AGENCY' | 'INTERVIEWER' | 'EDIT_INTERVIEWER' | null;
 
 const emptySystemUser = { name: '', email: '', password: '', role: 'AGENCY' as SystemUserRole, agencyId: '' };
 const emptyAgency = { name: '', slug: '' };
@@ -84,6 +84,7 @@ export const AgenciesPage = () => {
   const [currentEditingSystemUserId, setCurrentEditingSystemUserId] = useState<string | null>(null);
   const [agencyForm, setAgencyForm] = useState(emptyAgency);
   const [interviewerForm, setInterviewerForm] = useState(emptyInterviewer);
+  const [currentEditingInterviewerId, setCurrentEditingInterviewerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (developmentMode) {
@@ -204,6 +205,71 @@ export const AgenciesPage = () => {
     setError('');
     setSuccess('');
     setModalMode('AGENCY');
+  };
+
+  const openEditInterviewer = (item: User) => {
+    setCurrentEditingInterviewerId(item.id);
+    setInterviewerForm({
+      name: item.name,
+      email: item.email,
+      password: '',
+      scope: item.agencyId ? 'AGENCY' : 'GLOBAL',
+      agencyId: item.agencyId ?? '',
+    });
+    setError('');
+    setSuccess('');
+    setModalMode('EDIT_INTERVIEWER');
+  };
+
+  const updateInterviewer = async () => {
+    const target = interviewers.find((item) => item.id === currentEditingInterviewerId);
+    if (!target) {
+      setError('The selected interviewer is no longer available.');
+      return;
+    }
+    if (!interviewerForm.name.trim() || !interviewerForm.email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+    if (interviewerForm.password && interviewerForm.password.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      let updated: User;
+      if (developmentMode) {
+        updated = {
+          ...target,
+          name: interviewerForm.name.trim(),
+          email: interviewerForm.email.trim(),
+        };
+      } else {
+        const endpoint = target.agencyId
+          ? '/agencies/' + target.agencyId + '/users/' + target.id
+          : '/interviewers/' + target.id;
+        updated = await apiFetch<User>(endpoint, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: interviewerForm.name.trim(),
+            email: interviewerForm.email.trim(),
+            ...(interviewerForm.password ? { password: interviewerForm.password } : {}),
+          }),
+        });
+      }
+
+      setInterviewers((current) => current.map((row) => row.id === updated.id ? updated : row));
+      setInterviewerForm({ ...emptyInterviewer });
+      setCurrentEditingInterviewerId(null);
+      setModalMode(null);
+      setSuccess('Interviewer account was updated.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the interviewer.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openCreateInterviewer = () => {
@@ -521,9 +587,14 @@ export const AgenciesPage = () => {
       key: 'actions',
       header: 'Actions',
       render: (item: User) => (
-        <Button size="sm" variant={item.active ? 'danger' : 'secondary'} onClick={() => void toggleInterviewer(item)}>
-          {item.active ? 'Deactivate' : 'Activate'}
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button size="sm" variant="secondary" onClick={() => openEditInterviewer(item)}>
+            Edit account
+          </Button>
+          <Button size="sm" variant={item.active ? 'danger' : 'secondary'} onClick={() => void toggleInterviewer(item)}>
+            {item.active ? 'Deactivate' : 'Activate'}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -710,6 +781,32 @@ export const AgenciesPage = () => {
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button disabled={saving} onClick={() => void createAgency()}>{saving ? 'Creating…' : 'Create agency'}</Button>
+          </div>
+        </AdminModal>
+      )}
+
+      {modalMode === 'EDIT_INTERVIEWER' && (
+        <AdminModal
+          title="Edit interviewer account"
+          description="Update the interviewer name or email, or set a new password. Leave the password blank to keep the current password."
+          onClose={closeModal}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Name">
+              <input className="field-input" value={interviewerForm.name} onChange={(event) => setInterviewerForm({ ...interviewerForm, name: event.target.value })} placeholder="David Perera" />
+            </FormField>
+            <FormField label="Email">
+              <input type="email" className="field-input" value={interviewerForm.email} onChange={(event) => setInterviewerForm({ ...interviewerForm, email: event.target.value })} placeholder="interviewer@example.com" />
+            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="New password" hint="Optional. Enter 8-128 characters to replace the current password.">
+                <input type="password" className="field-input" value={interviewerForm.password} onChange={(event) => setInterviewerForm({ ...interviewerForm, password: event.target.value })} autoComplete="new-password" />
+              </FormField>
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void updateInterviewer()}>{saving ? 'Saving…' : 'Save changes'}</Button>
           </div>
         </AdminModal>
       )}
