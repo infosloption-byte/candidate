@@ -12,6 +12,8 @@ import type { CandidateStatus, Interview, InterviewStatus, InterviewType, Job, U
 
 interface Props { role: UserRole; }
 
+type JobFilterOption = Pick<Job, 'id' | 'title' | 'location' | 'status'>;
+
 interface Analytics {
   scope: UserRole;
   counts: {
@@ -78,7 +80,7 @@ export const DashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
   const { state } = useRecruitment();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<JobFilterOption[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
