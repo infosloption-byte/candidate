@@ -195,7 +195,7 @@ export interface Interview {
   criterionAssignments?: InterviewCriterionAssignment[];
   startedAt?: string | null;
   completedAt?: string | null;
-  candidate?: Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'name' | 'birthdate' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'passportNumber' | 'passportExpiry' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
+  candidate?: Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'agencyRegisterNo' | 'firstName' | 'lastName' | 'name' | 'birthdate' | 'passportNumber' | 'passportExpiry' | 'requestedProfession' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
   job?: Pick<Job, 'id' | 'agencyId' | 'title' | 'location' | 'status'> | null;
   panel?: Array<{
     userId: string;
