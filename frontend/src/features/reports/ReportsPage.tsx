@@ -260,7 +260,7 @@ export const ReportsPage = ({ role }: Props) => {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="text-base font-black text-slate-950">Candidate lifecycle</h2>
-          <p className="mt-1 text-xs text-slate-400">Current candidate distribution{data.selectedJob ? ' for this job.' : '.'}</p>
+          <p className="mt-1 text-xs text-slate-400">{t('Current candidate distribution')}{data.selectedJob ? ' ' + t('for this job.') + '.' : '.'}</p>
           <div className="mt-5 divide-y divide-slate-100">
             {candidateLabels.map((status) => (
               <div key={status} className="flex justify-between px-3 py-3">
@@ -273,7 +273,7 @@ export const ReportsPage = ({ role }: Props) => {
 
         <Card>
           <h2 className="text-base font-black text-slate-950">Interview performance</h2>
-          <p className="mt-1 text-xs text-slate-400">Status and type breakdown{data.selectedJob ? ' for this job.' : '.'}</p>
+          <p className="mt-1 text-xs text-slate-400">{t('Status and type breakdown')}{data.selectedJob ? ' ' + t('for this job.') + '.' : '.'}</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             {interviewStatuses.map((status) => (
               <div key={status} className="rounded-2xl bg-slate-50 p-4">
@@ -293,7 +293,7 @@ export const ReportsPage = ({ role }: Props) => {
       <Card>
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0"><h2 className="text-base font-black text-slate-950">Recent interviews</h2><p className="mt-1 text-xs text-slate-400">Job context is included so interview activity can be traced back to the hiring request.</p></div>
-          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">{data.recentInterviews.length} shown</span>
+          <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-slate-400">{data.recentInterviews.length} {t('shown')}</span>
         </div>
         <div className="mt-5 space-y-2.5 sm:hidden">
           {data.recentInterviews.map((item) => (
