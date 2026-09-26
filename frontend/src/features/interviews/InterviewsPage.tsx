@@ -191,6 +191,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const { state, dispatch } = useRecruitment();
   const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
+  const [scheduleCandidates, setScheduleCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [agencyOptions, setAgencyOptions] = useState<Array<{ id: string; name: string }>>(
@@ -466,9 +467,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setCandidateId('');
     setSelectedCandidateIds([]);
     setCandidateSearch('');
-    setJobId(jobFilterId || '');
-    const selectedJob = jobs.find((job) => job.id === (jobFilterId || ''));
-    if (selectedJob) setAgencyId(selectedJob.agencyId);
+    setJobId('');
+    setScheduleCandidates(developmentMode ? state.candidates : []);
     setCriterionGroupIds([]);
     setPanel([]);
     setResponseDrafts({});
@@ -486,7 +486,10 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setCandidateId('');
     setSelectedCandidateIds([]);
     setCandidateSearch('');
-    setJobId('');
+    setJobId(jobFilterId || '');
+    const selectedJob = jobs.find((job) => job.id === jobFilterId);
+    if (selectedJob) setAgencyId(selectedJob.agencyId);
+    setScheduleCandidates(developmentMode && jobFilterId ? state.jobCandidates.filter((item) => item.jobId === jobFilterId).map((item) => item.candidate) : developmentMode ? state.candidates : []);
     setCriterionGroupIds([]);
     setPanel(firstInterviewer ? [firstInterviewer.id] : []);
     setShowScheduleForm(true);
@@ -529,6 +532,22 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setError('');
     setSuccess('');
   };
+
+  useEffect(() => {
+    if (!scheduleModalOpen || !jobId) {
+      if (!scheduleModalOpen) setScheduleCandidates(developmentMode ? state.candidates : []);
+      return;
+    }
+    if (developmentMode) {
+      setScheduleCandidates(state.jobCandidates.filter((item) => item.jobId === jobId).map((item) => item.candidate));
+      return;
+    }
+    let cancelled = false;
+    apiFetch<Candidate[]>('/candidates?jobId=' + encodeURIComponent(jobId))
+      .then((result) => { if (!cancelled) setScheduleCandidates(result); })
+      .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load the job candidate pool.'); });
+    return () => { cancelled = true; };
+  }, [developmentMode, jobId, scheduleModalOpen, state.candidates, state.jobCandidates]);
 
   useEffect(() => {
     if (!scheduleModalOpen || !criteriaGroups.length) return;
@@ -1360,7 +1379,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                         setCandidateSearch('');
                       }}
                       options={[
-                        { value: '', label: 'No specific job' },
+                        { value: '', label: 'Select a job' },
                         ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
                       ]}
                       ariaLabel="Select job position"
@@ -1432,7 +1451,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                     <div>
                       <FormField label="Additional candidates" hint="Select candidates from different agencies. Existing selections stay selected when you switch the browse agency.">
                         <CandidateMultiSelect
-                          candidates={candidates}
+                          candidates={scheduleCandidates}
                           agencyOptions={agencyOptions}
                           activeAgencyId={agencyId}
                           selectedIds={selectedCandidateIds}
@@ -1456,7 +1475,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                 ) : (
                   <FormField label="Candidates" hint="Browse an agency, click candidates to move them into the selected panel, then switch agencies without losing previous selections.">
                     <CandidateMultiSelect
-                      candidates={candidates}
+                      candidates={scheduleCandidates}
                       agencyOptions={agencyOptions}
                       activeAgencyId={agencyId}
                       selectedIds={selectedCandidateIds}
