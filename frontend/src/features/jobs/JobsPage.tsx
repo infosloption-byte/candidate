@@ -845,6 +845,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                   </div>
                 </div>
               </Card>
+            );
           })}
         </div>
       )}
