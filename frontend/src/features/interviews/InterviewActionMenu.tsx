@@ -53,10 +53,12 @@ export const InterviewActionMenu = ({
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="flex w-full flex-col items-end gap-2 sm:w-auto">
       <button
         type="button"
-        className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+        className={`grid size-10 place-items-center rounded-xl border bg-white shadow-sm transition ${
+          open ? 'border-cyan-300 text-cyan-700 ring-2 ring-cyan-50' : 'border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+        }`}
         aria-label="More interview options"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -64,16 +66,16 @@ export const InterviewActionMenu = ({
         onClick={() => setOpen((value) => !value)}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 fill-current">
-          <circle cx="5" cy="12" r="1.7" />
+          <circle cx="12" cy="5" r="1.7" />
           <circle cx="12" cy="12" r="1.7" />
-          <circle cx="19" cy="12" r="1.7" />
+          <circle cx="12" cy="19" r="1.7" />
         </svg>
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 bottom-[calc(100%+0.5rem)] z-30 min-w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl ring-1 ring-black/5"
+          className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm ring-1 ring-slate-100 sm:w-72"
         >
           {showInterviewerStart && (
             <button
