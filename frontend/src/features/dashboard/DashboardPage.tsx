@@ -139,6 +139,7 @@ export const DashboardPage = ({ role }: Props) => {
 
   useEffect(() => {
     if (developmentMode) {
+      setJobs(state.jobs);
       setAnalytics(developmentAnalytics);
       setLoading(false);
       return;
@@ -146,25 +147,33 @@ export const DashboardPage = ({ role }: Props) => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    Promise.all([apiFetch<Analytics>('/analytics/summary'), apiFetch<Interview[]>('/interviews')])
+    const query = selectedJobId ? '?jobId=' + encodeURIComponent(selectedJobId) : '';
+    Promise.all([
+      apiFetch<Analytics>('/analytics/summary' + query),
+      apiFetch<Interview[]>('/interviews' + query),
+    ])
       .then(([result, interviews]) => {
         if (cancelled) return;
-        const byId = new Map(interviews.map((interview) => [interview.id, interview]));
-        setAnalytics({
-          ...result,
-          upcomingInterviews: result.upcomingInterviews.map((item) => ({
-            ...item,
-            candidate: {
-              ...item.candidate,
-              passportNumber: byId.get(item.id)?.candidate?.passportNumber ?? null,
-            },
-          })),
-        });
+        const jobRecords = [...new Map(
+          interviews
+            .filter((interview) => interview.job)
+            .map((interview) => [interview.job!.id, interview.job as NonNullable<Interview['job']>]),
+        ).values()].map((job) => ({ id: job.id, title: job.title, location: job.location, status: job.status }));
+        if (role !== 'INTERVIEWER') {
+          void apiFetch<Job[]>('/jobs')
+            .then((availableJobs) => {
+              if (!cancelled) setJobs(availableJobs);
+            })
+            .catch(() => undefined);
+        } else {
+          setJobs(jobRecords);
+        }
+        setAnalytics(result);
       })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load dashboard analytics.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [developmentMode, developmentAnalytics]);
+  }, [developmentMode, developmentAnalytics, role, selectedJobId, state.jobs]);
 
   if (loading) {
     return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading dashboard" description="Preparing the latest recruitment and interview statistics." /></section>;
@@ -174,6 +183,7 @@ export const DashboardPage = ({ role }: Props) => {
   }
 
   const { counts, candidateStatuses, interviewStatuses, interviewTypes, upcomingInterviews } = analytics;
+  const activeJob = selectedJobId ? jobs.find((job) => job.id === selectedJobId) : null;
   const completionRate = counts.interviews ? Math.round(((interviewStatuses.COMPLETED ?? 0) / counts.interviews) * 100) : 0;
   const decisionRate = counts.candidates ? Math.round(((candidateStatuses.PASSED ?? 0) + (candidateStatuses.REJECTED ?? 0) + (candidateStatuses.HIRED ?? 0)) / counts.candidates * 100) : 0;
 
@@ -184,11 +194,30 @@ export const DashboardPage = ({ role }: Props) => {
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live workspace</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Good to see you, {user?.name ?? 'there'}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            {role === 'ADMIN' ? 'System-wide recruitment intelligence across agencies, candidates, jobs and interview panels.' : role === 'AGENCY' ? 'A focused view of your recruitment pipeline, interview workload and candidate movement.' : 'Your interview desk at a glance — upcoming panels, evaluation workload and completed interviews.'}
+            {selectedJobId
+              ? 'Job-scoped recruitment intelligence for ' + (activeJob?.title ?? analytics.selectedJob?.title ?? 'the selected job') + '.'
+              : role === 'ADMIN'
+                ? 'System-wide recruitment intelligence across agencies, candidates, jobs and interview panels.'
+                : role === 'AGENCY'
+                  ? 'A focused view of your recruitment pipeline, interview workload and candidate movement.'
+                  : 'Your interview desk at a glance — upcoming panels, evaluation workload and completed interviews.'}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300">
-          Updated {new Date().toLocaleString()}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="min-w-52">
+            <SelectMenu
+              value={selectedJobId}
+              onChange={setSelectedJobId}
+              options={[
+                { value: '', label: 'All jobs' },
+                ...jobs.map((job) => ({ value: job.id, label: job.title })),
+              ]}
+              ariaLabel="Filter dashboard by job"
+            />
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300">
+            Updated {new Date().toLocaleString()}
+          </div>
         </div>
       </div>
 
@@ -233,7 +262,7 @@ export const DashboardPage = ({ role }: Props) => {
           <div className="mt-5 divide-y divide-slate-100">
             {upcomingInterviews.length ? upcomingInterviews.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 text-xs text-slate-400">{item.candidate.reference} · Passport: {item.candidate.passportNumber ?? 'Not provided'} · {statusLabel(item.type)}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.candidate.name}</p><p className="mt-1 text-xs text-slate-400">{item.candidate.reference} · Passport: {item.candidate.passportNumber ?? 'Not provided'} · {statusLabel(item.type)}{item.job?.title ? ' · ' + item.job.title : ''}</p></div>
                 <div className="shrink-0 text-right"><p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString()}</p><p className="mt-1 text-[10px] text-slate-400">{new Date(item.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
               </div>
             )) : <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-xs text-slate-400">No upcoming interviews.</p>}
