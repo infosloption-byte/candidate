@@ -126,6 +126,9 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         recentCandidates,
         recentInterviews,
         upcomingInterviews,
+        totalOpeningsRow,
+        filledWorkers,
+        pendingInterviewerEvaluations,
       ] = await Promise.all([
         user.role === 'ADMIN' ? prisma.agency.count() : Promise.resolve(0),
         user.role === 'ADMIN' ? prisma.agency.count({ where: { status: 'ACTIVE' } }) : Promise.resolve(0),
@@ -187,11 +190,35 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             job: { select: { id: true, title: true, location: true } },
           },
         }),
+        prisma.job.aggregate({
+          where: jobWhere,
+          _sum: { openings: true },
+        }),
+        prisma.jobCandidate.count({
+          where: {
+            status: 'HIRED',
+            job: jobWhere,
+          },
+        }),
+        user.role === 'INTERVIEWER'
+          ? prisma.interview.count({
+              where: {
+                ...interviewWhere,
+                status: { in: ['IN_PROGRESS', 'COMPLETED'] },
+                OR: [
+                  { evaluations: { none: { interviewerId: user.id } } },
+                  { evaluations: { some: { interviewerId: user.id, status: 'DRAFT' } } },
+                ],
+              },
+            })
+          : Promise.resolve(0),
       ]);
 
       const averageScorePoints = scoreRows.length
         ? scoreRows.reduce((sum, row) => sum + row.points, 0) / scoreRows.length
         : null;
+      const totalOpenings = totalOpeningsRow._sum.openings ?? 0;
+      const remainingOpenings = Math.max(0, totalOpenings - filledWorkers);
 
       return reply.send({
         success: true,
@@ -208,6 +235,10 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
             submittedEvaluations,
             draftEvaluations,
             pendingDecisions,
+            totalOpenings,
+            filledWorkers,
+            remainingOpenings,
+            pendingInterviewerEvaluations,
           },
           candidateStatuses: Object.fromEntries(candidateStatusRows),
           interviewStatuses: Object.fromEntries(interviewStatusRows),
