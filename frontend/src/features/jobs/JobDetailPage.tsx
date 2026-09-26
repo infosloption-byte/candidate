@@ -125,6 +125,7 @@ export const JobDetailPage = ({ role, jobId, onBack, onCandidates, onInterviews 
   const candidateCount = job.candidateCount ?? job.candidatePool.length;
   const interviewCount = job.interviewCount ?? job.interviews.length;
   const progress = job.openings ? Math.min(100, Math.round((filledCount / job.openings) * 100)) : 0;
+  const positions = job.positions?.length ? job.positions.slice().sort((a, b) => a.sortOrder - b.sortOrder) : [{ id: job.id + '-position', jobId: job.id, position: job.title, requiredCount: job.openings, sortOrder: 0 }];
   const canManage = role === 'ADMIN' || role === 'AGENCY';
 
   return (
@@ -158,10 +159,9 @@ export const JobDetailPage = ({ role, jobId, onBack, onCandidates, onInterviews 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <StatusPill value={job.status} />
-              {job.agency && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{job.agency.name}</span>}
             </div>
             <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{job.title}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{job.description || 'No job description provided.'}</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{job.description || 'No job note provided.'}</p>
           </div>
           <div className="w-full shrink-0 lg:w-72">
             <div className="flex items-center justify-between gap-3">
@@ -175,12 +175,24 @@ export const JobDetailPage = ({ role, jobId, onBack, onCandidates, onInterviews 
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 text-sm font-bold text-slate-800">{job.location || 'Not set'}</p></div>
-          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Openings</p><p className="mt-1 text-sm font-bold text-slate-800">{job.openings}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p><p className="mt-1 text-sm font-bold text-slate-800">{positions.length}</p></div>
+          <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Required workers</p><p className="mt-1 text-sm font-bold text-slate-800">{job.openings}</p></div>
           <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidates</p><p className="mt-1 text-sm font-bold text-slate-800">{candidateCount}</p></div>
           <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviews</p><p className="mt-1 text-sm font-bold text-slate-800">{interviewCount}</p></div>
           <div className="rounded-2xl bg-slate-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Published</p><p className="mt-1 text-sm font-bold text-slate-800">{job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : 'Draft'}</p></div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Position requirements</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {positions.map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3.5 py-3 shadow-sm">
+                <span className="truncate text-xs font-bold text-slate-800">{item.position}</span>
+                <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">{item.requiredCount} required</span>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
