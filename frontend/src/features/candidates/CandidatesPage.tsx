@@ -110,11 +110,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [profileForm, setProfileForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
   const [professionFilter, setProfessionFilter] = useState('');
-  const [availabilityFilter, setAvailabilityFilter] = useState('');
-  const [visaStatusFilter, setVisaStatusFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -908,39 +904,24 @@ const filterOptions = useMemo(() => ({
                       </div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
-                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate</p>
-                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p>
-                      </div>
-                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
-                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Experience</p>
-                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.experienceYears ?? 0} years</p>
-                      </div>
-                      <div className="rounded-xl bg-slate-50 px-3 py-2.5">
-                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Availability</p>
-                        <p className="mt-1 truncate text-[11px] font-bold text-slate-800">{item.availability ?? 'Not set'}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2.5 space-y-2">
-                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
-                        <span className="text-[10px] font-bold text-slate-400">Contact</span>
-                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{item.phone ?? 'No contact number'}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
-                        <span className="text-[10px] font-bold text-slate-400">Location</span>
-                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{item.currentLocation ?? item.country ?? 'Not set'}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
-                        <span className="text-[10px] font-bold text-slate-400">Passport</span>
-                        <span className="max-w-[68%] truncate text-right text-[10px] font-semibold text-slate-600">{displayPassport(item.passportNumber)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
-                        <span className="text-[10px] font-bold text-slate-400">Onboarding</span>
-                        <StatusPill value={item.onboardingStatus} />
-                      </div>
-                    </div>
+                     <div className="mt-4 grid grid-cols-2 gap-2">
+                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Birth date</p>
+                         <p className="mt-1 text-[11px] font-bold text-slate-800">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p>
+                       </div>
+                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Agency Register</p>
+                         <p className="mt-1 truncate text-[11px] font-bold text-slate-800">{item.agencyRegisterNo}</p>
+                       </div>
+                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Passport</p>
+                         <p className="mt-1 text-[11px] font-bold text-slate-800">{displayPassport(item.passportNumber)}</p>
+                       </div>
+                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Passport expiry</p>
+                         <p className="mt-1 text-[11px] font-bold text-slate-800">{item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p>
+                       </div>
+                     </div>
 
                     <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
                       <Button
@@ -1013,7 +994,7 @@ const filterOptions = useMemo(() => ({
                         <StatusPill value={candidate.onboardingStatus} />
                       </div>
                       <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
-                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'} · {candidate.experienceYears ?? 0} years</p>
+                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'}</p>
                     </div>
                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
@@ -1081,17 +1062,17 @@ const filterOptions = useMemo(() => ({
                     <>
                       {activeDetailTab === 'overview' && (
                         <div className="space-y-7">
-                          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
-                            <div><p className="field-label">Contact</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
-                            <div><p className="field-label">Email</p><p className="mt-1 text-sm font-semibold break-words text-slate-800">{candidate.email ?? 'No email'}</p></div>
-                            <div><p className="field-label">Country</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.country ?? 'Not set'}</p></div>
-                            <div><p className="field-label">Location</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.currentLocation ?? 'Not set'}</p></div>
-                            <div><p className="field-label">Passport</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p><p className="mt-0.5 text-xs text-slate-400">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
-                            <div><p className="field-label">Work readiness</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
-                            <div><p className="field-label">Skills</p><p className="mt-1 text-sm leading-6 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
-                            <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
-                            <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
-                          </div>
+                           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
+                             <div><p className="field-label">Agency Register No</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.agencyRegisterNo}</p></div>
+                             <div><p className="field-label">First name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.firstName}</p></div>
+                             <div><p className="field-label">Last name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.lastName}</p></div>
+                             <div><p className="field-label">Birth date</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p></div>
+                             <div><p className="field-label">Passport number</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p></div>
+                             <div><p className="field-label">Passport expiry</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                             <div><p className="field-label">Requested profession</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.requestedProfession}</p></div>
+                             <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
+                             <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
+                           </div>
 
                           <section className="border-t border-slate-200 pt-5 sm:pt-6">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
