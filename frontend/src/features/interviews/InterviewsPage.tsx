@@ -1536,38 +1536,38 @@ export const InterviewsPage = ({ role }: Props) => {
 
             return (
               <Card key={interview.id} padded={false} className="overflow-visible">
-                <div className="p-4 sm:p-5">
-                  <header className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                <div className="p-3.5 sm:p-4">
+                  <header className="flex items-center justify-between gap-2.5 border-b border-slate-100 pb-2.5">
                     <div className="min-w-0">
                       <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Interview code</p>
-                      <p className="mt-1 truncate font-mono text-xs font-black text-slate-900">{interviewCode}</p>
+                      <p className="mt-0.5 truncate font-mono text-[11px] font-black text-slate-900">{interviewCode}</p>
                     </div>
                     <StatusPill value={interview.status} />
                   </header>
 
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="mt-2.5 overflow-hidden rounded-xl border border-slate-200">
                     <div className="divide-y divide-slate-100">
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidate</span>
                         <span className="min-w-0 text-sm font-black text-slate-900">{candidate?.name ?? interview.candidateId}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Passport</span>
                         <span className="min-w-0 break-all text-sm font-bold text-slate-800">{candidate?.passportNumber ?? 'Not provided'}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate</span>
                         <span className="min-w-0 text-sm font-bold text-slate-800">{formatDateOnly(candidate?.birthdate)}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Age</span>
                         <span className="text-sm font-extrabold text-cyan-700">{age ? `${age.years} years ${age.months} months` : 'Not available'}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Schedule</span>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-800">{new Date(interview.scheduledAt).toLocaleString()}</p>
@@ -1575,22 +1575,22 @@ export const InterviewsPage = ({ role }: Props) => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview type</span>
                         <span className="text-sm font-bold text-slate-800">{statusLabel(interview.type)}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Venue / location</span>
                         <span className="min-w-0 break-words text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</span>
                       </div>
 
-                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-start gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-start gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="pt-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interviewers</span>
                         <div className="flex min-w-0 flex-wrap gap-1.5">
                           {interview.panel?.length
                             ? interview.panel.map((participant) => (
-                                <span key={participant.userId} className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                                <span key={participant.userId} className="rounded-md bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-700">
                                   {participant.user?.name ?? 'Interviewer unavailable'}{participant.user && !participant.user.active ? ' · inactive' : ''}
                                 </span>
                               ))
@@ -1599,7 +1599,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       </div>
 
                       {job && (
-                        <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                        <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Position</span>
                           <span className="min-w-0 text-sm font-bold text-slate-800">{job.title}</span>
                         </div>
@@ -1607,20 +1607,20 @@ export const InterviewsPage = ({ role }: Props) => {
                     </div>
                   </div>
 
-                  <footer className="relative mt-4 border-t border-slate-100 pt-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                  <footer className="relative mt-2.5 border-t border-slate-100 pt-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button type="button" title="View interview details" aria-label="View interview details" className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
                       </button>
 
                       {candidate && (
-                        <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                        <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
                         </button>
                       )}
 
                       {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                        <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
+                        <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                         </button>
                       )}
@@ -1691,21 +1691,21 @@ export const InterviewsPage = ({ role }: Props) => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          <button type="button" title="View interview details" aria-label="View interview details" className="grid size-10 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                          <button type="button" title="View interview details" aria-label="View interview details" className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
                             <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
                           </button>
                           {candidate && (
-                            <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                            <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
                             </button>
                           )}
                           {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                            <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
+                            <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                             </button>
                           )}
                           {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
-                            <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
+                            <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
                             </button>
                           )}
@@ -1798,11 +1798,11 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
+                        <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My score</p>
-                        <p className="mt-1 text-sm font-black text-cyan-700">
+                        <p className="mt-0.5 text-[13px font-black text-cyan-700">
                           {evaluationAssignments.reduce((sum, item) => sum + (scoreDrafts[item.criterionId] === '' ? 0 : Number(scoreDrafts[item.criterionId] ?? 0)), 0)}
                           {' / '}
                           {evaluationAssignments.reduce((sum, item) => sum + item.maxPoints, 0)}
@@ -1810,7 +1810,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
+                        <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading'}</p>
                       </div>
                     </div>
                     <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-3.5 sm:p-4">
@@ -1821,7 +1821,7 @@ export const InterviewsPage = ({ role }: Props) => {
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</p>
-                          <p className="mt-1 text-sm font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
+                          <p className="mt-0.5 text-[13px font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
                         </div>
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p>
@@ -1847,7 +1847,7 @@ export const InterviewsPage = ({ role }: Props) => {
                               </Button>
                             </div>
                           ) : (
-                            <p className="mt-1 text-sm font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
+                            <p className="mt-0.5 text-[13px font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>
                           )}
                         </div>
                       </div>
@@ -1902,11 +1902,11 @@ export const InterviewsPage = ({ role }: Props) => {
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Panel submissions</p>
-                            <p className="mt-1 text-sm font-black text-slate-900">{evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED').length ?? 0} / {evaluationDetail?.panel?.length ?? 0}</p>
+                            <p className="mt-0.5 text-[13px font-black text-slate-900">{evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED').length ?? 0} / {evaluationDetail?.panel?.length ?? 0}</p>
                           </div>
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Final average</p>
-                            <p className="mt-1 text-sm font-black text-cyan-700">{(() => {
+                            <p className="mt-0.5 text-[13px font-black text-cyan-700">{(() => {
                               const submitted = evaluationDetail?.evaluations?.filter((item) => item.status === 'SUBMITTED') ?? [];
                               const scoringAssignments = evaluationDetail?.criterionAssignments ?? [];
                               const max = scoringAssignments.reduce((sum, item) => sum + item.maxPoints, 0);
@@ -1917,7 +1917,7 @@ export const InterviewsPage = ({ role }: Props) => {
                           </div>
                           <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Access</p>
-                            <p className="mt-1 text-sm font-black text-slate-900">All panel scores</p>
+                            <p className="mt-0.5 text-[13px font-black text-slate-900">All panel scores</p>
                           </div>
                         </div>
                         <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
@@ -1984,7 +1984,7 @@ export const InterviewsPage = ({ role }: Props) => {
                     <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
                       <div>
                         <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Final candidate decision</p>
-                        <h4 className="mt-1 text-sm font-black text-slate-950">Record the candidate outcome</h4>
+                        <h4 className="mt-0.5 text-[13px font-black text-slate-950">Record the candidate outcome</h4>
                         <p className="mt-1 text-[10px] leading-4 text-slate-500">The final score is calculated from the interviewer panel. Record the decision here so the system keeps who made it.</p>
                       </div>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
