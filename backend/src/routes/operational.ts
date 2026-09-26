@@ -103,9 +103,11 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         : baseCandidateWhere;
       const jobWhere = jobId ? { ...baseJobWhere, id: jobId } : baseJobWhere;
       const interviewWhere = jobId ? { ...baseInterviewWhere, jobId } : baseInterviewWhere;
-      const evaluationWhere = jobId
-        ? { ...baseEvaluationWhere, interview: { ...('interview' in baseEvaluationWhere && typeof baseEvaluationWhere.interview === 'object' ? baseEvaluationWhere.interview : {}), jobId } }
-        : baseEvaluationWhere;
+      const evaluationWhere = user.role === 'INTERVIEWER'
+        ? (jobId ? { interviewerId: user.id, interview: { jobId } } : { interviewerId: user.id })
+        : (jobId
+          ? { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' }, jobId } }
+          : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } });
 
       const [
         agencies,
