@@ -1304,25 +1304,6 @@ export const InterviewsPage = ({ role }: Props) => {
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
               <div className="grid gap-3 md:grid-cols-2">
-                {role === 'ADMIN' && (
-                  <div className="md:col-span-2">
-                    <FormField label="Agency workspace" hint="Select the agency whose candidate pool you want to schedule from.">
-                      <SelectMenu
-                        value={agencyId}
-                        onChange={(value) => {
-                          setAgencyId(value);
-                          setPanel([]);
-                          setCandidateSearch('');
-                        }}
-                        options={[
-                          { value: '', label: 'Select an agency' },
-                          ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
-                        ]}
-                        ariaLabel="Select agency workspace for interview scheduling"
-                      />
-                    </FormField>
-                  </div>
-                )}
                         {editingInterviewId ? (
               <>
                 <FormField label="Current candidate">
