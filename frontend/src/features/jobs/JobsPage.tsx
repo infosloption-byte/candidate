@@ -13,7 +13,7 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import type { Agency, Job, UserRole } from '../../domain/types';
+import type { Job, UserRole } from '../../domain/types';
 
 interface JobsPageProps {
   role: UserRole;
@@ -29,8 +29,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
-  const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
-  const [agencyId, setAgencyId] = useState(user?.agencyId ?? '');
   const [showForm, setShowForm] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
@@ -39,6 +37,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const [success, setSuccess] = useState('');
   const [successTitle, setSuccessTitle] = useState('');
   const [form, setForm] = useState(emptyForm);
+  const [positionRows, setPositionRows] = useState<Array<{ position: string; requiredCount: string }>>([{ position: '', requiredCount: '1' }]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState<'created' | 'title' | 'openings' | 'filled' | 'interviews'>('created');
@@ -62,8 +61,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   useEffect(() => {
     if (developmentMode) {
       setJobs(state.jobs);
-      setAgencies(state.agencies);
-      if (role !== 'ADMIN') setAgencyId(user?.agencyId ?? '');
+
       return;
     }
 
@@ -73,17 +71,12 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
     const requests: [Promise<Job[]>, Promise<Agency[]>] = [
       apiFetch<Job[]>('/jobs'),
-      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
     ];
 
     Promise.all(requests)
-      .then(([jobResult, agencyResult]) => {
+      .then(([jobResult]) => {
         if (cancelled) return;
         setJobs(jobResult);
-        if (role === 'ADMIN') {
-          setAgencies(agencyResult);
-          setAgencyId((current) => current || agencyResult.find((item) => item.status === 'ACTIVE')?.id || '');
-        }
       })
       .catch((requestError: unknown) => {
         if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load jobs.');
@@ -93,18 +86,19 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       });
 
     return () => { cancelled = true; };
-  }, [developmentMode, role, state.jobs, state.agencies, user?.agencyId, user?.id]);
+  }, [developmentMode, role, state.jobs, user?.id]);
 
   function closeForm() {
     setShowForm(false);
     setEditingJobId(null);
     setForm(emptyForm);
+    setPositionRows([{ position: '', requiredCount: '1' }]);
   }
 
   const openCreateForm = () => {
     setEditingJobId(null);
     setForm(emptyForm);
-    if (role !== 'ADMIN') setAgencyId(user?.agencyId ?? '');
+    setPositionRows([{ position: '', requiredCount: '1' }]);
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -112,13 +106,17 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
   const beginEdit = (job: Job) => {
     setEditingJobId(job.id);
-    setAgencyId(job.agencyId);
     setForm({
       title: job.title,
       description: job.description ?? '',
       location: job.location ?? '',
       openings: String(job.openings),
     });
+    setPositionRows(
+      job.positions?.length
+        ? job.positions.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((item) => ({ position: item.position, requiredCount: String(item.requiredCount) }))
+        : [{ position: job.title, requiredCount: String(job.openings) }],
+    );
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -129,16 +127,27 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       setError('Job title is required.');
       return;
     }
-    if (!agencyId && !developmentMode) {
-      setError('Select an agency for this job.');
-      return;
-    }
-
     setSaving(true);
     setError('');
 
     try {
-      const openings = Math.max(1, Number(form.openings) || 1);
+      const normalizedPositions = positionRows
+        .map((row) => ({ position: row.position.trim(), requiredCount: Math.max(0, Number(row.requiredCount) || 0) }))
+        .filter((row) => row.position || row.requiredCount > 0);
+      if (!normalizedPositions.length) {
+        setError('Add at least one position.');
+        return;
+      }
+      const invalidPosition = normalizedPositions.find((row) => !row.position || row.requiredCount < 1);
+      if (invalidPosition) {
+        setError('Every position needs a name and a required count of at least 1.');
+        return;
+      }
+      const openings = normalizedPositions.reduce((sum, row) => sum + row.requiredCount, 0);
+      if (openings > 1000) {
+        setError('Total required workers cannot exceed 1000.');
+        return;
+      }
 
       if (editingJobId) {
         const current = jobs.find((job) => job.id === editingJobId);
@@ -159,6 +168,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                 description: form.description.trim() || null,
                 location: form.location.trim() || null,
                 openings,
+                positions: normalizedPositions,
               }),
             });
 
@@ -169,10 +179,16 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         return;
       }
 
-      const targetAgencyId = agencyId || user?.agencyId || 'agency-1';
       const draft: Job = {
         id: 'job-' + Date.now(),
-        agencyId: targetAgencyId,
+        agencyId: null,
+        positions: normalizedPositions.map((item, index) => ({
+          id: 'job-position-' + Date.now() + '-' + index,
+          jobId: 'job-' + Date.now(),
+          position: item.position,
+          requiredCount: item.requiredCount,
+          sortOrder: index,
+        })),
         title: form.title.trim(),
         description: form.description.trim() || null,
         location: form.location.trim() || null,
@@ -183,13 +199,13 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
       const created = developmentMode
         ? draft
-        : await apiFetch<Job>('/agencies/' + targetAgencyId + '/jobs', {
+        : await apiFetch<Job>('/jobs', {
             method: 'POST',
             body: JSON.stringify({
               title: draft.title,
               description: draft.description,
               location: draft.location,
-              openings: draft.openings,
+              positions: normalizedPositions,
             }),
           });
 
@@ -286,7 +302,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     });
   }, [displayJobs, role, search, sortBy, sortDirection, statusFilter]);
 
-  const jobTotalPages = Math.max(1, Math.ceil(visibleJobs.length / JOBS_PAGE_SIZE));
   const activeJobPage = Math.min(jobPage, jobTotalPages);
   const paginatedJobs = useMemo(
     () => visibleJobs.slice((activeJobPage - 1) * JOBS_PAGE_SIZE, activeJobPage * JOBS_PAGE_SIZE),
@@ -382,60 +397,88 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {role === 'ADMIN' && !editingJobId && (
-                <div className="sm:col-span-2">
-                  <FormField label="Agency">
-                    <SelectMenu
-                      value={agencyId}
-                      onChange={setAgencyId}
-                      options={[
-                        { value: '', label: 'Select an agency' },
-                        ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
-                      ]}
-                      ariaLabel="Select agency for job"
-                    />
-                  </FormField>
-                </div>
-              )}
+            <div className="mt-5 space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Job title">
+                  <input
+                    className="field-input"
+                    value={form.title}
+                    onChange={(event) => setForm({ ...form, title: event.target.value })}
+                    placeholder="e.g. Dubai Tower Project"
+                    autoFocus
+                  />
+                </FormField>
 
-              <FormField label="Job title">
-                <input
-                  className="field-input"
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                  placeholder="e.g. Mason — Dubai Project"
-                  autoFocus
-                />
-              </FormField>
-
-              <FormField label="Location">
-                <input
-                  className="field-input"
-                  value={form.location}
-                  onChange={(event) => setForm({ ...form, location: event.target.value })}
-                  placeholder="Dubai, UAE"
-                />
-              </FormField>
-
-              <div className="sm:col-span-2">
-                <FormField label="Description">
-                  <textarea
-                    className="field-input min-h-28 resize-y"
-                    value={form.description}
-                    onChange={(event) => setForm({ ...form, description: event.target.value })}
-                    placeholder="Describe the role, project, responsibilities and requirements."
+                <FormField label="Location">
+                  <input
+                    className="field-input"
+                    value={form.location}
+                    onChange={(event) => setForm({ ...form, location: event.target.value })}
+                    placeholder="Dubai, UAE"
                   />
                 </FormField>
               </div>
 
-              <FormField label="Required workers">
-                <input
-                  type="number"
-                  min="1"
-                  className="field-input"
-                  value={form.openings}
-                  onChange={(event) => setForm({ ...form, openings: event.target.value })}
+              <div>
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="field-label">Required positions</p>
+                    <p className="mt-1 text-[10px] text-slate-400">Add each position needed for this job and the number of workers required.</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">
+                    {positionRows.reduce((sum, row) => sum + (Number(row.requiredCount) || 0), 0)} workers
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {positionRows.map((row, index) => (
+                    <div key={index} className="grid grid-cols-[minmax(0,1fr)_7rem_auto] gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                      <input
+                        className="field-input min-w-0 bg-white"
+                        value={row.position}
+                        onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, position: event.target.value } : item))}
+                        placeholder="Position"
+                        aria-label={'Position ' + (index + 1)}
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        className="field-input bg-white"
+                        value={row.requiredCount}
+                        onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, requiredCount: event.target.value } : item))}
+                        placeholder="Count"
+                        aria-label={'Required count for position ' + (index + 1)}
+                      />
+                      <button
+                        type="button"
+                        aria-label={'Remove position ' + (index + 1)}
+                        title="Remove position"
+                        disabled={positionRows.length === 1}
+                        className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
+                        onClick={() => setPositionRows((current) => current.length === 1 ? current : current.filter((_, i) => i !== index))}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50/40 hover:text-cyan-700"
+                  onClick={() => setPositionRows((current) => [...current, { position: '', requiredCount: '1' }])}
+                >
+                  <Icon name="plus" size={14} /> Add position
+                </button>
+              </div>
+
+              <FormField label="Job note">
+                <textarea
+                  className="field-input min-h-28 resize-y"
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                  placeholder="Add notes about the project, responsibilities, requirements or other useful information."
                 />
               </FormField>
             </div>
@@ -566,6 +609,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             const candidateCount = job.candidateCount ?? 0;
             const interviewCount = job.interviewCount ?? 0;
             const fillPercent = Math.min(100, Math.round((filledCount / Math.max(1, job.openings)) * 100));
+            const positions = job.positions ?? [{ id: job.id + '-position', jobId: job.id, position: job.title, requiredCount: job.openings, sortOrder: 0 }];
 
             return (
               <Card key={job.id}>
@@ -583,7 +627,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                         <span className="size-1.5 rounded-full bg-cyan-500" />
                         {job.location ?? 'Location not set'}
                       </span>
-                      <span>{job.openings} worker{job.openings === 1 ? '' : 's'}</span>
+                      <span>{positions.length} position{positions.length === 1 ? '' : 's'}</span>
+                      <span>{job.openings} required</span>
                       <span>{candidateCount} candidate{candidateCount === 1 ? '' : 's'}</span>
                       <span>{interviewCount} interview{interviewCount === 1 ? '' : 's'}</span>
                     </div>
