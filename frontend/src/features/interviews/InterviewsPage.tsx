@@ -1387,8 +1387,6 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       value={jobId}
                       onChange={(value) => {
                         setJobId(value);
-                        const selectedJob = jobs.find((job) => job.id === value);
-                        if (selectedJob) setAgencyId(selectedJob.agencyId);
                         setSelectedCandidateIds([]);
                         setCandidateSearch('');
                       }}
