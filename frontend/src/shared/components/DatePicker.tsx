@@ -91,7 +91,7 @@ export const DatePicker = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => parseDateValue(value) ?? new Date());
-  const [panelPosition, setPanelPosition] = useState({ top: 0, left: 0, width: 336 });
+  const [panelPosition, setPanelPosition] = useState({ top: 0, left: 0, width: 336, maxHeight: 520 });
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const minimumDate = useMemo(() => (min ? parseDateValue(min) : null), [min]);
   const maximumDate = useMemo(() => (max ? parseDateValue(max) : null), [max]);
@@ -102,16 +102,19 @@ export const DatePicker = ({
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const width = Math.min(336, window.innerWidth - 24);
-    const panelHeight = showTime ? 500 : 414;
-    const openBelow = window.innerHeight - rect.bottom >= panelHeight + 16;
+    const preferredHeight = showTime ? 500 : 414;
+    const spaceBelow = Math.max(160, window.innerHeight - rect.bottom - 12);
+    const spaceAbove = Math.max(160, rect.top - 12);
+    const openBelow = spaceBelow >= Math.min(preferredHeight, window.innerHeight - 24) || spaceBelow >= spaceAbove;
+    const maxHeight = Math.min(preferredHeight, Math.max(160, openBelow ? spaceBelow : spaceAbove));
     const top = openBelow
-      ? rect.bottom + 8
-      : Math.max(12, rect.top - panelHeight - 8);
+      ? Math.min(rect.bottom + 8, window.innerHeight - maxHeight - 12)
+      : Math.max(12, rect.top - maxHeight - 8);
     const left = Math.min(
       Math.max(12, rect.left),
       Math.max(12, window.innerWidth - width - 12),
     );
-    setPanelPosition({ top, left, width });
+    setPanelPosition({ top, left, width, maxHeight });
   };
 
   useEffect(() => {
@@ -247,8 +250,8 @@ export const DatePicker = ({
           ref={panelRef}
           role="dialog"
           aria-label={showTime ? 'Date and time picker' : 'Date picker'}
-          className="fixed z-[100] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-black/5"
-          style={{ top: panelPosition.top, left: panelPosition.left, width: panelPosition.width }}
+          className="fixed z-[100] flex max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-black/5"
+          style={{ top: panelPosition.top, left: panelPosition.left, width: panelPosition.width, maxHeight: panelPosition.maxHeight }}
         >
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-2">
@@ -306,7 +309,7 @@ export const DatePicker = ({
             </div>
           </div>
 
-          <div className="px-4 pt-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3">
             <div className="grid grid-cols-7 gap-1 text-center">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <span key={day} className="py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-400">{day.slice(0, 1)}</span>
