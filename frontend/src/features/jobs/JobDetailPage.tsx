@@ -13,6 +13,7 @@ import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, Job, JobCandidate, JobDetail, User, UserRole } from '../../domain/types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface JobDetailPageProps {
   role: UserRole;
@@ -217,6 +218,7 @@ const buildAssignments = (groups: InterviewCriterionGroup[], selectedIds: string
 
 export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const { user, developmentMode } = useAuth();
+  const { t } = useLanguage();
   const { state, dispatch } = useRecruitment();
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(Boolean(jobId));
@@ -540,7 +542,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         });
       }
       setScheduleModal(false);
-      setSuccess(candidateIds.length + ' interview(s) scheduled.');
+      setSuccess(candidateIds.length + ' ' + t('interview(s) scheduled') + '.');
       await refreshJob();
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to schedule interviews.');
@@ -569,7 +571,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
     }
   };
 
-  if (!jobId) return <StateMessage kind="empty" title="No job selected" description="Choose a job from the Jobs page." />;
+  if (!jobId) return <StateMessage kind="empty" title={t('No job selected')} description={t('Choose a job from the Jobs page.')} />;
   if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading job" description="Fetching the job, candidate pool and interview activity." /></section>;
   if (!job) return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title="Job not found" description={error || 'The requested job is unavailable.'} /></section>;
 
@@ -680,7 +682,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <p className="text-sm font-black text-slate-950">{filledCount} / {job.openings}</p>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-500" style={{ width: progress + '%' }} /></div>
-            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{job.openings - filledCount > 0 ? job.openings - filledCount + ' opening(s) remaining' : 'All openings filled'}</p>
+            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">{job.openings - filledCount > 0 ? job.openings - filledCount + ' ' + t('opening(s) remaining') : t('All openings filled')}</p>
           </div>
         </div>
 
@@ -751,7 +753,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
           </div>
           {filteredCandidates.length > 0 && (
             <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 text-[10px] font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-              <span>Showing {(safeCandidatePage - 1) * CANDIDATE_POOL_PAGE_SIZE + 1}-{Math.min(safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE, filteredCandidates.length)} of {filteredCandidates.length}</span>
+              <span>{t('Showing')} {(safeCandidatePage - 1) * CANDIDATE_POOL_PAGE_SIZE + 1}-{Math.min(safeCandidatePage * CANDIDATE_POOL_PAGE_SIZE, filteredCandidates.length)} {t('of')} {filteredCandidates.length}</span>
               {candidatePageCount > 1 && (
                 <div className="flex items-center gap-1.5">
                   <Button size="sm" variant="secondary" className="!min-h-8 !px-2.5 !py-1 text-[10px]" disabled={safeCandidatePage === 1} onClick={() => setCandidatePoolPage((value) => Math.max(1, value - 1))}>Previous</Button>
