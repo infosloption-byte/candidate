@@ -555,6 +555,151 @@ dbTest('global interviewer can be assigned to an agency interview and sees the a
   assert.ok(listBody.data.some((item) => item.id === body.data.id));
 });
 
+dbTest('multiple interviewers can independently save and submit one shared interview', async () => {
+  assert.ok(app);
+
+  const agencyCookie = await login(emails.agencyA);
+  const panelCandidate = await prisma!.candidate.create({
+    data: {
+      agencyId: agencyAId,
+      reference: 'PANEL-I-' + suffix,
+      name: 'Multi Interviewer Candidate',
+      profession: 'Electrician',
+      status: 'POOL',
+      source: 'AGENCY_ADDED',
+      onboardingStatus: 'COMPLETED',
+      skills: ['Electrical'],
+    },
+    select: { id: true },
+  });
+
+  const scheduled = await app.inject({
+    method: 'POST',
+    url: '/api/v1/candidates/' + panelCandidate.id + '/interviews',
+    headers: { cookie: agencyCookie },
+    payload: {
+      type: 'TECHNICAL',
+      scheduledAt: new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString(),
+      durationMins: 45,
+      location: 'Panel QA Room',
+      interviewerIds: [interviewerId, globalInterviewerId],
+      criterionGroupId,
+    },
+  });
+  assert.equal(scheduled.statusCode, 201);
+
+  const scheduledBody = json<{ data: { id: string; panel: Array<{ userId: string }>; status: string } }>(scheduled);
+  assert.equal(scheduledBody.data.panel.length, 2);
+  const panelInterviewId = scheduledBody.data.id;
+
+  const firstCookie = await login(emails.interviewer);
+  const secondCookie = await login(emails.globalInterviewer);
+
+  const firstStart = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + panelInterviewId + '/start',
+    headers: { cookie: firstCookie },
+  });
+  assert.equal(firstStart.statusCode, 200);
+
+  const secondWorkspace = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation',
+    headers: { cookie: secondCookie },
+  });
+  assert.equal(secondWorkspace.statusCode, 200);
+  const secondWorkspaceBody = json<{ data: { interview: { status: string }; evaluation: unknown } }>(secondWorkspace);
+  assert.equal(secondWorkspaceBody.data.interview.status, 'IN_PROGRESS');
+  assert.equal(secondWorkspaceBody.data.evaluation, null);
+
+  const firstDraft = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation',
+    headers: { cookie: firstCookie },
+    payload: {
+      scores: [{ criterionId: criterionAId, points: 8 }],
+      comments: 'First interviewer draft.',
+    },
+  });
+  assert.equal(firstDraft.statusCode, 200);
+
+  const secondDraft = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation',
+    headers: { cookie: secondCookie },
+    payload: {
+      scores: [{ criterionId: criterionAId, points: 7 }],
+      comments: 'Second interviewer draft.',
+    },
+  });
+  assert.equal(secondDraft.statusCode, 200);
+  const secondDraftBody = json<{ data: { evaluation: { interviewerId: string }; summary: { drafts: number } } }>(secondDraft);
+  assert.equal(secondDraftBody.data.evaluation.interviewerId, globalInterviewerId);
+  assert.equal(secondDraftBody.data.summary.drafts, 2);
+
+  const firstCompleteDraft = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation',
+    headers: { cookie: firstCookie },
+    payload: {
+      scores: [
+        { criterionId: criterionAId, points: 8 },
+        { criterionId: criterionBId, points: 4 },
+      ],
+      comments: 'First interviewer completed notes.',
+    },
+  });
+  assert.equal(firstCompleteDraft.statusCode, 200);
+
+  const firstSubmit = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation/submit',
+    headers: { cookie: firstCookie },
+  });
+  assert.equal(firstSubmit.statusCode, 201);
+  const firstSubmitBody = json<{ data: { interviewCompleted: boolean; summary: { submitted: number; drafts: number } } }>(firstSubmit);
+  assert.equal(firstSubmitBody.data.interviewCompleted, false);
+  assert.equal(firstSubmitBody.data.summary.submitted, 1);
+  assert.equal(firstSubmitBody.data.summary.drafts, 1);
+
+  const secondCompleteDraft = await app.inject({
+    method: 'PUT',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation',
+    headers: { cookie: secondCookie },
+    payload: {
+      scores: [
+        { criterionId: criterionAId, points: 7 },
+        { criterionId: criterionBId, points: 5 },
+      ],
+      comments: 'Second interviewer completed notes.',
+    },
+  });
+  assert.equal(secondCompleteDraft.statusCode, 200);
+
+  const secondSubmit = await app.inject({
+    method: 'POST',
+    url: '/api/v1/interviews/' + panelInterviewId + '/evaluation/submit',
+    headers: { cookie: secondCookie },
+  });
+  assert.equal(secondSubmit.statusCode, 201);
+  const secondSubmitBody = json<{ data: { interviewCompleted: boolean; summary: { submitted: number; drafts: number } } }>(secondSubmit);
+  assert.equal(secondSubmitBody.data.interviewCompleted, true);
+  assert.equal(secondSubmitBody.data.summary.submitted, 2);
+  assert.equal(secondSubmitBody.data.summary.drafts, 0);
+
+  const details = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews/' + panelInterviewId,
+    headers: { cookie: await login(emails.agencyA) },
+  });
+  assert.equal(details.statusCode, 200);
+  const detailsBody = json<{ data: { status: string; evaluations: Array<{ interviewerId: string; scores: Array<{ criterionId: string; points: number }> }> } }>(details);
+  assert.equal(detailsBody.data.status, 'COMPLETED');
+  assert.equal(detailsBody.data.evaluations.length, 2);
+  assert.ok(detailsBody.data.evaluations.some((item) => item.interviewerId === interviewerId));
+  assert.ok(detailsBody.data.evaluations.some((item) => item.interviewerId === globalInterviewerId));
+});
+
 dbTest('bulk interview scheduling creates consecutive interview slots for selected candidates', async () => {
   assert.ok(app);
 
