@@ -167,8 +167,24 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     }
   };
 
+  const displayJobs = useMemo(
+    () => developmentMode
+      ? jobs.map((job) => {
+          const memberships = state.jobCandidates.filter((item) => item.jobId === job.id);
+          const interviews = state.interviews.filter((item) => item.jobId === job.id);
+          return {
+            ...job,
+            candidateCount: memberships.length,
+            interviewCount: interviews.length,
+            filledCount: memberships.filter((item) => item.status === 'HIRED').length,
+          };
+        })
+      : jobs,
+    [developmentMode, jobs, state.interviews, state.jobCandidates],
+  );
+
   const visibleJobs = useMemo(() => {
-    const available = jobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
+    const available = displayJobs.filter((job) => role !== 'INTERVIEWEE' || job.status === 'PUBLISHED');
     const query = search.trim().toLowerCase();
     if (!query) return available;
     return available.filter((job) => [job.title, job.description ?? '', job.location ?? '', job.status].some((value) => value.toLowerCase().includes(query)));
