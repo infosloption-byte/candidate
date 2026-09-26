@@ -984,37 +984,6 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                 />
               </div>
 
-              <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-                <label className="field-label">Sort</label>
-                <div className="mt-1 flex min-w-0 gap-1.5">
-                  <SelectMenu
-                    value={sortBy}
-                    onChange={(value) => setSortBy(value as typeof sortBy)}
-                    options={[
-                      { value: 'name', label: 'Name' },
-                      { value: 'profession', label: 'Profession' },
-                      { value: 'experience', label: 'Experience' },
-                      { value: 'passport', label: 'Passport' },
-                      { value: 'status', label: 'Status' },
-                    ]}
-                    ariaLabel="Sort candidates by"
-                    className="min-w-0 flex-1"
-                  />
-                  <button
-                    type="button"
-                    title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
-                    aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
-                    className="grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-                    onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-                      {sortDirection === 'asc'
-                        ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-                    </svg>
-                  </button>
-                </div>
-              </div>
             </div>
 
             {showAdvancedFilters && (
@@ -1126,6 +1095,36 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
               <div className="flex items-center justify-between gap-3 sm:justify-end">
                 <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
+
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">Sort</span>
+                  <SelectMenu
+                    value={sortBy}
+                    onChange={(value) => setSortBy(value as typeof sortBy)}
+                    options={[
+                      { value: 'name', label: 'Name' },
+                      { value: 'profession', label: 'Profession' },
+                      { value: 'experience', label: 'Experience' },
+                      { value: 'passport', label: 'Passport' },
+                      { value: 'status', label: 'Status' },
+                    ]}
+                    ariaLabel="Sort candidates by"
+                    className="w-32 sm:w-36"
+                  />
+                  <button
+                    type="button"
+                    title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
+                    aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
+                    className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
+                      {sortDirection === 'asc'
+                        ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+                    </svg>
+                  </button>
+                </div>
 
                 {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
                   <button
