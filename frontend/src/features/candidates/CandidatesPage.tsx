@@ -110,11 +110,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [profileForm, setProfileForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
   const [professionFilter, setProfessionFilter] = useState('');
-  const [availabilityFilter, setAvailabilityFilter] = useState('');
-  const [visaStatusFilter, setVisaStatusFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
   const [passportFilter, setPassportFilter] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -1040,7 +1036,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                   </button>
                 </div>
 
-                {(search || statusFilter || countryFilter || professionFilter || availabilityFilter || visaStatusFilter || locationFilter || passportFilter) && (
+                {(search || statusFilter || professionFilter || passportFilter) && (
                   <button
                     type="button"
                     title="Clear filters"
@@ -1126,8 +1122,8 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                         <p className="mt-1 text-[11px] font-bold text-slate-800">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</p>
                       </div>
                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
-                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Experience</p>
-                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.experienceYears ?? 0} years</p>
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Passport expiry</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-800">{item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p>
                       </div>
                       <div className="rounded-xl bg-slate-50 px-3 py-2.5">
                         <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Availability</p>
@@ -1287,13 +1283,6 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
                       {activeDetailTab === 'overview' && (
                         <div className="space-y-7">
                           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
-                            <div><p className="field-label">Contact</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.phone ?? 'Not provided'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.alternatePhone ?? 'No alternate number'}</p></div>
-                            <div><p className="field-label">Email</p><p className="mt-1 text-sm font-semibold break-words text-slate-800">{candidate.email ?? 'No email'}</p></div>
-                            <div><p className="field-label">Country</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.country ?? 'Not set'}</p></div>
-                            <div><p className="field-label">Location</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.currentLocation ?? 'Not set'}</p></div>
-                            <div><p className="field-label">Passport</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p><p className="mt-0.5 text-xs text-slate-400">Expires {candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
-                            <div><p className="field-label">Work readiness</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.availability ?? 'Not set'}</p><p className="mt-0.5 text-xs text-slate-400">{candidate.visaStatus ?? 'Visa status not set'}</p></div>
-                            <div><p className="field-label">Skills</p><p className="mt-1 text-sm leading-6 text-slate-600">{candidate.skills.length ? candidate.skills.join(' · ') : 'No skills recorded'}</p></div>
                             <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
                             <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
                           </div>
