@@ -109,7 +109,7 @@ export const InterviewDetailsModal = ({ detail, open, onClose, role, onUpdateCan
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
-            <h2 id="interview-details-title" className="mt-1 text-xl font-black text-slate-950">{detail.candidate?.name ?? detail.candidateId}</h2>
+            <h2 id="interview-details-title" className="mt-1 text-xl font-black text-slate-950">{detail.candidate?.name ?? 'Candidate unavailable'}</h2>
             <p className="mt-1 text-xs text-slate-500">{detail.candidate?.reference ?? 'Candidate'} · Birthdate: {detail.candidate?.birthdate ? new Date(detail.candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {detail.candidate?.passportNumber ?? 'Not provided'} · {detail.type} interview · {statusLabel(detail.status)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2"><StatusPill value={detail.status} /><Button size="sm" variant="secondary" onClick={onClose}>Close</Button></div>
