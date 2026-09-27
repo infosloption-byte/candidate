@@ -18,7 +18,7 @@ import { CriterionResponseField } from './CriterionResponseField';
 import { InterviewActionMenu } from './InterviewActionMenu';
 import { CandidateMultiSelect } from './CandidateMultiSelect';
 import { ApiError, apiFetch } from '../../shared/lib/api';
-import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewType, Job, User, UserRole } from '../../domain/types';
+import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewCriterionResponseType, InterviewType, Job, User, UserRole } from '../../domain/types';
 
 interface Props {
   role: UserRole;
@@ -47,6 +47,8 @@ const toDateTimeLocal = (value: string): string => {
 };
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
+const usesOptionResponse = (responseType: InterviewCriterionResponseType): boolean =>
+  responseType === 'MULTI_SELECT' || responseType === 'SINGLE_SELECT';
 
 const normalizeCriteriaGroupName = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -900,8 +902,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     const responses = evaluationAssignments
       .map((assignment) => ({
         criterionId: assignment.criterionId,
-        textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
-        selectedOptions: assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
+        textValue: usesOptionResponse(assignment.responseType) ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
+        selectedOptions: usesOptionResponse(assignment.responseType) ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
       }))
       .filter((response) => response.textValue !== null || (response.selectedOptions?.length ?? 0) > 0);
 
@@ -979,7 +981,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     const missingRequired = evaluationAssignments.filter((assignment) => {
       if (!assignment.required) return false;
       const missingScore = scoreDrafts[assignment.criterionId] === '';
-      const missingAnswer = assignment.responseType === 'MULTI_SELECT'
+      const missingAnswer = usesOptionResponse(assignment.responseType)
         ? !(selectedOptionsDrafts[assignment.criterionId]?.length)
         : !responseDrafts[assignment.criterionId]?.trim();
       return missingScore || missingAnswer;
@@ -1012,7 +1014,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
             responses: evaluationAssignments.map((assignment) => ({
               criterionId: assignment.criterionId,
               textValue: assignment.responseType === 'MULTI_SELECT' ? null : (responseDrafts[assignment.criterionId]?.trim() || null),
-              selectedOptions: assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
+              selectedOptions: usesOptionResponse(assignment.responseType) ? (selectedOptionsDrafts[assignment.criterionId] ?? []) : null,
             })).filter((response) => response.textValue !== null || (response.selectedOptions?.length ?? 0) > 0),
           };
           const allEvaluations = [...(updated.evaluations ?? []).filter((item) => item.interviewerId !== ownId), ownEvaluationSubmitted];
@@ -1899,7 +1901,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</p>
-                        <p className="mt-0.5 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (assignment.responseType === 'MULTI_SELECT' ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-900">{evaluationAssignments.filter((assignment) => scoreDrafts[assignment.criterionId] !== '' && (usesOptionResponse(assignment.responseType) ? (selectedOptionsDrafts[assignment.criterionId]?.length ?? 0) > 0 : Boolean(responseDrafts[assignment.criterionId]?.trim()))).length} / {evaluationAssignments.length} answered</p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">My score</p>
@@ -1971,7 +1973,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-xs font-extrabold text-slate-900">{assignment.name}</p>
                                 {assignment.required && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-700">Required</span>}
-                                <span className="text-[10px] font-bold text-slate-400">Max {assignment.maxPoints} pts · {assignment.responseType === 'MULTI_SELECT' ? 'Multiple tags' : 'Standard answer'}</span>
+                                <span className="text-[10px] font-bold text-slate-400">Max {assignment.maxPoints} pts · {assignment.responseType === 'MULTI_SELECT' ? 'Multiple tags' : assignment.responseType === 'SINGLE_SELECT' ? 'Dropdown' : 'Text answer'}</span>
                               </div>
                               {assignment.description && <p className="mt-1 text-[10px] leading-4 text-slate-400">{assignment.description}</p>}
                             </div>
@@ -2112,7 +2114,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                                 ? 'Saved automatically at ' + new Date(evaluationLastSaved).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
                                 : 'Changes save automatically while you interview.'}
                         </p>
-                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (scoreDrafts[assignment.criterionId] === '' || (assignment.responseType === 'MULTI_SELECT' ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim()))) || !evaluationComments.trim()}>
+                        <Button onClick={() => void submitEvaluation(activeInterview)} disabled={evaluationStatus === 'SUBMITTED' || evaluating || evaluationAssignments.some((assignment) => assignment.required && (scoreDrafts[assignment.criterionId] === '' || (usesOptionResponse(assignment.responseType) ? !(selectedOptionsDrafts[assignment.criterionId]?.length) : !responseDrafts[assignment.criterionId]?.trim()))) || !evaluationComments.trim()}>
                           {evaluating ? 'Submitting…' : evaluationStatus === 'SUBMITTED' ? 'Submitted' : 'Submit'}
                         </Button>
                       </div>
