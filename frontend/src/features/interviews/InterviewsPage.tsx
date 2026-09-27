@@ -813,7 +813,6 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     setEvaluationSummary(null);
     setEvaluationDetail(null);
     setEvaluationLastSaved(null);
-    setEvaluationDecisionMessage('');
 
     try {
       if (role !== 'INTERVIEWER') {
