@@ -822,13 +822,13 @@ const filterOptions = useMemo(() => ({
         const read = (values: string[], name: string) => values[indexOf(name)]?.trim() ?? '';
 
         const created: Candidate[] = rows.slice(1).filter((values) => values.some((value) => value.trim())).map((values, index) => {
-          const agencyRegisterNo = read(values, 'agencyregisterno');
-          const firstName = read(values, 'firstname');
-          const lastName = read(values, 'lastname');
+          const agencyRegisterNo = read(values, 'agencyRegisterNo');
+          const firstName = read(values, 'firstName');
+          const lastName = read(values, 'lastName');
           const birthdate = read(values, 'birthdate');
-          const passportNumber = read(values, 'passportnumber');
-          const passportExpiry = read(values, 'passportexpiry');
-          const requestedProfession = read(values, 'requestedprofession');
+          const passportNumber = read(values, 'passportNumber');
+          const passportExpiry = read(values, 'passportExpiry');
+          const requestedProfession = read(values, 'requestedProfession');
 
           if (!agencyRegisterNo || !firstName || !lastName || !birthdate || !passportNumber || !passportExpiry || !requestedProfession) {
             throw new Error('CSV row ' + (index + 2) + ' is missing one or more required intake fields.');
