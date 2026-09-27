@@ -1771,7 +1771,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   return (
                     <tr key={interview.id} className="align-top text-xs text-slate-700 hover:bg-slate-50/70">
                       <td className="px-4 py-3">
-                        <p className="font-extrabold text-slate-900">{candidate?.name ?? interview.candidateId}</p>
+                        <p className="font-extrabold text-slate-900">{candidate?.name ?? 'Candidate unavailable'}</p>
                         <p className="mt-0.5 font-semibold text-cyan-700">{candidate?.reference ?? 'Candidate'} · Birthdate: {candidate?.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {candidate?.passportNumber ?? 'Not provided'}{job ? ' · ' + job.title : ''}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
