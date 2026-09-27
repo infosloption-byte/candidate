@@ -64,7 +64,7 @@ const buildJobReportHtml = (
 ) => {
   const positionRows = positions.map((item) => '<tr><td>' + escapeReportHtml(item.position) + '</td><td>' + item.requiredCount + '</td></tr>').join('');
   const candidateRows = candidatePool.map((item) => '<tr><td>' + escapeReportHtml(item.candidate.name) + '</td><td>' + escapeReportHtml(item.candidate.reference) + '</td><td>' + escapeReportHtml(item.candidate.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.candidate.requestedProfession || 'Profession not set') + '</td><td>' + escapeReportHtml(item.status) + '</td></tr>').join('');
-  const interviewRows = interviews.map((item) => '<tr><td>' + escapeReportHtml(item.candidate?.name || item.candidateId) + '</td><td>' + escapeReportHtml(item.candidate?.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.type) + '</td><td>' + escapeReportHtml(item.status) + '</td><td>' + escapeReportHtml(new Date(item.scheduledAt).toLocaleString()) + '</td></tr>').join('');
+  const interviewRows = interviews.map((item) => '<tr><td>' + escapeReportHtml(item.candidate?.name || 'Candidate unavailable') + '</td><td>' + escapeReportHtml(item.candidate?.passportNumber || 'Not provided') + '</td><td>' + escapeReportHtml(item.type) + '</td><td>' + escapeReportHtml(item.status) + '</td><td>' + escapeReportHtml(new Date(item.scheduledAt).toLocaleString()) + '</td></tr>').join('');
   return '<!doctype html><html><head><meta charset="utf-8"><title>BuildHire - ' + escapeReportHtml(job.title) + '</title><style>' +
     'body{font-family:Arial,sans-serif;color:#0f172a;margin:32px;font-size:12px}' +
     'h1{font-size:24px;margin:0 0 6px}h2{font-size:15px;margin:24px 0 8px}' +
@@ -819,7 +819,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <div key={interview.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? interview.candidateId}</p>
+                    <p className="truncate text-sm font-black text-slate-900">{interview.candidate?.name ?? 'Candidate unavailable'}</p>
                     <p className="mt-0.5 truncate text-[10px] text-slate-400">{label(interview.type)} · {new Date(interview.scheduledAt).toLocaleString()} · {interview.candidate?.passportNumber ? 'Passport: ' + interview.candidate.passportNumber : 'Passport not provided'}</p>
                   </div>
                   <StatusPill value={interview.status} />
