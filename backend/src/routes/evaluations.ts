@@ -128,6 +128,10 @@ const validateResponses = (responses: EvaluationInput['responses'], assignments:
       if (!Array.isArray(response.selectedOptions) || response.selectedOptions.length === 0) {
         errors.push('Select at least one option for "' + assignment.name + '".');
       }
+    } else if (assignment.responseType === 'SINGLE_SELECT') {
+      if (!Array.isArray(response.selectedOptions) || response.selectedOptions.length !== 1) {
+        errors.push('Select one option for "' + assignment.name + '".');
+      }
     } else if (!response.textValue?.trim()) {
       errors.push('Provide an answer for "' + assignment.name + '".');
     }
@@ -465,6 +469,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         const response = responseByCriterion.get(assignment.criterionId);
         if (!response) return true;
         if (assignment.responseType === 'MULTI_SELECT') return !Array.isArray(response.selectedOptions) || response.selectedOptions.length === 0;
+        if (assignment.responseType === 'SINGLE_SELECT') return !Array.isArray(response.selectedOptions) || response.selectedOptions.length !== 1;
         return !response.textValue?.trim();
       });
       if (missingRequired.length) {
