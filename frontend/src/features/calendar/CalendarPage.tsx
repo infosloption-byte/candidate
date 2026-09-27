@@ -160,7 +160,7 @@ export const CalendarPage = ({ role }: Props) => {
       .map((interview) => ({
         id: interview.id,
         kind: 'interview' as const,
-        title: interview.candidate?.name ?? interview.candidateId,
+        title: interview.candidate?.name ?? 'Candidate unavailable',
         date: new Date(interview.scheduledAt),
         interview,
       }))
