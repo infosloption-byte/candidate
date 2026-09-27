@@ -72,7 +72,7 @@ export const InterviewDetailsModal = ({ detail, open, onClose, role, onUpdateCan
     [detail.criterionAssignments],
   );
 
-  const totalFor = (evaluation: InterviewDetail['evaluations'][number]) =>
+  const totalFor = (evaluation: NonNullable<InterviewDetail['evaluations']>[number]) =>
     evaluation.scores.reduce((sum, score) => sum + score.points, 0);
 
   const averagePercentage = submittedEvaluations.length && maxPoints
