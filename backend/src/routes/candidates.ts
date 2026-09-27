@@ -34,6 +34,27 @@ const candidateSelect = {
 
 const getReference = (): string => 'CA-' + randomBytes(5).toString('hex').toUpperCase();
 
+const normalizeImportKey = (value: string): string =>
+  value
+    .replace(/^\uFEFF/, '')
+    .replace(/[\u200B-\u200D\u2060\u00A0]/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+
+const readImportField = (
+  row: Record<string, string>,
+  aliases: string[],
+): string => {
+  const entries = Object.entries(row).map(([key, value]) => [normalizeImportKey(key), value] as const);
+  for (const alias of aliases) {
+    const match = entries.find(([key]) => key === normalizeImportKey(alias));
+    if (match?.[1]?.trim()) return match[1].trim();
+  }
+  return '';
+};
+
+
 const canManageCandidate = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
   role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId);
 
@@ -284,17 +305,17 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       const candidateInputs: CandidateInput[] = [];
 
       rows.forEach((row, index) => {
-        const agencyRegisterNo = row.agencyregisterno?.trim() || row.agency_register_no?.trim() || '';
-        const birthdateRaw = row.birthdate?.trim() || row.birth_date?.trim() || row.dateofbirth?.trim() || row.date_of_birth?.trim() || row.dob?.trim() || '';
-        const passportExpiryRaw = row.passportexpiry?.trim() || row.passport_expiry?.trim() || '';
+        const agencyRegisterNo = readImportField(row, ['agencyRegisterNo', 'agency register no', 'agency register number', 'agencyregisterno']);
+        const birthdateRaw = readImportField(row, ['birthdate', 'birth date', 'date of birth', 'dob']);
+        const passportExpiryRaw = readImportField(row, ['passportexpiry', 'passport expiry', 'passport expiry date']);
         const input: CandidateInput = {
           agencyRegisterNo: agencyRegisterNo || undefined,
-          firstName: row.firstname || row.first_name || undefined,
-          lastName: row.lastname || row.last_name || undefined,
+          firstName: readImportField(row, ['firstName', 'first name', 'firstname']) || undefined,
+          lastName: readImportField(row, ['lastName', 'last name', 'lastname']) || undefined,
           birthdate: birthdateRaw || undefined,
-          passportNumber: row.passportnumber || row.passport_number || undefined,
+          passportNumber: readImportField(row, ['passportNumber', 'passport number', 'passport no', 'passport']) || undefined,
           passportExpiry: passportExpiryRaw || undefined,
-          requestedProfession: row.requestedprofession || row.requested_profession || row.profession || undefined,
+          requestedProfession: readImportField(row, ['requestedProfession', 'requested profession', 'profession', 'job title']) || undefined,
         };
         const rowErrors = validateCandidateInput(input, 'create');
         if (agencyRegisterNo && agencyRegisterNos.has(agencyRegisterNo.toLowerCase())) rowErrors.push('Agency register number is duplicated in this file.');
