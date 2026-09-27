@@ -209,11 +209,11 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
   const workbookXml = new DOMParser().parseFromString(xmlText(entries, 'xl/workbook.xml'), 'application/xml');
   const relationshipsXml = new DOMParser().parseFromString(xmlText(entries, 'xl/_rels/workbook.xml.rels'), 'application/xml');
 
-  const firstSheet = workbookXml.querySelector('sheet');
+  const firstSheet = Array.from(workbookXml.getElementsByTagNameNS('*', 'sheet'))[0];
   const relationshipId = firstSheet?.getAttribute('r:id');
   if (!relationshipId) throw new Error('Excel workbook does not contain a worksheet.');
 
-  const relationship = Array.from(relationshipsXml.querySelectorAll('Relationship'))
+  const relationship = Array.from(relationshipsXml.getElementsByTagNameNS('*', 'Relationship'))
     .find((item) => item.getAttribute('Id') === relationshipId);
   const relationshipTarget = relationship?.getAttribute('Target');
   if (!relationshipTarget) throw new Error('Excel workbook worksheet relationship is invalid.');
@@ -229,8 +229,8 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
   const sharedStringsBytes = entries.get('xl/sharedStrings.xml');
   if (sharedStringsBytes) {
     const sharedXml = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(sharedStringsBytes), 'application/xml');
-    for (const item of Array.from(sharedXml.querySelectorAll('si'))) {
-      sharedStrings.push(Array.from(item.querySelectorAll('t')).map((node) => node.textContent ?? '').join(''));
+    for (const item of Array.from(sharedXml.getElementsByTagNameNS('*', 'si'))) {
+      sharedStrings.push(Array.from(item.getElementsByTagNameNS('*', 't')).map((node) => node.textContent ?? '').join(''));
     }
   }
 
@@ -243,7 +243,7 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
 
   const readCell = (cell: Element): string => {
     const type = cell.getAttribute('t') ?? '';
-    const valueNode = cell.querySelector('v');
+    const valueNode = Array.from(cell.getElementsByTagNameNS('*', 'v'))[0];
     const value = valueNode?.textContent ?? '';
 
     if (type === 's') {
@@ -251,19 +251,19 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
     }
 
     if (type === 'inlineStr') {
-      return Array.from(cell.querySelectorAll('is t')).map((node) => node.textContent ?? '').join('');
+      return Array.from(cell.getElementsByTagNameNS('*', 't')).map((node) => node.textContent ?? '').join('');
     }
 
     return value;
   };
 
   const matrix: string[][] = [];
-  for (const rowNode of Array.from(sheetXml.querySelectorAll('sheetData > row'))) {
+  for (const rowNode of Array.from(sheetXml.getElementsByTagNameNS('*', 'row'))) {
     const rowNumber = Number(rowNode.getAttribute('r') ?? matrix.length + 1);
     while (matrix.length < rowNumber) matrix.push([]);
 
     const row = matrix[rowNumber - 1];
-    for (const cell of Array.from(rowNode.querySelectorAll(':scope > c'))) {
+    for (const cell of Array.from(rowNode.children).filter((child) => child.localName === 'c')) {
       const reference = cell.getAttribute('r') ?? '';
       const columnIndex = cellColumnIndex(reference);
       row[columnIndex] = readCell(cell);
