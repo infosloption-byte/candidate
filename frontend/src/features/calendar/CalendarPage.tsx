@@ -421,7 +421,7 @@ export const CalendarPage = ({ role }: Props) => {
 
       {selectedInterviewId && (
         selectedInterviewDetail ? (
-          <InterviewDetailsModal detail={selectedInterviewDetail} open={Boolean(selectedInterviewId)} onClose={closeInterviewDetails} />
+          <InterviewDetailsModal detail={selectedInterviewDetail} open={Boolean(selectedInterviewId)} onClose={closeInterviewDetails} role={role} />
         ) : (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button type="button" aria-label="Close interview details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeInterviewDetails} />
