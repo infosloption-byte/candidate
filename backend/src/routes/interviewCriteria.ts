@@ -77,7 +77,12 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'CRITERION_NOT_FOUND', message: 'Interview criterion not found.' } });
       }
 
-      const errors = validateInterviewCriterionInput(request.body, 'update');
+      const errors = validateInterviewCriterionInput(
+        request.body.responseType === undefined
+          ? { ...request.body, responseType: existing.responseType as InterviewCriterionInput['responseType'] }
+          : request.body,
+        'update',
+      );
       if (errors.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW_CRITERION', message: errors.join(' ') } });
       }
@@ -94,7 +99,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
           ...(request.body.responseType !== undefined ? { responseType: request.body.responseType } : {}),
           ...(request.body.required !== undefined ? { required: request.body.required } : {}),
           ...((request.body.responseType !== undefined || request.body.options !== undefined) ? {
-            options: effectiveResponseType === 'MULTI_SELECT'
+            options: ['MULTI_SELECT', 'SINGLE_SELECT'].includes(effectiveResponseType)
               ? (request.body.options === undefined
                 ? (existing.options === null ? Prisma.DbNull : existing.options as Prisma.InputJsonValue)
                 : (request.body.options?.map((option) => option.trim()).filter(Boolean) ?? Prisma.DbNull))
