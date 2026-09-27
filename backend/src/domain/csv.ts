@@ -52,11 +52,18 @@ export const parseCsv = (input: string): string[][] => {
   return rows;
 };
 
+const normalizeCsvHeader = (header: string): string =>
+  header
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+
 export const csvRowsToObjects = (input: string): Array<Record<string, string>> => {
   const rows = parseCsv(input);
   if (rows.length < 2) return [];
 
-  const headers = rows[0].map((header, index) => (index === 0 ? header.replace(/^\uFEFF/, '') : header).trim().toLowerCase());
+  const headers = rows[0].map(normalizeCsvHeader);
 
   return rows.slice(1).map((values) => Object.fromEntries(
     headers.map((header, index) => [header, values[index]?.trim() ?? '']),
