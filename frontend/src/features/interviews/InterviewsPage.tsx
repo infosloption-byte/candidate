@@ -408,7 +408,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       const rightCandidate = right.candidate ?? candidates.find((item) => item.id === right.candidateId);
       let result = 0;
       if (sortBy === 'date') result = new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime();
-      if (sortBy === 'candidate') result = (leftCandidate?.name ?? left.candidateId).localeCompare(rightCandidate?.name ?? right.candidateId, undefined, { sensitivity: 'base' });
+      if (sortBy === 'candidate') result = (leftCandidate?.name ?? '').localeCompare(rightCandidate?.name ?? '', undefined, { sensitivity: 'base' });
       if (sortBy === 'status') result = left.status.localeCompare(right.status, undefined, { sensitivity: 'base' });
       return sortDirection === 'asc' ? result : -result;
     });
@@ -1485,8 +1485,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   <>
                     <FormField label="Current candidate">
                       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? candidateId}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? candidateId} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
+                        <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? 'Candidate unavailable'}</p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? 'Reference unavailable'} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
                       </div>
                     </FormField>
                     <div>
@@ -1652,7 +1652,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                     <div className="divide-y divide-slate-100">
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Candidate</span>
-                        <span className="min-w-0 text-sm font-black text-slate-900">{candidate?.name ?? interview.candidateId}</span>
+                        <span className="min-w-0 text-sm font-black text-slate-900">{candidate?.name ?? 'Candidate unavailable'}</span>
                       </div>
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
@@ -1872,7 +1872,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-slate-900">Interview — {activeCandidate?.name ?? activeInterview.candidateId}</p>
+                        <p className="truncate text-xs font-black text-slate-900">Interview — {activeCandidate?.name ?? 'Candidate unavailable'}</p>
                         <p className="text-[10px] text-slate-400">{activeCandidate?.passportNumber ? 'Passport: ' + activeCandidate.passportNumber + ' · ' : 'Passport: Not provided · '}{evaluationSummary ? evaluationSummary.submitted + ' / ' + evaluationSummary.required + ' submitted' : 'Loading scorecard…'}</p>
                       </div>
                       <Button size="sm" variant="secondary" className="min-h-9 px-2 text-[10px]" onClick={() => setEvaluationMinimized(false)}>Open</Button>
@@ -1886,7 +1886,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{activeInterview.status === 'COMPLETED' ? 'Completed interview panel' : 'Ongoing interview'}</p>
-                      <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? activeInterview.candidateId}</h3>
+                      <h3 className="truncate text-sm font-black text-slate-950">{activeCandidate?.name ?? 'Candidate unavailable'}</h3>
                       <p className="truncate text-[10px] text-slate-400">Birthdate: {activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'} · Passport: {activeCandidate?.passportNumber ?? 'Not provided'} · {activeInterview.type} · {activeInterview.criterionGroup?.name ?? 'Assigned scorecard'}</p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1924,7 +1924,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Name</p>
-                          <p className="mt-0.5 text-sm font-black text-slate-900">{activeCandidate?.name ?? activeInterview.candidateId}</p>
+                          <p className="mt-0.5 text-sm font-black text-slate-900">{activeCandidate?.name ?? 'Candidate unavailable'}</p>
                         </div>
                         <div className="rounded-xl border border-white bg-white/80 px-3 py-2.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Birthdate</p>
