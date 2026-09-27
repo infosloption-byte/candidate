@@ -199,7 +199,7 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
   const workbook = entryText(entries, 'xl/workbook.xml');
   const relationships = entryText(entries, 'xl/_rels/workbook.xml.rels');
 
-  const sheetTag = (workbook.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/) ?? [])[0];
+  const sheetTag = workbook.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/)?.[0] ?? '';
   if (!sheetTag) throw new Error('Excel workbook does not contain a worksheet.');
 
   const relationshipId = xmlAttr(sheetTag, 'r:id') || xmlAttr(sheetTag, 'id');
@@ -246,13 +246,13 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
 
   const rows: string[][] = [];
   for (const rowXml of sheetXml.match(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?row>/g) ?? []) {
-    const rowTag = (rowXml.match(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*>/) ?? [])[0];
+    const rowTag = rowXml.match(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*>/)?.[0] ?? '';
     const rowNumber = Number(xmlAttr(rowTag, 'r') || rows.length + 1);
     while (rows.length < rowNumber) rows.push([]);
 
     const row = rows[rowNumber - 1];
     for (const cellXml of rowXml.match(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?c>/g) ?? []) {
-      const cellTag = (cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*>/) ?? [])[0];
+      const cellTag = cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*>/)?.[0] ?? '';
       const reference = xmlAttr(cellTag, 'r');
       const type = xmlAttr(cellTag, 't');
       const valueMatch = cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?v\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?v>/);
