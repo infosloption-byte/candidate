@@ -786,9 +786,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                       <Icon name="clock" size={12} />
                       <span className="truncate">
                         Created {job.createdAt
-                          ? new Date(job.createdAt).toLocaleDateString()
+                          ? new Date(job.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
                           : job.publishedAt
-                            ? new Date(job.publishedAt).toLocaleDateString()
+                            ? new Date(job.publishedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
                             : '—'}
                       </span>
                     </div>
