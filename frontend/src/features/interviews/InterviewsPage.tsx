@@ -1154,7 +1154,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       const message = 'Decision recorded: ' + updated.name + ' is now ' + statusLabel(updated.status) + '.';
       setSuccess(message);
     } catch (requestError: unknown) {
-      setEvaluationDecisionMessage('');
+      setError('');
       setError(requestError instanceof Error ? requestError.message : 'Unable to update candidate status.');
     }
   };
