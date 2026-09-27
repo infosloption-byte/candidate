@@ -780,7 +780,10 @@ const filterOptions = useMemo(() => ({
   };
 
   const downloadCsvTemplate = () => {
-    const csv = 'agencyRegisterNo,firstName,lastName,birthdate,passportNumber,passportExpiry,requestedProfession\\nAGR-1001,Kamal,Perera,1990-01-15,N1234567,2031-12-31,Mason\\n';
+    const csv = [
+      'Agency Register No,First Name,Last Name,Birth Date,Passport Number,Passport Expiry,Requested Profession',
+      'AGR-1001,Kamal,Perera,1990-01-15,N1234567,2031-12-31,Mason',
+    ].join('\\n') + '\\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -810,8 +813,8 @@ const filterOptions = useMemo(() => ({
         const rows = parseCsvRows(csv);
         if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
 
-        const header = rows[0].map((item, index) => (index === 0 ? item.replace(/^\\uFEFF/, '') : item).trim().toLowerCase());
-        const requiredHeaders = ['agencyregisterno', 'firstname', 'lastname', 'birthdate', 'passportnumber', 'passportexpiry', 'requestedprofession'];
+        const header = rows[0].map((item) => canonicalImportHeader(item));
+        const requiredHeaders = ['agencyRegisterNo', 'firstName', 'lastName', 'birthdate', 'passportNumber', 'passportExpiry', 'requestedProfession'];
         const missingHeaders = requiredHeaders.filter((item) => !header.includes(item));
         if (missingHeaders.length) throw new Error('CSV is missing required columns: ' + missingHeaders.join(', ') + '.');
 
