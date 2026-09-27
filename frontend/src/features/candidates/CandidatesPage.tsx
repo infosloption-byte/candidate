@@ -93,71 +93,68 @@ const readUint32Le = (bytes: Uint8Array, offset: number): number =>
 const unzipXlsx = async (buffer: ArrayBuffer): Promise<Map<string, Uint8Array>> => {
   const bytes = new Uint8Array(buffer);
   let eocd = -1;
-  const minOffset = Math.max(0, bytes.length - 65_557);
-
-  for (let index = bytes.length - 22; index >= minOffset; index -= 1) {
-    if (
-      bytes[index] === 0x50 &&
-      bytes[index + 1] === 0x4b &&
-      bytes[index + 2] === 0x05 &&
-      bytes[index + 3] === 0x06
-    ) {
+  for (let index = bytes.length - 22; index >= Math.max(0, bytes.length - 65_557); index -= 1) {
+    if (bytes[index] === 0x50 && bytes[index + 1] === 0x4b && bytes[index + 2] === 0x05 && bytes[index + 3] === 0x06) {
       eocd = index;
       break;
     }
   }
-
   if (eocd < 0) throw new Error('Invalid Excel workbook: ZIP directory was not found.');
 
   const entryCount = readUint16Le(bytes, eocd + 10);
-  const centralDirectoryOffset = readUint32Le(bytes, eocd + 16);
+  const directoryOffset = readUint32Le(bytes, eocd + 16);
   const entries = new Map<string, Uint8Array>();
-  let cursor = centralDirectoryOffset;
+  let cursor = directoryOffset;
 
   for (let index = 0; index < entryCount; index += 1) {
-    if (
-      bytes[cursor] !== 0x50 ||
-      bytes[cursor + 1] !== 0x4b ||
-      bytes[cursor + 2] !== 0x01 ||
-      bytes[cursor + 3] !== 0x02
-    ) {
-      throw new Error('Invalid Excel workbook: ZIP directory entry is malformed.');
+    if (bytes[cursor] !== 0x50 || bytes[cursor + 1] !== 0x4b || bytes[cursor + 2] !== 0x01 || bytes[cursor + 3] !== 0x02) {
+      throw new Error('Invalid Excel workbook: malformed ZIP directory.');
     }
 
-    const compressionMethod = readUint16Le(bytes, cursor + 10);
+    const method = readUint16Le(bytes, cursor + 10);
     const compressedSize = readUint32Le(bytes, cursor + 20);
-    const fileNameLength = readUint16Le(bytes, cursor + 28);
+    const nameLength = readUint16Le(bytes, cursor + 28);
     const extraLength = readUint16Le(bytes, cursor + 30);
     const commentLength = readUint16Le(bytes, cursor + 32);
-    const localHeaderOffset = readUint32Le(bytes, cursor + 42);
-    const fileName = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + fileNameLength));
+    const localOffset = readUint32Le(bytes, cursor + 42);
+    const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
 
-    const localFileNameLength = readUint16Le(bytes, localHeaderOffset + 26);
-    const localExtraLength = readUint16Le(bytes, localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localFileNameLength + localExtraLength;
+    const localNameLength = readUint16Le(bytes, localOffset + 26);
+    const localExtraLength = readUint16Le(bytes, localOffset + 28);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
     const compressed = bytes.slice(dataStart, dataStart + compressedSize);
 
     let content: Uint8Array;
-    if (compressionMethod === 0) {
+    if (method === 0) {
       content = compressed;
-    } else if (compressionMethod === 8) {
+    } else if (method === 8) {
       const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
       content = new Uint8Array(await new Response(stream).arrayBuffer());
     } else {
       throw new Error('Excel workbook uses an unsupported ZIP compression method.');
     }
 
-    entries.set(fileName, content);
-    cursor += 46 + fileNameLength + extraLength + commentLength;
+    entries.set(name, content);
+    cursor += 46 + nameLength + extraLength + commentLength;
   }
 
   return entries;
 };
 
-const xmlText = (entries: Map<string, Uint8Array>, name: string): string => {
-  const bytes = entries.get(name);
-  if (!bytes) throw new Error('Excel workbook is missing ' + name + '.');
-  return new TextDecoder('utf-8').decode(bytes);
+const entryText = (entries: Map<string, Uint8Array>, name: string): string => {
+  const content = entries.get(name);
+  if (!content) throw new Error('Excel workbook is missing ' + name + '.');
+  return new TextDecoder().decode(content);
+};
+
+const xmlAttr = (tag: string, name: string): string => {
+  const match = tag.match(new RegExp('(?:^|\\s)' + name.replace(':', '\\\\:') + '="([^"]*)"'));
+  return match?.[1] ?? '';
+};
+
+const escapeCsvValue = (value: string): string => {
+  const clean = value.replace(/[\u0000\u200B-\u200D\u2060]/g, '');
+  return /[",\n\r]/.test(clean) ? '"' + clean.replace(/"/g, '""') + '"' : clean;
 };
 
 const excelSerialToDate = (value: string): string => {
@@ -183,8 +180,6 @@ const canonicalImportHeader = (value: string): string => {
     firstname: 'firstName',
     lastname: 'lastName',
     birthdate: 'birthdate',
-    birthdateofbirth: 'birthdate',
-    birth_date: 'birthdate',
     dateofbirth: 'birthdate',
     dob: 'birthdate',
     passportnumber: 'passportNumber',
@@ -199,88 +194,90 @@ const canonicalImportHeader = (value: string): string => {
   return aliases[normalized] ?? value.trim();
 };
 
-const escapeCsvValue = (value: string): string => {
-  const clean = value.replace(/[\u0000\u200B-\u200D\u2060]/g, '');
-  return /[",\n\r]/.test(clean) ? '"' + clean.replace(/"/g, '""') + '"' : clean;
-};
-
 const xlsxFileToCsv = async (file: File): Promise<string> => {
   const entries = await unzipXlsx(await file.arrayBuffer());
-  const workbookXml = new DOMParser().parseFromString(xmlText(entries, 'xl/workbook.xml'), 'application/xml');
-  const relationshipsXml = new DOMParser().parseFromString(xmlText(entries, 'xl/_rels/workbook.xml.rels'), 'application/xml');
+  const workbook = entryText(entries, 'xl/workbook.xml');
+  const relationships = entryText(entries, 'xl/_rels/workbook.xml.rels');
 
-  const firstSheet = Array.from(workbookXml.getElementsByTagNameNS('*', 'sheet'))[0];
-  const relationshipId = firstSheet?.getAttribute('r:id');
-  if (!relationshipId) throw new Error('Excel workbook does not contain a worksheet.');
+  const sheetTag = (workbook.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/) ?? [])[0];
+  if (!sheetTag) throw new Error('Excel workbook does not contain a worksheet.');
 
-  const relationship = Array.from(relationshipsXml.getElementsByTagNameNS('*', 'Relationship'))
-    .find((item) => item.getAttribute('Id') === relationshipId);
-  const relationshipTarget = relationship?.getAttribute('Target');
-  if (!relationshipTarget) throw new Error('Excel workbook worksheet relationship is invalid.');
+  const relationshipId = xmlAttr(sheetTag, 'r:id') || xmlAttr(sheetTag, 'id');
+  if (!relationshipId) throw new Error('Excel workbook worksheet relationship is missing.');
 
-  const normalizedTarget = relationshipTarget.replace(/^\//, '').startsWith('xl/')
-    ? relationshipTarget.replace(/^\//, '')
-    : 'xl/' + relationshipTarget.replace(/^\//, '').replace(/^\.\//, '');
+  const relationshipMatch = relationships.match(
+    new RegExp('<(?:[A-Za-z_][\\w.-]*:)?Relationship\\b[^>]*\\bId="' + relationshipId + '"[^>]*\\bTarget="([^"]+)"[^>]*\\/>'),
+  );
+  const target = relationshipMatch?.[1];
+  if (!target) throw new Error('Excel workbook worksheet target is missing.');
 
-  const sheetName = entries.has(normalizedTarget) ? normalizedTarget : 'xl/worksheets/sheet1.xml';
-  const sheetXml = new DOMParser().parseFromString(xmlText(entries, sheetName), 'application/xml');
+  const sheetPath = target.replace(/^\//, '').startsWith('xl/')
+    ? target.replace(/^\//, '')
+    : 'xl/' + target.replace(/^\.\//, '').replace(/^\//, '');
+  const sheetXml = entryText(entries, sheetPath);
 
   const sharedStrings: string[] = [];
-  const sharedStringsBytes = entries.get('xl/sharedStrings.xml');
-  if (sharedStringsBytes) {
-    const sharedXml = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(sharedStringsBytes), 'application/xml');
-    for (const item of Array.from(sharedXml.getElementsByTagNameNS('*', 'si'))) {
-      sharedStrings.push(Array.from(item.getElementsByTagNameNS('*', 't')).map((node) => node.textContent ?? '').join(''));
+  const sharedXml = entries.get('xl/sharedStrings.xml');
+  if (sharedXml) {
+    const text = new TextDecoder().decode(sharedXml);
+    for (const item of text.match(/<(?:[A-Za-z_][\w.-]*:)?si\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?si>/g) ?? []) {
+      sharedStrings.push(
+        (item.match(/<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?t>/g) ?? [])
+          .map((part) => part.replace(/<[^>]+>/g, ''))
+          .join(''),
+      );
     }
   }
+
+  const decodeXml = (value: string): string =>
+    value
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
 
   const cellColumnIndex = (reference: string): number => {
     const letters = reference.match(/[A-Z]+/i)?.[0]?.toUpperCase() ?? '';
     let value = 0;
-    for (const letter of letters) value = value * 26 + (letter.charCodeAt(0) - 64);
+    for (const letter of letters) value = value * 26 + letter.charCodeAt(0) - 64;
     return Math.max(0, value - 1);
   };
 
-  const readCell = (cell: Element): string => {
-    const type = cell.getAttribute('t') ?? '';
-    const valueNode = Array.from(cell.getElementsByTagNameNS('*', 'v'))[0];
-    const value = valueNode?.textContent ?? '';
+  const rows: string[][] = [];
+  for (const rowXml of sheetXml.match(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?row>/g) ?? []) {
+    const rowTag = (rowXml.match(/<(?:[A-Za-z_][\w.-]*:)?row\b[^>]*>/) ?? [])[0];
+    const rowNumber = Number(xmlAttr(rowTag, 'r') || rows.length + 1);
+    while (rows.length < rowNumber) rows.push([]);
 
-    if (type === 's') {
-      return sharedStrings[Number(value)] ?? '';
-    }
+    const row = rows[rowNumber - 1];
+    for (const cellXml of rowXml.match(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?c>/g) ?? []) {
+      const cellTag = (cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?c\b[^>]*>/) ?? [])[0];
+      const reference = xmlAttr(cellTag, 'r');
+      const type = xmlAttr(cellTag, 't');
+      const valueMatch = cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?v\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?v>/);
+      const value = decodeXml(valueMatch?.[1] ?? '');
+      let result = value;
 
-    if (type === 'inlineStr') {
-      return Array.from(cell.getElementsByTagNameNS('*', 't')).map((node) => node.textContent ?? '').join('');
-    }
+      if (type === 's') result = sharedStrings[Number(value)] ?? '';
+      if (type === 'inlineStr' || type === 'str') {
+        const textParts = cellXml.match(/<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/g) ?? [];
+        if (textParts.length) result = textParts.map((part) => decodeXml(part.replace(/<[^>]+>/g, ''))).join('');
+      }
 
-    return value;
-  };
-
-  const matrix: string[][] = [];
-  for (const rowNode of Array.from(sheetXml.getElementsByTagNameNS('*', 'row'))) {
-    const rowNumber = Number(rowNode.getAttribute('r') ?? matrix.length + 1);
-    while (matrix.length < rowNumber) matrix.push([]);
-
-    const row = matrix[rowNumber - 1];
-    for (const cell of Array.from(rowNode.children).filter((child) => child.localName === 'c')) {
-      const reference = cell.getAttribute('r') ?? '';
-      const columnIndex = cellColumnIndex(reference);
-      row[columnIndex] = readCell(cell);
+      row[cellColumnIndex(reference)] = result;
     }
   }
 
-  while (matrix.length && matrix[matrix.length - 1].every((value) => !value)) matrix.pop();
-  if (matrix.length < 2) throw new Error('Excel workbook must contain a header row and at least one candidate row.');
+  while (rows.length && rows[rows.length - 1].every((value) => !value)) rows.pop();
+  if (rows.length < 2) throw new Error('Excel workbook must contain a header row and at least one candidate row.');
 
-  const headers = matrix[0].map(canonicalImportHeader);
-  const dateColumns = new Set(
-    headers
-      .map((header, index) => (header === 'birthdate' || header === 'passportExpiry' ? index : -1))
-      .filter((index) => index >= 0),
-  );
+  const headers = rows[0].map(canonicalImportHeader);
+  const dateColumns = new Set(headers.map((header, index) =>
+    header === 'birthdate' || header === 'passportExpiry' ? index : -1,
+  ).filter((index) => index >= 0));
 
-  const normalizedRows = matrix.slice(1).map((row) =>
+  const normalizedRows = rows.slice(1).map((row) =>
     headers.map((_, index) => {
       const value = row[index] ?? '';
       return dateColumns.has(index) && /^\d+(?:\.\d+)?$/.test(value) ? excelSerialToDate(value) : value;
@@ -291,6 +288,7 @@ const xlsxFileToCsv = async (file: File): Promise<string> => {
     .map((row) => row.map((value) => escapeCsvValue(value ?? '')).join(','))
     .join('\n');
 };
+
 const parseCsvRows = (input: string): string[][] => {
   const rows: string[][] = [];
   let row: string[] = [];
