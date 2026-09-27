@@ -240,7 +240,6 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const evaluationSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CandidateStatus>>({});
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({});
-  const [evaluationDecisionMessage, setEvaluationDecisionMessage] = useState('');
   const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [interviewStatusUpdating, setInterviewStatusUpdating] = useState<string | null>(null);
   const [pendingInterviewStatus, setPendingInterviewStatus] = useState<{ interview: InterviewRecord; status: 'CANCELLED' | 'NO_SHOW' } | null>(null);
@@ -1103,8 +1102,14 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
     }
   };
 
-  const updateCandidateStatus = async (candidate: Pick<Candidate, 'id' | 'name' | 'status'>, targetJobId: string | null = null) => {
-    const status = statusDrafts[candidate.id];
+  const updateCandidateStatus = async (
+    candidate: Pick<Candidate, 'id' | 'name' | 'status'>,
+    targetJobId: string | null = null,
+    statusOverride?: CandidateStatus,
+    reasonOverride?: string,
+  ) => {
+    const status = statusOverride ?? statusDrafts[candidate.id];
+    const reason = reasonOverride ?? statusReasons[candidate.id]?.trim() ?? '';
     if (!status || status === candidate.status) return;
 
     try {
@@ -1117,7 +1122,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         ? { ...(currentCandidate as Candidate), status, statusUpdatedAt: new Date().toISOString() }
         : await apiFetch<Candidate>('/candidates/' + candidate.id, {
             method: 'PATCH',
-            body: JSON.stringify({ status, statusReason: statusReasons[candidate.id]?.trim() || null, jobId: targetJobId }),
+            body: JSON.stringify({ status, statusReason: reason || null, jobId: targetJobId }),
           });
 
       if (developmentMode) {
@@ -1147,10 +1152,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
       setStatusDrafts((current) => ({ ...current, [updated.id]: updated.status }));
       const message = 'Decision recorded: ' + updated.name + ' is now ' + statusLabel(updated.status) + '.';
-      setEvaluationDecisionMessage(message);
       setSuccess(message);
     } catch (requestError: unknown) {
-      setEvaluationDecisionMessage('');
       setError(requestError instanceof Error ? requestError.message : 'Unable to update candidate status.');
     }
   };
@@ -2067,57 +2070,6 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       </div>
                     )}
                   </div>
-                  {evaluationDecisionMessage && (
-                    <div className="shrink-0 border-t border-emerald-100 bg-emerald-50 px-4 py-3 sm:px-5" role="status" aria-live="polite">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-[11px] font-black text-white">✓</div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-extrabold text-emerald-900">Decision recorded</p>
-                          <p className="mt-0.5 text-[11px] leading-5 text-emerald-800">{evaluationDecisionMessage}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeInterview.status === 'COMPLETED' && activeCandidate && !candidateFinalStatuses.includes(activeCandidate.status) && (
-                    <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Final candidate decision</p>
-                        <h4 className="mt-0.5 text-sm font-black text-slate-950">Record the candidate outcome</h4>
-                        <p className="mt-1 text-[10px] leading-4 text-slate-500">The final score is calculated from the interviewer panel. Record the decision here so the system keeps who made it.</p>
-                      </div>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <FormField label="Status">
-                          <select
-                            className="field-input h-11"
-                            value={statusDrafts[activeCandidate.id] ?? ''}
-                            onChange={(event) => setStatusDrafts((current) => ({ ...current, [activeCandidate.id]: event.target.value as CandidateStatus }))}
-                          >
-                            <option value="">Select final status</option>
-                            {(role === 'INTERVIEWER' ? interviewerDecisionStatuses : candidateFinalStatuses).map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
-                          </select>
-                        </FormField>
-                        <FormField label="Reason" hint="Optional">
-                          <input
-                            className="field-input h-11"
-                            value={statusReasons[activeCandidate.id] ?? ''}
-                            onChange={(event) => setStatusReasons((current) => ({ ...current, [activeCandidate.id]: event.target.value }))}
-                            placeholder="Reason or decision note"
-                          />
-                        </FormField>
-                        <div className="sm:col-span-2">
-                          <Button
-                            className="min-h-11 w-full sm:w-auto"
-                            disabled={!statusDrafts[activeCandidate.id]}
-                            onClick={() => void updateCandidateStatus(activeCandidate, evaluationFor ? (interviews.find((item) => item.id === evaluationFor)?.jobId ?? null) : null)}
-                          >
-                            Update status
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {role === 'INTERVIEWER' && ['SCHEDULED', 'IN_PROGRESS'].includes(activeInterview.status) && (
                     <div className="shrink-0 border-t border-amber-100 bg-amber-50/60 px-4 py-3 sm:px-5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -2216,7 +2168,23 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       />
 
       {detailFor && detail && (
-        <InterviewDetailsModal detail={detail} open={interviewDetailModalOpen} onClose={closeInterviewDetails} />
+        <InterviewDetailsModal
+          detail={detail}
+          open={interviewDetailModalOpen}
+          onClose={closeInterviewDetails}
+          role={role}
+          onUpdateCandidateStatus={async (candidate, status, reason) => {
+            await updateCandidateStatus(candidate, detail?.job?.id ?? null, status, reason);
+            setDetail((current) => current
+              ? {
+                  ...current,
+                  candidate: current.candidate
+                    ? { ...current.candidate, status, statusUpdatedAt: new Date().toISOString() }
+                    : current.candidate,
+                }
+              : current);
+          }}
+        />
       )}
 
     </section>
