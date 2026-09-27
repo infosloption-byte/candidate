@@ -46,4 +46,4 @@ ALTER TABLE `Candidate`
 CREATE UNIQUE INDEX `Candidate_agencyId_agencyRegisterNo_key` ON `Candidate` (`agencyId`, `agencyRegisterNo`);
 CREATE INDEX `Candidate_agencyId_firstName_lastName_idx` ON `Candidate` (`agencyId`, `firstName`, `lastName`);
 CREATE INDEX `Candidate_agencyId_requestedProfession_idx` ON `Candidate` (`agencyId`, `requestedProfession`);
-CREATE INDEX `Candidate_agencyId_passportNumber_idx` ON `Candidate` (`agencyId`, `passportNumber`);
+-- Removed: index already existed on this DB before
