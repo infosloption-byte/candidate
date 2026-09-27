@@ -53,6 +53,10 @@ export const CriterionResponseField = ({
     );
   };
 
+  const textPlaceholder = assignment.name.trim()
+    ? 'Enter ' + assignment.name.trim().toLowerCase()
+    : 'Enter answer';
+
   const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' || event.key === ',') {
       event.preventDefault();
@@ -112,13 +116,27 @@ export const CriterionResponseField = ({
               </div>
             )}
           </div>
+        ) : assignment.responseType === 'SINGLE_SELECT' ? (
+          <select
+            className="field-input !mt-0"
+            disabled={disabled}
+            value={selectedOptions[0] ?? ''}
+            onChange={(event) => onSelectedOptionsChange(event.target.value ? [event.target.value] : [])}
+            aria-label={assignment.name + ' answer'}
+          >
+            <option value="">Select one option</option>
+            {(assignment.options ?? []).map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
         ) : (
-          <textarea
-            className="field-input min-h-24 resize-y"
+          <input
+            type="text"
+            className="field-input !mt-0"
             disabled={disabled}
             value={textValue}
             onChange={(event) => onTextChange(event.target.value)}
-            placeholder="Enter the candidate's answer"
+            placeholder={textPlaceholder}
             aria-label={assignment.name + ' answer'}
           />
         )}
