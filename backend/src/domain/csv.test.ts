@@ -22,3 +22,21 @@ test('csv object parser lowercases camel-case experience header', () => {
     [{ name: 'Kamal', experienceyears: '8' }],
   );
 });
+
+test('csv object parser accepts Excel-style human-readable headers', () => {
+  assert.deepEqual(
+    csvRowsToObjects(
+      'Agency Register No,First Name,Last Name,Birth Date,Passport Number,Passport Expiry,Requested Profession\n' +
+      'AGR-2001,Kamal,Perera,1990-01-15,N1234567,2031-12-31,Mason\n',
+    ),
+    [{
+      agencyregisterno: 'AGR-2001',
+      firstname: 'Kamal',
+      lastname: 'Perera',
+      birthdate: '1990-01-15',
+      passportnumber: 'N1234567',
+      passportexpiry: '2031-12-31',
+      requestedprofession: 'Mason',
+    }],
+  );
+});
