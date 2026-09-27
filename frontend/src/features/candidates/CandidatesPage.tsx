@@ -48,6 +48,38 @@ const label = (value: string): string => value.replaceAll('_', ' ');
 const finalStatusOptions: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
 const CANDIDATES_PAGE_SIZE = 10;
 
+
+const decodeTextFile = async (file: File): Promise<string> => {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+    return new TextDecoder('utf-16le').decode(bytes.slice(2));
+  }
+
+  if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+    return new TextDecoder('utf-16be').decode(bytes.slice(2));
+  }
+
+  const sampleLength = Math.min(bytes.length, 200);
+  let oddZeroCount = 0;
+  let evenZeroCount = 0;
+  for (let index = 0; index < sampleLength; index += 1) {
+    if (bytes[index] !== 0) continue;
+    if (index % 2 === 0) evenZeroCount += 1;
+    else oddZeroCount += 1;
+  }
+
+  if (oddZeroCount > 8 && oddZeroCount > evenZeroCount * 2) {
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+
+  if (evenZeroCount > 8 && evenZeroCount > oddZeroCount * 2) {
+    return new TextDecoder('utf-16be').decode(bytes);
+  }
+
+  return new TextDecoder('utf-8').decode(bytes);
+};
 const parseCsvRows = (input: string): string[][] => {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -563,7 +595,7 @@ const filterOptions = useMemo(() => ({
     setError('');
     setSuccess('');
     try {
-      const csv = await file.text();
+      const csv = await decodeTextFile(file);
 
       if (developmentMode) {
         const rows = parseCsvRows(csv);
@@ -858,7 +890,7 @@ const filterOptions = useMemo(() => ({
                     <path d="M5 12v7h14v-7" />
                   </svg>
                   <span className="mt-2 text-xs font-bold text-slate-700">{importFile ? 'Change selected file' : 'Choose a CSV file'}</span>
-                  <span className="mt-1 text-[10px] text-slate-400">CSV format only</span>
+                  <span className="mt-1 text-[10px] text-slate-400">CSV format only • UTF-8 / Excel CSV</span>
                   <input
                     ref={bulkFileRef}
                     type="file"
