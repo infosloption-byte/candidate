@@ -1,4 +1,4 @@
-export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'MULTI_SELECT';
+export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT';
 
 export interface InterviewCriterionInput {
   name?: string;
@@ -26,7 +26,7 @@ export const validateInterviewCriterionInput = (
   if (input.description !== undefined && input.description !== null && input.description.trim().length > 500) {
     errors.push('Criterion description must be 500 characters or fewer.');
   }
-  if (!['SCORE', 'TEXT', 'MULTI_SELECT'].includes(responseType)) {
+  if (!['SCORE', 'TEXT', 'SINGLE_SELECT', 'MULTI_SELECT'].includes(responseType)) {
     errors.push('Invalid criterion response type.');
   }
   const maxPoints = input.maxPoints ?? (mode === 'create' ? 5 : undefined);
@@ -44,12 +44,14 @@ export const validateInterviewCriterionInput = (
       if (options.length > 50 || options.some((option) => option.length > 120)) {
         errors.push('Criterion options must contain up to 50 non-empty labels of 120 characters or fewer.');
       }
-      if (responseType !== 'MULTI_SELECT' && options.length) {
-        errors.push('Suggested tags can only be used when Multiple tag option is enabled.');
+      if (responseType === 'SINGLE_SELECT' && options.length === 0) {
+        errors.push('Dropdown criteria must include at least one option.');
+      }
+      if (!['SINGLE_SELECT', 'MULTI_SELECT'].includes(responseType) && options.length) {
+        errors.push('Options can only be configured for Dropdown or Multiple tag criteria.');
       }
     }
   }
-  // Multiple-tag criteria may have optional suggested tags, but the interviewer can always enter free-form tags.
   if (input.active !== undefined && typeof input.active !== 'boolean') {
     errors.push('Criterion active flag must be true or false.');
   }
