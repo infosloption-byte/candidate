@@ -77,9 +77,10 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       }
       const job = await getPrisma().job.findUnique({
         where: { id: request.query.jobId },
-        select: { id: true, status: true },
+        select: { id: true, companyId: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (job.companyId !== user.companyId) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       const canReadJob =
         user.role === 'COMPANY'
         || user.role === 'AGENCY'
@@ -91,12 +92,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
     const candidates = await getPrisma().candidate.findMany({
       where: request.query.jobId
-        ? { jobMemberships: { some: { jobId: request.query.jobId } } }
+        ? { companyId: user.companyId ?? '__missing__', jobMemberships: { some: { jobId: request.query.jobId } } }
         : user.role === 'COMPANY'
-          ? undefined
+          ? { companyId: user.companyId ?? '__missing__' }
           : user.role === 'INTERVIEWEE'
             ? user.candidateId ? { id: user.candidateId } : { id: '__not_found__' }
-            : { agencyId: user.agencyId ?? '__missing__' },
+            : { companyId: user.companyId ?? '__missing__', agencyId: user.agencyId ?? '__missing__' },
       select: candidateSelect,
       orderBy: { createdAt: 'desc' },
     });
@@ -108,6 +109,9 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
     const user = request.authUser!;
+    if (user.role !== 'INTERVIEWEE' && candidate.companyId !== user.companyId) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
+    }
     const allowed = canManageCandidate(user.role, user.agencyId, candidate.agencyId)
       || (user.role === 'INTERVIEWEE' && user.candidateId === candidate.id);
     if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' } });
