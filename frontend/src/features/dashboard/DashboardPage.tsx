@@ -123,6 +123,7 @@ const ProgressBar = ({ value, tone = 'cyan' }: { value: number; tone?: Tone }) =
 );
 
 const PipelineCard = ({ label, value, total, tone = 'cyan' }: { label: string; value: number; total: number; tone?: Tone }) => {
+  const { t } = useLanguage();
   const ratio = total ? (value / total) * 100 : 0;
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
@@ -133,7 +134,7 @@ const PipelineCard = ({ label, value, total, tone = 'cyan' }: { label: string; v
       <div className="mt-3">
         <ProgressBar value={ratio} tone={tone} />
       </div>
-      <p className="mt-2 text-[10px] font-semibold text-slate-400">{Math.round(ratio)}% of scoped candidates</p>
+      <p className="mt-2 text-[10px] font-semibold text-slate-400">{Math.round(ratio)}% {t('of scoped candidates')}</p>
     </div>
   );
 };
@@ -144,7 +145,10 @@ const ScheduleItem = ({
 }: {
   item: Analytics['upcomingInterviews'][number];
   interviewer?: boolean;
-}) => (
+}) => {
+  const { t, language } = useLanguage();
+  const locale = language === 'he' ? 'he-IL' : 'en-US';
+  return (
   <div className="flex min-w-0 flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
     <div className="flex min-w-0 items-start gap-3">
       <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-cyan-300">
@@ -154,22 +158,23 @@ const ScheduleItem = ({
         <p className="truncate text-sm font-black text-slate-900">{item.candidate.name}</p>
         <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">
           {item.candidate.reference}
-          {item.candidate.passportNumber ? ' · Passport: ' + item.candidate.passportNumber : ''}
+          {item.candidate.passportNumber ? ' · ' + t('Passport') + ': ' + item.candidate.passportNumber : ''}
         </p>
         <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">
-          {statusLabel(item.type)}{item.job?.title ? ' · ' + item.job.title : ''}
+          {t(statusLabel(item.type))}{item.job?.title ? ' · ' + item.job.title : ''}
         </p>
       </div>
     </div>
     <div className="shrink-0 sm:text-right">
-      <p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString()}</p>
+      <p className="text-xs font-black text-slate-900">{new Date(item.scheduledAt).toLocaleDateString(locale)}</p>
       <p className="mt-1 text-[10px] font-semibold text-slate-400">
-        {new Date(item.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {new Date(item.scheduledAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
       </p>
-      {interviewer && <span className="mt-2 inline-flex rounded-full bg-cyan-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-700">Assigned</span>}
+      {interviewer && <span className="mt-2 inline-flex rounded-full bg-cyan-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-700">{t('Assigned')}</span>}
     </div>
   </div>
-);
+  );
+}
 
 export const DashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
@@ -320,11 +325,11 @@ export const DashboardPage = ({ role }: Props) => {
   }, [developmentMode, developmentAnalytics, role, selectedJobId, state.jobs]);
 
   if (loading) {
-    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title="Loading dashboard" description="Preparing your recruitment command center." /></section>;
+    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title={t('Loading dashboard')} description={t('Preparing your recruitment command center.')} /></section>;
   }
 
   if (error || !analytics) {
-    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title="Dashboard unavailable" description={error || 'No analytics data was returned.'} /></section>;
+    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="error" title={t('Dashboard unavailable')} description={error || t('No analytics data was returned.')} /></section>;
   }
 
   const { counts, candidateStatuses, interviewStatuses, interviewTypes, upcomingInterviews, recentCandidates } = analytics;
@@ -338,14 +343,14 @@ export const DashboardPage = ({ role }: Props) => {
   const todayInterviews = upcomingInterviews.filter((item) => isToday(item.scheduledAt));
   const nextInterview = upcomingInterviews[0] ?? null;
 
-  const roleLabel = role === 'COMPANY_ADMIN' ? 'Operations command center' : role === 'AGENCY' ? 'Agency recruitment desk' : 'Interviewer command center';
-  const roleDescription = selectedJobId
+  const roleLabel = t(role === 'COMPANY_ADMIN' ? 'Operations command center' : role === 'AGENCY' ? 'Agency recruitment desk' : 'Interviewer command center');
+  const roleDescription = t(selectedJobId
     ? 'Focused on the selected job and its active recruitment workflow.'
     : role === 'COMPANY_ADMIN'
       ? 'Monitor capacity, candidate flow, interviews and decisions across the platform.'
       : role === 'AGENCY'
         ? 'Track your hiring pipeline, open roles, interviews and candidate movement.'
-        : 'See your assigned interviews, evaluation workload and the next actions that need attention.';
+        : 'See your assigned interviews, evaluation workload and the next actions that need attention.');
 
   return (
     <section className="mx-auto max-w-7xl space-y-4 p-3 sm:space-y-5 sm:p-5 lg:space-y-6 lg:p-8">
@@ -353,21 +358,21 @@ export const DashboardPage = ({ role }: Props) => {
         <div className="grid gap-5 p-5 text-white sm:p-7 lg:grid-cols-[1.3fr_.7fr] lg:items-end lg:p-8">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-cyan-400/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">Live workspace</span>
-              {selectedJobId && <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-300">Job scope</span>}
+              <span className="rounded-full bg-cyan-400/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">{t('Live workspace')}</span>
+              {selectedJobId && <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-300">{t('Job scope')}</span>}
             </div>
             <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">{t('Good to see you,')} {user?.name ?? t('there')}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">{roleLabel} · {roleDescription}</p>
             {nextInterview && (
               <div className="mt-5 flex min-w-0 flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">Next interview</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">{t('Next interview')}</p>
                   <p className="mt-1 truncate text-sm font-black text-white">{nextInterview.candidate.name}</p>
-                  <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{nextInterview.job?.title ?? 'Platform interview'} · {statusLabel(nextInterview.type)}</p>
+                  <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{nextInterview.job?.title ?? 'Platform interview'} · {t(statusLabel(nextInterview.type))}</p>
                 </div>
                 <div className="shrink-0 sm:text-right">
-                  <p className="text-sm font-black text-white">{new Date(nextInterview.scheduledAt).toLocaleDateString()}</p>
-                  <p className="mt-1 text-[10px] font-semibold text-slate-400">{new Date(nextInterview.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-sm font-black text-white">{new Date(nextInterview.scheduledAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}</p>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-400">{new Date(nextInterview.scheduledAt).toLocaleTimeString(language === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
             )}
@@ -378,13 +383,13 @@ export const DashboardPage = ({ role }: Props) => {
               value={selectedJobId}
               onChange={setSelectedJobId}
               options={[
-                { value: '', label: 'All jobs' },
+                { value: '', label: t('All jobs') },
                 ...jobs.map((job) => ({ value: job.id, label: job.title })),
               ]}
-              ariaLabel="Filter dashboard by job"
+              ariaLabel={t('Filter dashboard by job')}
             />
             <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300 lg:justify-start">
-              <span>Updated</span>
+              <span>{t('Updated')}</span>
               <span className="ml-2 text-slate-100">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </div>
@@ -394,39 +399,39 @@ export const DashboardPage = ({ role }: Props) => {
       {role === 'INTERVIEWER' ? (
         <>
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="Assigned interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' scheduled'} icon="calendar" tone="cyan" />
-            <MetricCard label="Today" value={todayInterviews.length} hint="sessions visible in the next queue" icon="clock" tone="violet" />
-            <MetricCard label="Needs evaluation" value={counts.pendingInterviewerEvaluations} hint="in progress or completed" icon="alert" tone="amber" />
-            <MetricCard label="Completion" value={completionRate + '%'} hint={(interviewStatuses.COMPLETED ?? 0) + ' completed'} icon="target" tone="emerald" />
+            <MetricCard label="Assigned interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' ' + t('scheduled')} icon="calendar" tone="cyan" />
+            <MetricCard label="Today" value={todayInterviews.length} hint={t('sessions visible in the next queue')} icon="clock" tone="violet" />
+            <MetricCard label="Needs evaluation" value={counts.pendingInterviewerEvaluations} hint={t('in progress or completed')} icon="alert" tone="amber" />
+            <MetricCard label="Completion" value={completionRate + '%'} hint={(interviewStatuses.COMPLETED ?? 0) + ' ' + t('completed')} icon="target" tone="emerald" />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
             <Card className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">Next actions</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">My interview desk</h2>
-                  <p className="mt-1 text-xs text-slate-400">Your assigned sessions, not the whole platform schedule.</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">{t('Next actions')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('My interview desk')}</h2>
+                  <p className="mt-1 text-xs text-slate-400">{t('Your assigned sessions, not the whole platform schedule.')}</p>
                 </div>
                 <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700"><Icon name="calendar" size={17} /></div>
               </div>
               <div className="mt-4 space-y-2.5">
-                {upcomingInterviews.length ? upcomingInterviews.map((item) => <ScheduleItem key={item.id} item={item} interviewer />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">No upcoming assigned interviews.</div>}
+                {upcomingInterviews.length ? upcomingInterviews.map((item) => <ScheduleItem key={item.id} item={item} interviewer />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">{t('No upcoming assigned interviews.')}<</div>}
               </div>
             </Card>
 
             <Card className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-600">Evaluation health</p>
-              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Submission status</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-600">{t('Evaluation health')}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Submission status')}</h2>
               <div className="mt-5 rounded-3xl bg-slate-950 p-5 text-white">
                 <p className="text-4xl font-black">{counts.submittedEvaluations}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">submitted evaluations</p>
+                <p className="mt-1 text-xs font-semibold text-slate-400">{t('submitted evaluations')}</p>
                 <div className="mt-4"><ProgressBar value={counts.submittedEvaluations + counts.pendingInterviewerEvaluations ? counts.submittedEvaluations / (counts.submittedEvaluations + counts.pendingInterviewerEvaluations) * 100 : 0} tone="violet" /></div>
-                <p className="mt-2 text-[10px] font-semibold text-slate-400">{counts.pendingInterviewerEvaluations} still need attention</p>
+                <p className="mt-2 text-[10px] font-semibold text-slate-400">{counts.pendingInterviewerEvaluations} {t('still need attention')}</p>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">In progress</p><p className="mt-1 text-xl font-black">{interviewStatuses.IN_PROGRESS ?? 0}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">No show</p><p className="mt-1 text-xl font-black">{interviewStatuses.NO_SHOW ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t('In progress')}</p><p className="mt-1 text-xl font-black">{interviewStatuses.IN_PROGRESS ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t('No show')}</p><p className="mt-1 text-xl font-black">{interviewStatuses.NO_SHOW ?? 0}</p></div>
               </div>
             </Card>
           </div>
@@ -435,7 +440,7 @@ export const DashboardPage = ({ role }: Props) => {
             {['SCREENING', 'TECHNICAL', 'PRACTICAL', 'FINAL'].map((type) => (
               <div key={type} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{statusLabel(type)}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t(statusLabel(type))}</span>
                   <span className="text-sm font-black text-slate-950">{interviewTypes[type] ?? 0}</span>
                 </div>
                 <div className="mt-3"><ProgressBar value={counts.interviews ? ((interviewTypes[type] ?? 0) / counts.interviews) * 100 : 0} tone="cyan" /></div>
@@ -446,43 +451,43 @@ export const DashboardPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            {role === 'COMPANY_ADMIN' && <MetricCard label="Agencies" value={counts.activeAgencies} hint={counts.agencies + ' total workspaces'} icon="users" tone="cyan" />}
-            <MetricCard label="Open roles" value={counts.publishedJobs} hint={counts.jobs + ' jobs in scope'} icon="briefcase" tone="violet" />
-            <MetricCard label="Candidates" value={counts.candidates} hint={(candidateStatuses.INTERVIEW_COMPLETED ?? 0) + ' awaiting final decision'} icon="users" tone="cyan" />
-            <MetricCard label="Interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' scheduled'} icon="calendar" tone="amber" />
-            <MetricCard label="Hiring fill" value={fillRate + '%'} hint={counts.remainingOpenings + ' openings remaining'} icon="target" tone="emerald" />
+            {role === 'COMPANY_ADMIN' && <MetricCard label={t('Agencies')} value={counts.activeAgencies} hint={counts.agencies + ' ' + t('total workspaces')} icon="users" tone="cyan" />}
+            <MetricCard label={t('Open roles')} value={counts.publishedJobs} hint={counts.jobs + ' ' + t('jobs in scope')} icon="briefcase" tone="violet" />
+            <MetricCard label={t('Candidates')} value={counts.candidates} hint={(candidateStatuses.INTERVIEW_COMPLETED ?? 0) + ' ' + t('awaiting final decision')} icon="users" tone="cyan" />
+            <MetricCard label={t('Interviews')} value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' ' + t('scheduled')} icon="calendar" tone="amber" />
+            <MetricCard label={t('Hiring fill')} value={fillRate + '%'} hint={counts.remainingOpenings + ' ' + t('openings remaining')} icon="target" tone="emerald" />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
             <Card className="min-w-0">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Capacity</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Hiring progress</h2>
-                  <p className="mt-1 text-xs text-slate-400">Filled worker positions against requested capacity.</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">{t('Capacity')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Hiring progress')}</h2>
+                  <p className="mt-1 text-xs text-slate-400">{t('Filled worker positions against requested capacity.')}</p>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">{fillRate}% filled</span>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">{fillRate}% {t('filled')}</span>
               </div>
               <div className="mt-5">
                 <div className="flex items-end justify-between gap-3">
-                  <div><p className="text-3xl font-black text-slate-950">{counts.filledWorkers}</p><p className="mt-1 text-[10px] font-semibold text-slate-400">workers filled</p></div>
-                  <div className="text-right"><p className="text-2xl font-black text-slate-700">{counts.totalOpenings}</p><p className="mt-1 text-[10px] font-semibold text-slate-400">requested</p></div>
+                  <div><p className="text-3xl font-black text-slate-950">{counts.filledWorkers}</p><p className="mt-1 text-[10px] font-semibold text-slate-400">{t('workers filled')}</p></div>
+                  <div className="text-right"><p className="text-2xl font-black text-slate-700">{counts.totalOpenings}</p><p className="mt-1 text-[10px] font-semibold text-slate-400">{t('requested')}</p></div>
                 </div>
                 <div className="mt-4"><ProgressBar value={fillRate} tone="emerald" /></div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Remaining</p><p className="mt-1 text-xl font-black">{counts.remainingOpenings}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Hired</p><p className="mt-1 text-xl font-black">{candidateStatuses.HIRED ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t('Remaining')}</p><p className="mt-1 text-xl font-black">{counts.remainingOpenings}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t(t('Hired'))}</p><p className="mt-1 text-xl font-black">{candidateStatuses.HIRED ?? 0}</p></div>
               </div>
             </Card>
 
             <Card className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">Pipeline</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Candidate movement</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">{t('Pipeline')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Candidate movement')}</h2>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">{decisionRate}% finalised</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600"{decisionRate}% {t('finalised')}</span>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <PipelineCard label="Pool" value={candidateStatuses.POOL ?? 0} total={counts.candidates} tone="cyan" />
@@ -497,10 +502,10 @@ export const DashboardPage = ({ role }: Props) => {
             <Card className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-600">Interview operations</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Schedule health</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-600">{t('Interview operations')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Schedule health')}</h2>
                 </div>
-                <div className="text-right"><p className="text-2xl font-black text-slate-950">{completionRate}%</p><p className="text-[10px] font-semibold text-slate-400">completion</p></div>
+                <div className="text-right"><p className="text-2xl font-black text-slate-950">{completionRate}%</p><p className="text-[10px] font-semibold text-slate-400">{t('completion')}</p></div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
                 {['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].map((status) => (
@@ -511,18 +516,18 @@ export const DashboardPage = ({ role }: Props) => {
                 ))}
               </div>
               <div className="mt-4"><ProgressBar value={completionRate} tone="amber" /></div>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">{noShowRate}% no-show rate · {counts.draftEvaluations} draft evaluations</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">{noShowRate}% {t('no-show rate')} · {counts.draftEvaluations} {t('draft evaluations')}</p>
             </Card>
 
             <Card className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">Decision queue</p>
-              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Where attention is needed</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">{t('Decision queue')}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Where attention is needed')}</h2>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {[
-                  ['INTERVIEW_COMPLETED', candidateStatuses.INTERVIEW_COMPLETED ?? 0, 'Awaiting decision'],
-                  ['PASSED', candidateStatuses.PASSED ?? 0, 'Passed'],
-                  ['REJECTED', candidateStatuses.REJECTED ?? 0, 'Rejected'],
-                  ['HIRED', candidateStatuses.HIRED ?? 0, 'Hired'],
+                  ['INTERVIEW_COMPLETED', candidateStatuses.INTERVIEW_COMPLETED ?? 0, t('Awaiting decision')],
+                  ['PASSED', candidateStatuses.PASSED ?? 0, t('Passed')],
+                  ['REJECTED', candidateStatuses.REJECTED ?? 0, t('Rejected')],
+                  ['HIRED', candidateStatuses.HIRED ?? 0, t('Hired')],
                 ].map(([status, value, hint]) => (
                   <div key={status as string} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
                     <div className="flex items-center justify-between gap-2"><StatusPill value={status as string} /><span className="text-lg font-black text-slate-950">{value as number}</span></div>
@@ -537,21 +542,21 @@ export const DashboardPage = ({ role }: Props) => {
             <Card className="min-w-0">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-600">Live schedule</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Upcoming interviews</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-600">{t('Live schedule')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Upcoming interviews')}</h2>
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{upcomingInterviews.length} shown</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{upcomingInterviews.length} {t('shown')}</span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {upcomingInterviews.length ? upcomingInterviews.slice(0, 6).map((item) => <ScheduleItem key={item.id} item={item} />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">No upcoming interviews.</div>}
+                {upcomingInterviews.length ? upcomingInterviews.slice(0, 6).map((item) => <ScheduleItem key={item.id} item={item} />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">{t('No upcoming interviews.')}</div>}
               </div>
             </Card>
 
             <Card className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Latest movement</p>
-                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Candidate updates</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Latest movement')}</p>
+                  <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Candidate updates')}</h2>
                 </div>
                 <Icon name="refresh" size={18} />
               </div>
@@ -567,7 +572,7 @@ export const DashboardPage = ({ role }: Props) => {
                       <p className="mt-1 text-[9px] font-semibold text-slate-400">{new Date(candidate.statusUpdatedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">No recent candidate movement.</div>}
+                )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">{t('No recent candidate movement.')}</div>}
               </div>
             </Card>
           </div>
@@ -576,7 +581,7 @@ export const DashboardPage = ({ role }: Props) => {
             {['SCREENING', 'TECHNICAL', 'PRACTICAL', 'FINAL'].map((type) => (
               <div key={type} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{statusLabel(type)}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t(statusLabel(type))}</span>
                   <span className="text-sm font-black text-slate-950">{interviewTypes[type] ?? 0}</span>
                 </div>
                 <div className="mt-3"><ProgressBar value={counts.interviews ? ((interviewTypes[type] ?? 0) / counts.interviews) * 100 : 0} tone="cyan" /></div>
