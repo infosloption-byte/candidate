@@ -595,7 +595,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       const user = request.authUser!;
       const allowed =
-        user.role === 'ADMIN'
+        user.role === 'COMPANY'
         || (user.role === 'AGENCY' && user.agencyId === interview.candidate.agencyId)
         || (user.role === 'INTERVIEWER' && isPanelInterviewer(interview, user.id))
         || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidateId);
