@@ -18,7 +18,7 @@ export interface AuthUser {
   candidateId: string | null;
   name: string;
   email: string;
-  role: 'COMPANY' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
+  role: 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
   active: boolean;
 }
 
@@ -134,7 +134,7 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
     session.expiresAt.getTime() <= Date.now()
     || !session.user.active
     || (session.user.companyId !== null && companyStatus !== 'ACTIVE')
-    || (!globalInterviewer && session.user.role !== 'COMPANY' && agencyStatus !== 'ACTIVE')
+    || (!globalInterviewer && session.user.role !== 'COMPANY_ADMIN' && agencyStatus !== 'ACTIVE')
   ) {
     await getPrisma().session.deleteMany({ where: { id: session.id } });
     return null;
@@ -183,7 +183,7 @@ export const requireAgencyAccess = (paramName = 'agencyId'): preHandlerHookHandl
     });
   }
 
-  if (request.authUser.role === 'COMPANY') {
+  if (request.authUser.role === 'COMPANY_ADMIN') {
     const agency = await getPrisma().agency.findUnique({
       where: { id: agencyId },
       select: { companyId: true },
