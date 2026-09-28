@@ -510,7 +510,7 @@ export const AgenciesPage = () => {
         </div>
       ),
     },
-    { key: 'role', header: 'Role', render: (item: User) => <StatusPill value={item.role} /> },
+    { key: 'role', header: 'Role', render: (item: User) => <StatusPill value={item.role === 'COMPANY_ADMIN' ? 'COMPANY ADMIN' : item.role} /> },
     {
       key: 'agency',
       header: 'Agency',
