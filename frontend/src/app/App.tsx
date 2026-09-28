@@ -5,6 +5,7 @@ import { AuthProvider, developmentUser, useAuth } from '../domain/authContext';
 import { RecruitmentProvider } from '../domain/recruitmentContext';
 import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { PlatformDashboardPage } from '../features/dashboard/PlatformDashboardPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { JobDetailPage } from '../features/jobs/JobDetailPage';
@@ -112,7 +113,10 @@ const AuthenticatedApp = ({
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
       case 'dashboard':
-      default: return <DashboardPage role={role} />;
+      default:
+        return role === 'ADMIN'
+          ? <PlatformDashboardPage role={role} />
+          : <DashboardPage role={role} />;
     }
   })();
 
