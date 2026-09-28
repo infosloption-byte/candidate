@@ -178,7 +178,7 @@ const ScheduleItem = ({
 
 export const DashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { state } = useRecruitment();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [jobs, setJobs] = useState<JobFilterOption[]>([]);
