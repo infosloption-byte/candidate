@@ -2,16 +2,30 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { jobListWhereForUser } from './jobsAccess.js';
 
-test('interviewees only see published jobs from their linked agency', () => {
-  assert.deepEqual(
-    jobListWhereForUser({ role: 'INTERVIEWEE', companyId: null, agencyId: null, candidateAgencyId: 'agency-1' }),
-    { status: 'PUBLISHED', agencyId: 'agency-1' },
+test('platform admins can see jobs across companies', () => {
+  assert.equal(
+    jobListWhereForUser({ role: 'ADMIN', companyId: null, agencyId: null, candidateAgencyId: null }),
+    undefined,
   );
 });
 
-test('agency users only see their own agency jobs', () => {
+test('company admins only see jobs from their company', () => {
   assert.deepEqual(
-    jobListWhereForUser({ role: 'AGENCY', companyId: null, agencyId: 'agency-1', candidateAgencyId: null }),
-    { agencyId: 'agency-1' },
+    jobListWhereForUser({ role: 'COMPANY_ADMIN', companyId: 'company-1', agencyId: null, candidateAgencyId: null }),
+    { companyId: 'company-1' },
+  );
+});
+
+test('agency users only see jobs from their company', () => {
+  assert.deepEqual(
+    jobListWhereForUser({ role: 'AGENCY', companyId: 'company-1', agencyId: 'agency-1', candidateAgencyId: null }),
+    { companyId: 'company-1' },
+  );
+});
+
+test('interviewees only see published jobs', () => {
+  assert.deepEqual(
+    jobListWhereForUser({ role: 'INTERVIEWEE', companyId: 'company-1', agencyId: 'agency-1', candidateAgencyId: 'candidate-agency-1' }),
+    { status: 'PUBLISHED' },
   );
 });
