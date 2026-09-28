@@ -51,7 +51,8 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
 };
 
 const roleLabels: Record<UserRole, string> = {
-  COMPANY: 'Company administrator',
+  ADMIN: 'Developer / Platform owner',
+  COMPANY_ADMIN: 'Company administrator',
   AGENCY: 'Company workspace',
   INTERVIEWER: 'Interview desk',
   INTERVIEWEE: 'Candidate portal',
