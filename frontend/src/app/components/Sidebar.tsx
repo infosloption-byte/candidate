@@ -13,10 +13,19 @@ interface SidebarProps {
 const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: AppView; label: string; icon: IconName }> }>> = {
   ADMIN: [
     { label: 'Platform', items: [
-      { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'dashboard', label: 'Overview', icon: 'grid' },
       { view: 'companies', label: 'Companies', icon: 'briefcase' },
-      { view: 'agencies', label: 'Platform Users', icon: 'users' },
-      { view: 'settings', label: 'Settings', icon: 'settings' },
+      { view: 'agencies', label: 'Users & Access', icon: 'users' },
+    ]},
+    { label: 'Operations', items: [
+      { view: 'platform-reports', label: 'Platform Reports', icon: 'chart' },
+      { view: 'platform-activity', label: 'Activity & Security', icon: 'alert' },
+    ]},
+    { label: 'Finance', items: [
+      { view: 'billing', label: 'Billing & Revenue', icon: 'chart' },
+    ]},
+    { label: 'System', items: [
+      { view: 'settings', label: 'Platform Settings', icon: 'settings' },
     ]},
   ],
   COMPANY_ADMIN: [
