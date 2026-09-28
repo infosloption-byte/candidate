@@ -143,9 +143,9 @@ export const useAuth = (): AuthContextValue => {
 
 export const developmentUser = (role: UserRole): User => ({
   id: 'dev-' + role.toLowerCase(),
-  companyId: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'company-1',
-  companyName: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'BuildHire Demo Company',
-  agencyId: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'agency-1',
+  companyId: role === 'INTERVIEWEE' ? null : 'company-1',
+  companyName: role === 'INTERVIEWEE' ? null : 'BuildHire Demo Company',
+  agencyId: role === 'INTERVIEWEE' ? null : 'agency-1',
   candidateId: role === 'INTERVIEWEE' ? 'candidate-1' : null,
   name: 'Development Session',
   email: 'dev-' + role.toLowerCase() + '@buildhire.local',
