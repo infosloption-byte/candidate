@@ -201,7 +201,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   );
 
   app.post<{
-    Body: { name?: string; email?: string; password?: string; role?: 'COMPANY_ADMIN' | 'AGENCY'; agencyId?: string | null };
+    Body: { name?: string; email?: string; password?: string; role?: 'COMPANY_ADMIN' | 'AGENCY'; companyId?: string | null; agencyId?: string | null };
   }>(
     '/system-users',
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
@@ -211,6 +211,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       const password = request.body.password ?? '';
       const role = request.body.role;
       const agencyId = role === 'AGENCY' ? request.body.agencyId ?? null : null;
+      const requestedCompanyId = request.body.companyId ?? null;
 
       if (!name || !email || !password || password.length < 8 || !role || !['COMPANY_ADMIN', 'AGENCY'].includes(role)) {
         return reply.code(400).send({
@@ -226,6 +227,17 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       }
 
       let agency: { id: string; companyId: string | null; status: AgencyStatus } | null = null;
+
+      let companyId = request.authUser!.companyId;
+
+      if (request.authUser!.role === 'ADMIN') {
+        if (!requestedCompanyId) {
+          return reply.code(400).send({ success: false, error: { code: 'COMPANY_REQUIRED', message: 'A company is required when the platform administrator creates a tenant user.' } });
+        }
+        const company = await getPrisma().company.findUnique({ where: { id: requestedCompanyId }, select: { id: true } });
+        if (!company) return reply.code(404).send({ success: false, error: { code: 'COMPANY_NOT_FOUND', message: 'Company not found.' } });
+        companyId = company.id;
+      }
 
       if (role === 'AGENCY') {
         if (!agencyId) {
