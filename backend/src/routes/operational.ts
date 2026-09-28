@@ -83,12 +83,12 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         interviews,
         submittedEvaluations,
         companyAdmins,
-        platformRoleCounts,
         companiesCreatedLast7Days,
         companiesCreatedLast30Days,
         companiesWithoutAgencies,
         companiesWithoutJobs,
         companiesWithoutCandidates,
+        platformRoleCounts,
         recentCompanies,
       ] = await Promise.all([
         prisma.company.count(),
