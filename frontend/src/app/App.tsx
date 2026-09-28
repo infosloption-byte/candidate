@@ -11,6 +11,7 @@ import { JobDetailPage } from '../features/jobs/JobDetailPage';
 import { CandidatesPage } from '../features/candidates/CandidatesPage';
 import { InterviewsPage } from '../features/interviews/InterviewsPage';
 import { AgenciesPage } from '../features/agencies/AgenciesPage';
+import { CompanyUsersPage } from '../features/company/CompanyUsersPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
@@ -102,7 +103,8 @@ const AuthenticatedApp = ({
         return <CandidatesPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
       case 'interviews':
         return <InterviewsPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
-      case 'agencies': return <AgenciesPage />;
+      case 'agencies':
+        return role === 'ADMIN' ? <AgenciesPage /> : role === 'AGENCY' ? <CompanyUsersPage /> : <DashboardPage role={role} />;
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
       case 'dashboard':
