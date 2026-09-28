@@ -77,7 +77,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>('/agencies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
     const agency = await getPrisma().agency.findUnique({
       where: { id: request.params.id },
-      include: { _count: { select: { users: true, jobs: true, candidates: true } } },
+      include: { _count: { select: { users: true, candidates: true } } },
     });
 
     if (!agency) {
@@ -338,7 +338,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('COMPANY')] },
     async (_request, reply) => {
       const interviewers = await getPrisma().user.findMany({
-        where: { role: 'INTERVIEWER' },
+        where: { companyId: _request.authUser?.companyId, role: 'INTERVIEWER' },
         select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
         orderBy: [{ agencyId: 'asc' }, { active: 'desc' }, { name: 'asc' }],
       });
@@ -349,7 +349,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Querystring: InterviewerQuery }>(
     '/interviewers',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const actor = request.authUser!;
       const requestedAgencyId = request.query.agencyId;
@@ -370,12 +370,12 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const agency = await getPrisma().agency.findUnique({
-        where: { id: agencyId },
+      const agency = await getPrisma().agency.findFirst({
+        where: { id: agencyId, companyId: actor.companyId },
         select: { id: true, status: true },
       });
       if (!agency) {
-        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
+        return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found in your company.' } });
       }
 
       const interviewers = await getPrisma().user.findMany({
@@ -397,7 +397,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('COMPANY')] },
     async (_request, reply) => {
       const interviewers = await getPrisma().user.findMany({
-        where: { role: 'INTERVIEWER', agencyId: null },
+        where: { role: 'INTERVIEWER', companyId: _request.authUser?.companyId, agencyId: null },
         select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
         orderBy: [{ active: 'desc' }, { name: 'asc' }],
       });
@@ -430,6 +430,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       try {
         const user = await getPrisma().user.create({
           data: {
+            companyId: request.authUser!.companyId,
             agencyId: null,
             name,
             email,
@@ -463,7 +464,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('COMPANY')] },
     async (request, reply) => {
       const existing = await getPrisma().user.findFirst({
-        where: { id: request.params.id, agencyId: null, role: 'INTERVIEWER' },
+        where: { id: request.params.id, companyId: request.authUser!.companyId, agencyId: null, role: 'INTERVIEWER' },
       });
 
       if (!existing) {
@@ -517,7 +518,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: { agencyId: string } }>(
     '/agencies/:agencyId/users',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const users = await getPrisma().user.findMany({
         where: { agencyId: request.params.agencyId, role: { in: ['AGENCY', 'INTERVIEWER'] } },
@@ -531,7 +532,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: { agencyId: string }; Body: UserBody }>(
     '/agencies/:agencyId/users',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const name = request.body.name?.trim();
       const email = request.body.email?.trim().toLowerCase();
@@ -586,7 +587,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: { agencyId: string; userId: string }; Body: Pick<UserBody, 'name' | 'role'> & { email?: string; password?: string; active?: boolean } }>(
     '/agencies/:agencyId/users/:userId',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const existing = await getPrisma().user.findFirst({
         where: { id: request.params.userId, agencyId: request.params.agencyId, role: { in: ['AGENCY', 'INTERVIEWER'] } },
