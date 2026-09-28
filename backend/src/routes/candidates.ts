@@ -525,7 +525,6 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to update this candidate.' } });
       }
       const canManage = canManageCandidate(user.role, user.agencyId, existing.agencyId);
-      const canSetFinalStatus = canSetFinalCandidateStatus(user.role, user.agencyId, existing.agencyId);
       const requestedFinalStatus = request.body.status !== undefined && ['PASSED', 'REJECTED', 'HIRED'].includes(request.body.status);
       const assignedInterviewer = user.role === 'INTERVIEWER'
         ? Boolean(await getPrisma().interviewParticipant.findFirst({ where: { userId: user.id, interview: { candidateId: existing.id, companyId: existing.companyId } }, select: { interviewId: true } }))
