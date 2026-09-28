@@ -33,7 +33,7 @@ const allowedToAccessCandidate = async (
   agencyId: string,
   candidateId: string,
 ): Promise<boolean> => {
-  if (user.role === 'COMPANY') return true;
+  if (user.role === 'COMPANY_ADMIN') return true;
   if (user.role === 'INTERVIEWEE') return user.candidateId === candidateId;
   if (user.role === 'AGENCY') return user.agencyId === agencyId;
   if (user.role === 'INTERVIEWER') {
@@ -51,7 +51,7 @@ const canManageCandidateDocuments = (
   user: NonNullable<FastifyRequest['authUser']>,
   agencyId: string,
 ): boolean =>
-  user.role === 'COMPANY' || (user.role === 'AGENCY' && user.agencyId === agencyId);
+  user.role === 'COMPANY_ADMIN' || (user.role === 'AGENCY' && user.agencyId === agencyId);
 
 
 export const documentRoutes: FastifyPluginAsync = async (app) => {
