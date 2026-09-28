@@ -27,7 +27,7 @@ const roleDefaults: Record<UserRole, AppView> = {
 
 const AppContent = () => {
   const { user, loading, developmentMode, logout } = useAuth();
-  const [developmentRole, setDevelopmentRole] = useState<UserRole>('ADMIN');
+  const [developmentRole, setDevelopmentRole] = useState<UserRole>('COMPANY');
 
   if (loading) {
     return (
@@ -105,9 +105,9 @@ const AuthenticatedApp = ({
       case 'interviews':
         return <InterviewsPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
       case 'companies':
-        return role === 'ADMIN' ? <CompaniesPage /> : <DashboardPage role={role} />;
+        return role === 'COMPANY' ? <CompaniesPage /> : <DashboardPage role={role} />;
       case 'agencies':
-        return role === 'ADMIN' ? <AgenciesPage /> : role === 'AGENCY' ? <CompanyUsersPage /> : <DashboardPage role={role} />;
+        return role === 'COMPANY' ? <AgenciesPage /> : role === 'AGENCY' ? <CompanyUsersPage /> : <DashboardPage role={role} />;
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
       case 'dashboard':
