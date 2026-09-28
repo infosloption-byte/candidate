@@ -116,6 +116,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           user: toPublicUser({
             id: result.user.id,
             companyId: result.user.companyId,
+            companyName: result.user.company?.name ?? null,
             agencyId: result.user.agencyId,
             candidateId: result.user.candidateId,
             name: result.user.name,
@@ -164,6 +165,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         user: toPublicUser({
           id: user.id,
           companyId: user.companyId,
+          companyName: user.company?.name ?? null,
           agencyId: user.agencyId,
           candidateId: user.candidateId,
           name: user.name,
@@ -220,8 +222,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_REGISTRATION', message: 'Select an agency.' } });
     }
     const agency = await getPrisma().agency.findFirst({
-      where: { id: agencyId, status: 'ACTIVE' },
-      select: { id: true, companyId: true },
+      where: { id: agencyId, status: 'ACTIVE', companyId: { not: null } },
+      select: { id: true, companyId: true, company: { select: { id: true, name: true, status: true } } },
     });
 
     if (!agency) {
@@ -232,7 +234,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const result = await getPrisma().$transaction(async (tx) => {
         const candidate = await tx.candidate.create({
           data: {
-            companyId: agency.companyId ?? (await tx.company.findFirst({ select: { id: true }, orderBy: { createdAt: 'asc' } }))?.id!,
+            companyId: agency.companyId!,
             agencyId: agency.id,
             reference: 'CA-' + randomBytes(5).toString('hex').toUpperCase(),
             agencyRegisterNo: request.body?.agencyRegisterNo?.trim() || 'SELF-' + randomBytes(5).toString('hex').toUpperCase(),
@@ -250,7 +252,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const user = await tx.user.create({
           data: {
             candidateId: candidate.id,
-            companyId: agency.companyId ?? undefined,
+            companyId: agency.companyId!,
             agencyId: agency.id,
             name: [firstName!, lastName!].join(' '),
             email,
