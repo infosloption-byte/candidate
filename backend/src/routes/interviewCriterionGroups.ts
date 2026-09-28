@@ -27,7 +27,7 @@ const groupInclude = {
 export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/interview-criteria-groups',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const groups = await getPrisma().interviewCriterionGroup.findMany({
         where: { companyId: request.authUser!.companyId ?? undefined },
@@ -40,7 +40,7 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
 
   app.post<{ Body: InterviewCriterionGroupInput }>(
     '/interview-criteria-groups',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const errors = validateInterviewCriterionGroupInput(request.body, 'create');
       if (errors.length) {
@@ -86,7 +86,7 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
 
   app.patch<{ Params: GroupParams; Body: InterviewCriterionGroupInput }>(
     '/interview-criteria-groups/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().interviewCriterionGroup.findFirst({
         where: { id: request.params.id, companyId: request.authUser!.companyId ?? undefined },
