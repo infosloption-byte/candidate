@@ -81,7 +81,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: JobParams }>('/jobs/:id', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+    if (!['COMPANY', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
     }
 
@@ -115,7 +115,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     if (!job) {
       return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
     }
-    if (user.role === 'AGENCY' && (job.companyId !== user.companyId || job.agencyId !== user.agencyId)) {
+    if (job.companyId !== user.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
     }
 
