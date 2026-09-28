@@ -38,6 +38,9 @@ const ActionButton = ({ children, onClick, variant = 'primary' }: { children: Re
 
 const Eyebrow = ({ children }: { children: ReactNode }) => <p className="bh-eyebrow">{children}</p>;
 
+// Public subscription price. Change it here and the pricing section updates.
+const PLAN = { price: '$49', period: '/ month', trialDays: 7 };
+
 const stages = [
   ['Intake', 'Capture the candidate once.'],
   ['Interview', 'Assign a panel and schedule it.'],
@@ -72,6 +75,7 @@ const faqs: [string, string][] = [
   ['How is recruitment data controlled?', 'The product is structured around company and agency workspaces, role-based access, explicit relationships and connected history.'],
   ['Does BuildHire work on mobile?', 'Yes. The recruitment surfaces are responsive for phones, tablets and desktops.'],
   ['How long does onboarding take?', 'There is no honest one-size-fits-all number. Setup depends on your template, roles, agencies and interview criteria.'],
+  ['How does the 7-day free trial work?', 'Create your company workspace and use every feature for 7 days. After the trial, the subscription is ' + PLAN.price + ' per month for your company workspace.'],
   ['What support is available?', 'Start with a company workspace and map your candidate intake and interview process into BuildHire.'],
 ];
 
@@ -162,7 +166,7 @@ export const MarketingSite = () => {
             <button type="button" className="bh-icon-btn" onClick={toggleTheme} aria-label="Toggle theme"><ThemeIcon dark={theme === 'light'} /></button>
             <select className="bh-lang-toggle" aria-label="Language" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}><option value="en">EN</option><option value="he">HE</option></select>
             <button type="button" className="bh-nav-action" onClick={login}>Login</button>
-            <ActionButton onClick={start}>Start free trial <Arrow /></ActionButton>
+            <ActionButton onClick={start}>Start 7-day trial <Arrow /></ActionButton>
           </div>
           <button type="button" className="bh-mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="buildhire-mobile-menu" aria-label="Open navigation"><MenuIcon open={false} /></button>
         </div>
@@ -185,7 +189,7 @@ export const MarketingSite = () => {
                 <label className="bh-btn bh-btn-secondary" style={{ position: 'relative' }}><span>{language === 'en' ? 'English' : 'עברית'}</span><select aria-label="Mobile language" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'he')} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}><option value="en">English</option><option value="he">עברית</option></select></label>
               </div>
               <ActionButton onClick={login} variant="secondary">Login</ActionButton>
-              <ActionButton onClick={start}>Start free trial <Arrow /></ActionButton>
+              <ActionButton onClick={start}>Start 7-day free trial <Arrow /></ActionButton>
             </div>
           </aside>
         </>
@@ -200,7 +204,7 @@ export const MarketingSite = () => {
               <h1 className="bh-title bh-hero-title">Replace spreadsheet chaos with one <span className="bh-mark">hiring workspace.</span></h1>
               <p className="bh-lead">BuildHire takes candidates from bulk intake to panel interview, comparison, selection and deployment—with passport data, trade requests and agency records kept in one place.</p>
               <div className="bh-hero-actions">
-                <ActionButton onClick={start}>Start free trial <Arrow /></ActionButton>
+                <ActionButton onClick={start}>Start 7-day free trial <Arrow /></ActionButton>
                 <ActionButton onClick={() => scrollTo('workflow')} variant="secondary">See how it works</ActionButton>
               </div>
               <ul className="bh-checks">
@@ -218,7 +222,7 @@ export const MarketingSite = () => {
                 {stages.map(([name], index) => <div key={name} className={'bh-step' + (index < 2 ? ' done' : index === 2 ? ' now' : '')}>{name}</div>)}
               </div>
               <div className="bh-facts">
-                {[['Agency', 'Atlas Manpower'], ['Job', 'Doha Tower Fit-out'], ['Passport', 'N8••••32'], ['Expiry', '14 Nov 2027']].map(([label, value]) => (
+                {[['Agency', 'Atlas Manpower'], ['Job', 'Doha Tower Fit-out'], ['Profession', 'Steel fixer'], ['Status', 'Shortlist review'], ['Passport', 'N8••••32'], ['Expiry', '14 Nov 2027']].map(([label, value]) => (
                   <div className="bh-fact" key={label}><span>{label}</span><strong>{value}</strong></div>
                 ))}
               </div>
@@ -357,27 +361,25 @@ export const MarketingSite = () => {
         {/* Pricing */}
         <section id="pricing" className="bh-section" aria-labelledby="pricing-title">
           <div className="bh-container">
-            <div className="bh-section-head bh-reveal">
-              <Eyebrow>Pricing and rollout</Eyebrow>
-              <h2 id="pricing-title" className="bh-title">Start with the workflow. Talk about scale when you know it.</h2>
-              <p className="bh-lead">BuildHire pricing can be aligned to your recruitment operation, candidate volume and team structure. No invented public plan numbers on this page.</p>
+            <div className="bh-section-head bh-center bh-reveal">
+              <Eyebrow>Pricing</Eyebrow>
+              <h2 id="pricing-title" className="bh-title">One plan. Everything included.</h2>
+              <p className="bh-lead">Try BuildHire free for {PLAN.trialDays} days. After that, one simple monthly price for your whole company workspace.</p>
             </div>
-            <div className="bh-pricing">
-              <article className="bh-plan hi bh-reveal">
-                <h3>Start free</h3>
-                <div className="price">Build your workspace</div>
-                <p>Use the existing company registration flow to set up jobs, candidate pools and interviews.</p>
-                <ul><li>Company workspace</li><li>Candidate intake and import</li><li>Jobs and panel interviews</li><li>Structured scoring and decisions</li></ul>
-                <ActionButton onClick={start}>Create a company workspace <Arrow /></ActionButton>
-              </article>
-              <article className="bh-plan bh-reveal">
-                <h3>Need a walkthrough?</h3>
-                <div className="price">See the workflow</div>
-                <p>Bring your current spreadsheet process, CSV format and interview panel flow. Map the product around the operation you already run.</p>
-                <ul><li>Candidate CSV structure</li><li>Agency and role boundaries</li><li>Interview panel setup</li><li>Decision and deployment workflow</li></ul>
-                <ActionButton onClick={() => scrollTo('workflow')} variant="secondary">See how BuildHire works <Arrow /></ActionButton>
-              </article>
-            </div>
+            <article className="bh-plan bh-reveal">
+              <span className="bh-badge">{PLAN.trialDays}-day free trial</span>
+              <div className="bh-price"><strong>{PLAN.price}</strong><span>{PLAN.period}</span></div>
+              <p className="bh-plan-sub">per company workspace · billed monthly</p>
+              <ul>
+                <li>Company workspace with role-based access</li>
+                <li>Candidate intake and bulk CSV import</li>
+                <li>Jobs, panel interviews and structured scoring</li>
+                <li>Decisions with reasons and a full audit trail</li>
+                <li>Passport, documents and deployment tracking</li>
+              </ul>
+              <ActionButton onClick={start}>Start {PLAN.trialDays}-day free trial <Arrow /></ActionButton>
+              <p className="bh-plan-note">Then {PLAN.price}/month. Cancel anytime.</p>
+            </article>
           </div>
         </section>
 
@@ -405,7 +407,7 @@ export const MarketingSite = () => {
               <h2 id="final-title" className="bh-title">Give your candidate pool one place to move.</h2>
               <p>Bring the spreadsheet, candidate records and interview panel into one workspace built for construction recruitment.</p>
               <div className="bh-hero-actions">
-                <ActionButton onClick={start}>Start free trial <Arrow /></ActionButton>
+                <ActionButton onClick={start}>Start 7-day free trial <Arrow /></ActionButton>
                 <ActionButton onClick={() => scrollTo('workflow')} variant="secondary">Watch the workflow <Arrow /></ActionButton>
               </div>
             </div>
@@ -422,7 +424,7 @@ export const MarketingSite = () => {
           <div className="bh-footer-grid">
             <div className="bh-footer-col"><h3>Product</h3><button type="button" onClick={() => scrollTo('features')}>Features</button><button type="button" onClick={() => scrollTo('workflow')}>How it works</button><button type="button" onClick={() => scrollTo('pricing')}>Pricing</button></div>
             <div className="bh-footer-col"><h3>Trust</h3><button type="button" onClick={() => scrollTo('security')}>Security and control</button><button type="button" onClick={() => scrollTo('faq')}>FAQ</button><button type="button" onClick={login}>Login</button></div>
-            <div className="bh-footer-col"><h3>Workspace</h3><button type="button" onClick={start}>Start free trial</button><button type="button" onClick={() => scrollTo('import')}>CSV intake</button><button type="button" onClick={() => scrollTo('workflow')}>Decision workflow</button></div>
+            <div className="bh-footer-col"><h3>Workspace</h3><button type="button" onClick={start}>Start 7-day free trial</button><button type="button" onClick={() => scrollTo('import')}>CSV intake</button><button type="button" onClick={() => scrollTo('workflow')}>Decision workflow</button></div>
           </div>
         </div>
         <div className="bh-container bh-footer-bottom">
@@ -432,7 +434,7 @@ export const MarketingSite = () => {
       </footer>
 
       <div className={'bh-mobile-cta' + (mobileCta ? ' visible' : '')} aria-label="Mobile primary action">
-        <ActionButton onClick={start}>Start free trial <Arrow /></ActionButton>
+        <ActionButton onClick={start}>Start 7-day free trial <Arrow /></ActionButton>
         <ActionButton onClick={() => scrollTo('workflow')} variant="secondary">See workflow</ActionButton>
       </div>
     </div>
