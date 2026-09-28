@@ -12,15 +12,8 @@ interface SidebarProps {
 
 const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: AppView; label: string; icon: IconName }> }>> = {
   ADMIN: [
-    { label: 'Operations', items: [
+    { label: 'Platform', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
-      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
-      { view: 'candidates', label: 'Candidates', icon: 'users' },
-      { view: 'interviews', label: 'Interviews', icon: 'calendar' },
-      { view: 'reports', label: 'Reports', icon: 'chart' },
-    ]},
-    { label: 'Administration', items: [
-      { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
       { view: 'companies', label: 'Companies', icon: 'briefcase' },
       { view: 'agencies', label: 'Platform Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
