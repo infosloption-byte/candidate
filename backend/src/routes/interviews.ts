@@ -652,6 +652,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
+          companyId: true,
           job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
@@ -774,7 +775,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (criterionGroupsChanged && !nextCriterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group.' } });
       }
-      const nextCriterionSetups = criterionGroupsChanged ? await getCriterionGroups(nextCriterionGroupIds) : [];
+      const nextCriterionSetups = criterionGroupsChanged ? await getCriterionGroups(nextCriterionGroupIds, existing.companyId) : [];
       if (criterionGroupsChanged && nextCriterionSetups.length !== nextCriterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
