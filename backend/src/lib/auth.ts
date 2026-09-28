@@ -125,13 +125,15 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
 
   const agencyStatus = session.user.agency?.status
     ?? session.user.candidate?.agency.status
-    ?? (session.user.role === 'COMPANY' ? 'ACTIVE' : null);
+    ?? null;
+  const companyStatus = session.user.company?.status ?? null;
 
   const globalInterviewer = session.user.role === 'INTERVIEWER' && session.user.agencyId === null;
 
   if (
     session.expiresAt.getTime() <= Date.now()
     || !session.user.active
+    || (session.user.companyId !== null && companyStatus !== 'ACTIVE')
     || (!globalInterviewer && session.user.role !== 'COMPANY' && agencyStatus !== 'ACTIVE')
   ) {
     await getPrisma().session.deleteMany({ where: { id: session.id } });
