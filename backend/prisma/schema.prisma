@@ -105,6 +105,7 @@ model Company {
 
   agencies  Agency[]
   users     User[]
+  jobs      Job[]
   candidates Candidate[]
   interviews Interview[]
   criteria  InterviewCriterion[]
