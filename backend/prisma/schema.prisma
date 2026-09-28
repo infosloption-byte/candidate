@@ -251,7 +251,8 @@ model Job {
   interviews    Interview[]
   candidatePool JobCandidate[]
 
-  @@index([companyId, status])}
+  @@index([companyId, status])
+}
 
 model JobPosition {
   id            String   @id @default(uuid()) @db.VarChar(36)
