@@ -1008,7 +1008,7 @@ const filterOptions = useMemo(() => ({
 
       {error && <StateMessage kind="error" title="Candidate action failed" description={error} floating={candidateFormModalOpen || showImportModal} />}
       {success && <StateMessage kind="success" title={successTitle} description={success} />}
-      {loading && <StateMessage kind="loading" title="Loading candidates" description="Fetching the candidate pool." />}
+      {loading && <StateMessage kind="loading" title="Loading candidates" description={t("Fetching the candidate pool")} />}
 
       {candidateFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
@@ -1197,7 +1197,7 @@ const filterOptions = useMemo(() => ({
                     value={agencyId}
                     onChange={setAgencyId}
                     options={[
-                      { value: '', label: 'All agencies' },
+                      { value: '', label: t('All agencies') },
                       ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
                     ]}
                     ariaLabel="Filter by agency"
@@ -1207,12 +1207,12 @@ const filterOptions = useMemo(() => ({
               )}
 
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-                <label className="field-label">{t('Job candidate pool')}</label>
+                <label className="field-label">{t('Job')}</label>
                 <SelectMenu
                   value={jobId}
                   onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
                   options={[
-                    { value: '', label: 'All candidates' },
+                    { value: '', label: t('All Jobs') },
                     ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
                   ]}
                   ariaLabel="Filter candidates by job"
@@ -1280,12 +1280,12 @@ const filterOptions = useMemo(() => ({
                 <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{filteredCandidates.length}</span> candidate(s)</p>
 
                 <div className="flex items-center gap-2">
-                  <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">Sort</span>
+                  <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">{t('Sort')}</span>
                   <SelectMenu
                     value={sortBy}
                     onChange={(value) => setSortBy(value as typeof sortBy)}
                     options={[
-                      { value: 'name', label: 'Name' },
+                      { value: 'name', label: t('Name') },
                       { value: 'profession', label: 'Profession' },
                       { value: 'passport', label: 'Passport' },
                       { value: 'status', label: 'Status' },
