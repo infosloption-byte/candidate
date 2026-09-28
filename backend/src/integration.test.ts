@@ -81,7 +81,7 @@ before(async () => {
     const agencyBUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
     const interviewer = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
     const interviewerB = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer B', email: emails.interviewerB, passwordHash, role: 'INTERVIEWER' } });
-    const globalInterviewer = await tx.user.create({ data: { agencyId: null, name: 'QA Global Interviewer', email: emails.globalInterviewer, passwordHash, role: 'INTERVIEWER' } });
+    const globalInterviewer = await tx.user.create({ data: { companyId: company.id, agencyId: null, name: 'QA Global Interviewer', email: emails.globalInterviewer, passwordHash, role: 'INTERVIEWER' } });
 
     const candidate = await tx.candidate.create({
       data: {
@@ -116,10 +116,10 @@ before(async () => {
     });
 
     const jobA = await tx.job.create({
-      data: { companyId: company.id, agencyId: agencyA.id, title: 'QA Mason A', description: 'Agency A position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { companyId: company.id, title: 'QA Mason A', description: 'Company position A', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
     const jobB = await tx.job.create({
-      data: { companyId: company.id, agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { companyId: company.id, title: 'QA Mason B', description: 'Company position B', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
 
     const criterionA = await tx.interviewCriterion.create({
@@ -225,9 +225,9 @@ dbTest('admin and agency boundaries support candidate-pool operations', async ()
     headers: { cookie: adminCookie },
   });
   assert.equal(adminJobs.statusCode, 200);
-  const adminJobsBody = json<{ data: Array<{ agencyId: string }> }>(adminJobs);
-  assert.ok(new Set(adminJobsBody.data.map((item) => item.agencyId)).has(agencyAId));
-  assert.ok(new Set(adminJobsBody.data.map((item) => item.agencyId)).has(agencyBId));
+  const adminJobsBody = json<{ data: Array<{ companyId: string }> }>(adminJobs);
+  assert.ok(adminJobsBody.data.length >= 2);
+  assert.ok(adminJobsBody.data.every((item) => item.companyId === companyId));
 
   const adminUsers = await app.inject({
     method: 'GET',
