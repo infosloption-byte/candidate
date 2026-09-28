@@ -325,7 +325,7 @@ export const DashboardPage = ({ role }: Props) => {
   }, [developmentMode, developmentAnalytics, role, selectedJobId, state.jobs]);
 
   if (loading) {
-    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title={t('Loading dashboard')} description={t('Preparing your recruitment command center.')} /></section>;
+    return <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><StateMessage kind="loading" title={t('Loading dashboard')} description={t('Preparing your recruitment command center')} /></section>;
   }
 
   if (error || !analytics) {
