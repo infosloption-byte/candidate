@@ -189,7 +189,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     async (_request, reply) => {
       const users = await getPrisma().user.findMany({
         where: { role: { in: ['ADMIN', 'AGENCY'] } },
-        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
+        select: { id: true, companyId: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true },
         orderBy: [{ role: 'asc' }, { name: 'asc' }],
       });
 
@@ -229,7 +229,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
             error: { code: 'AGENCY_REQUIRED', message: 'An agency is required for an Agency user.' },
           });
         }
-        const agency = await getPrisma().agency.findUnique({ where: { id: agencyId }, select: { id: true, status: true } });
+        const agency = await getPrisma().agency.findUnique({ where: { id: agencyId }, select: { id: true, companyId: true, status: true } });
         if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
         if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
       }
@@ -237,6 +237,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       try {
         const user = await getPrisma().user.create({
           data: {
+            companyId: agency?.companyId ?? null,
             agencyId,
             name,
             email,
@@ -517,7 +518,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const users = await getPrisma().user.findMany({
         where: { agencyId: request.params.agencyId },
-        select: { id: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
+        select: { id: true, companyId: true, agencyId: true, candidateId: true, name: true, email: true, role: true, active: true, createdAt: true, updatedAt: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -541,7 +542,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name must be 160 characters or fewer, email must be valid and 191 characters or fewer, and password must be 8-128 characters.' } });
       }
 
-      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId } });
+      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId }, select: { id: true, companyId: true, name: true, slug: true, status: true } });
       if (!agency) {
         return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
       }
@@ -552,6 +553,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       try {
         const user = await getPrisma().user.create({
           data: {
+            companyId: agency.companyId ?? request.authUser!.companyId,
             agencyId: agency.id,
             name,
             email,
