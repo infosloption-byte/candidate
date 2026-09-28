@@ -24,8 +24,9 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/interview-criteria',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
-    async (_request, reply) => {
+    async (request, reply) => {
       const criteria = await getPrisma().interviewCriterion.findMany({
+        where: { companyId: request.authUser!.companyId ?? undefined },
         select,
         orderBy: [{ active: 'desc' }, { createdAt: 'asc' }],
       });
@@ -44,6 +45,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
 
       const criterion = await getPrisma().interviewCriterion.create({
         data: {
+          companyId: request.authUser!.companyId!,
           name: request.body.name!.trim(),
           description: request.body.description?.trim() || null,
           maxPoints: request.body.maxPoints ?? 5,
