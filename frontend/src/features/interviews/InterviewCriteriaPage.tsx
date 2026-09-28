@@ -864,7 +864,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               {selectedGroup.category && (
                 <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{selectedGroup.category}</p>
               )}
-              <p className="mt-1.5 text-xs leading-5 text-slate-600">{selectedGroup.description ?? 'No description provided.'}</p>
+              {selectedGroup.description && <p className="mt-1.5 text-xs leading-5 text-slate-600">{selectedGroup.description}</p>}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
