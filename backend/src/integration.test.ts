@@ -76,7 +76,7 @@ before(async () => {
     const agencyA = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency A ' + suffix, slug: 'qa-agency-a-' + suffix } });
     const agencyB = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency B ' + suffix, slug: 'qa-agency-b-' + suffix } });
 
-    const admin = await tx.user.create({ data: { name: 'QA Admin', email: emails.admin, passwordHash, role: 'COMPANY' } });
+    const admin = await tx.user.create({ data: { name: 'QA Admin', email: emails.admin, passwordHash, role: 'COMPANY_ADMIN' } });
     const agencyAUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Agency A', email: emails.agencyA, passwordHash, role: 'AGENCY' } });
     const agencyBUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
     const interviewer = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
@@ -277,7 +277,7 @@ dbTest('admin can manage unified system users and interviewer types', async () =
   });
   assert.equal(systemUsersResponse.statusCode, 200);
   const systemUsersBody = json<{ data: Array<{ id: string; role: string; agencyId: string | null }> }>(systemUsersResponse);
-  assert.ok(systemUsersBody.data.some((item) => item.id === adminId && item.role === 'COMPANY'));
+  assert.ok(systemUsersBody.data.some((item) => item.id === adminId && item.role === 'COMPANY_ADMIN'));
   assert.ok(systemUsersBody.data.some((item) => item.id === agencyAUserId && item.role === 'AGENCY' && item.agencyId === agencyAId));
 
   const createdGlobalInterviewer = await app.inject({
@@ -379,7 +379,7 @@ dbTest('admin can manage unified system users and interviewer types', async () =
       name: 'QA Editable User',
       email: 'qa-editable-user-' + suffix + '@buildhire.local',
       password,
-      role: 'COMPANY',
+      role: 'COMPANY_ADMIN',
     },
   });
   assert.equal(editableUser.statusCode, 201);
@@ -399,7 +399,7 @@ dbTest('admin can manage unified system users and interviewer types', async () =
   const updatedEditableUserBody = json<{ data: { id: string; name: string; email: string; role: string } }>(updatedEditableUser);
   assert.equal(updatedEditableUserBody.data.name, 'QA Editable User Updated');
   assert.equal(updatedEditableUserBody.data.email, 'qa-editable-user-updated-' + suffix + '@buildhire.local');
-  assert.equal(updatedEditableUserBody.data.role, 'COMPANY');
+  assert.equal(updatedEditableUserBody.data.role, 'COMPANY_ADMIN');
 
   const storedEditableUser = await prisma.user.findUnique({ where: { id: editableUserBody.data.id } });
   assert.ok(storedEditableUser);
@@ -418,7 +418,7 @@ dbTest('admin can manage unified system users and interviewer types', async () =
       name: 'Should Not Be Created',
       email: 'qa-forbidden-system-' + suffix + '@buildhire.local',
       password,
-      role: 'COMPANY',
+      role: 'COMPANY_ADMIN',
     },
   });
   assert.equal(agencyCreateSystemUser.statusCode, 403);
