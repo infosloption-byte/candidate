@@ -13,9 +13,12 @@ import { apiFetch } from '../../shared/lib/api';
 interface CompanyForm {
   name: string;
   slug: string;
+  adminName: string;
+  adminEmail: string;
+  adminPassword: string;
 }
 
-const emptyForm: CompanyForm = { name: '', slug: '' };
+const emptyForm: CompanyForm = { name: '', slug: '', adminName: '', adminEmail: '', adminPassword: '' };
 
 const CompanyModal = ({
   onClose,
@@ -50,6 +53,17 @@ const CompanyModal = ({
           </FormField>
           <FormField label="Company identifier" hint="Lowercase letters, numbers and hyphens only.">
             <input className="field-input" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') }))} placeholder="example-manpower" />
+          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Company administrator">
+              <input className="field-input" value={form.adminName} onChange={(event) => setForm((current) => ({ ...current, adminName: event.target.value }))} placeholder="Admin name" />
+            </FormField>
+            <FormField label="Administrator email">
+              <input className="field-input" type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} placeholder="admin@example.com" />
+            </FormField>
+          </div>
+          <FormField label="Administrator password">
+            <input className="field-input" type="password" value={form.adminPassword} onChange={(event) => setForm((current) => ({ ...current, adminPassword: event.target.value }))} placeholder="Minimum 8 characters" autoComplete="new-password" />
           </FormField>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
@@ -89,8 +103,8 @@ export const CompaniesPage = () => {
   }, []);
 
   const createCompany = async () => {
-    if (!form.name.trim() || !form.slug.trim()) {
-      setError('Company name and identifier are required.');
+    if (!form.name.trim() || !form.slug.trim() || !form.adminName.trim() || !form.adminEmail.trim() || form.adminPassword.length < 8) {
+      setError('Company name, identifier, administrator name, email, and an 8+ character password are required.');
       return;
     }
 
@@ -99,7 +113,7 @@ export const CompaniesPage = () => {
     try {
       const created = await apiFetch<Company>('/companies', {
         method: 'POST',
-        body: JSON.stringify({ name: form.name.trim(), slug: form.slug.trim() }),
+        body: JSON.stringify({ name: form.name.trim(), slug: form.slug.trim(), adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim(), adminPassword: form.adminPassword }),
       });
       setCompanies((current) => [created, ...current]);
       setModalOpen(false);
