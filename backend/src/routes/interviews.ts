@@ -331,7 +331,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     Body: InterviewInput & { jobId?: string | null; candidateIds?: string[] }
   }>(
     '/interviews/bulk',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const candidateIds = [...new Set(request.body.candidateIds ?? [])];
       if (!candidateIds.length || candidateIds.length > 100) {
@@ -507,7 +507,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: CandidateInterviewParams; Body: InterviewInput & { jobId?: string | null } }>(
     '/candidates/:candidateId/interviews',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const errors = validateInterviewInput(request.body, 'create');
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW', message: errors.join(' ') } });
@@ -734,7 +734,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: InterviewParams; Body: InterviewInput }>(
     '/interviews/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().interview.findUnique({
         where: { id: request.params.id },
