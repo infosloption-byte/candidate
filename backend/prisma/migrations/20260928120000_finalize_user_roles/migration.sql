@@ -5,31 +5,16 @@
 -- INTERVIEWER = interviewer
 -- INTERVIEWEE = candidate portal user
 --
--- The previous company-tenancy migration renamed legacy ADMIN users to COMPANY.
--- Preserve the earliest such account as the platform ADMIN, and convert the
--- remaining COMPANY accounts into COMPANY_ADMIN users.
+-- The previous company-tenancy migration temporarily renamed legacy ADMIN
+-- users to COMPANY. Convert those tenant users to COMPANY_ADMIN without
+-- guessing which real account should be the developer/platform owner.
 
 ALTER TABLE `User`
   MODIFY COLUMN `role` ENUM('ADMIN','COMPANY_ADMIN','COMPANY','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
 
-SET @legacy_platform_admin_id = (
-  SELECT `id`
-  FROM `User`
-  WHERE `role` = 'COMPANY'
-  ORDER BY `createdAt` ASC
-  LIMIT 1
-);
-
 UPDATE `User`
 SET `role` = 'COMPANY_ADMIN'
 WHERE `role` = 'COMPANY';
-
-UPDATE `User`
-SET
-  `role` = 'ADMIN',
-  `companyId` = NULL,
-  `agencyId` = NULL
-WHERE `id` = @legacy_platform_admin_id;
 
 ALTER TABLE `User`
   MODIFY COLUMN `role` ENUM('ADMIN','COMPANY_ADMIN','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
