@@ -1,3 +1,5 @@
+import { useLanguage } from '../../i18n/LanguageContext';
+
 interface StatusPillProps {
   value: string;
 }
@@ -46,8 +48,11 @@ const toneClasses: Record<string, string> = {
   SUBMITTED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
 };
 
-export const StatusPill = ({ value }: StatusPillProps) => (
+export const StatusPill = ({ value }: StatusPillProps) => {
+  const { t } = useLanguage();
+  return (
   <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${toneClasses[value] ?? 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-    {labels[value] ?? value}
+    {t(labels[value] ?? value)}
   </span>
-);
+  );
+};
