@@ -41,7 +41,7 @@ const totalRequired = (positions: Array<{ requiredCount: number }>): number =>
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+    if (!['COMPANY', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({
         success: false,
         error: { code: 'FORBIDDEN', message: 'Jobs are available only to recruitment managers.' },
@@ -262,7 +262,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, companyId: true, agencyId: true, title: true, status: true },
+        select: { id: true, companyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId)) {
