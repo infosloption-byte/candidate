@@ -28,9 +28,9 @@ const conflictResponse = (reply: FastifyReply, code: string, message: string) =>
   reply.code(409).send({ success: false, error: { code, message } });
 
 export const companyRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/companies', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
+  app.get('/companies', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
     const companies = await getPrisma().company.findMany({
-      where: { id: request.authUser!.companyId ?? '__missing__' },
+      where: request.authUser!.role === 'ADMIN' ? undefined : { id: request.authUser!.companyId ?? '__missing__' },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { users: true, jobs: true, candidates: true, interviews: true } },
@@ -51,8 +51,8 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
-    if (request.params.id !== request.authUser!.companyId) {
+  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
+    if (request.authUser!.role !== 'ADMIN' && request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own company.' } });
     }
     const company = await getPrisma().company.findUnique({
@@ -68,7 +68,39 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: { ...company, counts: company._count } });
   });
 
-  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
+  app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (request, reply) => {
+    const name = request.body.name?.trim();
+    const slug = slugify(request.body.slug ?? request.body.name ?? '');
+
+    if (!name || name.length < 2 || name.length > 160 || !slug) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'Company name and a valid slug are required.' } });
+    }
+
+    try {
+      const company = await getPrisma().company.create({
+        data: { name, slug, status: 'ACTIVE' },
+      });
+
+      await recordAuditEvent({
+        actorId: request.authUser!.id,
+        companyId: company.id,
+        agencyId: null,
+        action: 'COMPANY_CREATED',
+        entityType: 'Company',
+        entityId: company.id,
+        summary: 'Created company "' + company.name + '".',
+      });
+
+      return reply.code(201).send({ success: true, data: company });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        return conflictResponse(reply, 'COMPANY_SLUG_EXISTS', 'Company slug is already in use.');
+      }
+      throw error;
+    }
+  });
+
+  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
     if (request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only manage your own company.' } });
     }
