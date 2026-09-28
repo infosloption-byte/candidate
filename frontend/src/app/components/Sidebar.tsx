@@ -11,11 +11,11 @@ interface SidebarProps {
 }
 
 const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: AppView; label: string; icon: IconName }> }>> = {
-  ADMIN: [
+  COMPANY: [
     { label: 'Platform', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
       { view: 'companies', label: 'Companies', icon: 'briefcase' },
-      { view: 'agencies', label: 'Platform Users', icon: 'users' },
+      { view: 'agencies', label: 'Agencies & Team', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
@@ -51,7 +51,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
 };
 
 const roleLabels: Record<UserRole, string> = {
-  ADMIN: 'System administrator',
+  COMPANY: 'Company administrator',
   AGENCY: 'Company workspace',
   INTERVIEWER: 'Interview desk',
   INTERVIEWEE: 'Candidate portal',
