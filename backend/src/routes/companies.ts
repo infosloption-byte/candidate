@@ -9,6 +9,9 @@ interface CompanyBody {
   name?: string;
   slug?: string;
   status?: CompanyStatus;
+  adminName?: string;
+  adminEmail?: string;
+  adminPassword?: string;
 }
 
 interface CompanyUserBody {
@@ -71,15 +74,36 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (request, reply) => {
     const name = request.body.name?.trim();
     const slug = slugify(request.body.slug ?? request.body.name ?? '');
+    const adminName = request.body.adminName?.trim();
+    const adminEmail = request.body.adminEmail?.trim().toLowerCase();
+    const adminPassword = request.body.adminPassword ?? '';
 
     if (!name || name.length < 2 || name.length > 160 || !slug) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'Company name and a valid slug are required.' } });
     }
+    if (!adminName || adminName.length < 2 || adminName.length > 160 || !adminEmail || !adminEmail.includes('@') || adminEmail.length > 191 || adminPassword.length < 8 || adminPassword.length > 128) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY_ADMIN', message: 'Company administrator name, valid email, and password (8-128 characters) are required.' } });
+    }
 
     try {
-      const company = await getPrisma().company.create({
-        data: { name, slug, status: 'ACTIVE' },
+      const result = await getPrisma().$transaction(async (tx) => {
+        const company = await tx.company.create({
+          data: { name, slug, status: 'ACTIVE' },
+        });
+        const admin = await tx.user.create({
+          data: {
+            companyId: company.id,
+            agencyId: null,
+            name: adminName,
+            email: adminEmail,
+            passwordHash: await hashPassword(adminPassword),
+            role: 'COMPANY_ADMIN',
+            active: true,
+          },
+        });
+        return { company, admin };
       });
+      const company = result.company;
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
