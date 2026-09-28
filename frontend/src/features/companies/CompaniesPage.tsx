@@ -129,7 +129,7 @@ export const CompaniesPage = () => {
         eyebrow="System administration"
         title="Companies"
         description="Each company is an isolated BuildHire tenant containing its jobs, candidates, interviews and company users."
-        actions={<Button onClick={() => { setForm(emptyForm); setError(''); setModalOpen(true); }}>Add company</Button>}
+        action={<Button onClick={() => { setForm(emptyForm); setError(''); setModalOpen(true); }}>Add company</Button>}
       />
 
       {loading && <StateMessage kind="loading" title="Loading companies" description="Fetching all company workspaces." />}
