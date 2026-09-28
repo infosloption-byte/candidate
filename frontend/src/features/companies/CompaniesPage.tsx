@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import type { Company } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { Card } from '../../shared/components/Card';
@@ -26,7 +26,7 @@ const CompanyModal = ({
   onClose: () => void;
   onSave: () => void;
   form: CompanyForm;
-  setForm: React.Dispatch<React.SetStateAction<CompanyForm>>;
+  setForm: Dispatch<SetStateAction<CompanyForm>>;
   saving: boolean;
 }) => {
   const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
