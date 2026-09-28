@@ -7,6 +7,14 @@ interface LoginInput {
   password: string;
 }
 
+interface RegisterCompanyInput {
+  companyName: string;
+  companySlug: string;
+  adminName: string;
+  email: string;
+  password: string;
+}
+
 interface RegisterIntervieweeInput {
   name: string;
   email: string;
@@ -25,6 +33,7 @@ interface AuthContextValue {
   developmentMode: boolean;
   login: (input: LoginInput) => Promise<void>;
   registerInterviewee: (input: RegisterIntervieweeInput) => Promise<void>;
+  registerCompany: (input: RegisterCompanyInput) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -82,6 +91,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setDevelopmentMode(false);
   };
 
+  const registerCompany = async (input: RegisterCompanyInput): Promise<void> => {
+    setError(null);
+    const result = await apiFetch<{ user: User }>('/auth/register/company', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    setUser(result.user);
+    setDevelopmentMode(false);
+  };
+
   const registerInterviewee = async (input: RegisterIntervieweeInput): Promise<void> => {
     setError(null);
     const result = await apiFetch<{ user: User }>('/auth/register/interviewee', {
@@ -109,7 +128,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   const value = useMemo(
-    () => ({ user, loading, error, developmentMode, login, registerInterviewee, logout, refreshUser }),
+    () => ({ user, loading, error, developmentMode, login, registerCompany, registerInterviewee, logout, refreshUser }),
     [user, loading, error, developmentMode],
   );
 
@@ -124,6 +143,8 @@ export const useAuth = (): AuthContextValue => {
 
 export const developmentUser = (role: UserRole): User => ({
   id: 'dev-' + role.toLowerCase(),
+  companyId: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'company-1',
+  companyName: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'BuildHire Demo Company',
   agencyId: role === 'ADMIN' || role === 'INTERVIEWEE' ? null : 'agency-1',
   candidateId: role === 'INTERVIEWEE' ? 'candidate-1' : null,
   name: 'Development Session',
