@@ -67,12 +67,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Querystring: CandidateListQuery }>('/candidates', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['COMPANY_ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
+    if (!['ADMIN', 'COMPANY_ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access candidate details through assigned interviews.' } });
     }
 
     if (request.query.jobId) {
-      if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
+      if (!['ADMIN', 'COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Job-scoped candidate lists are available only to recruitment managers.' } });
       }
       const job = await getPrisma().job.findUnique({
