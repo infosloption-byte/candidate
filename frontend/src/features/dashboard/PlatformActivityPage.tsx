@@ -5,6 +5,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
 import { Icon } from '../../shared/components/Icon';
 import { apiFetch } from '../../shared/lib/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface AuditEvent {
   id: string;
@@ -42,6 +43,7 @@ const downloadCsv = (events: AuditEvent[]) => {
 };
 
 export const PlatformActivityPage = () => {
+  const { t, language } = useLanguage();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'all' | 'security'>('all');
@@ -86,16 +88,16 @@ export const PlatformActivityPage = () => {
   const securityEvents = events.filter((event) => event.action.includes('LOGIN_') || event.action.includes('PASSWORD') || event.action.includes('USER_')).length;
   const unusualCount = events.filter((event) => event.action === 'LOGIN_FAILED' || event.action.includes('DEACTIVATED')).length;
 
-  if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="loading" title="Loading platform activity" description="Reading the latest audit and security events." /></section>;
-  if (error) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="error" title="Activity log unavailable" description={error} /></section>;
+  if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="loading" title={t('Loading platform activity')} description={t('Reading the latest audit and security events.')} /></section>;
+  if (error) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="error" title={t('Activity log unavailable')} description={error} /></section>;
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-3 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">Platform operations</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Activity & security log</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Review administrative activity, authentication events and unusual actions across the platform.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">{t('Platform operations')}</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{t('Activity & security log')}</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">{t('Review administrative activity, authentication events and unusual actions across the platform.')}</p>
         </div>
         <Button variant="secondary" onClick={() => downloadCsv(filtered)}><Icon name="download" size={16} /> Export log</Button>
       </div>
@@ -119,10 +121,10 @@ export const PlatformActivityPage = () => {
       <Card>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="grid grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1 sm:w-fit">
-            <button type="button" onClick={() => setTab('all')} className={`rounded-xl px-4 py-2 text-xs font-extrabold ${tab === 'all' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>All activity</button>
-            <button type="button" onClick={() => setTab('security')} className={`rounded-xl px-4 py-2 text-xs font-extrabold ${tab === 'security' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Security</button>
+            <button type="button" onClick={() => setTab('all')} className={`rounded-xl px-4 py-2 text-xs font-extrabold ${tab === 'all' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>{t('All activity')}</button>
+            <button type="button" onClick={() => setTab('security')} className={`rounded-xl px-4 py-2 text-xs font-extrabold ${tab === 'security' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>{t('Security')}</button>
           </div>
-          <input className="field-input w-full lg:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search actor, action, entity or summary…" />
+          <input className="field-input w-full lg:max-w-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('Search actor, action, entity or summary…')} />
         </div>
 
         <div className="mt-4 space-y-2.5">
@@ -133,19 +135,19 @@ export const PlatformActivityPage = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xs font-black text-slate-900">{event.action.replaceAll('_', ' ')}</p>
                     <StatusPill value={event.actor?.role ?? 'SYSTEM'} />
-                    {event.action === 'LOGIN_FAILED' && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-rose-700">Attention</span>}
+                    {event.action === 'LOGIN_FAILED' && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-rose-700">{t('Attention')}</span>}
                   </div>
                   <p className="mt-1 text-xs leading-5 text-slate-600">{event.summary}</p>
                   <p className="mt-1 text-[10px] font-semibold text-slate-400">{event.entityType} · {event.entityId}</p>
                 </div>
                 <div className="shrink-0 text-left sm:text-right">
                   <p className="text-[10px] font-bold text-slate-500">{event.actor?.name ?? 'System / unknown'}</p>
-                  <p className="mt-1 text-[9px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                  <p className="mt-1 text-[9px] text-slate-400">{new Date(event.createdAt).toLocaleString(language === 'he' ? 'he-IL' : 'en-US')}</p>
                 </div>
               </div>
             </div>
           ))}
-          {!filtered.length && <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs font-semibold text-slate-400">No events match the current filter.</p>}
+          {!filtered.length && <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs font-semibold text-slate-400">{t('No events match the current filter.')}</p>}
         </div>
       </Card>
     </section>
