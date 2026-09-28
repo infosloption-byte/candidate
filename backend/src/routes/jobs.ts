@@ -51,6 +51,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     const jobs = await getPrisma().job.findMany({
       where: jobListWhereForUser({
         role: user.role,
+        companyId: user.companyId,
         agencyId: user.agencyId,
         candidateAgencyId: null,
       }),
