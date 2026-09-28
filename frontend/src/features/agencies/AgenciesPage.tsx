@@ -710,7 +710,7 @@ export const AgenciesPage = () => {
                 onChange={(value) => setSystemUserForm({ ...systemUserForm, role: value as SystemUserRole, agencyId: value === 'COMPANY' ? '' : systemUserForm.agencyId })}
                 options={[
                   { value: 'AGENCY', label: 'Agency' },
-                  { value: 'COMPANY', label: 'Admin' },
+                  { value: 'COMPANY', label: 'Company administrator' },
                 ]}
                 ariaLabel="Select system user role"
               />
