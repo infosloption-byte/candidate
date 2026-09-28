@@ -187,7 +187,7 @@ export const CompanyUsersPage = () => {
         eyebrow="Company administration"
         title="Company Users"
         description="Create company administrators and interviewers who belong only to this company workspace."
-        actions={<Button onClick={openCreate}>Add company user</Button>}
+        action={<Button onClick={openCreate}>Add company user</Button>}
       />
 
       {loading && <StateMessage kind="loading" title="Loading company users" description="Fetching the current company team." />}
