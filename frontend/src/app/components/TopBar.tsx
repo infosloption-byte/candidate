@@ -34,13 +34,13 @@ const titles: Record<AppView, string> = {
   candidates: 'Candidates',
   interviews: 'Interviews',
   criteria: 'Interview Criteria',
-  agencies: 'Agencies & Users',
+  agencies: 'Companies & Users',
   settings: 'Settings',
 };
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
-  AGENCY: 'Agency',
+  AGENCY: 'Company Admin',
   INTERVIEWER: 'Interviewer',
   INTERVIEWEE: 'Interviewee',
 };
@@ -123,6 +123,7 @@ export const TopBar = ({
         <div className="min-w-0 flex-1">
           <div className="hidden items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 sm:flex">
             <span>{t('Workspace')}</span>
+            {user.companyName && <><Icon name="chevron-right" size={11} /><span className="max-w-44 truncate text-slate-500">{user.companyName}</span></>}
             <Icon name="chevron-right" size={11} />
             <span className="text-slate-500">{t(titles[activeView])}</span>
           </div>
@@ -189,7 +190,7 @@ export const TopBar = ({
         <div ref={profileMenuRef} className="relative">
           <button type="button" onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-haspopup="menu" className="flex items-center gap-2 rounded-xl border border-transparent px-1.5 py-1.5 text-left transition hover:border-slate-200 hover:bg-slate-50">
             <div className="grid size-9 shrink-0 place-items-center rounded-full bg-slate-950 text-[11px] font-extrabold text-white shadow-sm">
-              {role === 'INTERVIEWEE' ? 'IN' : role === 'INTERVIEWER' ? 'IR' : role === 'AGENCY' ? 'AG' : 'AD'}
+              {role === 'INTERVIEWEE' ? 'IN' : role === 'INTERVIEWER' ? 'IR' : role === 'AGENCY' ? 'CA' : 'AD'}
             </div>
             <div className="hidden min-w-0 lg:block">
               <p className="max-w-44 truncate text-xs font-extrabold text-slate-900">{user.name}</p>
