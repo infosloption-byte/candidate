@@ -3,7 +3,7 @@ import { getPrisma } from './prisma.js';
 export interface AuditEventInput {
   actorId: string | null;
   companyId?: string | null;
-  agencyId: string | null;
+  agencyId?: string | null;
   action: string;
   entityType: string;
   entityId: string;
