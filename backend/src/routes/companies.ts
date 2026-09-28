@@ -28,8 +28,9 @@ const conflictResponse = (reply: FastifyReply, code: string, message: string) =>
   reply.code(409).send({ success: false, error: { code, message } });
 
 export const companyRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/companies', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (_request, reply) => {
+  app.get('/companies', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
     const companies = await getPrisma().company.findMany({
+      where: { id: request.authUser!.companyId ?? '__missing__' },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { users: true, jobs: true, candidates: true, interviews: true } },
@@ -50,9 +51,9 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (request, reply) => {
-    const company = await getPrisma().company.findUnique({
-      where: { id: request.params.id },
+  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+    const company = await getPrisma().company.findFirst({
+      where: { id: request.params.id, id: request.authUser!.companyId ?? '__missing__' },
       include: {
         _count: { select: { users: true, jobs: true, candidates: true, interviews: true } },
       },
@@ -64,7 +65,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: { ...company, counts: company._count } });
   });
 
-  app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (request, reply) => {
+  app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
     const name = request.body.name?.trim();
     const slug = slugify(request.body.slug ?? request.body.name ?? '');
 
@@ -100,7 +101,10 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('ADMIN')] }, async (request, reply) => {
+  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+    if (request.params.id !== request.authUser!.companyId) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only manage your own company.' } });
+    }
     const existing = await getPrisma().company.findUnique({ where: { id: request.params.id } });
     if (!existing) {
       return reply.code(404).send({ success: false, error: { code: 'COMPANY_NOT_FOUND', message: 'Company not found.' } });
