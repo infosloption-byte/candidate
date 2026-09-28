@@ -186,6 +186,9 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      }
 
       const errors = validateJobInput(request.body, 'update');
       if (errors.length) {
@@ -258,9 +261,12 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, title: true, status: true },
+        select: { id: true, companyId: true, agencyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId || job.agencyId !== request.authUser!.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      }
       if (job.status === 'CLOSED') {
         return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Candidates cannot be added to a closed job.' } });
       }
@@ -362,6 +368,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         select: {
           id: true,
+          companyId: true,
+          agencyId: true,
           title: true,
           candidatePool: { select: { status: true } },
           interviews: { select: { id: true } },
@@ -369,6 +377,9 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      }
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
       if (existing.interviews.length) {
@@ -409,6 +420,9 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         include: { positions: true },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      }
 
       const filledCount = await getPrisma().jobCandidate.count({
         where: { jobId: existing.id, status: 'HIRED' },
