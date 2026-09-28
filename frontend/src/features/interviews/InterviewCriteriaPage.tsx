@@ -15,7 +15,7 @@ import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionRes
 
 interface Props { role: UserRole; }
 
-const emptyCriterionForm = { name: '', maxPoints: '5', responseType: 'TEXT' as InterviewCriterionResponseType, required: true, optionsText: '' };
+const emptyCriterionForm = { name: '', maxPoints: '0', responseType: 'TEXT' as InterviewCriterionResponseType, required: true, optionsText: '' };
 const criterionResponseOptions = [
   { value: 'TEXT', label: 'Text answer' },
   { value: 'MULTI_SELECT', label: 'Multiple tag selection' },
@@ -247,7 +247,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
-            required: criterionForm.required,
             options: options.length ? options : null,
           };
         } else {
@@ -256,7 +255,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
-            required: criterionForm.required,
             options: options.length ? options : null,
             active: true,
           };
@@ -531,12 +529,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <input type="checkbox" checked={criterionForm.required} onChange={(event) => setCriterionForm({ ...criterionForm, required: event.target.checked })} />
-                  Required before the interviewer can submit
-                </label>
-              </div>
 
               <div className="md:col-span-2 flex justify-end gap-2">
                 <Button variant="secondary" onClick={closeModal}>Cancel</Button>
@@ -611,7 +603,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                           >
                             <span className="min-w-0">
                               <span className="block text-xs font-extrabold text-slate-900">{criterion.name}</span>
-                              <span className="mt-1 block text-[10px] leading-4 text-slate-400">{criterion.description ?? 'No description.'}</span>
                             </span>
                             <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
                           </button>
@@ -766,7 +757,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                             <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
                             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-slate-500">{criterion.responseType === 'MULTI_SELECT' ? 'MULTI TAG' : criterion.responseType.replace('_', ' ')}</span>
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description ?? 'No description provided.'}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                           <div className="mr-auto rounded-xl bg-slate-50 px-3 py-2 text-center">
@@ -835,7 +825,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <h3 className="text-base font-black text-slate-950">{selectedCriterion.name}</h3>
                 <StatusPill value={selectedCriterion.active ? 'ACTIVE' : 'INACTIVE'} />
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-600">{selectedCriterion.description ?? 'No description provided.'}</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -912,9 +901,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                   <div key={item.criterionId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="text-xs font-extrabold text-slate-900">{index + 1}. {item.criterion.name}</p>
-                      {item.criterion.description && (
-                        <p className="mt-0.5 truncate text-[10px] text-slate-400">{item.criterion.description}</p>
-                      )}
                     </div>
                     <span className="shrink-0 text-[11px] font-black text-slate-700">{item.criterion.maxPoints} pts</span>
                   </div>
