@@ -59,19 +59,27 @@ const MiniTable = ({ full = false }: { full?: boolean }) => (
 );
 
 const PipelineVisual = () => {
-  const refs = useRef<Array<HTMLDivElement | null>>([]);
   const [active, setActive] = useState(0);
   const names = ['Intake', 'Interview', 'Evaluation', 'Selection', 'Deployment'];
   const positions = [7, 27, 47, 67, 82];
 
   useEffect(() => {
-    const observers = refs.current.map((node, index) => {
-      if (!node) return null;
-      const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && setActive(index), { threshold: 0.65, rootMargin: '-10% 0px -10%' });
-      observer.observe(node);
-      return observer;
-    });
-    return () => observers.forEach((observer) => observer?.disconnect());
+    const shell = document.querySelector<HTMLElement>('.marketing-site');
+    const section = document.getElementById('workflow');
+    if (!shell || !section) return;
+
+    const update = () => {
+      const rect = section.getBoundingClientRect();
+      const viewport = shell.clientHeight;
+      const start = viewport * 0.82;
+      const end = -section.clientHeight * 0.18;
+      const progress = Math.min(1, Math.max(0, (start - rect.top) / (start - end)));
+      setActive(Math.min(names.length - 1, Math.floor(progress * names.length)));
+    };
+
+    shell.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => shell.removeEventListener('scroll', update);
   }, []);
 
   return (
@@ -80,7 +88,7 @@ const PipelineVisual = () => {
       <div className="bh-pipeline-axis" />
       <div className="bh-pipeline-tick t1" /><div className="bh-pipeline-tick t2" /><div className="bh-pipeline-tick t3" /><div className="bh-pipeline-tick t4" /><div className="bh-pipeline-tick t5" />
       {names.map((name, index) => <div key={name} ref={(node) => { refs.current[index] = node; }} style={{ position: 'absolute', left: positions[index] + '%', top: 'calc(50% + 25px)', transform: 'translateX(-50%)', color: index === active ? 'var(--bh-orange)' : 'var(--bh-steel)', font: '600 0.52rem/1 var(--bh-font-mono)', textTransform: 'uppercase' }}>{name}</div>)}
-      <div className="bh-moving-candidate" style={{ left: positions[active] + '%', transform: 'translateX(-7%)' }} aria-live="polite">
+      <div className="bh-moving-candidate" style={{ left: positions[active] + '%', transform: active === 0 ? 'translateX(0)' : active === positions.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)' }} aria-live="polite">
         <div className="row"><div><strong>Nimal Perera</strong><div className="meta">REG-20481 · Steel fixer</div></div><span className="bh-tag orange">{String(active + 1).padStart(2, '0')}</span></div>
         <div className="passport"><span>Passport N8••••32</span><span>14 NOV 2027</span></div>
         <div style={{ marginTop: 9, display: 'flex', justifyContent: 'space-between', gap: 8 }}><span className="bh-ui-kicker">Current stage</span><strong style={{ color: 'var(--bh-orange)', fontSize: '0.68rem', fontFamily: 'var(--bh-font-mono)' }}>{names[active]}</strong></div>
