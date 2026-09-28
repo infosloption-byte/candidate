@@ -27,7 +27,7 @@ if (!seedPassword || seedPassword.length < 8) {
 const upsertUser = async (
   email: string,
   name: string,
-  role: 'ADMIN' | 'AGENCY' | 'INTERVIEWER',
+  role: 'ADMIN' | 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER',
   agencyId: string | null,
   companyId: string | null,
 ) => {
@@ -58,6 +58,13 @@ const main = async () => {
     'ADMIN',
     null,
     null,
+  );
+  const companyAdmin = await upsertUser(
+    process.env.BUILDHIRE_COMPANY_ADMIN_EMAIL ?? 'company-admin@buildhire.local',
+    'BuildHire Company Admin',
+    'COMPANY_ADMIN',
+    null,
+    company.id,
   );
   const agencyUser = await upsertUser(
     process.env.BUILDHIRE_AGENCY_EMAIL ?? 'agency@buildhire.local',
@@ -110,7 +117,7 @@ const main = async () => {
     }
   }
 
-  console.log(`Seeded company=${company.slug}, admin=${admin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
+  console.log(`Seeded company=${company.slug}, admin=${admin.email}, companyAdmin=${companyAdmin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
 };
 
 main()
