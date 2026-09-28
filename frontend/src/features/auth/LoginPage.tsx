@@ -14,7 +14,10 @@ interface PublicAgency {
 
 export const LoginPage = () => {
   const { login, registerCompany, registerInterviewee, error: sessionError } = useAuth();
-  const [mode, setMode] = useState<'login' | 'company-register' | 'candidate-register'>('login');
+  const [mode, setMode] = useState<'login' | 'company-register' | 'candidate-register'>(() => {
+    const requestedMode = new URLSearchParams(window.location.search).get('mode');
+    return requestedMode === 'company-register' ? 'company-register' : requestedMode === 'candidate-register' ? 'candidate-register' : 'login';
+  });
   const [companyName, setCompanyName] = useState('');
   const [companySlug, setCompanySlug] = useState('');
   const [email, setEmail] = useState('');
@@ -54,6 +57,11 @@ export const LoginPage = () => {
     };
   }, [mode]);
 
+  const enterApp = () => {
+    window.history.replaceState({}, '', '/app');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   const submit = async () => {
     setSubmitting(true);
     setError('');
@@ -66,6 +74,7 @@ export const LoginPage = () => {
         }
 
         await login({ email: email.trim(), password });
+        enterApp();
         return;
       }
 
@@ -82,6 +91,7 @@ export const LoginPage = () => {
           email: email.trim(),
           password,
         });
+        enterApp();
         return;
       }
 
@@ -100,6 +110,7 @@ export const LoginPage = () => {
         experienceYears: experienceYears ? Number(experienceYears) : null,
         skills: skills.split(',').map((skill) => skill.trim()).filter(Boolean),
       });
+      enterApp();
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to continue.');
     } finally {
