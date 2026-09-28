@@ -1224,7 +1224,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         eyebrow={role === 'COMPANY_ADMIN' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
         description={role === 'INTERVIEWER' ? 'Complete the assigned interview criteria and submit your scorecard.' : role === 'INTERVIEWEE' ? 'Review your assigned interview schedule.' : 'Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.'}
-        action={role === 'COMPANY_ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
+        action={role === 'COMPANY_ADMIN' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
       {error && <StateMessage kind="error" title="Interview action failed" description={error} floating={showScheduleForm || Boolean(evaluationFor) || Boolean(detailFor) || Boolean(profileCandidate)} />}
@@ -1722,7 +1722,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                         </button>
                       )}
 
-                      {(role === 'COMPANY_ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                      {role === 'COMPANY_ADMIN' && interview.status === 'SCHEDULED' && (
                         <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                         </button>
