@@ -52,8 +52,11 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
-    const company = await getPrisma().company.findFirst({
-      where: { id: request.params.id, id: request.authUser!.companyId ?? '__missing__' },
+    if (request.params.id !== request.authUser!.companyId) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own company.' } });
+    }
+    const company = await getPrisma().company.findUnique({
+      where: { id: request.params.id },
       include: {
         _count: { select: { users: true, jobs: true, candidates: true, interviews: true } },
       },
@@ -66,6 +69,8 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+    return reply.code(403).send({ success: false, error: { code: 'COMPANY_CREATION_FORBIDDEN', message: 'Company administrators manage their existing company. New companies are created through company registration.' } });
+
     const name = request.body.name?.trim();
     const slug = slugify(request.body.slug ?? request.body.name ?? '');
 
