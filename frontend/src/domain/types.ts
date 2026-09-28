@@ -10,8 +10,20 @@ export type InterviewEvaluationStatus = 'DRAFT' | 'SUBMITTED';
 export type InterviewType = 'SCREENING' | 'TECHNICAL' | 'PRACTICAL' | 'FINAL';
 export type InterviewCriterionResponseType = 'SCORE' | 'TEXT' | 'SINGLE_SELECT' | 'MULTI_SELECT';
 
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  userCount?: number;
+  jobCount?: number;
+  candidateCount?: number;
+  interviewCount?: number;
+}
+
 export interface Agency {
   id: string;
+  companyId?: string | null;
   name: string;
   slug: string;
   status: 'ACTIVE' | 'INACTIVE';
@@ -22,6 +34,8 @@ export interface Agency {
 
 export interface User {
   id: string;
+  companyId?: string | null;
+  companyName?: string | null;
   agencyId: string | null;
   candidateId: string | null;
   name: string;
@@ -41,6 +55,7 @@ export interface CandidateDocument {
 
 export interface Candidate {
   id: string;
+  companyId?: string | null;
   agencyId: string;
   reference: string;
   agencyRegisterNo: string;
@@ -83,6 +98,7 @@ export interface JobPosition {
 
 export interface Job {
   id: string;
+  companyId?: string | null;
   agencyId: string | null;
   title: string;
   description: string | null;
@@ -177,6 +193,7 @@ export interface InterviewCriterionAssignment {
 
 export interface Interview {
   id: string;
+  companyId?: string | null;
   candidateId: string;
   jobId: string | null;
   type: InterviewType;
