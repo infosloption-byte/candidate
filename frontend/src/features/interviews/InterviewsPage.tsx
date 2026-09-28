@@ -1231,7 +1231,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
       {error && <StateMessage kind="error" title="Interview action failed" description={error} floating={showScheduleForm || Boolean(evaluationFor) || Boolean(detailFor) || Boolean(profileCandidate)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
-      {loading && <StateMessage kind="loading" title="Loading interviews" description="Fetching the latest interview schedule." />}
+      {loading && <StateMessage kind="loading" title="Loading interviews" description={t("Fetching the latest interview schedule")} />}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -1276,7 +1276,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                   value={agencyFilter}
                   onChange={setAgencyFilter}
                   options={[
-                    { value: '', label: 'All agencies' },
+                    { value: '', label: t('All agencies') },
                     ...agencyOptions.map((agency) => ({ value: agency.id, label: agency.name })),
                   ]}
                   ariaLabel="Filter interviews by agency"
@@ -1319,12 +1319,12 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
           )}
 
           <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-            <label className="field-label">Interview type</label>
+            <label className="field-label">{t('Interview type')}</label>
             <SelectMenu
               value={typeFilter}
               onChange={(value) => setTypeFilter(value as InterviewType | '')}
               options={[
-                { value: '', label: 'All interview types' },
+                { value: '', label: t('All Types') },
                 { value: 'SCREENING', label: 'Screening' },
                 { value: 'TECHNICAL', label: 'Technical' },
                 { value: 'PRACTICAL', label: 'Practical' },
@@ -1338,13 +1338,13 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="field-label shrink-0">Sort</span>
+            <span className="field-label shrink-0">{t('Sort')}</span>
             <div className="min-w-32">
               <SelectMenu
                 value={sortBy}
                 onChange={(value) => setSortBy(value as typeof sortBy)}
                 options={[
-                  { value: 'date', label: 'Date' },
+                  { value: 'date', label: t('Date') },
                   { value: 'candidate', label: 'Candidate' },
                   { value: 'status', label: 'Status' },
                 ]}
@@ -1717,12 +1717,12 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
                   <footer className="relative mt-2.5 border-t border-slate-100 pt-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" title="View interview details" aria-label="View interview details" className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
+                      <button type="button" title={t("View interview details")} aria-label={t("View interview details")} className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
                         <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
                       </button>
 
                       {candidate && (
-                        <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
+                        <button type="button" title={t("Open full candidate profile")} aria-label={t("Open full candidate profile")} className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
                         </button>
                       )}
