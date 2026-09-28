@@ -76,7 +76,7 @@ before(async () => {
     const agencyA = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency A ' + suffix, slug: 'qa-agency-a-' + suffix } });
     const agencyB = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency B ' + suffix, slug: 'qa-agency-b-' + suffix } });
 
-    const admin = await tx.user.create({ data: { name: 'QA Admin', email: emails.admin, passwordHash, role: 'COMPANY_ADMIN' } });
+    const admin = await tx.user.create({ data: { companyId: company.id, agencyId: null, name: 'QA Company Admin', email: emails.admin, passwordHash, role: 'COMPANY_ADMIN' } });
     const agencyAUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Agency A', email: emails.agencyA, passwordHash, role: 'AGENCY' } });
     const agencyBUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
     const interviewer = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
