@@ -78,7 +78,7 @@ const CompanyModal = ({
 export const CompaniesPage = () => {
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'ADMIN';
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [companies, setCompanies] = useState<Array<Company & { counts?: { users: number; jobs: number; candidates: number; interviews?: number } }>>([]);
   const [form, setForm] = useState(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export const CompaniesPage = () => {
     setLoading(true);
     setError('');
     try {
-      setCompanies(await apiFetch<Company[]>('/companies'));
+      setCompanies(await apiFetch<Array<Company & { counts?: { users: number; jobs: number; candidates: number; interviews?: number } }>>('/companies'));
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load companies.');
     } finally {
@@ -178,9 +178,9 @@ export const CompaniesPage = () => {
                     <p className="mt-1 text-[11px] font-semibold text-slate-400">{company.slug}</p>
                   </td>
                   <td className="px-4 py-4"><StatusPill value={company.status} /></td>
-                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.userCount ?? 0}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.jobCount ?? 0}</td>
-                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.candidateCount ?? 0}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.users ?? 0}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.jobs ?? 0}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.candidates ?? 0}</td>
                   <td className="px-4 py-4 text-right">
                     <Button size="sm" variant={company.status === 'ACTIVE' ? 'danger' : 'secondary'} onClick={() => void toggleStatus(company)}>
                       {company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
