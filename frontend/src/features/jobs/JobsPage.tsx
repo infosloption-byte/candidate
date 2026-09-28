@@ -13,6 +13,7 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { Job, UserRole } from '../../domain/types';
 
 interface JobsPageProps {
@@ -25,6 +26,7 @@ const JOBS_PAGE_SIZE = 10;
 
 export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const { user, developmentMode } = useAuth();
+  const { t, language } = useLanguage();
   const { state, dispatch } = useRecruitment();
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
   const [showForm, setShowForm] = useState(false);
@@ -75,7 +77,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         setJobs(jobResult);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load jobs.');
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : t('Unable to load jobs.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -120,7 +122,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
   const saveJob = async () => {
     if (!form.title.trim()) {
-      setError('Job title is required.');
+      setError(t('Job title is required.'));
       return;
     }
     setSaving(true);
@@ -131,23 +133,23 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         .map((row) => ({ position: row.position.trim(), requiredCount: Math.max(0, Number(row.requiredCount) || 0) }))
         .filter((row) => row.position || row.requiredCount > 0);
       if (!normalizedPositions.length) {
-        setError('Add at least one position.');
+        setError(t('Add at least one position.'));
         return;
       }
       const invalidPosition = normalizedPositions.find((row) => !row.position || row.requiredCount < 1);
       if (invalidPosition) {
-        setError('Every position needs a name and a required count of at least 1.');
+        setError(t('Every position needs a name and a required count of at least 1.'));
         return;
       }
       const openings = normalizedPositions.reduce((sum, row) => sum + row.requiredCount, 0);
       if (openings > 1000) {
-        setError('Total required workers cannot exceed 1000.');
+        setError(t('Total required workers cannot exceed 1000.'));
         return;
       }
 
       if (editingJobId) {
         const current = jobs.find((job) => job.id === editingJobId);
-        if (!current) throw new Error('The selected job could not be found.');
+        if (!current) throw new Error(t('The selected job could not be found.'));
 
         const updated: Job = developmentMode
           ? {
@@ -177,8 +179,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
         setJobs((currentJobs) => currentJobs.map((job) => job.id === updated.id ? updated : job));
         closeForm();
-        setSuccessTitle('Job updated');
-        setSuccess('"' + updated.title + '" was updated.');
+        setSuccessTitle(t('Job updated'));
+        setSuccess(t('Job updated successfully.'));
         return;
       }
 
@@ -216,10 +218,10 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       if (developmentMode) dispatch({ type: 'CREATE_JOB', job: draft });
       setJobs((current) => [created, ...current]);
       closeForm();
-      setSuccessTitle('Job created');
-      setSuccess('"' + created.title + '" is now published and ready for recruitment.');
+      setSuccessTitle(t('Job created'));
+      setSuccess(t('Job created successfully and published.'));
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to save the job.');
+      setError(requestError instanceof Error ? requestError.message : t('Unable to save the job.'));
     } finally {
       setSaving(false);
     }
@@ -231,7 +233,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     const filledCount = job.filledCount ?? 0;
 
     if (nextStatus === 'CLOSED' && filledCount < job.openings) {
-      setError('A job can only be closed after all required openings are filled.');
+      setError(t('A job can only be closed after all required openings are filled.'));
       return;
     }
 
@@ -258,10 +260,10 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             filledCount: updated.filledCount ?? item.filledCount,
           }
         : item));
-      setSuccessTitle('Job closed');
-      setSuccess('"' + job.title + '" is now closed.');
+      setSuccessTitle(t('Job closed'));
+      setSuccess(t('Job closed successfully.'));
     } catch (requestError: unknown) {
-      setError(requestError instanceof Error ? requestError.message : 'Unable to update the job.');
+      setError(requestError instanceof Error ? requestError.message : t('Unable to update the job.'));
     }
   };
 
@@ -319,9 +321,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   }, [search, statusFilter, sortBy, sortDirection]);
 
   const jobStatusOptions = [
-    { value: '', label: 'All statuses' },
-    { value: 'PUBLISHED', label: 'Published' },
-    { value: 'CLOSED', label: 'Closed' },
+    { value: '', label: t('All statuses') },
+    { value: 'PUBLISHED', label: t('Published') },
+    { value: 'CLOSED', label: t('Closed') },
   ];
 
   const renderJobActions = (job: Job, _compact = false) => (
@@ -330,8 +332,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
         variant="secondary"
         size="sm"
         className="!size-9 !min-h-9 !p-0"
-        title="Edit job"
-        aria-label="Edit job"
+        title={t('Edit job')}
+        aria-label={t('Edit job')}
         onClick={(event) => {
           event.stopPropagation();
           beginEdit(job);
@@ -344,8 +346,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
           variant="secondary"
           size="sm"
           className="!size-9 !min-h-9 !p-0"
-          title="Close job"
-          aria-label="Close job"
+          title={t('Close job')}
+          aria-label={t('Close job')}
           disabled={(job.filledCount ?? 0) < job.openings}
           onClick={(event) => {
             event.stopPropagation();
@@ -361,27 +363,27 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'INTERVIEWEE' ? 'Available positions' : 'Recruitment'}
-        title="Jobs"
+        eyebrow={t(role === 'INTERVIEWEE' ? 'Available positions' : 'Recruitment')}
+        title={t('Jobs')}
         description={role === 'INTERVIEWEE'
-          ? 'Review positions available for your interview assignments.'
-          : 'Create and manage job openings that drive the candidate and interview workflow.'}
+          ? t('Review positions available for your interview assignments.')
+          : t('Create and manage job openings that drive the candidate and interview workflow.')}
         action={role !== 'INTERVIEWEE' ? (
           <Button onClick={openCreateForm}>
-            <Icon name="plus" size={16} /> New job
+            <Icon name="plus" size={16} /> {t('New job')}
           </Button>
         ) : undefined}
       />
 
-      {error && <StateMessage kind="error" title="Job action failed" description={error} floating={formModalOpen} />}
-      {success && <StateMessage kind="success" title={successTitle || 'Saved'} description={success} />}
-      {loading && <StateMessage kind="loading" title="Loading jobs" description="Fetching the latest job openings." />}
+      {error && <StateMessage kind="error" title={t('Job action failed')} description={error} floating={formModalOpen} />}
+      {success && <StateMessage kind="success" title={successTitle || t('Saved')} description={success} />}
+      {loading && <StateMessage kind="loading" title={t('Loading jobs')} description={t('Fetching the latest job openings.')} />}
 
       {formModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
           <button
             type="button"
-            aria-label="Close job dialog"
+            aria-label={t('Close job dialog')}
             className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
             onClick={closeForm}
           />
@@ -396,18 +398,18 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">
-                  {editingJobId ? 'Job settings' : 'New opening'}
+                  {t(editingJobId ? 'Job settings' : 'New opening')}
                 </p>
                 <h2 id="job-form-title" className="mt-1 text-lg font-black text-slate-950">
-                  {editingJobId ? 'Edit job' : 'Create job'}
+                  {t(editingJobId ? 'Edit job' : 'Create job')}
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  {editingJobId ? 'Update the job details without changing its recruitment history.' : 'Set the opening details first. Candidates and interviews are managed from the job workflow.'}
+                  {t(editingJobId ? 'Update the job details without changing its recruitment history.' : 'Set the opening details first. Candidates and interviews are managed from the job workflow.')}
                 </p>
               </div>
               <button
                 type="button"
-                aria-label="Close"
+                aria-label={t('Close')}
                 className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 onClick={closeForm}
               >
@@ -417,22 +419,22 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
             <div className="mt-5 space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField label="Job title">
+                <FormField label={t('Job title')}>
                   <input
                     className="field-input"
                     value={form.title}
                     onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder="e.g. Dubai Tower Project"
+                    placeholder={t('e.g. Dubai Tower Project')}
                     autoFocus
                   />
                 </FormField>
 
-                <FormField label="Location">
+                <FormField label={t('Location')}>
                   <input
                     className="field-input"
                     value={form.location}
                     onChange={(event) => setForm({ ...form, location: event.target.value })}
-                    placeholder="Dubai, UAE"
+                    placeholder={t('Dubai, UAE')}
                   />
                 </FormField>
               </div>
@@ -440,8 +442,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               <div>
                 <div className="flex items-end justify-between gap-3">
                   <div>
-                    <p className="field-label">Required positions</p>
-                    <p className="mt-1 text-[10px] text-slate-400">Add each position needed for this job and the number of workers required.</p>
+                    <p className="field-label">{t('Required positions')}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{t('Add each position needed for this job and the number of workers required.')}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">
                     {positionRows.reduce((sum, row) => sum + (Number(row.requiredCount) || 0), 0)} workers
@@ -455,8 +457,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                         className="field-input min-w-0 bg-white"
                         value={row.position}
                         onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, position: event.target.value } : item))}
-                        placeholder="Position"
-                        aria-label={'Position ' + (index + 1)}
+                        placeholder={t('Position')}
+                        aria-label={t('Position') + ' ' + (index + 1)}
                       />
                       <input
                         type="number"
@@ -465,13 +467,13 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                         className="field-input bg-white"
                         value={row.requiredCount}
                         onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, requiredCount: event.target.value } : item))}
-                        placeholder="Count"
-                        aria-label={'Required count for position ' + (index + 1)}
+                        placeholder={t('Count')}
+                        aria-label={t('Required count for position') + ' ' + (index + 1)}
                       />
                       <button
                         type="button"
-                        aria-label={'Remove position ' + (index + 1)}
-                        title="Remove position"
+                        aria-label={t('Remove position') + ' ' + (index + 1)}
+                        title={t('Remove position')}
                         disabled={positionRows.length === 1}
                         className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
                         onClick={() => setPositionRows((current) => current.length === 1 ? current : current.filter((_, i) => i !== index))}
@@ -487,27 +489,27 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                   className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50/40 hover:text-cyan-700"
                   onClick={() => setPositionRows((current) => [...current, { position: '', requiredCount: '1' }])}
                 >
-                  <Icon name="plus" size={14} /> Add position
+                  <Icon name="plus" size={14} /> {t('Add position')}
                 </button>
               </div>
 
-              <FormField label="Job note">
+              <FormField label={t('Job note')}>
                 <textarea
                   className="field-input min-h-28 resize-y"
                   value={form.description}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
-                  placeholder="Add notes about the project, responsibilities, requirements or other useful information."
+                  placeholder={t('Add notes about the project, responsibilities, requirements or other useful information.')}
                 />
               </FormField>
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={closeForm} disabled={saving}>Cancel</Button>
+              <Button variant="secondary" onClick={closeForm} disabled={saving}>{t('Cancel')}</Button>
               <Button
                 disabled={saving || positionRows.length === 0}
                 onClick={() => void saveJob()}
               >
-                {saving ? 'Saving…' : editingJobId ? 'Save changes' : 'Create job'}
+                {saving ? t('Saving…') : editingJobId ? t('Save changes') : t('Create job')}
               </Button>
             </div>
           </div>
@@ -517,12 +519,12 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="min-w-0">
-            <label className="field-label">Search jobs</label>
+            <label className="field-label">{t('Search jobs')}</label>
             <input
               className="field-input mt-1 w-full"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Title, location, description or status…"
+              placeholder={t('Title, location, description or status…')}
             />
           </div>
 
@@ -533,19 +535,19 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             aria-controls="mobile-job-filters"
             onClick={() => setMobileFiltersOpen((value) => !value)}
           >
-            <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
+            <span>{t(mobileFiltersOpen ? 'Hide filters' : 'More filters')}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
             </svg>
           </button>
 
           <div id="mobile-job-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-            <label className="field-label">Status</label>
+            <label className="field-label">{t('Status')}</label>
             <SelectMenu
               value={statusFilter}
               onChange={setStatusFilter}
               options={jobStatusOptions}
-              ariaLabel="Filter jobs by status"
+              ariaLabel={t('Filter jobs by status')}
               className="mt-1"
             />
           </div>
@@ -556,12 +558,12 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
           <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="field-label">Status</label>
+                <label className="field-label">{t('Status')}</label>
                 <SelectMenu
                   value={statusFilter}
                   onChange={setStatusFilter}
                   options={jobStatusOptions}
-                  ariaLabel="Filter jobs by status"
+                  ariaLabel={t('Filter jobs by status')}
                   className="mt-1"
                 />
               </div>
@@ -573,8 +575,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
           <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
             <button
               type="button"
-              title={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
-              aria-label={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
+              title={t(showAdvancedFilters ? 'Hide advanced filters' : 'More filters')}
+              aria-label={t(showAdvancedFilters ? 'Hide advanced filters' : 'More filters')}
               className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
               onClick={() => setShowAdvancedFilters((value) => !value)}
             >
@@ -583,32 +585,32 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               </svg>
             </button>
             <span className="text-[10px] font-bold text-slate-400">
-              {showAdvancedFilters ? 'Advanced filters' : 'More filters'}
+              {t(showAdvancedFilters ? 'Advanced filters' : 'More filters')}
             </span>
           </div>
 
           <div className="flex items-center justify-between gap-3 sm:justify-end">
-            <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visibleJobs.length}</span> job(s)</p>
+            <p className="text-xs text-slate-500"><span className="font-black text-slate-800">{visibleJobs.length}</span> {t('job(s)')}</p>
 
             <div className="flex items-center gap-2">
-              <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">Sort</span>
+              <span className="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline">{t('Sort')}</span>
               <SelectMenu
                 value={sortBy}
                 onChange={(value) => setSortBy(value as typeof sortBy)}
                 options={[
-                  { value: 'created', label: 'Latest' },
-                  { value: 'title', label: 'Title' },
-                  { value: 'openings', label: 'Required workers' },
-                  { value: 'filled', label: 'Filled workers' },
-                  { value: 'interviews', label: 'Interviews' },
+                  { value: 'created', label: t('Latest') },
+                  { value: 'title', label: t('Title') },
+                  { value: 'openings', label: t('Required workers') },
+                  { value: 'filled', label: t('Filled workers') },
+                  { value: 'interviews', label: t('Interviews') },
                 ]}
-                ariaLabel="Sort jobs by"
+                ariaLabel={t('Sort jobs by')}
                 className="w-32 sm:w-36"
               />
               <button
                 type="button"
-                title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
-                aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
+                title={t(sortDirection === 'asc' ? 'Ascending order' : 'Descending order')}
+                aria-label={t(sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort')}
                 className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
                 onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
               >
@@ -623,8 +625,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             {(search || statusFilter) && (
               <button
                 type="button"
-                title="Clear filters"
-                aria-label="Clear filters"
+                title={t('Clear filters')}
+                aria-label={t('Clear filters')}
                 className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
                 onClick={() => {
                   setSearch('');
@@ -638,12 +640,12 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               </button>
             )}
 
-            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Job list view">
+            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label={t('Job list view')}>
               <button
                 type="button"
-                aria-label="Card view"
+                aria-label={t('Card view')}
                 aria-pressed={listView === 'cards'}
-                title="Card view"
+                title={t('Card view')}
                 className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'cards' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 onClick={() => setListView('cards')}
               >
@@ -656,9 +658,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               </button>
               <button
                 type="button"
-                aria-label="Table view"
+                aria-label={t('Table view')}
                 aria-pressed={listView === 'table'}
-                title="Table view"
+                title={t('Table view')}
                 className={`grid h-8 w-8 place-items-center rounded-lg transition ${listView === 'table' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 onClick={() => setListView('table')}
               >
@@ -675,8 +677,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       {!loading && visibleJobs.length === 0 && (
         <StateMessage
           kind="empty"
-          title="No jobs to show"
-          description={search || statusFilter ? 'Try changing the filters or search terms.' : 'Create a job opening to start building its candidate pool.'}
+          title={t('No jobs to show')}
+          description={t(search || statusFilter ? 'Try changing the filters or search terms.' : 'Create a job opening to start building its candidate pool.')}
         />
       )}
 
@@ -694,7 +696,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                 key={job.id}
                 role="button"
                 tabIndex={0}
-                aria-label={'Open job ' + job.title}
+                aria-label={t('Open job') + ' ' + job.title}
                 className="cursor-pointer transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                 onClick={() => onOpenJob?.(job.id)}
                 onKeyDown={(event) => {
@@ -713,12 +715,12 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                       <div className="min-w-0">
                         <h2 className="truncate text-base font-black text-slate-950">{job.title}</h2>
                         <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">
-                          {job.location ?? 'Location not set'}
+                          {job.location ?? t('Location not set')}
                         </p>
                       </div>
                     </div>
                     <div className="shrink-0 rounded-lg bg-slate-50 px-2.5 py-1.5 text-right">
-                      <p className="text-[8px] font-extrabold uppercase tracking-wider text-slate-400">Job code</p>
+                      <p className="text-[8px] font-extrabold uppercase tracking-wider text-slate-400">{t('Job code')}</p>
                       <p className="mt-0.5 font-mono text-[10px] font-black tracking-wide text-slate-700">
                         JOB-{job.id.slice(0, 8).toUpperCase()}
                       </p>
@@ -727,22 +729,22 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
                   <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
                     <div className="rounded-xl bg-white px-3 py-2.5">
-                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Required</p>
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t('Required')}</p>
                       <p className="mt-1 text-sm font-black text-slate-900">{job.openings}</p>
-                      <p className="text-[9px] font-semibold text-slate-400">workers</p>
+                      <p className="text-[9px] font-semibold text-slate-400">{t('workers')}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2.5">
-                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Positions</p>
+                      <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t('Positions')}</p>
                       <p className="mt-1 text-sm font-black text-slate-900">{positions.length}</p>
-                      <p className="text-[9px] font-semibold text-slate-400">{positions.length === 1 ? 'role' : 'roles'}</p>
+                      <p className="text-[9px] font-semibold text-slate-400">{t(positions.length === 1 ? 'role' : 'roles')}</p>
                     </div>
                   </div>
 
                   <div className="mt-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Worker progress</p>
-                        <p className="mt-1 text-xs font-black text-slate-900">{filledCount} / {job.openings} filled</p>
+                        <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">{t('Worker progress')}</p>
+                        <p className="mt-1 text-xs font-black text-slate-900">{filledCount} / {job.openings} {t('filled')}</p>
                       </div>
                       <span className="text-xs font-black text-slate-600">{fillPercent}%</span>
                     </div>
@@ -751,8 +753,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     </div>
                     <p className="mt-1.5 text-[9px] font-semibold text-slate-400">
                       {job.openings - filledCount > 0
-                        ? (job.openings - filledCount) + ' opening(s) remaining'
-                        : 'All required openings filled'}
+                        ? (job.openings - filledCount) + ' ' + t('Remaining opening(s)')
+                         : t('All required openings filled')}
                     </p>
                   </div>
 
@@ -760,21 +762,21 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <Icon name="users" size={13} />
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Candidates</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">{t('Candidates')}</span>
                       </div>
                       <p className="mt-1 text-sm font-black text-slate-900">{candidateCount}</p>
                     </div>
                     <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <Icon name="calendar" size={13} />
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Interviews</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">{t('Interviews')}</span>
                       </div>
                       <p className="mt-1 text-sm font-black text-slate-900">{interviewCount}</p>
                     </div>
                     <div className="rounded-xl border border-slate-100 bg-white px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <Icon name="target" size={13} />
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider">Filled</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">{t('Filled')}</span>
                       </div>
                       <p className="mt-1 text-sm font-black text-slate-900">{filledCount}</p>
                     </div>
@@ -784,11 +786,11 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     <div className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold text-slate-400">
                       <Icon name="clock" size={12} />
                       <span className="truncate">
-                        Created {job.createdAt
+                        {t('Created')} {job.createdAt
                           ? new Date(job.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
                           : job.publishedAt
                             ? new Date(job.publishedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-                            : '—'}
+                            : t('Not available') }
                       </span>
                     </div>
                     {role !== 'INTERVIEWEE' && (
@@ -811,7 +813,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
           columns={[
             {
               key: 'job',
-              header: 'Job',
+              header: t('Job'),
               render: (job) => (
                 <div className="min-w-64">
                   <div className="flex items-center gap-2">
@@ -820,7 +822,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-black text-slate-900">{job.title}</p>
-                      <p className="mt-0.5 truncate text-[10px] text-slate-400">{job.location ?? 'Location not set'}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">{job.location ?? t('Location not set')}</p>
                     </div>
                   </div>
                 </div>
@@ -828,7 +830,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             },
             {
               key: 'code',
-              header: 'Job code',
+              header: t('Job code'),
               render: (job) => (
                 <span className="font-mono text-[10px] font-black tracking-wide text-slate-600">
                   JOB-{job.id.slice(0, 8).toUpperCase()}
@@ -837,17 +839,17 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             },
             {
               key: 'required',
-              header: 'Required',
+              header: t('Required'),
               render: (job) => (
                 <div>
                   <p className="font-black text-slate-800">{job.openings}</p>
-                  <p className="text-[10px] text-slate-400">workers · {job.positions?.length ?? 1} {(job.positions?.length ?? 1) === 1 ? 'position' : 'positions'}</p>
+                  <p className="text-[10px] text-slate-400">workers · {job.positions?.length ?? 1} {t((job.positions?.length ?? 1) === 1 ? 'position' : 'positions')}</p>
                 </div>
               ),
             },
             {
               key: 'progress',
-              header: 'Progress',
+              header: t('Progress'),
               render: (job) => {
                 const filled = job.filledCount ?? 0;
                 const percent = Math.min(100, Math.round((filled / Math.max(1, job.openings)) * 100));
@@ -866,31 +868,31 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
             },
             {
               key: 'candidates',
-              header: 'Candidates',
+              header: t('Candidates'),
               render: (job) => <span className="font-bold text-slate-700">{job.candidateCount ?? 0}</span>,
             },
             {
               key: 'interviews',
-              header: 'Interviews',
+              header: t('Interviews'),
               render: (job) => <span className="font-bold text-slate-700">{job.interviewCount ?? 0}</span>,
             },
             {
               key: 'filled',
-              header: 'Filled',
+              header: t('Filled'),
               render: (job) => <span className="font-bold text-slate-700">{job.filledCount ?? 0}</span>,
             },
             {
               key: 'created',
-              header: 'Created',
+              header: t('Created'),
               render: (job) => (
                 <span className="whitespace-nowrap text-[10px] font-semibold text-slate-500">
-                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : '—'}
+                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : t('Not available') }
                 </span>
               ),
             },
             {
               key: 'actions',
-              header: 'Actions',
+              header: t('Actions'),
               className: 'whitespace-nowrap',
               render: (job) => (
                 <div className="flex items-center gap-1.5">
@@ -898,8 +900,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                     variant="secondary"
                     size="sm"
                     className="!size-9 !min-h-9 !p-0"
-                    title="View job"
-                    aria-label="View job"
+                    title={t('View job')}
+                    aria-label={t('View job')}
                     onClick={() => onOpenJob?.(job.id)}
                   >
                     <Icon name="eye" size={15} />
