@@ -20,6 +20,14 @@ interface LoginBody {
   password?: string;
 }
 
+interface RegisterCompanyBody {
+  companyName?: string;
+  companySlug?: string;
+  adminName?: string;
+  email?: string;
+  password?: string;
+}
+
 interface RegisterIntervieweeBody {
   agencyRegisterNo?: string | null;
   firstName?: string;
@@ -34,6 +42,97 @@ interface RegisterIntervieweeBody {
 }
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
+  app.post<{ Body: RegisterCompanyBody }>('/auth/register/company', async (request, reply) => {
+    const companyName = request.body?.companyName?.trim();
+    const companySlug = (request.body?.companySlug?.trim().toLowerCase()
+      || companyName?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100));
+    const adminName = request.body?.adminName?.trim();
+    const email = request.body?.email?.trim().toLowerCase();
+    const password = request.body?.password ?? '';
+
+    if (!companyName || companyName.length < 2 || companyName.length > 160) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'Company name must be 2-160 characters.' } });
+    }
+    if (!companySlug || companySlug.length < 2 || companySlug.length > 100) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'A valid company identifier is required.' } });
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(companySlug)) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'Company identifier can only contain letters, numbers, and hyphens.' } });
+    }
+    if (!adminName || adminName.length < 2 || adminName.length > 160) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY_ADMIN', message: 'Company administrator name is required.' } });
+    }
+    if (!email || !email.includes('@') || email.length > 191) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY_ADMIN', message: 'A valid email address is required.' } });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY_ADMIN', message: 'Password must be 8-128 characters.' } });
+    }
+
+    try {
+      const result = await getPrisma().$transaction(async (tx) => {
+        const company = await tx.company.create({
+          data: { name: companyName, slug: companySlug, status: 'ACTIVE' },
+        });
+        const agency = await tx.agency.create({
+          data: {
+            companyId: company.id,
+            name: companyName,
+            slug: companySlug + '-agency',
+            status: 'ACTIVE',
+          },
+        });
+        const user = await tx.user.create({
+          data: {
+            companyId: company.id,
+            agencyId: agency.id,
+            name: adminName,
+            email,
+            passwordHash: await hashPassword(password),
+            role: 'AGENCY',
+            active: true,
+          },
+          select: {
+            id: true,
+            companyId: true,
+            agencyId: true,
+            candidateId: true,
+            name: true,
+            email: true,
+            role: true,
+            active: true,
+            company: { select: { id: true, name: true, slug: true, status: true } },
+          },
+        });
+        return { company, agency, user };
+      });
+
+      await createSession(result.user.id, reply);
+
+      return reply.code(201).send({
+        success: true,
+        data: {
+          company: result.company,
+          user: toPublicUser({
+            id: result.user.id,
+            companyId: result.user.companyId,
+            agencyId: result.user.agencyId,
+            candidateId: result.user.candidateId,
+            name: result.user.name,
+            email: result.user.email,
+            role: result.user.role,
+            active: result.user.active,
+          }),
+        },
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        return reply.code(409).send({ success: false, error: { code: 'COMPANY_EXISTS', message: 'Company identifier or administrator email is already in use.' } });
+      }
+      throw error;
+    }
+  });
+
   app.post<{ Body: LoginBody }>('/auth/login', async (request, reply) => {
     const email = request.body?.email?.trim().toLowerCase();
     const password = request.body?.password ?? '';
@@ -45,7 +144,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const user = await getPrisma().user.findUnique({ where: { email } });
+    const user = await getPrisma().user.findUnique({
+      where: { email },
+      include: { company: { select: { id: true, name: true, slug: true, status: true } } },
+    });
 
     if (!user || !user.active || !(await verifyPassword(password, user.passwordHash))) {
       return reply.code(401).send({
@@ -61,6 +163,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       data: {
         user: toPublicUser({
           id: user.id,
+          companyId: user.companyId,
           agencyId: user.agencyId,
           candidateId: user.candidateId,
           name: user.name,
@@ -118,7 +221,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
     const agency = await getPrisma().agency.findFirst({
       where: { id: agencyId, status: 'ACTIVE' },
-      select: { id: true },
+      select: { id: true, companyId: true },
     });
 
     if (!agency) {
@@ -129,6 +232,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       const result = await getPrisma().$transaction(async (tx) => {
         const candidate = await tx.candidate.create({
           data: {
+            companyId: agency.companyId ?? (await tx.company.findFirst({ select: { id: true }, orderBy: { createdAt: 'asc' } }))?.id!,
             agencyId: agency.id,
             reference: 'CA-' + randomBytes(5).toString('hex').toUpperCase(),
             agencyRegisterNo: request.body?.agencyRegisterNo?.trim() || 'SELF-' + randomBytes(5).toString('hex').toUpperCase(),
@@ -146,6 +250,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const user = await tx.user.create({
           data: {
             candidateId: candidate.id,
+            companyId: agency.companyId ?? undefined,
+            agencyId: agency.id,
             name: [firstName!, lastName!].join(' '),
             email,
             passwordHash: await hashPassword(password),
@@ -153,6 +259,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           },
           select: {
             id: true,
+            companyId: true,
             agencyId: true,
             candidateId: true,
             name: true,
