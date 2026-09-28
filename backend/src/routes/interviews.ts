@@ -570,6 +570,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       const result = await getPrisma().$transaction(async (tx) => {
         const interview = await tx.interview.create({
           data: {
+            companyId: candidate.companyId,
             candidateId: candidate.id,
             jobId: job?.id ?? null,
             type: request.body.type!,
