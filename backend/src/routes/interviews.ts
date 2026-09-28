@@ -29,6 +29,7 @@ const interviewInclude = {
       source: true,
       status: true,
       statusUpdatedAt: true,
+      agency: { select: { slug: true } },
     },
   },
   job: { select: { id: true, title: true, location: true, status: true } },
