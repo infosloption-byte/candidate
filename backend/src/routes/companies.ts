@@ -17,7 +17,6 @@ interface CompanyUserBody {
   password?: string;
 }
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const slugify = (value: string): string => value
   .trim()
   .toLowerCase()
@@ -77,13 +76,14 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
       const result = await getPrisma().$transaction(async (tx) => {
         const company = await tx.company.create({ data: { name, slug, status: 'ACTIVE' } });
         const agency = await tx.agency.create({
-          data: { companyId: company.id, name, slug: slug + '-agency', status: 'ACTIVE' },
+          data: { companyId: company.id, name, slug: (slug.slice(0, 92) + '-agency').slice(0, 100), status: 'ACTIVE' },
         });
         return { company, agency };
       });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
+        companyId: result.company.id,
         agencyId: result.agency.id,
         action: 'COMPANY_CREATED',
         entityType: 'Company',
@@ -131,7 +131,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
         entityType: 'Company',
         entityId: company.id,
         summary: 'Updated company "' + company.name + '".',
-      } as never);
+      });
       return reply.send({ success: true, data: company });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
