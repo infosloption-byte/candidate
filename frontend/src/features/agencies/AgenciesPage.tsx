@@ -638,14 +638,14 @@ export const AgenciesPage = () => {
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform access</p>
                   <h2 className="text-lg font-black text-slate-950">System Users</h2>
-                  <p className="mt-1 text-xs text-slate-500">Manage Admin and Agency accounts. Interviewers are maintained in their own tab.</p>
+                  <p className="mt-1 text-xs text-slate-500">Manage Company Admin and Agency accounts. Interviewers are maintained in their own tab.</p>
                 </div>
                 {!developmentMode && <Button onClick={openCreateSystemUser}>Add system user</Button>}
               </div>
               {systemUsers.length ? (
                 <DataTable columns={systemUserColumns} rows={systemUsers} getRowKey={(item) => item.id} />
               ) : (
-                <StateMessage kind="empty" title="No system users" description="Add an Admin or Agency account to get started." />
+                <StateMessage kind="empty" title="No system users" description="Add a Company Admin or Agency account to get started." />
               )}
             </div>
           )}
@@ -691,7 +691,7 @@ export const AgenciesPage = () => {
       {modalMode === 'SYSTEM_USER' && (
         <AdminModal
           title="Add system user"
-          description="Create an Admin account or an Agency account. Interviewers are created from the Interviewers tab."
+          description="Create a Company Admin account or an Agency account. Interviewers are created from the Interviewers tab."
           onClose={closeModal}
         >
           <div className="grid gap-4 md:grid-cols-2">
