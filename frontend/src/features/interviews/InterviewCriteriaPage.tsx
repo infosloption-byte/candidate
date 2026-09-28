@@ -274,7 +274,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
-            required: true,
             options: options.length ? options : null,
           }),
         });
@@ -286,7 +285,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
-            required: criterionForm.required,
             options: options.length ? options : null,
           }),
         });
