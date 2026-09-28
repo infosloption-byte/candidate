@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -74,6 +75,7 @@ const CriteriaModal = ({
 
 export const InterviewCriteriaPage = ({ role }: Props) => {
   const { developmentMode } = useAuth();
+  const { t } = useLanguage();
   const { state, dispatch } = useRecruitment();
   const [criteria, setCriteria] = useState<InterviewCriterion[]>(developmentMode ? state.interviewCriteria : []);
   const [groups, setGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups : []);
@@ -468,7 +470,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       <SectionHeading
         eyebrow="Interview setup"
         title="Interview criteria"
-        description="Build reusable interview criteria and group them by job type or trade category. Every criterion has an answer and a point limit; the multiple-tag option changes the answer field to tag entry."
+        description={t('Build reusable interview criteria and group them by job type or trade category. Every criterion has an answer and a point limit; the multiple-tag option changes the answer field to tag entry.')}
         action={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={openCreateCriterion}>New criterion</Button>
@@ -479,7 +481,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
 
       {error && <StateMessage kind="error" title="Interview setup action failed" description={error} floating={Boolean(modalMode)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
-      {loading && <StateMessage kind="loading" title="Loading interview setup" description="Fetching criteria and reusable interview groups." />}
+      {loading && <StateMessage kind="loading" title="Loading interview setup" description={t('Fetching criteria and reusable interview groups')} />}
 
       {!loading && (criterionFormOpen || groupFormOpen) && (
         <CriteriaModal
@@ -661,7 +663,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
                             </div>
                             {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
-                            <p className="mt-2 text-xs leading-5 text-slate-500">{group.description ?? 'No description provided.'}</p>
+                            <p className="mt-2 text-xs leading-5 text-slate-500">{group.description && <p className="mt-2 text-xs leading-5 text-slate-500">{group.description}</p>}</p>
                           </div>
 
                           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
@@ -673,8 +675,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <button
                                 type="button"
                                 onClick={() => openViewGroup(group)}
-                                title="View criteria group"
-                                aria-label={'View criteria group ' + group.name}
+                                title={t('View criteria group')}
+                                aria-label={t('View criteria group') + ' ' + group.name}
                                 className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                               >
                                 <Icon name="eye" size={16} />
@@ -683,8 +685,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                                 <button
                                   type="button"
                                   onClick={() => openEditGroup(group)}
-                                  title="Edit criteria group"
-                                  aria-label={'Edit criteria group ' + group.name}
+                                  title={t('Edit criteria group')}
+                                  aria-label={t('Edit criteria group') + ' ' + group.name}
                                   className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                                 >
                                   <Icon name="pencil" size={16} />
@@ -694,8 +696,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                                 <button
                                   type="button"
                                   onClick={() => void toggleGroup(group)}
-                                  title={group.active ? 'Disable criteria group' : 'Enable criteria group'}
-                                  aria-label={(group.active ? 'Disable' : 'Enable') + ' criteria group ' + group.name}
+                                  title={group.active ? t('Disable criteria group') : t('Enable criteria group')}
+                                  aria-label={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name}
                                   className={'grid size-9 place-items-center rounded-xl border transition ' + (group.active
                                     ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
                                     : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
@@ -731,9 +733,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview library</p>
                   <h2 className="text-lg font-black text-slate-950">Criteria</h2>
-                  <p className="mt-1 text-xs text-slate-500">Disable individual criteria instead of deleting them so older scorecards remain readable.</p>
+                  <p className="mt-1 text-xs text-slate-500">{t('Disable individual criteria instead of deleting them so older scorecards remain readable')}</p>
                 </div>
-                <p className="text-xs text-slate-400">{criteria.length} criterion/criteria</p>
+                <p className="text-xs text-slate-400">{criteria.length} {t('criterion/criteria')}</p>
               </div>
               {criteria.length > 0 ? (
                 <div className="space-y-3">
@@ -757,8 +759,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                             <button
                               type="button"
                               onClick={() => openViewCriterion(criterion)}
-                              title="View criterion"
-                              aria-label={'View criterion ' + criterion.name}
+                              title={t('View criteria')}
+                              aria-label={t('View criteria') + ' ' + criterion.name}
                               className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                             >
                               <Icon name="eye" size={16} />
@@ -778,8 +780,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <button
                                 type="button"
                                 onClick={() => void toggleCriterion(criterion)}
-                                title={criterion.active ? 'Disable criterion' : 'Enable criterion'}
-                                aria-label={(criterion.active ? 'Disable' : 'Enable') + ' criterion ' + criterion.name}
+                                title={criterion.active ? t('Disable criteria') : t('Enable criterion')}
+                                aria-label={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name}
                                 className={'grid size-9 place-items-center rounded-xl border transition ' + (criterion.active
                                   ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
                                   : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
