@@ -787,9 +787,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
                       <Icon name="clock" size={12} />
                       <span className="truncate">
                         {t('Created')} {job.createdAt
-                          ? new Date(job.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                          ? new Date(job.createdAt).toLocaleString(language === 'he' ? 'he-IL' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
                           : job.publishedAt
-                            ? new Date(job.publishedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                            ? new Date(job.publishedAt).toLocaleString(language === 'he' ? 'he-IL' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
                             : t('Not available') }
                       </span>
                     </div>
@@ -886,7 +886,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               header: t('Created'),
               render: (job) => (
                 <span className="whitespace-nowrap text-[10px] font-semibold text-slate-500">
-                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : job.publishedAt ? new Date(job.publishedAt).toLocaleDateString() : t('Not available') }
+                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US') : job.publishedAt ? new Date(job.publishedAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US') : t('Not available') }
                 </span>
               ),
             },
