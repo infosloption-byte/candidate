@@ -123,7 +123,7 @@ const ProgressBar = ({ value, tone = 'cyan' }: { value: number; tone?: Tone }) =
 );
 
 const PipelineCard = ({ label, value, total, tone = 'cyan' }: { label: string; value: number; total: number; tone?: Tone }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const ratio = total ? (value / total) * 100 : 0;
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
