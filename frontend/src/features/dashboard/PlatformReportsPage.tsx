@@ -4,6 +4,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { Button } from '../../shared/components/Button';
 import { Icon } from '../../shared/components/Icon';
 import { apiFetch } from '../../shared/lib/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PlatformAnalytics {
   counts: {
@@ -57,6 +58,7 @@ const downloadCsv = (rows: string[][]) => {
 };
 
 export const PlatformReportsPage = () => {
+  const { t } = useLanguage();
   const [data, setData] = useState<PlatformAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -95,16 +97,16 @@ export const PlatformReportsPage = () => {
     ];
   }, [data]);
 
-  if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="loading" title="Loading platform reports" description="Preparing tenant, onboarding and platform activity statistics." /></section>;
-  if (error || !data) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="error" title="Platform reports unavailable" description={error || 'No platform report data was returned.'} /></section>;
+  if (loading) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="loading" title={t('Loading platform reports')} description={t('Preparing tenant, onboarding and platform activity statistics.')} /></section>;
+  if (error || !data) return <section className="mx-auto max-w-7xl p-4 sm:p-8"><StateMessage kind="error" title={t('Platform reports unavailable')} description={error || t('No platform report data was returned.')} /></section>;
 
   return (
     <section className="mx-auto max-w-7xl space-y-5 p-3 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">Platform intelligence</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Platform reports</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Tenant growth, onboarding readiness and platform-wide operational reporting.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">{t('Platform intelligence')}</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{t('Platform reports')}</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">{t('Tenant growth, onboarding readiness and platform-wide operational reporting.')}</p>
         </div>
         <Button variant="secondary" onClick={() => downloadCsv(rows)}><Icon name="download" size={16} /> Export CSV</Button>
       </div>
@@ -122,7 +124,7 @@ export const PlatformReportsPage = () => {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Icon name="briefcase" size={18} /></div><div><h2 className="text-base font-black text-slate-950">Tenant portfolio</h2><p className="text-xs text-slate-400">Core platform totals.</p></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Icon name="briefcase" size={18} /></div><div><h2 className="text-base font-black text-slate-950">{t('Tenant portfolio')}</h2><p className="text-xs text-slate-400">{t('Core platform totals.')}</p></div></div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
               ['Companies', data.counts.companies],
@@ -136,19 +138,19 @@ export const PlatformReportsPage = () => {
         </Card>
 
         <Card>
-          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-violet-50 text-violet-700"><Icon name="users" size={18} /></div><div><h2 className="text-base font-black text-slate-950">Access distribution</h2><p className="text-xs text-slate-400">Platform account composition.</p></div></div>
+          <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-violet-50 text-violet-700"><Icon name="users" size={18} /></div><div><h2 className="text-base font-black text-slate-950">{t('Access distribution')}</h2><p className="text-xs text-slate-400">{t('Platform account composition.')}</p></div></div>
           <div className="mt-4 space-y-2.5">
-            {Object.entries(data.userRoles).map(([role, count]) => <div key={role} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-3"><span className="text-xs font-bold text-slate-700">{role.replaceAll('_', ' ')}</span><span className="text-sm font-black text-slate-950">{count}</span></div>)}
+            {Object.entries(data.userRoles).map(([role, count]) => <div key={role} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3.5 py-3"><span className="text-xs font-bold text-slate-700">{t(role.replaceAll('_', ' '))}</span><span className="text-sm font-black text-slate-950">{count}</span></div>)}
           </div>
         </Card>
       </div>
 
       <Card>
-        <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Icon name="chart" size={18} /></div><div><h2 className="text-base font-black text-slate-950">Onboarding attention</h2><p className="text-xs text-slate-400">These are operational readiness signals, not a formal onboarding status field.</p></div></div>
+        <div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Icon name="chart" size={18} /></div><div><h2 className="text-base font-black text-slate-950">{t('Onboarding attention')}</h2><p className="text-xs text-slate-400">{t('These are operational readiness signals, not a formal onboarding status field.')}</p></div></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">No agencies</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutAgencies}</p><p className="mt-1 text-[10px] text-slate-400">May still be setting up recruitment partners.</p></div>
-          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">No jobs</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutJobs}</p><p className="mt-1 text-[10px] text-slate-400">May not have started hiring activity.</p></div>
-          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">No candidates</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutCandidates}</p><p className="mt-1 text-[10px] text-slate-400">May need onboarding support.</p></div>
+          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('No agencies')}</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutAgencies}</p><p className="mt-1 text-[10px] text-slate-400">{t('May still be setting up recruitment partners.')}</p></div>
+          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('No jobs')}</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutJobs}</p><p className="mt-1 text-[10px] text-slate-400">{t('May not have started hiring activity.')}</p></div>
+          <div className="rounded-2xl border border-slate-100 p-3.5"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('No candidates')}</p><p className="mt-1 text-xl font-black">{data.onboarding.companiesWithoutCandidates}</p><p className="mt-1 text-[10px] text-slate-400">{t('May need onboarding support.')}</p></div>
         </div>
       </Card>
     </section>
