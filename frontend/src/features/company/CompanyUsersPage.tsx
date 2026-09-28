@@ -20,7 +20,7 @@ const emptyForm = {
   role: 'INTERVIEWER' as TeamRole,
 };
 
-const roleLabel = (role: TeamRole) => role === 'AGENCY' ? 'Company Admin' : 'Interviewer';
+const roleLabel = (role: TeamRole) => role === 'AGENCY' ? 'Agency user' : 'Interviewer';
 
 const TeamModal = ({
   title,
