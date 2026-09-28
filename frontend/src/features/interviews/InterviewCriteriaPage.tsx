@@ -254,6 +254,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
+            required: true,
             options: options.length ? options : null,
             active: true,
           };
