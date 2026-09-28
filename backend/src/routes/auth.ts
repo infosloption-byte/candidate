@@ -74,22 +74,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         const company = await tx.company.create({
           data: { name: companyName, slug: companySlug, status: 'ACTIVE' },
         });
-        const agency = await tx.agency.create({
-          data: {
-            companyId: company.id,
-            name: companyName,
-            slug: companySlug + '-agency',
-            status: 'ACTIVE',
-          },
-        });
         const user = await tx.user.create({
           data: {
             companyId: company.id,
-            agencyId: agency.id,
+            agencyId: null,
             name: adminName,
             email,
             passwordHash: await hashPassword(password),
-            role: 'AGENCY',
+            role: 'COMPANY',
             active: true,
           },
           select: {
@@ -104,7 +96,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             company: { select: { id: true, name: true, slug: true, status: true } },
           },
         });
-        return { company, agency, user };
+        return { company, user };
       });
 
       await createSession(result.user.id, reply);
