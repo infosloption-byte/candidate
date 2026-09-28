@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { agencies as fixtureAgencies } from '../../domain/fixtures';
@@ -67,6 +68,7 @@ const AdminModal = ({
 
 export const AgenciesPage = () => {
   const { user, developmentMode, refreshUser } = useAuth();
+  const { t } = useLanguage();
   const { state } = useRecruitment();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('system-users');
@@ -617,10 +619,10 @@ export const AgenciesPage = () => {
       <SectionHeading
         eyebrow="System administration"
         title="Agencies & Team"
-        description="Manage platform users, agency workspaces, and interviewers from one administration area. Interviewers can belong to one agency or remain global."
+        description={t('Manage platform users, agency workspaces, and interviewers from one administration area. Interviewers can belong to one agency or remain global')}
       />
 
-      {loading && <StateMessage kind="loading" title="Loading administration" description="Fetching users, agencies, and interviewers." />}
+      {loading && <StateMessage kind="loading" title="Loading administration" description={t('Fetching users, agencies and interviewers')} />}
       {error && <StateMessage kind="error" title="Administration action failed" description={error} floating={Boolean(modalMode)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
 
@@ -638,7 +640,7 @@ export const AgenciesPage = () => {
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform access</p>
                   <h2 className="text-lg font-black text-slate-950">System Users</h2>
-                  <p className="mt-1 text-xs text-slate-500">Manage Company Admin and Agency accounts. Interviewers are maintained in their own tab.</p>
+                  <p className="mt-1 text-xs text-slate-500">{t('Manage Company Admin and Agency accounts. Interviewers are maintained in their own tab.')}</p>
                 </div>
                 {!developmentMode && <Button onClick={openCreateSystemUser}>Add system user</Button>}
               </div>
