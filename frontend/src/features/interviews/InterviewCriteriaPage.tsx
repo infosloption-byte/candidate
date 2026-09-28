@@ -252,6 +252,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           saved = {
             id: 'criterion-' + Date.now(),
             name: criterionForm.name.trim(),
+            description: null,
             maxPoints,
             responseType: criterionForm.responseType,
             required: true,
