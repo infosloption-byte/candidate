@@ -1,23 +1,24 @@
--- Establish the final five-role model.
--- ADMIN is the developer/platform-owner role.
--- COMPANY_ADMIN is the tenant/company administrator role.
---
--- The preceding tenancy migration temporarily converted legacy ADMIN users to COMPANY.
--- This follow-up keeps those tenant administrators as COMPANY_ADMIN and restores ADMIN
--- as an available platform role without guessing which real account should be the
--- developer/platform owner.
+-- Rename the legacy ADMIN role to the explicit COMPANY role and remove agency ownership from jobs.
+-- Existing ADMIN accounts become company administrators in their existing tenant.
+SET @default_company_id = (
+  SELECT `id` FROM `Company`
+  ORDER BY `createdAt` ASC
+  LIMIT 1
+);
 
 ALTER TABLE `User`
-  MODIFY COLUMN `role` ENUM('ADMIN','COMPANY','COMPANY_ADMIN','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
+  MODIFY COLUMN `role` ENUM('ADMIN','COMPANY','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
 
 UPDATE `User`
-SET `role` = 'COMPANY_ADMIN'
-WHERE `role` = 'COMPANY';
+SET
+  `role` = 'COMPANY',
+  `companyId` = COALESCE(`companyId`, @default_company_id),
+  `agencyId` = NULL
+WHERE `role` = 'ADMIN';
 
 ALTER TABLE `User`
-  MODIFY COLUMN `role` ENUM('ADMIN','COMPANY_ADMIN','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
+  MODIFY COLUMN `role` ENUM('COMPANY','AGENCY','INTERVIEWER','INTERVIEWEE') NOT NULL;
 
--- Jobs belong to the company, never to an agency.
 ALTER TABLE `Job`
   DROP FOREIGN KEY `Job_agencyId_fkey`,
   DROP INDEX `Job_agencyId_status_idx`,
