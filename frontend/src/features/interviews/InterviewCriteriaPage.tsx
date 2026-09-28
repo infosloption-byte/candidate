@@ -15,7 +15,7 @@ import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionRes
 
 interface Props { role: UserRole; }
 
-const emptyCriterionForm = { name: '', maxPoints: '0', responseType: 'TEXT' as InterviewCriterionResponseType, required: true, optionsText: '' };
+const emptyCriterionForm = { name: '', maxPoints: '0', responseType: 'TEXT' as InterviewCriterionResponseType, optionsText: '' };
 const criterionResponseOptions = [
   { value: 'TEXT', label: 'Text answer' },
   { value: 'MULTI_SELECT', label: 'Multiple tag selection' },
@@ -154,7 +154,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       name: criterion.name,
       maxPoints: String(criterion.maxPoints),
       responseType: criterion.responseType,
-      required: criterion.required,
       optionsText: (criterion.options ?? []).join('\n'),
     });
     setSelectedCriterionId(criterion.id);
@@ -275,7 +274,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             name: criterionForm.name.trim(),
             maxPoints,
             responseType: criterionForm.responseType,
-            required: criterionForm.required,
+            required: true,
             options: options.length ? options : null,
           }),
         });
