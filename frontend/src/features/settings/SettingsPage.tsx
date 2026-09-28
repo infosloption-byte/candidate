@@ -4,7 +4,7 @@ export const SettingsPage = () => (
   <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
     <SectionHeading eyebrow="Platform foundation" title="Settings" description="Configuration stays intentionally small until the rebuilt core workflow proves what needs to be configurable." />
     <div className="grid gap-4 md:grid-cols-2">{[
-      ['Roles', 'Company, Agency, Interviewer, Interviewee'],
+      ['Roles', 'ADMIN (Developer / Platform owner), COMPANY_ADMIN, AGENCY, INTERVIEWER, INTERVIEWEE'],
       ['Onboarding', 'Self onboarding, agency onboarding, and bulk onboarding'],
       ['Candidate lifecycle', 'Pool, Ready for interview, Interview scheduled, Interview completed, Passed, Rejected, On hold, Hired, Inactive'],
       ['Interviews', 'One interviewer or multiple interviewers as a panel'],
