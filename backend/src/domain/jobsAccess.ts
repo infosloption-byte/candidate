@@ -1,5 +1,5 @@
 export const jobListWhereForUser = (
-  user: { role: 'ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE'; agencyId: string | null; candidateAgencyId: string | null },
+  user: { role: 'ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE'; companyId: string | null; agencyId: string | null; candidateAgencyId: string | null },
 ) => {
   if (user.role === 'ADMIN') return undefined;
   if (user.role === 'AGENCY') return { agencyId: user.agencyId ?? '__missing__' };
