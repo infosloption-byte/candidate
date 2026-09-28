@@ -659,7 +659,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
 
       const assignedInterviewer = user.role === 'INTERVIEWER' && existing.panel.some((participant) => participant.userId === user.id);
-      const managedByAgency = user.role === 'ADMIN' || role === 'COMPANY_ADMIN' || user.role === 'AGENCY' || canManage(user.role, user.agencyId, existing.candidate.agencyId);
+      const managedByAgency = user.role === 'ADMIN' || user.role === 'COMPANY_ADMIN' || user.role === 'AGENCY' || canManage(user.role, user.agencyId, existing.candidate.agencyId);
       if (!assignedInterviewer && !managedByAgency) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to change this interview status.' } });
       }
