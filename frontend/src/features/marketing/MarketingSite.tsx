@@ -87,7 +87,7 @@ const PipelineVisual = () => {
       <div className="bh-stage-readout"><span>PIPELINE / <strong>CONSTRUCTION RECRUITMENT</strong></span><span>{String(active + 1).padStart(2, '0')} / 05</span></div>
       <div className="bh-pipeline-axis" />
       <div className="bh-pipeline-tick t1" /><div className="bh-pipeline-tick t2" /><div className="bh-pipeline-tick t3" /><div className="bh-pipeline-tick t4" /><div className="bh-pipeline-tick t5" />
-      {names.map((name, index) => <div key={name} ref={(node) => { refs.current[index] = node; }} style={{ position: 'absolute', left: positions[index] + '%', top: 'calc(50% + 25px)', transform: 'translateX(-50%)', color: index === active ? 'var(--bh-orange)' : 'var(--bh-steel)', font: '600 0.52rem/1 var(--bh-font-mono)', textTransform: 'uppercase' }}>{name}</div>)}
+      {names.map((name, index) => <div key={name} style={{ position: 'absolute', left: positions[index] + '%', top: 'calc(50% + 25px)', transform: 'translateX(-50%)', color: index === active ? 'var(--bh-orange)' : 'var(--bh-steel)', font: '600 0.52rem/1 var(--bh-font-mono)', textTransform: 'uppercase' }}>{name}</div>)}
       <div className="bh-moving-candidate" style={{ left: positions[active] + '%', transform: active === 0 ? 'translateX(0)' : active === positions.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)' }} aria-live="polite">
         <div className="row"><div><strong>Nimal Perera</strong><div className="meta">REG-20481 · Steel fixer</div></div><span className="bh-tag orange">{String(active + 1).padStart(2, '0')}</span></div>
         <div className="passport"><span>Passport N8••••32</span><span>14 NOV 2027</span></div>
