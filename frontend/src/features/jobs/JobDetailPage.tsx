@@ -301,12 +301,12 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       setAgencies(state.agencies);
       return;
     }
-    if (role === 'ADMIN') {
+    if (role === 'COMPANY') {
       apiFetch<Agency[]>('/agencies').then(setAgencies).catch(() => undefined);
     }
   }, [developmentMode, role, state.agencies]);
 
-  const canManage = role === 'ADMIN' || role === 'AGENCY';
+  const canManage = role === 'COMPANY' || role === 'AGENCY';
 
   const openCandidateModal = () => {
     setCandidateForm(emptyCandidate);
@@ -725,7 +725,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                 />
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Icon name="search" size={14} /></span>
               </div>
-              {role === 'ADMIN' && (
+              {role === 'COMPANY' && (
                 <SelectMenu
                   value={candidateAgencyFilter}
                   onChange={setCandidateAgencyFilter}
@@ -852,7 +852,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <div className="md:col-span-2">
                 <FormField label="Job / position"><SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled /></FormField>
               </div>
-              {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
+              {role === 'COMPANY' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
               <FormField label="Agency Register No"><input className="field-input" value={candidateForm.agencyRegisterNo} onChange={(e) => setCandidateForm({ ...candidateForm, agencyRegisterNo: e.target.value })} /></FormField>
               <FormField label="First name"><input className="field-input" value={candidateForm.firstName} onChange={(e) => setCandidateForm({ ...candidateForm, firstName: e.target.value })} /></FormField>
               <FormField label="Last name"><input className="field-input" value={candidateForm.lastName} onChange={(e) => setCandidateForm({ ...candidateForm, lastName: e.target.value })} /></FormField>
@@ -875,7 +875,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
               <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
                 <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
               </FormField>
-              {role === 'ADMIN' && <FormField label="Agency workspace"><SelectMenu value={uploadAgencyId} onChange={setUploadAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Import agency" /></FormField>}
+              {role === 'COMPANY' && <FormField label="Agency workspace"><SelectMenu value={uploadAgencyId} onChange={setUploadAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Import agency" /></FormField>}
               <FormField label="CSV file"><input type="file" accept=".csv,text/csv" className="field-input" onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)} /></FormField>
               {uploadFile && <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{uploadFile.name}</div>}
             </div>
