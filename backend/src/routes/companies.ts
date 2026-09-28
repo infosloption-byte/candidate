@@ -68,44 +68,6 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: { ...company, counts: company._count } });
   });
 
-  app.post<{ Body: CompanyBody }>('/companies', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
-    return reply.code(403).send({ success: false, error: { code: 'COMPANY_CREATION_FORBIDDEN', message: 'Company administrators manage their existing company. New companies are created through company registration.' } });
-
-    const name = request.body.name?.trim();
-    const slug = slugify(request.body.slug ?? request.body.name ?? '');
-
-    if (!name || name.length < 2 || name.length > 160 || !slug) {
-      return reply.code(400).send({ success: false, error: { code: 'INVALID_COMPANY', message: 'Company name and a valid slug are required.' } });
-    }
-
-    try {
-      const result = await getPrisma().$transaction(async (tx) => {
-        const company = await tx.company.create({ data: { name, slug, status: 'ACTIVE' } });
-        const agency = await tx.agency.create({
-          data: { companyId: company.id, name, slug: (slug.slice(0, 92) + '-agency').slice(0, 100), status: 'ACTIVE' },
-        });
-        return { company, agency };
-      });
-
-      await recordAuditEvent({
-        actorId: request.authUser!.id,
-        companyId: result.company.id,
-        agencyId: result.agency.id,
-        action: 'COMPANY_CREATED',
-        entityType: 'Company',
-        entityId: result.company.id,
-        summary: 'Created company "' + result.company.name + '".',
-      });
-
-      return reply.code(201).send({ success: true, data: result.company });
-    } catch (error) {
-      if ((error as { code?: string }).code === 'P2002') {
-        return conflictResponse(reply, 'COMPANY_SLUG_EXISTS', 'Company slug is already in use.');
-      }
-      throw error;
-    }
-  });
-
   app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
     if (request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only manage your own company.' } });
