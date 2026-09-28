@@ -299,9 +299,12 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Candidates cannot be imported into an inactive agency.' } });
 
       const job = request.query.jobId
-        ? await getPrisma().job.findUnique({ where: { id: request.query.jobId }, select: { id: true, agencyId: true, title: true, status: true } })
+        ? await getPrisma().job.findUnique({ where: { id: request.query.jobId }, select: { id: true, companyId: true, title: true, status: true } })
         : null;
       if (request.query.jobId && !job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (job && job.companyId !== agency.companyId) {
+        return reply.code(403).send({ success: false, error: { code: 'JOB_COMPANY_MISMATCH', message: 'The selected job does not belong to the agency company.' } });
+      }
       if (job?.status === 'CLOSED') {
         return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Candidates cannot be added to a closed job.' } });
       }
