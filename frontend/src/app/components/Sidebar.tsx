@@ -11,11 +11,26 @@ interface SidebarProps {
 }
 
 const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: AppView; label: string; icon: IconName }> }>> = {
-  COMPANY: [
+  ADMIN: [
     { label: 'Platform', items: [
       { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
       { view: 'companies', label: 'Companies', icon: 'briefcase' },
+      { view: 'agencies', label: 'Platform Users', icon: 'users' },
+      { view: 'settings', label: 'Settings', icon: 'settings' },
+    ]},
+  ],
+  COMPANY_ADMIN: [
+    { label: 'Recruitment', items: [
+      { view: 'dashboard', label: 'Dashboard', icon: 'grid' },
+      { view: 'jobs', label: 'Jobs', icon: 'briefcase' },
+      { view: 'candidates', label: 'Candidates', icon: 'users' },
+      { view: 'interviews', label: 'Interviews', icon: 'calendar' },
+      { view: 'reports', label: 'Reports', icon: 'chart' },
+    ]},
+    { label: 'Administration', items: [
+      { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
       { view: 'agencies', label: 'Agencies & Team', icon: 'users' },
+      { view: 'companies', label: 'Company', icon: 'briefcase' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
@@ -53,7 +68,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Developer / Platform owner',
   COMPANY_ADMIN: 'Company administrator',
-  AGENCY: 'Company workspace',
+  AGENCY: 'Agency workspace',
   INTERVIEWER: 'Interview desk',
   INTERVIEWEE: 'Candidate portal',
 };
