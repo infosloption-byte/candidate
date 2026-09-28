@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest } from 'fastify';
-import { requireAuth } from '../lib/auth.js';
+import { hasCompanyAccess, requireAuth } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import {
@@ -30,9 +30,12 @@ const documentSelect = {
 
 const allowedToAccessCandidate = async (
   user: NonNullable<FastifyRequest['authUser']>,
+  companyId: string,
   agencyId: string,
   candidateId: string,
 ): Promise<boolean> => {
+  if (!hasCompanyAccess(user, companyId)) return false;
+  if (user.role === 'ADMIN') return true;
   if (user.role === 'COMPANY_ADMIN') return true;
   if (user.role === 'INTERVIEWEE') return user.candidateId === candidateId;
   if (user.role === 'AGENCY') return user.agencyId === agencyId;
@@ -49,9 +52,10 @@ const allowedToAccessCandidate = async (
 const sanitizeDownloadName = (fileName: string): string => fileName.replace(/[\r\n"]/g, '_');
 const canManageCandidateDocuments = (
   user: NonNullable<FastifyRequest['authUser']>,
+  companyId: string,
   agencyId: string,
 ): boolean =>
-  user.role === 'COMPANY_ADMIN' || (user.role === 'AGENCY' && user.agencyId === agencyId);
+  hasCompanyAccess(user, companyId) && (user.role === 'ADMIN' || user.role === 'COMPANY_ADMIN' || (user.role === 'AGENCY' && user.agencyId === agencyId));
 
 
 export const documentRoutes: FastifyPluginAsync = async (app) => {
@@ -61,7 +65,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true },
+        select: { id: true, companyId: true, agencyId: true },
       });
 
       if (!candidate) {
@@ -71,7 +75,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (!(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, candidate.id))) {
+      if (!(await allowedToAccessCandidate(request.authUser!, candidate.companyId, candidate.agencyId, candidate.id))) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' },
@@ -94,7 +98,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true, firstName: true, lastName: true },
+        select: { id: true, companyId: true, agencyId: true, firstName: true, lastName: true },
       });
 
       if (!candidate) {
@@ -104,7 +108,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      if (!canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
+      if (!canManageCandidateDocuments(request.authUser!, candidate.companyId, candidate.agencyId)) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can upload candidate documents.' },
@@ -189,10 +193,10 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: document.candidateId },
-        select: { agencyId: true },
+        select: { companyId: true, agencyId: true },
       });
 
-      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId))) {
+      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.companyId, candidate.agencyId, document.candidateId))) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'You do not have access to this document.' },
@@ -233,10 +237,10 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: document.candidateId },
-        select: { agencyId: true, firstName: true, lastName: true },
+        select: { companyId: true, agencyId: true, firstName: true, lastName: true },
       });
 
-      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
+      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate.companyId, candidate.agencyId)) {
         return reply.code(403).send({
           success: false,
           error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can delete candidate documents.' },
