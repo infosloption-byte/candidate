@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { requireAuth, requireRole } from '../lib/auth.js';
+import { hasCompanyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput, type JobPositionInput } from '../domain/jobValidation.js';
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
@@ -115,7 +115,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     if (!job) {
       return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
     }
-    if (job.companyId !== user.companyId) {
+    if (!hasCompanyAccess(user, job.companyId) || (user.role === 'AGENCY' && user.agencyId && !job.candidatePool.every((item) => item.candidate.agencyId === user.agencyId))) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
     }
 
@@ -187,7 +187,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
+      if (!hasCompanyAccess(request.authUser!, existing.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
@@ -265,7 +265,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         select: { id: true, companyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId)) {
+      if (!hasCompanyAccess(request.authUser!, job.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
       if (job.status === 'CLOSED') {
@@ -278,8 +278,11 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const candidates = await getPrisma().candidate.findMany({
-        where: { id: { in: candidateIds } },
-        select: { id: true },
+        where: {
+          id: { in: candidateIds },
+          ...(request.authUser!.role === 'ADMIN' ? {} : { companyId: request.authUser!.companyId ?? '__missing__' }),
+        },
+        select: { id: true, companyId: true },
       });
       if (candidates.length !== candidateIds.length) {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
@@ -320,9 +323,10 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, title: true },
+        select: { id: true, companyId: true, title: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (!hasCompanyAccess(request.authUser!, job.companyId)) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
 
       const membership = await getPrisma().jobCandidate.findUnique({
         where: { jobId_candidateId: { jobId: job.id, candidateId: request.params.candidateId } },
