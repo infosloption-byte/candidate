@@ -64,6 +64,101 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  app.get(
+    '/platform/summary',
+    { preHandler: [requireAuth, requireRole('ADMIN')] },
+    async (_request, reply) => {
+      const prisma = getPrisma();
+
+      const [
+        companies,
+        activeCompanies,
+        agencies,
+        activeAgencies,
+        users,
+        activeUsers,
+        candidates,
+        jobs,
+        publishedJobs,
+        interviews,
+        submittedEvaluations,
+        platformRoleCounts,
+        recentCompanies,
+      ] = await Promise.all([
+        prisma.company.count(),
+        prisma.company.count({ where: { status: 'ACTIVE' } }),
+        prisma.agency.count(),
+        prisma.agency.count({ where: { status: 'ACTIVE' } }),
+        prisma.user.count(),
+        prisma.user.count({ where: { active: true } }),
+        prisma.candidate.count(),
+        prisma.job.count(),
+        prisma.job.count({ where: { status: 'PUBLISHED' } }),
+        prisma.interview.count(),
+        prisma.interviewEvaluation.count({ where: { status: 'SUBMITTED' } }),
+        Promise.all((['ADMIN', 'COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER', 'INTERVIEWEE'] as const).map(async (role) => [
+          role,
+          await prisma.user.count({ where: { role } }),
+        ] as const)),
+        prisma.company.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            createdAt: true,
+            _count: {
+              select: {
+                users: true,
+                agencies: true,
+                candidates: true,
+                jobs: true,
+                interviews: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      return reply.send({
+        success: true,
+        data: {
+          counts: {
+            companies,
+            activeCompanies,
+            inactiveCompanies: companies - activeCompanies,
+            agencies,
+            activeAgencies,
+            inactiveAgencies: agencies - activeAgencies,
+            users,
+            activeUsers,
+            inactiveUsers: users - activeUsers,
+            candidates,
+            jobs,
+            publishedJobs,
+            interviews,
+            submittedEvaluations,
+          },
+          userRoles: Object.fromEntries(platformRoleCounts),
+          recentCompanies: recentCompanies.map((company) => ({
+            id: company.id,
+            name: company.name,
+            slug: company.slug,
+            status: company.status,
+            createdAt: company.createdAt,
+            users: company._count.users,
+            agencies: company._count.agencies,
+            candidates: company._count.candidates,
+            jobs: company._count.jobs,
+            interviews: company._count.interviews,
+          })),
+        },
+      });
+    },
+  );
+
   app.get<{ Querystring: AnalyticsQuery }>(
     '/analytics/summary',
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER')] },
