@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useAuth } from '../../domain/authContext';
 import type { User } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
