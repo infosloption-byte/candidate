@@ -118,14 +118,14 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send({ success: true, data: company });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
-        return conflictResponse(reply, 'COMPANY_SLUG_EXISTS', 'Company slug is already in use.');
+        return conflictResponse(reply, 'COMPANY_EXISTS', 'Company slug or administrator email is already in use.');
       }
       throw error;
     }
   });
 
   app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
-    if (request.params.id !== request.authUser!.companyId) {
+    if (request.authUser!.role !== 'ADMIN' && request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only manage your own company.' } });
     }
     const existing = await getPrisma().company.findUnique({ where: { id: request.params.id } });
