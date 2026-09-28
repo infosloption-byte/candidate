@@ -7,6 +7,7 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Icon, type IconName } from '../../shared/components/Icon';
 import { apiFetch } from '../../shared/lib/api';
 import type { UserRole } from '../../domain/types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface Props {
   role: UserRole;
@@ -102,6 +103,7 @@ const roleLabel = (role: string): string => ({
 
 export const PlatformDashboardPage = ({ role }: Props) => {
   const { user, developmentMode } = useAuth();
+  const { t, language } = useLanguage();
   const { state } = useRecruitment();
   const [analytics, setAnalytics] = useState<PlatformAnalytics | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
@@ -191,7 +193,7 @@ export const PlatformDashboardPage = ({ role }: Props) => {
   if (loading) {
     return (
       <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-        <StateMessage kind="loading" title="Loading platform dashboard" description="Preparing SaaS platform statistics." />
+        <StateMessage kind="loading" title={t('Loading platform dashboard')} description={t('Preparing SaaS platform statistics.')} />
       </section>
     );
   }
@@ -199,7 +201,7 @@ export const PlatformDashboardPage = ({ role }: Props) => {
   if (error || !analytics) {
     return (
       <section className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-        <StateMessage kind="error" title="Platform dashboard unavailable" description={error || 'No platform analytics data was returned.'} />
+        <StateMessage kind="error" title={t('Platform dashboard unavailable')} description={error || t('No platform analytics data was returned.')} />
       </section>
     );
   }
@@ -215,21 +217,21 @@ export const PlatformDashboardPage = ({ role }: Props) => {
         <div className="grid gap-6 p-5 text-white sm:p-7 lg:grid-cols-[1.25fr_.75fr] lg:items-end lg:p-8">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-cyan-400/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">Platform owner</span>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-300">SaaS operations</span>
+              <span className="rounded-full bg-cyan-400/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">{t('Platform owner')}</span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-300">{t('SaaS operations')}</span>
             </div>
             <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
-              {user?.name ? `Welcome, ${user.name}` : 'Platform dashboard'}
+              {user?.name ? <>{t('Welcome,')} {user.name}</> : t('Platform dashboard')}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Monitor companies, agencies, users and recruitment activity across the entire BuildHire platform.
+              {t('Monitor companies, agencies, users and recruitment activity across the entire BuildHire platform.')}
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">SaaS readiness</p>
-            <p className="mt-2 text-sm font-black text-white">Core platform analytics are active</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">{t('SaaS readiness')}</p>
+            <p className="mt-2 text-sm font-black text-white">{t('Core platform analytics are active')}</p>
             <p className="mt-1 text-[11px] leading-5 text-slate-400">
-              Support and billing modules can be connected here later without mixing them into company dashboards.
+              {t('Support and billing modules can be connected here later without mixing them into company dashboards.')}
             </p>
           </div>
         </div>
@@ -240,53 +242,53 @@ export const PlatformDashboardPage = ({ role }: Props) => {
         <Card>
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Icon name="briefcase" size={18} /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Company onboarding</p><h2 className="mt-1 text-base font-black text-slate-950">Tenant growth</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Company onboarding')}</p><h2 className="mt-1 text-base font-black text-slate-950">{t('Tenant growth')}</h2></div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">New · 7 days</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast7Days}</p></div>
-            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">New · 30 days</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast30Days}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">{t('New · 7 days')}</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast7Days}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">{t('New · 30 days')}</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast30Days}</p></div>
           </div>
         </Card>
         <Card>
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Icon name="alert" size={18} /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Onboarding attention</p><h2 className="mt-1 text-base font-black text-slate-950">Setup signals</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Onboarding attention')}</p><h2 className="mt-1 text-base font-black text-slate-950">{t('Setup signals')}</h2></div>
           </div>
           <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No agencies</span><span className="font-black">{analytics.onboarding.companiesWithoutAgencies}</span></div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No jobs</span><span className="font-black">{analytics.onboarding.companiesWithoutJobs}</span></div>
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No candidates</span><span className="font-black">{analytics.onboarding.companiesWithoutCandidates}</span></div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">{t('No agencies')}</span><span className="font-black">{analytics.onboarding.companiesWithoutAgencies}</span></div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">{t('No jobs')}</span><span className="font-black">{analytics.onboarding.companiesWithoutJobs}</span></div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">{t('No candidates')}</span><span className="font-black">{analytics.onboarding.companiesWithoutCandidates}</span></div>
           </div>
         </Card>
         <Card>
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-2xl bg-violet-50 text-violet-700"><Icon name="users" size={18} /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Tenant administration</p><h2 className="mt-1 text-base font-black text-slate-950">Company admins</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Tenant administration')}</p><h2 className="mt-1 text-base font-black text-slate-950">{t('Company admins')}</h2></div>
           </div>
           <p className="mt-4 text-3xl font-black text-slate-950">{counts.companyAdmins}</p>
-          <p className="mt-1 text-xs text-slate-400">Company administrator accounts across the platform.</p>
+          <p className="mt-1 text-xs text-slate-400">{t('Company administrator accounts across the platform.')}</p>
         </Card>
       </div>
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Companies" value={counts.companies} hint={counts.activeCompanies + ' active tenants'} icon="briefcase" tone="cyan" />
-        <MetricCard label="Agencies" value={counts.agencies} hint={counts.activeAgencies + ' active agencies'} icon="users" tone="emerald" />
-        <MetricCard label="Users" value={counts.users} hint={counts.activeUsers + ' active accounts'} icon="users" tone="violet" />
-        <MetricCard label="Candidates" value={counts.candidates} hint="across all companies" icon="target" tone="amber" />
-        <MetricCard label="Jobs" value={counts.jobs} hint={counts.publishedJobs + ' currently published'} icon="briefcase" tone="slate" />
-        <MetricCard label="Interviews" value={counts.interviews} hint="across all tenants" icon="calendar" tone="cyan" />
-        <MetricCard label="Submitted evaluations" value={counts.submittedEvaluations} hint="completed interviewer submissions" icon="check" tone="emerald" />
-        <MetricCard label="Inactive accounts" value={counts.inactiveUsers} hint="users currently disabled" icon="lock" tone="rose" />
+        <MetricCard label={t('Companies')} value={counts.companies} hint={counts.activeCompanies + ' ' + t('active tenants')} icon="briefcase" tone="cyan" />
+        <MetricCard label={t('Agencies')} value={counts.agencies} hint={counts.activeAgencies + ' ' + t('active agencies')} icon="users" tone="emerald" />
+        <MetricCard label={t('Users')} value={counts.users} hint={counts.activeUsers + ' ' + t('active accounts')} icon="users" tone="violet" />
+        <MetricCard label={t('Candidates')} value={counts.candidates} hint={t('across all companies')} icon="target" tone="amber" />
+        <MetricCard label={t('Jobs')} value={counts.jobs} hint={counts.publishedJobs + ' ' + t('currently published')} icon="briefcase" tone="slate" />
+        <MetricCard label={t('Interviews')} value={counts.interviews} hint={t('across all tenants')} icon="calendar" tone="cyan" />
+        <MetricCard label={t('Submitted evaluations')} value={counts.submittedEvaluations} hint={t('completed interviewer submissions')} icon="check" tone="emerald" />
+        <MetricCard label={t('Inactive accounts')} value={counts.inactiveUsers} hint={t('users currently disabled')} icon="lock" tone="rose" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Tenant overview</p>
-              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">Recent companies</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Tenant overview')}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Recent companies')}</h2>
             </div>
-            <span className="text-[10px] font-bold text-slate-400">{recentCompanies.length} shown</span>
+            <span className="text-[10px] font-bold text-slate-400">{recentCompanies.length} {t('shown')}</span>
           </div>
 
           <div className="mt-4 space-y-2.5">
@@ -301,16 +303,16 @@ export const PlatformDashboardPage = ({ role }: Props) => {
                     <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{company.slug}</p>
                   </div>
                   <p className="shrink-0 text-[10px] font-semibold text-slate-400">
-                    Created {new Date(company.createdAt).toLocaleDateString()}
+                    {t('Created')} {new Date(company.createdAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}
                   </p>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {[
-                    ['Users', company.users],
-                    ['Agencies', company.agencies],
-                    ['Candidates', company.candidates],
-                    ['Jobs', company.jobs],
-                    ['Interviews', company.interviews],
+                    [t('Users'), company.users],
+                    [t('Agencies'), company.agencies],
+                    [t('Candidates'), company.candidates],
+                    [t('Jobs'), company.jobs],
+                    [t('Interviews'), company.interviews],
                   ].map(([label, value]) => (
                     <div key={label as string} className="rounded-xl bg-white px-2.5 py-2">
                       <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p>
@@ -321,7 +323,7 @@ export const PlatformDashboardPage = ({ role }: Props) => {
               </div>
             )) : (
               <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">
-                No companies have been created yet.
+                {t('No companies have been created yet.')}
               </div>
             )}
           </div>
@@ -331,15 +333,15 @@ export const PlatformDashboardPage = ({ role }: Props) => {
           <Card>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Platform users</p>
-                <h2 className="mt-1 text-base font-black text-slate-950">Role distribution</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Platform users')}</p>
+                <h2 className="mt-1 text-base font-black text-slate-950">{t('Role distribution')}</h2>
               </div>
               <Icon name="users" size={18} />
             </div>
             <div className="mt-4 space-y-2.5">
               {Object.entries(userRoles).map(([nextRole, count]) => (
                 <div key={nextRole} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
-                  <span className="min-w-0 truncate text-xs font-bold text-slate-700">{roleLabel(nextRole)}</span>
+                  <span className="min-w-0 truncate text-xs font-bold text-slate-700">{t(roleLabel(nextRole))}</span>
                   <span className="text-sm font-black text-slate-950">{count}</span>
                 </div>
               ))}
@@ -347,25 +349,25 @@ export const PlatformDashboardPage = ({ role }: Props) => {
           </Card>
 
           <Card>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Operational health</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Operational health')}</p>
             <div className="mt-4 space-y-4">
               <div>
                 <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                  <span className="text-slate-600">Active companies</span>
+                  <span className="text-slate-600">{t('Active companies')}</span>
                   <span className="text-slate-950">{tenantActivityRate}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-500" style={{ width: tenantActivityRate + '%' }} /></div>
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                  <span className="text-slate-600">Active users</span>
+                  <span className="text-slate-600">{t('Active users')}</span>
                   <span className="text-slate-950">{userActivityRate}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: userActivityRate + '%' }} /></div>
               </div>
               <div>
                 <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                  <span className="text-slate-600">Published jobs</span>
+                  <span className="text-slate-600">{t('Published jobs')}</span>
                   <span className="text-slate-950">{publishedJobRate}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-violet-500" style={{ width: publishedJobRate + '%' }} /></div>
@@ -380,10 +382,10 @@ export const PlatformDashboardPage = ({ role }: Props) => {
           <div className="flex items-start gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Icon name="settings" size={18} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Support operations</p>
-              <h2 className="mt-1 text-base font-black text-slate-950">Support center</h2>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">Reserved for tenant support, incidents, service requests and platform communications.</p>
-              <span className="mt-3 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">Module not connected yet</span>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Support operations')}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950">{t('Support center')}</h2>
+              <p className="mt-1.5 text-xs leading-5 text-slate-500">{t('Reserved for tenant support, incidents, service requests and platform communications.')}</p>
+              <span className="mt-3 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">{t('Module not connected yet')}</span>
             </div>
           </div>
         </Card>
@@ -392,9 +394,9 @@ export const PlatformDashboardPage = ({ role }: Props) => {
           <div className="flex items-start gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Icon name="chart" size={18} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Billing operations</p>
-              <h2 className="mt-1 text-base font-black text-slate-950">Subscriptions & payments</h2>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">Reserved for plans, subscriptions, invoices, payment health and recurring revenue analytics.</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{t('Billing operations')}</p>
+              <h2 className="mt-1 text-base font-black text-slate-950">{t('Subscriptions & payments')}</h2>
+              <p className="mt-1.5 text-xs leading-5 text-slate-500">{t('Reserved for plans, subscriptions, invoices, payment health and recurring revenue analytics.')}</p>
               <span className="mt-3 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-500">Module not connected yet</span>
             </div>
           </div>
