@@ -23,7 +23,7 @@ const select = {
 export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/interview-criteria',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const criteria = await getPrisma().interviewCriterion.findMany({
         where: { companyId: request.authUser!.companyId ?? undefined },
@@ -36,7 +36,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: InterviewCriterionInput }>(
     '/interview-criteria',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const errors = validateInterviewCriterionInput(request.body, 'create');
       if (errors.length) {
@@ -72,7 +72,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: CriterionParams; Body: InterviewCriterionInput }>(
     '/interview-criteria/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().interviewCriterion.findUnique({ where: { id: request.params.id }, select });
       if (!existing) {
