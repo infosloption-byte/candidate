@@ -13,8 +13,10 @@ interface PublicAgency {
 }
 
 export const LoginPage = () => {
-  const { login, registerInterviewee, error: sessionError } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const { login, registerCompany, registerInterviewee, error: sessionError } = useAuth();
+  const [mode, setMode] = useState<'login' | 'company-register' | 'candidate-register'>('login');
+  const [companyName, setCompanyName] = useState('');
+  const [companySlug, setCompanySlug] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -29,7 +31,7 @@ export const LoginPage = () => {
   const [loadingAgencies, setLoadingAgencies] = useState(false);
 
   useEffect(() => {
-    if (mode !== 'register') return;
+    if (mode !== 'candidate-register') return;
 
     let cancelled = false;
     setLoadingAgencies(true);
@@ -67,6 +69,22 @@ export const LoginPage = () => {
         return;
       }
 
+      if (mode === 'company-register') {
+        if (!companyName.trim() || !name.trim() || !email.trim() || password.length < 8) {
+          setError('Company name, administrator name, email, and password (8+ characters) are required.');
+          return;
+        }
+
+        await registerCompany({
+          companyName: companyName.trim(),
+          companySlug: companySlug.trim(),
+          adminName: name.trim(),
+          email: email.trim(),
+          password,
+        });
+        return;
+      }
+
       if (!name.trim() || !email.trim() || password.length < 8 || !agencyId) {
         setError('Name, email, password (8+ characters), and agency are required.');
         return;
@@ -96,15 +114,31 @@ export const LoginPage = () => {
       <div className="w-full max-w-lg space-y-5">
         <div className="text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-950 text-lg font-black text-cyan-400">B</div>
-          <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-950">{mode === 'login' ? 'Welcome to BuildHire' : 'Create your candidate account'}</h1>
-          <p className="mt-2 text-sm text-slate-500">{mode === 'login' ? 'Sign in to manage recruitment, interviews, and candidate onboarding.' : 'Choose your agency and submit your candidate profile to get started.'}</p>
+          <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-950">
+            {mode === 'login' ? 'Welcome to BuildHire' : mode === 'company-register' ? 'Register your company' : 'Create your candidate account'}
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {mode === 'login'
+              ? 'Sign in to manage recruitment, interviews, and candidate onboarding.'
+              : mode === 'company-register'
+                ? 'Create your company workspace and become the first company administrator.'
+                : 'Choose your agency and submit your candidate profile to get started.'}
+          </p>
         </div>
 
         {message && <StateMessage kind="error" title={mode === 'login' ? 'Sign-in failed' : 'Registration failed'} description={message} />}
 
         <Card>
           <div className="space-y-4">
-            {mode === 'register' && (
+            {mode === 'company-register' && (
+              <>
+                <FormField label="Company name"><input autoComplete="organization" className="field-input" value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Example Manpower Services" /></FormField>
+                <FormField label="Company identifier" hint="Used as your workspace identifier and must be unique."><input className="field-input" value={companySlug} onChange={(event) => setCompanySlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} placeholder="example-manpower" /></FormField>
+                <FormField label="Company administrator name"><input autoComplete="name" className="field-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your full name" /></FormField>
+              </>
+            )}
+
+            {mode === 'candidate-register' && (
               <>
                 <FormField label="Full name"><input autoComplete="name" className="field-input" value={name} onChange={(event) => setName(event.target.value)} /></FormField>
                 <FormField label="Agency">
@@ -126,19 +160,26 @@ export const LoginPage = () => {
             <FormField label="Email"><input type="email" autoComplete="email" className="field-input" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></FormField>
             <FormField label="Password"><input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} className="field-input" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void submit(); }} placeholder={mode === 'login' ? 'Your password' : 'At least 8 characters'} /></FormField>
 
-            <Button className="w-full" onClick={() => void submit()} disabled={submitting || (mode === 'register' && loadingAgencies)}>
-              {submitting ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create candidate account'}
+            <Button className="w-full" onClick={() => void submit()} disabled={submitting || (mode === 'candidate-register' && loadingAgencies)}>
+              {submitting ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'company-register' ? 'Create company workspace' : 'Create candidate account'}
             </Button>
           </div>
 
-          <div className="mt-5 border-t border-slate-100 pt-4 text-center">
-            <button
-              type="button"
-              className="text-xs font-bold text-slate-600 hover:text-slate-950"
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-            >
-              {mode === 'login' ? 'Create a candidate account' : 'Back to sign in'}
-            </button>
+          <div className="mt-5 border-t border-slate-100 pt-4 text-center space-y-2">
+            {mode === 'login' ? (
+              <>
+                <button type="button" className="block w-full text-xs font-bold text-slate-700 hover:text-slate-950" onClick={() => { setMode('company-register'); setError(''); }}>
+                  Register your company
+                </button>
+                <button type="button" className="block w-full text-xs font-bold text-slate-500 hover:text-slate-950" onClick={() => { setMode('candidate-register'); setError(''); }}>
+                  Create a candidate account
+                </button>
+              </>
+            ) : (
+              <button type="button" className="text-xs font-bold text-slate-600 hover:text-slate-950" onClick={() => { setMode('login'); setError(''); }}>
+                Back to sign in
+              </button>
+            )}
           </div>
         </Card>
       </div>
