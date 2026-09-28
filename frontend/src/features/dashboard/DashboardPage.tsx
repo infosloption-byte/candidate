@@ -338,10 +338,10 @@ export const DashboardPage = ({ role }: Props) => {
   const todayInterviews = upcomingInterviews.filter((item) => isToday(item.scheduledAt));
   const nextInterview = upcomingInterviews[0] ?? null;
 
-  const roleLabel = role === 'ADMIN' ? 'Operations command center' : role === 'AGENCY' ? 'Agency recruitment desk' : 'Interviewer command center';
+  const roleLabel = role === 'COMPANY' ? 'Operations command center' : role === 'AGENCY' ? 'Agency recruitment desk' : 'Interviewer command center';
   const roleDescription = selectedJobId
     ? 'Focused on the selected job and its active recruitment workflow.'
-    : role === 'ADMIN'
+    : role === 'COMPANY'
       ? 'Monitor capacity, candidate flow, interviews and decisions across the platform.'
       : role === 'AGENCY'
         ? 'Track your hiring pipeline, open roles, interviews and candidate movement.'
@@ -446,7 +446,7 @@ export const DashboardPage = ({ role }: Props) => {
       ) : (
         <>
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            {role === 'ADMIN' && <MetricCard label="Agencies" value={counts.activeAgencies} hint={counts.agencies + ' total workspaces'} icon="users" tone="cyan" />}
+            {role === 'COMPANY' && <MetricCard label="Agencies" value={counts.activeAgencies} hint={counts.agencies + ' total workspaces'} icon="users" tone="cyan" />}
             <MetricCard label="Open roles" value={counts.publishedJobs} hint={counts.jobs + ' jobs in scope'} icon="briefcase" tone="violet" />
             <MetricCard label="Candidates" value={counts.candidates} hint={(candidateStatuses.INTERVIEW_COMPLETED ?? 0) + ' awaiting final decision'} icon="users" tone="cyan" />
             <MetricCard label="Interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' scheduled'} icon="calendar" tone="amber" />
