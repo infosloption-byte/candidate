@@ -1,4 +1,5 @@
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useAuth } from '../../domain/authContext';
 import type { Company } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { Card } from '../../shared/components/Card';
@@ -61,6 +62,8 @@ const CompanyModal = ({
 };
 
 export const CompaniesPage = () => {
+  const { user } = useAuth();
+  const isPlatformAdmin = user?.role === 'ADMIN';
   const [companies, setCompanies] = useState<Company[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
@@ -126,10 +129,14 @@ export const CompaniesPage = () => {
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow="System administration"
+        eyebrow={isPlatformAdmin ? 'Platform administration' : 'Company administration'}
         title="Companies"
-        description="Each company is an isolated BuildHire tenant containing its jobs, candidates, interviews and company users."
-        action={}
+        description={isPlatformAdmin
+          ? 'Manage company tenants across the BuildHire platform.'
+          : 'Manage your company profile and company workspace.'}
+        action={isPlatformAdmin
+          ? <Button onClick={() => { setForm(emptyForm); setError(''); setModalOpen(true); }}>Add company</Button>
+          : undefined}
       />
 
       {loading && <StateMessage kind="loading" title="Loading companies" description="Fetching all company workspaces." />}
@@ -173,7 +180,7 @@ export const CompaniesPage = () => {
         </div>
       </Card>
 
-      {modalOpen && (
+      {modalOpen && isPlatformAdmin && (
         <CompanyModal
           onClose={() => { if (!saving) setModalOpen(false); }}
           onSave={() => void createCompany()}
