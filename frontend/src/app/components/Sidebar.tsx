@@ -21,7 +21,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
     ]},
     { label: 'Administration', items: [
       { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
-      { view: 'agencies', label: 'Users', icon: 'users' },
+      { view: 'agencies', label: 'Companies & Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
@@ -35,7 +35,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
     ]},
     { label: 'Administration', items: [
       { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
-      { view: 'agencies', label: 'Users', icon: 'users' },
+      { view: 'agencies', label: 'Team', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
@@ -58,7 +58,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'System administrator',
-  AGENCY: 'Agency workspace',
+  AGENCY: 'Company workspace',
   INTERVIEWER: 'Interview desk',
   INTERVIEWEE: 'Candidate portal',
 };
@@ -125,7 +125,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
         <div className="rounded-xl border border-white/7 bg-white/[0.03] px-3 py-2.5">
           <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Workspace</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-slate-300">
-            {role === 'ADMIN' ? 'System administration' : role === 'AGENCY' ? 'Recruitment operations' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
+            {role === 'ADMIN' ? 'System administration' : role === 'AGENCY' ? 'Company recruitment' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
           </p>
         </div>
       )}
