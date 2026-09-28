@@ -18,7 +18,7 @@ export interface AuthUser {
   candidateId: string | null;
   name: string;
   email: string;
-  role: 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
+  role: 'ADMIN' | 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
   active: boolean;
 }
 
@@ -182,6 +182,8 @@ export const requireAgencyAccess = (paramName = 'agencyId'): preHandlerHookHandl
       error: { code: 'AGENCY_ACCESS_DENIED', message: 'You do not have access to this agency.' },
     });
   }
+
+  if (request.authUser.role === 'ADMIN') return;
 
   if (request.authUser.role === 'COMPANY_ADMIN') {
     const agency = await getPrisma().agency.findUnique({
