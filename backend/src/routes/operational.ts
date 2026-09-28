@@ -66,7 +66,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Querystring: AnalyticsQuery }>(
     '/analytics/summary',
-    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER')] },
     async (request, reply) => {
       const prisma = getPrisma();
       const user = request.authUser!;
@@ -74,16 +74,16 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
 
       const baseCandidateWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : { agencyId: user.agencyId ?? undefined };
+        : user.role === 'ADMIN' ? {} : { companyId: user.companyId ?? '__missing__' };
       const baseJobWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : { agencyId: user.role === 'COMPANY_ADMIN' ? undefined : user.agencyId ?? '__missing__' };
+        : user.role === 'ADMIN' ? {} : user.role === 'COMPANY_ADMIN' ? { companyId: user.companyId ?? '__missing__' } : { agencyId: user.agencyId ?? '__missing__' };
       const baseInterviewWhere = user.role === 'INTERVIEWER'
         ? { panel: { some: { userId: user.id } } }
-        : { candidate: { agencyId: user.agencyId ?? '__missing__' } };
+        : user.role === 'ADMIN' ? {} : user.role === 'COMPANY_ADMIN' ? { companyId: user.companyId ?? '__missing__' } : { candidate: { agencyId: user.agencyId ?? '__missing__' } };
       const baseEvaluationWhere = user.role === 'INTERVIEWER'
         ? { interviewerId: user.id }
-        : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } };
+        : user.role === 'ADMIN' ? {} : user.role === 'COMPANY_ADMIN' ? { interview: { companyId: user.companyId ?? '__missing__' } } : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } };
 
       let selectedJob: { id: string; title: string; location: string | null; status: string } | null = null;
       if (jobId) {
@@ -106,9 +106,11 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
       const interviewWhere = jobId ? { ...baseInterviewWhere, jobId } : baseInterviewWhere;
       const evaluationWhere = user.role === 'INTERVIEWER'
         ? (jobId ? { interviewerId: user.id, interview: { jobId } } : { interviewerId: user.id })
-        : (jobId
-          ? { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' }, jobId } }
-          : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } });
+        : user.role === 'ADMIN'
+          ? (jobId ? { interview: { jobId } } : {})
+          : user.role === 'COMPANY_ADMIN'
+            ? (jobId ? { interview: { companyId: user.companyId ?? '__missing__', jobId } } : { interview: { companyId: user.companyId ?? '__missing__' } })
+            : (jobId ? { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' }, jobId } } : { interview: { candidate: { agencyId: user.agencyId ?? '__missing__' } } });
 
       const [
         agencies,
@@ -131,8 +133,8 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         filledWorkers,
         pendingInterviewerEvaluations,
       ] = await Promise.all([
-        user.role === 'COMPANY_ADMIN' ? prisma.agency.count() : Promise.resolve(0),
-        user.role === 'COMPANY_ADMIN' ? prisma.agency.count({ where: { status: 'ACTIVE' } }) : Promise.resolve(0),
+        user.role === 'ADMIN' ? prisma.agency.count() : user.role === 'COMPANY_ADMIN' ? prisma.agency.count({ where: { companyId: user.companyId ?? '__missing__' } }) : Promise.resolve(0),
+        user.role === 'ADMIN' ? prisma.agency.count({ where: { status: 'ACTIVE' } }) : user.role === 'COMPANY_ADMIN' ? prisma.agency.count({ where: { companyId: user.companyId ?? '__missing__', status: 'ACTIVE' } }) : Promise.resolve(0),
         prisma.candidate.count({ where: candidateWhere }),
         prisma.job.count({ where: jobWhere }),
         prisma.job.count({ where: { ...jobWhere, status: 'PUBLISHED' } }),
@@ -256,11 +258,11 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
 
   app.get(
     '/audit-events',
-    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const user = request.authUser!;
       const events = await getPrisma().auditEvent.findMany({
-        where: user.role === 'COMPANY_ADMIN' ? undefined : { agencyId: user.agencyId ?? '__missing__' },
+        where: user.role === 'ADMIN' ? undefined : user.role === 'COMPANY_ADMIN' ? { companyId: user.companyId ?? '__missing__' } : { agencyId: user.agencyId ?? '__missing__' },
         orderBy: { createdAt: 'desc' },
         take: 50,
         include: {
