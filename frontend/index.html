@@ -3,14 +3,114 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="robots" content="index,follow" />
-    <meta property="og:title" content="BuildHire — Recruitment operations, connected." />
-    <meta property="og:description" content="Run candidate intake, jobs, interview panels, structured scorecards, and final decisions in one connected recruitment workspace." />
+    <meta name="theme-color" content="#0B1B2B" />
+    <meta name="description" content="BuildHire is a recruitment management platform for construction recruitment agencies. Manage candidate intake, bulk CSV import, jobs, panel interviews, interviewer comparison, selection, passport expiry, documents and deployment in one workspace." />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta property="og:title" content="BuildHire — Construction recruitment, in one workspace." />
+    <meta property="og:description" content="Replace spreadsheet, WhatsApp and email chaos with one construction recruitment workspace for candidate intake, panel interviews, decisions and deployment." />
     <meta property="og:type" content="website" />
-    <meta name="description" content="BuildHire connects companies, manpower agencies, interviewers, and candidates in one recruitment workspace—from candidate intake to final decision." />
+    <meta name="application-name" content="BuildHire" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>BuildHire — Recruitment Platform</title>
+    <title>BuildHire — Construction Recruitment Management Platform</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "BuildHire",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "Recruitment management software",
+        "description": "Recruitment management platform built for construction recruitment agencies handling candidate intake, bulk CSV imports, jobs, panel interviews, interviewer comparison, selection, documents, passport expiry and deployment.",
+        "operatingSystem": "Web",
+        "featureList": [
+          "7-field candidate intake",
+          "Bulk CSV import with validation and duplicate register-number checks per agency",
+          "Candidate directory and profile workspace",
+          "Job-based candidate pools",
+          "Panel interviews with multiple interviewers",
+          "Side-by-side interviewer comparison",
+          "Role-based shortlist, reject and approve actions",
+          "Complete audit trail with decision reasons",
+          "Documents and deployment tracking",
+          "Responsive mobile-first workflow"
+        ],
+        "audience": {
+          "@type": "BusinessAudience",
+          "audienceType": "Construction recruitment agencies"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What CSV format should we use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use the ready BuildHire candidate template. The import flow validates expected fields before records are created."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How are duplicate candidates handled?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Agency register numbers are checked within the agency context. Duplicate register numbers are flagged during import."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can different users have different permissions?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. BuildHire uses role-aware workspaces and actions for company administrators, agencies, interviewers and candidates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do we keep track of passport expiry?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Passport number and expiry are part of the candidate intake record and stay on the candidate profile."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is recruitment data controlled?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The product is structured around company and agency workspaces, role-based access, explicit relationships and connected recruitment history."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does BuildHire work on mobile?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The recruitment surfaces are responsive for phones, tablets and desktops."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How long does onboarding take?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "There is no one-size-fits-all onboarding time. Setup depends on the candidate template, roles, agencies and interview criteria."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What support is available?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Start with a company workspace and map your candidate intake and interview process into BuildHire."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
