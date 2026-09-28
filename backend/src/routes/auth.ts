@@ -149,7 +149,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         agencyId: user?.agencyId ?? null,
         action: 'LOGIN_FAILED',
         entityType: 'Authentication',
-        entityId: user?.id ?? email,
+        entityId: user?.id ?? 'anonymous',
         summary: 'Failed login attempt for ' + email + '.',
       });
       return reply.code(401).send({
