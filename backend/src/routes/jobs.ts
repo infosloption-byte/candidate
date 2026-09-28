@@ -41,7 +41,7 @@ const totalRequired = (positions: Array<{ requiredCount: number }>): number =>
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
+    if (!['ADMIN', 'COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({
         success: false,
         error: { code: 'FORBIDDEN', message: 'Jobs are available only to recruitment managers.' },
