@@ -246,7 +246,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
             error: { code: 'AGENCY_REQUIRED', message: 'An agency is required for an Agency user.' },
           });
         }
-        agency = await getPrisma().agency.findFirst({ where: { id: agencyId, companyId: request.authUser!.companyId }, select: { id: true, companyId: true, status: true } });
+        agency = await getPrisma().agency.findFirst({ where: { id: agencyId, companyId }, select: { id: true, companyId: true, status: true } });
         if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
         if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
       }
@@ -254,7 +254,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
       try {
         const user = await getPrisma().user.create({
           data: {
-            companyId: agency?.companyId ?? request.authUser!.companyId,
+            companyId: agency?.companyId ?? companyId,
             agencyId,
             name,
             email,
@@ -291,7 +291,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().user.findFirst({
-        where: { id: request.params.id, companyId: request.authUser!.companyId, role: { in: ['COMPANY_ADMIN', 'AGENCY'] } },
+        where: request.authUser!.role === 'ADMIN'
+          ? { id: request.params.id, role: { in: ['COMPANY_ADMIN', 'AGENCY'] } }
+          : { id: request.params.id, companyId: request.authUser!.companyId, role: { in: ['COMPANY_ADMIN', 'AGENCY'] } },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'SYSTEM_USER_NOT_FOUND', message: 'System user not found.' } });
       if (existing.id === request.authUser!.id && request.body.active === false) {
