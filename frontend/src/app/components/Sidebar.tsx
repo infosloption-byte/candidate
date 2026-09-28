@@ -119,7 +119,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
         <div className="rounded-xl border border-white/7 bg-white/[0.03] px-3 py-2.5">
           <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-slate-500">Workspace</p>
           <p className="mt-1 truncate text-[11px] font-semibold text-slate-300">
-            {role === 'COMPANY' ? 'Company administration' : role === 'AGENCY' ? 'Agency workspace' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
+            {role === 'COMPANY_ADMIN' ? 'Platform administration' : role === 'AGENCY' ? 'Agency workspace' : role === 'INTERVIEWER' ? 'Interview operations' : 'Candidate portal'}
           </p>
         </div>
       )}
