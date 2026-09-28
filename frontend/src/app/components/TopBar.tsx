@@ -34,7 +34,8 @@ const titles: Record<AppView, string> = {
   candidates: 'Candidates',
   interviews: 'Interviews',
   criteria: 'Interview Criteria',
-  agencies: 'Companies & Users',
+  companies: 'Companies',
+  agencies: 'Platform Users',
   settings: 'Settings',
 };
 
