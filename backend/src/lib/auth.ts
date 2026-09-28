@@ -30,6 +30,9 @@ declare module 'fastify' {
 
 export const toPublicUser = (user: AuthUser): AuthUser => ({ ...user });
 
+export const hasCompanyAccess = (user: AuthUser, companyId: string | null | undefined): boolean =>
+  user.role === 'ADMIN' || Boolean(companyId && user.companyId === companyId);
+
 export const hashPassword = async (password: string): Promise<string> => {
   if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
 
@@ -59,7 +62,13 @@ const getCookie = (request: FastifyRequest, name: string): string | null => {
 
   for (const part of header.split(';')) {
     const [key, ...value] = part.trim().split('=');
-    if (key === name) return decodeURIComponent(value.join('='));
+    if (key === name) {
+      try {
+        return decodeURIComponent(value.join('='));
+      } catch {
+        return null;
+      }
+    }
   }
 
   return null;
