@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
+export type UserRole = 'COMPANY' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
 
 export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 export type JobCandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED';
@@ -99,7 +99,6 @@ export interface JobPosition {
 export interface Job {
   id: string;
   companyId?: string | null;
-  agencyId: string | null;
   title: string;
   description: string | null;
   location: string | null;
@@ -111,8 +110,7 @@ export interface Job {
   candidateCount?: number;
   interviewCount?: number;
   filledCount?: number;
-  agency?: Pick<Agency, 'id' | 'name' | 'slug' | 'status'>;
-}
+  }
 
 export interface JobCandidate {
   id: string;
@@ -213,7 +211,7 @@ export interface Interview {
   startedAt?: string | null;
   completedAt?: string | null;
   candidate?: Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'agencyRegisterNo' | 'firstName' | 'lastName' | 'name' | 'birthdate' | 'passportNumber' | 'passportExpiry' | 'requestedProfession' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt'>;
-  job?: Pick<Job, 'id' | 'agencyId' | 'title' | 'location' | 'status'> | null;
+  job?: Pick<Job, 'id' | 'title' | 'location' | 'status'> | null;
   panel?: Array<{
     userId: string;
     assignedAt: string;
