@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { agencyRoutes } from './routes/agencies.js';
 import { authRoutes } from './routes/auth.js';
 import { candidateRoutes } from './routes/candidates.js';
+import { companyRoutes } from './routes/companies.js';
 import { documentRoutes } from './routes/documents.js';
 import { evaluationRoutes } from './routes/evaluations.js';
 import { healthRoutes } from './routes/health.js';
@@ -33,6 +34,7 @@ export const buildApp = (): FastifyInstance => {
   void app.register(healthRoutes, { prefix: '/api/v1' });
   void app.register(authRoutes, { prefix: '/api/v1' });
   void app.register(agencyRoutes, { prefix: '/api/v1' });
+  void app.register(companyRoutes, { prefix: '/api/v1' });
   void app.register(jobRoutes, { prefix: '/api/v1' });
   void app.register(operationalRoutes, { prefix: '/api/v1' });
   void app.register(candidateRoutes, { prefix: '/api/v1' });
