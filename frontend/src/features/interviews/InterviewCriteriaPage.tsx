@@ -121,7 +121,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const activeCriteria = useMemo(() => criteria.filter((item) => item.active), [criteria]);
 
 
-  const canManage = role === 'COMPANY' || role === 'AGENCY';
+  const canManage = role === 'COMPANY_ADMIN' || role === 'AGENCY';
   const criterionFormOpen = modalMode === 'CREATE_CRITERION' || modalMode === 'EDIT_CRITERION';
   const groupFormOpen = modalMode === 'CREATE_GROUP' || modalMode === 'EDIT_GROUP';
 
