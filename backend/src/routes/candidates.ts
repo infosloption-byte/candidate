@@ -57,22 +57,22 @@ const readImportField = (
 
 
 const canManageCandidate = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
-  role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId);
+  role === 'COMPANY' || (role === 'AGENCY' && agencyId === candidateAgencyId);
 
 const canSetFinalCandidateStatus = (role: string, agencyId: string | null, candidateAgencyId: string): boolean =>
-  role === 'ADMIN' || (role === 'AGENCY' && agencyId === candidateAgencyId) || role === 'INTERVIEWER';
+  role === 'COMPANY' || (role === 'AGENCY' && agencyId === candidateAgencyId) || role === 'INTERVIEWER';
 
 export const candidateRoutes: FastifyPluginAsync = async (app) => {
   app.addContentTypeParser('text/csv', { parseAs: 'string' }, (_request, body, done) => done(null, body));
 
   app.get<{ Querystring: CandidateListQuery }>('/candidates', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['ADMIN', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
+    if (!['COMPANY', 'AGENCY', 'INTERVIEWEE'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Interviewers can only access candidate details through assigned interviews.' } });
     }
 
     if (request.query.jobId) {
-      if (!['ADMIN', 'AGENCY'].includes(user.role)) {
+      if (!['COMPANY', 'AGENCY'].includes(user.role)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Job-scoped candidate lists are available only to recruitment managers.' } });
       }
       const job = await getPrisma().job.findUnique({
@@ -81,7 +81,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       const canReadJob =
-        user.role === 'ADMIN'
+        user.role === 'COMPANY'
         || user.role === 'AGENCY'
         || (user.role === 'INTERVIEWEE' && user.candidateId
           ? job.status === 'PUBLISHED' && (await getPrisma().jobCandidate.count({ where: { jobId: job.id, candidateId: user.candidateId } })) > 0
@@ -92,7 +92,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     const candidates = await getPrisma().candidate.findMany({
       where: request.query.jobId
         ? { jobMemberships: { some: { jobId: request.query.jobId } } }
-        : user.role === 'ADMIN'
+        : user.role === 'COMPANY'
           ? undefined
           : user.role === 'INTERVIEWEE'
             ? user.candidateId ? { id: user.candidateId } : { id: '__not_found__' }
@@ -214,7 +214,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: AgencyCandidateParams; Body: CandidateInput & CandidateWorkflowBody }>(
     '/agencies/:agencyId/candidates',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const errors = validateCandidateInput(request.body, 'create');
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_CANDIDATE', message: errors.join(' ') } });
@@ -277,7 +277,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: AgencyCandidateParams; Body: string; Querystring: CandidateWorkflowBody }>(
     '/agencies/:agencyId/candidates/bulk',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY'), requireAgencyAccess()] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
       const csv = request.body;
       if (typeof csv !== 'string' || !csv.trim()) return reply.code(400).send({ success: false, error: { code: 'INVALID_CSV', message: 'CSV content is required.' } });
