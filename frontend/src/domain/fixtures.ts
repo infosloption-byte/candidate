@@ -6,7 +6,7 @@ export const agencies: Agency[] = [
 ];
 
 export const users: User[] = [
-  { id: 'user-admin', agencyId: null, candidateId: null, name: 'System Admin', email: 'admin@buildhire.demo', role: 'COMPANY', active: true },
+  { id: 'user-admin', agencyId: null, candidateId: null, companyId: null, candidateId: null, name: 'System Admin', email: 'admin@buildhire.demo', role: 'COMPANY_ADMIN', active: true },
   { id: 'user-agency-1', agencyId: 'agency-1', candidateId: null, name: 'Agency Manager', email: 'agency@buildhire.demo', role: 'AGENCY', active: true },
   { id: 'user-interviewer-1', agencyId: 'agency-1', candidateId: null, name: 'Kamal Perera', email: 'kamal@buildhire.demo', role: 'INTERVIEWER', active: true },
   { id: 'user-interviewer-2', agencyId: 'agency-1', candidateId: null, name: 'Nadeesha Silva', email: 'nadeesha@buildhire.demo', role: 'INTERVIEWER', active: true },
