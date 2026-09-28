@@ -143,6 +143,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     });
 
     if (!user || !user.active || !(await verifyPassword(password, user.passwordHash))) {
+      await recordAuditEvent({
+        actorId: null,
+        companyId: user?.companyId ?? null,
+        agencyId: user?.agencyId ?? null,
+        action: 'LOGIN_FAILED',
+        entityType: 'Authentication',
+        entityId: user?.id ?? email,
+        summary: 'Failed login attempt for ' + email + '.',
+      });
       return reply.code(401).send({
         success: false,
         error: { code: 'INVALID_LOGIN', message: 'Invalid email or password.' },
@@ -150,6 +159,16 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     await createSession(user.id, reply);
+
+    await recordAuditEvent({
+      actorId: user.id,
+      companyId: user.companyId,
+      agencyId: user.agencyId,
+      action: 'LOGIN_SUCCESS',
+      entityType: 'Authentication',
+      entityId: user.id,
+      summary: 'Successful login for ' + user.name + '.',
+    });
 
     return reply.send({
       success: true,
@@ -286,6 +305,83 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
         return reply.code(409).send({ success: false, error: { code: 'USER_EMAIL_EXISTS', message: 'Email is already registered.' } });
+      }
+      throw error;
+    }
+  });
+
+  app.patch<{
+    Body: { name?: string; email?: string; password?: string };
+  }>('/auth/me', { preHandler: requireAuth }, async (request, reply) => {
+    const name = request.body.name?.trim();
+    const email = request.body.email?.trim().toLowerCase();
+    const password = request.body.password;
+
+    if (name !== undefined && (name.length < 2 || name.length > 160)) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_PROFILE', message: 'Name must be 2-160 characters.' } });
+    }
+    if (email !== undefined && (!email.includes('@') || email.length > 191)) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_PROFILE', message: 'Email must be valid and 191 characters or fewer.' } });
+    }
+    if (password !== undefined && (password.length < 8 || password.length > 128)) {
+      return reply.code(400).send({ success: false, error: { code: 'INVALID_PASSWORD', message: 'Password must be 8-128 characters.' } });
+    }
+
+    const data: { name?: string; email?: string; passwordHash?: string } = {};
+    if (name !== undefined) data.name = name;
+    if (email !== undefined) data.email = email;
+    if (password !== undefined) data.passwordHash = await hashPassword(password);
+
+    if (!Object.keys(data).length) {
+      return reply.send({ success: true, data: { user: request.authUser } });
+    }
+
+    try {
+      const updated = await getPrisma().user.update({
+        where: { id: request.authUser!.id },
+        data,
+        include: { company: { select: { id: true, name: true, slug: true, status: true } } },
+      });
+
+      await recordAuditEvent({
+        actorId: updated.id,
+        companyId: updated.companyId,
+        agencyId: updated.agencyId,
+        action: password !== undefined ? 'ACCOUNT_PASSWORD_CHANGED' : 'ACCOUNT_PROFILE_UPDATED',
+        entityType: 'User',
+        entityId: updated.id,
+        summary: password !== undefined
+          ? 'Updated account password.'
+          : 'Updated account profile.',
+      });
+
+      if (password !== undefined) {
+        await getPrisma().session.deleteMany({ where: { userId: updated.id } });
+      }
+
+      if (password !== undefined) {
+        await createSession(updated.id, reply);
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          user: toPublicUser({
+            id: updated.id,
+            companyId: updated.companyId,
+            companyName: updated.company?.name ?? null,
+            agencyId: updated.agencyId,
+            candidateId: updated.candidateId,
+            name: updated.name,
+            email: updated.email,
+            role: updated.role,
+            active: updated.active,
+          }),
+        },
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') {
+        return reply.code(409).send({ success: false, error: { code: 'EMAIL_EXISTS', message: 'Email is already in use.' } });
       }
       throw error;
     }
