@@ -19,7 +19,7 @@ import { CalendarPage } from '../features/calendar/CalendarPage';
 import { LanguageProvider } from '../i18n/LanguageContext';
 
 const roleDefaults: Record<UserRole, AppView> = {
-  ADMIN: 'dashboard',
+  COMPANY: 'dashboard',
   AGENCY: 'dashboard',
   INTERVIEWER: 'dashboard',
   INTERVIEWEE: 'interviews',
