@@ -1125,4 +1125,124 @@ dbTest('candidate can be assigned directly to interview, scored, finalized, and 
   assert.equal(candidateHistoryAccess.statusCode, 403);
 });
 
+
+dbTest('tenant isolation blocks cross-company IDs and agency cross-record reads', async () => {
+  assert.ok(app);
+  assert.ok(prisma);
+
+  const agencyBCookie = await login(emails.agencyB);
+  const agencyJob = await app.inject({
+    method: 'GET',
+    url: '/api/v1/jobs/' + jobAId,
+    headers: { cookie: agencyBCookie },
+  });
+  assert.equal(agencyJob.statusCode, 200);
+  const agencyJobBody = json<{ data: { candidatePool: unknown[]; interviews: unknown[] } }>(agencyJob);
+  assert.equal(agencyJobBody.data.candidatePool.length, 0);
+  assert.equal(agencyJobBody.data.interviews.length, 0);
+
+  const agencyInterviewList = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews?jobId=' + encodeURIComponent(jobAId),
+    headers: { cookie: agencyBCookie },
+  });
+  assert.equal(agencyInterviewList.statusCode, 200);
+  assert.deepEqual(json<{ data: unknown[] }>(agencyInterviewList).data, []);
+
+  const agencyInterviewDetail = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews/' + interviewId,
+    headers: { cookie: agencyBCookie },
+  });
+  assert.equal(agencyInterviewDetail.statusCode, 403);
+
+  const companyB = await prisma.company.create({
+    data: { name: 'Isolation Company B ' + suffix, slug: 'isolation-company-b-' + suffix },
+  });
+  const companyBUser = await prisma.user.create({
+    data: {
+      companyId: companyB.id,
+      agencyId: null,
+      name: 'Isolation Company B Admin',
+      email: 'qa-isolation-b-' + suffix + '@buildhire.local',
+      passwordHash: await hashPassword(password),
+      role: 'COMPANY_ADMIN',
+    },
+  });
+
+  const companyBCookie = await login('qa-isolation-b-' + suffix + '@buildhire.local');
+
+  const crossCompanyCandidates = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates',
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyCandidates.statusCode, 200);
+  assert.deepEqual(json<{ data: unknown[] }>(crossCompanyCandidates).data, []);
+
+  const crossCompanyCandidate = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId,
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyCandidate.statusCode, 403);
+
+  const crossCompanyCandidatePatch = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/candidates/' + candidateId,
+    headers: { cookie: companyBCookie },
+    payload: { firstName: 'Cross Company Attack' },
+  });
+  assert.equal(crossCompanyCandidatePatch.statusCode, 403);
+
+  const crossCompanyJob = await app.inject({
+    method: 'GET',
+    url: '/api/v1/jobs/' + jobAId,
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyJob.statusCode, 403);
+
+  const crossCompanyJobPatch = await app.inject({
+    method: 'PATCH',
+    url: '/api/v1/jobs/' + jobAId,
+    headers: { cookie: companyBCookie },
+    payload: { title: 'Cross Company Attack' },
+  });
+  assert.equal(crossCompanyJobPatch.statusCode, 403);
+
+  const crossCompanyInterviewList = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews',
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyInterviewList.statusCode, 200);
+  assert.deepEqual(json<{ data: unknown[] }>(crossCompanyInterviewList).data, []);
+
+  const crossCompanyInterview = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews/' + interviewId,
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyInterview.statusCode, 403);
+
+  const crossCompanyEvaluations = await app.inject({
+    method: 'GET',
+    url: '/api/v1/interviews/' + interviewId + '/evaluations',
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyEvaluations.statusCode, 403);
+
+  const crossCompanyDocuments = await app.inject({
+    method: 'GET',
+    url: '/api/v1/candidates/' + candidateId + '/documents',
+    headers: { cookie: companyBCookie },
+  });
+  assert.equal(crossCompanyDocuments.statusCode, 403);
+
+  await prisma.session.deleteMany({ where: { userId: companyBUser.id } });
+  await prisma.user.delete({ where: { id: companyBUser.id } });
+  await prisma.company.delete({ where: { id: companyB.id } });
+});
+
+
 const adminCookieForTest = (cookie: string): string => cookie;
