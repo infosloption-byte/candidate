@@ -39,7 +39,7 @@ const CompanyModal = ({
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">System administration</p>
             <h2 className="mt-1 text-lg font-black text-slate-950">Create company</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Creates a separate tenant workspace with its own company administration boundary.</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Manage your company profile and current tenant workspace.</p>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
         </div>
@@ -101,7 +101,7 @@ export const CompaniesPage = () => {
       setCompanies((current) => [created, ...current]);
       setModalOpen(false);
       setForm(emptyForm);
-      setSuccess('Company workspace created.');
+      setSuccess('Company profile created.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to create company.');
     } finally {
@@ -129,7 +129,7 @@ export const CompaniesPage = () => {
         eyebrow="System administration"
         title="Companies"
         description="Each company is an isolated BuildHire tenant containing its jobs, candidates, interviews and company users."
-        action={<Button onClick={() => { setForm(emptyForm); setError(''); setModalOpen(true); }}>Add company</Button>}
+        action={}
       />
 
       {loading && <StateMessage kind="loading" title="Loading companies" description="Fetching all company workspaces." />}
