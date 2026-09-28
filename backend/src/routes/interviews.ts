@@ -652,7 +652,6 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
         where: { id: request.params.id },
         include: {
           candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
-          companyId: true,
           job: { select: { id: true, title: true, status: true } },
           panel: { select: { userId: true } },
         },
