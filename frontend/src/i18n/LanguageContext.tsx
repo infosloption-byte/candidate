@@ -1024,6 +1024,16 @@ const he: TranslationMap = {
   "Sign in to BuildHire": "כניסה ל-BuildHire",
   "Start 7-day free trial": "התחלת ניסיון חינם של 7 ימים",
   "One workspace for every construction hire.": "סביבת עבודה אחת לכל גיוס בענף הבנייה.",
+  "Unable to continue.": "לא ניתן להמשיך.",
+  "Start your 7-day free trial with the company account that owns your recruitment workspace.": "התחילו את הניסיון החינמי של 7 ימים עם חשבון החברה שמנהל את סביבת הגיוס שלכם.",
+  "Intake": "קליטה",
+  "Interview": "ראיון",
+  "Evaluation": "הערכה",
+  "Selection": "בחירה",
+  "Deployment": "פריסה",
+  "/ month": "/ חודש",
+  "Create your company workspace and use every feature for 7 days. After the trial, the subscription is $49 per month for your company workspace.": "צרו את סביבת העבודה של החברה והשתמשו בכל התכונות במשך 7 ימים. לאחר הניסיון, המנוי הוא 49$ לחודש עבור סביבת העבודה של החברה.",
+
 } as const;
 
 type TranslationMap = Record<string, string>;
