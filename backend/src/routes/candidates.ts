@@ -398,9 +398,18 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
       if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Self-onboarding is not available for this agency.' } });
 
+      const companyId = agency.companyId ?? user.companyId;
+      if (!companyId) {
+        return reply.code(409).send({
+          success: false,
+          error: { code: 'COMPANY_REQUIRED', message: 'The selected agency is not linked to a company.' },
+        });
+      }
+
       const result = await getPrisma().$transaction(async (tx) => {
         const candidate = await tx.candidate.create({
           data: {
+            companyId,
             agencyId: agency.id,
             reference: getReference(),
             agencyRegisterNo: request.body.agencyRegisterNo?.trim() || getReference(),
