@@ -251,10 +251,10 @@ export const CalendarPage = ({ role }: Props) => {
   return (
     <section className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'ADMIN' ? 'System schedule' : role === 'AGENCY' ? 'Agency schedule' : role === 'INTERVIEWER' ? 'My interview schedule' : 'My recruitment schedule'}
+        eyebrow={role === 'COMPANY' ? 'System schedule' : role === 'AGENCY' ? 'Agency schedule' : role === 'INTERVIEWER' ? 'My interview schedule' : 'My recruitment schedule'}
         title="Calendar"
         description={
-          role === 'ADMIN'
+          role === 'COMPANY'
             ? 'System-wide interview calendar with past, current and upcoming activity.'
             : role === 'AGENCY'
               ? 'All interviews belonging to your agency, including completed and upcoming schedules.'
