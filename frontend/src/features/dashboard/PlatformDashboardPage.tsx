@@ -41,6 +41,14 @@ interface PlatformAnalytics {
     publishedJobs: number;
     interviews: number;
     submittedEvaluations: number;
+    companyAdmins: number;
+  };
+  onboarding: {
+    companiesCreatedLast7Days: number;
+    companiesCreatedLast30Days: number;
+    companiesWithoutAgencies: number;
+    companiesWithoutJobs: number;
+    companiesWithoutCandidates: number;
   };
   userRoles: Record<string, number>;
   recentCompanies: PlatformCompany[];
@@ -126,6 +134,14 @@ export const PlatformDashboardPage = ({ role }: Props) => {
           (count, item) => count + (item.evaluations?.filter((evaluation) => evaluation.status === 'SUBMITTED').length ?? 0),
           0,
         ),
+        companyAdmins: state.users.filter((item) => item.role === 'COMPANY_ADMIN').length,
+      },
+      onboarding: {
+        companiesCreatedLast7Days: 0,
+        companiesCreatedLast30Days: 0,
+        companiesWithoutAgencies: 0,
+        companiesWithoutJobs: 0,
+        companiesWithoutCandidates: 0,
       },
       userRoles,
       recentCompanies: [{
@@ -217,6 +233,39 @@ export const PlatformDashboardPage = ({ role }: Props) => {
             </p>
           </div>
         </div>
+      </div>
+
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Icon name="briefcase" size={18} /></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Company onboarding</p><h2 className="mt-1 text-base font-black text-slate-950">Tenant growth</h2></div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">New · 7 days</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast7Days}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-3"><p className="text-[9px] font-black uppercase text-slate-400">New · 30 days</p><p className="mt-1 text-xl font-black">{analytics.onboarding.companiesCreatedLast30Days}</p></div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Icon name="alert" size={18} /></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Onboarding attention</p><h2 className="mt-1 text-base font-black text-slate-950">Setup signals</h2></div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No agencies</span><span className="font-black">{analytics.onboarding.companiesWithoutAgencies}</span></div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No jobs</span><span className="font-black">{analytics.onboarding.companiesWithoutJobs}</span></div>
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5"><span className="text-xs font-bold text-slate-600">No candidates</span><span className="font-black">{analytics.onboarding.companiesWithoutCandidates}</span></div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-2xl bg-violet-50 text-violet-700"><Icon name="users" size={18} /></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Tenant administration</p><h2 className="mt-1 text-base font-black text-slate-950">Company admins</h2></div>
+          </div>
+          <p className="mt-4 text-3xl font-black text-slate-950">{counts.companyAdmins}</p>
+          <p className="mt-1 text-xs text-slate-400">Company administrator accounts across the platform.</p>
+        </Card>
       </div>
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
