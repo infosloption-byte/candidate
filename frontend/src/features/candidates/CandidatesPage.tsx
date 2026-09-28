@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -340,6 +341,7 @@ const parseCsvRows = (input: string): string[][] => {
 
 export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props) => {
   const { user, developmentMode } = useAuth();
+  const { t, language } = useLanguage();
   const { state, dispatch } = useRecruitment();
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
@@ -970,10 +972,10 @@ const filterOptions = useMemo(() => ({
 
   const columns = [
     { key: 'candidate', header: 'Candidate', render: (item: Candidate) => <div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-[11px] text-slate-400">{item.reference}</p></div> },
-    { key: 'agencyRegisterNo', header: 'Agency Register No', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.agencyRegisterNo}</span> },
-    { key: 'birthdate', header: 'Birth date', render: (item: Candidate) => <span className="text-xs text-slate-600">{item.birthdate ? new Date(item.birthdate).toLocaleDateString() : 'Not provided'}</span> },
+    { key: 'agencyRegisterNo', header: t('Agency Register No'), render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.agencyRegisterNo}</span> },
+    { key: 'birthdate', header: t('Birth date'), render: (item: Candidate) => <span className="text-xs text-slate-600">{item.birthdate ? new Date(item.birthdate).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US') : 'Not provided'}</span> },
     { key: 'passport', header: 'Passport', render: (item: Candidate) => <div><p className="text-xs font-semibold text-slate-700">{displayPassport(item.passportNumber)}</p><p className="mt-1 text-[10px] text-slate-400">Exp. {item.passportExpiry ? new Date(item.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div> },
-    { key: 'requestedProfession', header: 'Requested profession', render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
+    { key: 'requestedProfession', header: t('Requested profession'), render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
     { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
@@ -982,9 +984,9 @@ const filterOptions = useMemo(() => ({
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'COMPANY_ADMIN' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Candidate profile' : 'Candidate pool'}
+        eyebrow={role === 'COMPANY_ADMIN' ? t('Candidate management') : role === 'INTERVIEWEE' ? t('Candidate profile') : t('Candidate pool')}
         title={role === 'INTERVIEWEE' ? 'My Profile' : 'Candidates'}
-        description={role === 'INTERVIEWEE' ? 'Maintain your candidate profile and documents.' : 'Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.'}
+        description={role === 'INTERVIEWEE' ? t('Maintain your candidate profile and documents.') : t('Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.')}
         action={role !== 'INTERVIEWEE' ? (
           <div className="flex items-center gap-2">
             <button type="button" title="Download CSV template" aria-label="Download CSV template" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" onClick={downloadCsvTemplate}>
@@ -1182,7 +1184,7 @@ const filterOptions = useMemo(() => ({
                 aria-controls="mobile-candidate-filters"
                 onClick={() => setMobileFiltersOpen((value) => !value)}
               >
-                <span>{mobileFiltersOpen ? 'Hide filters' : 'More filters'}</span>
+                <span>{mobileFiltersOpen ? t('Hide filters') : t('More filters')}</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d={mobileFiltersOpen ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
                 </svg>
@@ -1205,7 +1207,7 @@ const filterOptions = useMemo(() => ({
               )}
 
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
-                <label className="field-label">Job candidate pool</label>
+                <label className="field-label">{t('Job candidate pool')}</label>
                 <SelectMenu
                   value={jobId}
                   onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
@@ -1260,8 +1262,8 @@ const filterOptions = useMemo(() => ({
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
                 <button
                   type="button"
-                  title={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
-                  aria-label={showAdvancedFilters ? 'Hide advanced filters' : 'More filters'}
+                  title={showAdvancedFilters ? t('Hide advanced filters') : t('More filters')}
+                  aria-label={showAdvancedFilters ? t('Hide advanced filters') : t('More filters')}
                   className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
                   onClick={() => setShowAdvancedFilters((value) => !value)}
                 >
@@ -1270,7 +1272,7 @@ const filterOptions = useMemo(() => ({
                   </svg>
                 </button>
                 <span className="text-[10px] font-bold text-slate-400">
-                  {showAdvancedFilters ? 'Advanced filters' : 'More filters'}
+                  {showAdvancedFilters ? t('Advanced filters') : t('More filters')}
                 </span>
               </div>
 
