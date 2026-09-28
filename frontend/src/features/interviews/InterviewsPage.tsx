@@ -1669,7 +1669,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Agency code')}</span>
-                        <span className="min-w-0 break-all text-sm font-bold text-slate-800">{candidate?.agency?.slug ?? 'Not specified'}</span>
+                        <span className="min-w-0 break-all text-sm font-bold text-slate-800">{agencies.find((item) => item.id === candidate?.agencyId)?.slug ?? 'Not specified'}</span>
                       </div>
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
