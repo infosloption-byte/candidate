@@ -1,4 +1,4 @@
-export type UserRole = 'COMPANY' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
+export type UserRole = 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
 
 export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 export type JobCandidateStatus = 'POOL' | 'READY_FOR_INTERVIEW' | 'INTERVIEW_SCHEDULED' | 'INTERVIEW_COMPLETED' | 'PASSED' | 'REJECTED' | 'ON_HOLD' | 'HIRED';
