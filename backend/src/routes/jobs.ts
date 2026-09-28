@@ -426,7 +426,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         include: { positions: true },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
+      if (!hasCompanyAccess(request.authUser!, existing.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
