@@ -1032,7 +1032,6 @@ const he: TranslationMap = {
   "Selection": "בחירה",
   "Deployment": "פריסה",
   "/ month": "/ חודש",
-  "Create your company workspace and use every feature for 7 days. After the trial, the subscription is $49 per month for your company workspace.": "צרו את סביבת העבודה של החברה והשתמשו בכל התכונות במשך 7 ימים. לאחר הניסיון, המנוי הוא 49$ לחודש עבור סביבת העבודה של החברה.",
 
 } as const;
 
