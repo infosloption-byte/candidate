@@ -13,6 +13,7 @@ export const SESSION_COOKIE_NAME = 'buildhire_session';
 export interface AuthUser {
   id: string;
   companyId: string | null;
+  companyName: string | null;
   agencyId: string | null;
   candidateId: string | null;
   name: string;
@@ -112,6 +113,7 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
     include: {
       user: {
         include: {
+          company: { select: { id: true, name: true, status: true } },
           agency: { select: { status: true } },
           candidate: { select: { agency: { select: { status: true } } } },
         },
@@ -139,6 +141,7 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
   return {
     id: session.user.id,
     companyId: session.user.companyId,
+    companyName: session.user.company?.name ?? null,
     agencyId: session.user.agencyId,
     candidateId: session.user.candidateId,
     name: session.user.name,
