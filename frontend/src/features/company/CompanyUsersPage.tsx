@@ -1,4 +1,5 @@
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../domain/authContext';
 import type { User } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -55,6 +56,7 @@ const TeamModal = ({
 
 export const CompanyUsersPage = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -186,11 +188,11 @@ export const CompanyUsersPage = () => {
       <SectionHeading
         eyebrow="Company administration"
         title="Company Users"
-        description="Create company administrators and interviewers who belong only to this company workspace."
+        description={t('Manage your company profile and company workspace.')}
         action={<Button onClick={openCreate}>Add company user</Button>}
       />
 
-      {loading && <StateMessage kind="loading" title="Loading company users" description="Fetching the current company team." />}
+      {loading && <StateMessage kind="loading" title="Loading company users" description={t('Fetching all company workspaces')} />}
       {error && <StateMessage kind="error" title="Company user action failed" description={error} floating={Boolean(modalMode)} />}
       {success && <StateMessage kind="success" title="Saved" description={success} />}
 
