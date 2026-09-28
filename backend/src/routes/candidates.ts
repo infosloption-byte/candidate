@@ -342,6 +342,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
         for (const input of candidateInputs) {
           const candidate = await tx.candidate.create({
             data: {
+              companyId: agency.companyId ?? request.authUser!.companyId!,
               agencyId: agency.id,
               reference: getReference(),
               agencyRegisterNo: input.agencyRegisterNo!.trim(),
