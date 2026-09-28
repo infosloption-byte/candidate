@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 type MarketingPage = 'home' | 'features' | 'security';
@@ -9,7 +9,7 @@ const navigate = (path: string) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-const Icon = ({ children }: { children: React.ReactNode }) => (
+const Icon = ({ children }: { children: ReactNode }) => (
   <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-cyan-50 text-cyan-700">
     {children}
   </span>
