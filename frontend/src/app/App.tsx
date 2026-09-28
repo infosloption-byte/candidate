@@ -105,9 +105,9 @@ const AuthenticatedApp = ({
       case 'interviews':
         return <InterviewsPage role={role} initialJobId={activeJobId} onJobChange={(jobId) => setActiveJobId(jobId)} />;
       case 'companies':
-        return role === 'COMPANY_ADMIN' ? <CompaniesPage /> : <DashboardPage role={role} />;
+        return role === 'ADMIN' || role === 'COMPANY_ADMIN' ? <CompaniesPage /> : <DashboardPage role={role} />;
       case 'agencies':
-        return role === 'COMPANY_ADMIN' ? <AgenciesPage /> : role === 'AGENCY' ? <CompanyUsersPage /> : <DashboardPage role={role} />;
+        return role === 'ADMIN' || role === 'COMPANY_ADMIN' ? <AgenciesPage /> : role === 'AGENCY' ? <CompanyUsersPage /> : <DashboardPage role={role} />;
       case 'criteria': return <InterviewCriteriaPage role={role} />;
       case 'settings': return <SettingsPage />;
       case 'dashboard':
