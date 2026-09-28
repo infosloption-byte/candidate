@@ -232,7 +232,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
             error: { code: 'AGENCY_REQUIRED', message: 'An agency is required for an Agency user.' },
           });
         }
-        agency = await getPrisma().agency.findUnique({ where: { id: agencyId }, select: { id: true, companyId: true, status: true } });
+        agency = await getPrisma().agency.findFirst({ where: { id: agencyId, companyId: request.authUser!.companyId }, select: { id: true, companyId: true, status: true } });
         if (!agency) return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
         if (agency.status !== 'ACTIVE') return reply.code(409).send({ success: false, error: { code: 'AGENCY_INACTIVE', message: 'Users cannot be added to an inactive agency.' } });
       }
@@ -546,7 +546,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_USER', message: 'Name must be 160 characters or fewer, email must be valid and 191 characters or fewer, and password must be 8-128 characters.' } });
       }
 
-      const agency = await getPrisma().agency.findUnique({ where: { id: request.params.agencyId }, select: { id: true, companyId: true, name: true, slug: true, status: true } });
+      const agency = await getPrisma().agency.findFirst({ where: { id: request.params.agencyId, companyId: request.authUser!.companyId }, select: { id: true, companyId: true, name: true, slug: true, status: true } });
       if (!agency) {
         return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
       }
