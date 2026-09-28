@@ -19,6 +19,11 @@ enum AgencyStatus {
   INACTIVE
 }
 
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum OnboardingStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -89,22 +94,45 @@ enum JobCandidateStatus {
   HIRED
 }
 
+model Company {
+  id        String        @id @default(uuid()) @db.VarChar(36)
+  name      String        @db.VarChar(160)
+  slug      String        @unique @db.VarChar(100)
+  status    CompanyStatus  @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  agencies  Agency[]
+  users     User[]
+  jobs      Job[]
+  candidates Candidate[]
+  interviews Interview[]
+  criteria  InterviewCriterion[]
+  criterionGroups InterviewCriterionGroup[]
+  auditEvents AuditEvent[]
+}
+
 model Agency {
   id        String       @id @default(uuid()) @db.VarChar(36)
+  companyId String?      @db.VarChar(36)
   name      String       @db.VarChar(160)
   slug      String       @unique @db.VarChar(100)
   status    AgencyStatus @default(ACTIVE)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  company    Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
   users      User[]
   jobs       Job[]
   candidates Candidate[]
-  auditEvents              AuditEvent[]
+  auditEvents AuditEvent[]
+
+  @@index([companyId, status])
 }
 
 model User {
   id           String     @id @default(uuid()) @db.VarChar(36)
+  companyId    String?    @db.VarChar(36)
   agencyId     String?    @db.VarChar(36)
   candidateId  String?    @unique @db.VarChar(36)
   name         String     @db.VarChar(160)
@@ -115,6 +143,7 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  company       Company?                @relation(fields: [companyId], references: [id], onDelete: SetNull)
   agency        Agency?                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   candidate     Candidate?              @relation("CandidateAccount", fields: [candidateId], references: [id], onDelete: SetNull)
   interviews    InterviewParticipant[]
@@ -124,6 +153,7 @@ model User {
   notifications Notification[]
   statusChanges CandidateStatusHistory[]
 
+  @@index([companyId, role, active])
   @@index([agencyId, role, active])
 }
 
@@ -141,6 +171,7 @@ model Session {
 
 model Candidate {
   id               String           @id @default(uuid()) @db.VarChar(36)
+  companyId        String           @db.VarChar(36)
   agencyId         String           @db.VarChar(36)
   reference        String           @db.VarChar(32)
   agencyRegisterNo String           @db.VarChar(60)
@@ -157,6 +188,7 @@ model Candidate {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   agency         Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   account        User?           @relation("CandidateAccount")
   documents      CandidateDocument[]
@@ -164,6 +196,7 @@ model Candidate {
   statusHistory  CandidateStatusHistory[]
   jobMemberships JobCandidate[]
 
+  @@index([companyId, status])
   @@unique([agencyId, reference])
   @@unique([agencyId, agencyRegisterNo])
   @@index([agencyId, firstName, lastName])
@@ -203,6 +236,7 @@ model CandidateDocument {
 
 model Job {
   id            String        @id @default(uuid()) @db.VarChar(36)
+  companyId     String        @db.VarChar(36)
   agencyId      String?       @db.VarChar(36)
   title         String        @db.VarChar(160)
   description   String?       @db.Text
@@ -213,11 +247,13 @@ model Job {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   agency        Agency?       @relation(fields: [agencyId], references: [id], onDelete: SetNull)
   positions     JobPosition[]
   interviews    Interview[]
   candidatePool JobCandidate[]
 
+  @@index([companyId, status])
   @@index([agencyId, status])
 }
 
@@ -238,6 +274,7 @@ model JobPosition {
 
 model Interview {
   id            String          @id @default(uuid()) @db.VarChar(36)
+  companyId     String          @db.VarChar(36)
   candidateId   String          @db.VarChar(36)
   jobId         String?         @db.VarChar(36)
   type          InterviewType
@@ -252,6 +289,7 @@ model Interview {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
+  company           Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   candidate         Candidate                     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job               Job?                          @relation(fields: [jobId], references: [id], onDelete: SetNull)
   criterionGroup    InterviewCriterionGroup?      @relation(fields: [criterionGroupId], references: [id], onDelete: SetNull)
@@ -299,6 +337,7 @@ model InterviewEvaluation {
 
 model InterviewCriterionGroup {
   id          String   @id @default(uuid()) @db.VarChar(36)
+  companyId   String   @db.VarChar(36)
   name        String   @db.VarChar(160)
   category    String?  @db.VarChar(120)
   description String?  @db.VarChar(500)
@@ -306,6 +345,7 @@ model InterviewCriterionGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   criteria    InterviewCriterionGroupItem[]
   interviews  Interview[]
   interviewAssignments InterviewCriterionGroupAssignment[]
@@ -362,6 +402,7 @@ model InterviewCriterionAssignment {
 
 model InterviewCriterion {
   id          String   @id @default(uuid()) @db.VarChar(36)
+  companyId   String   @db.VarChar(36)
   name        String   @db.VarChar(120)
   description String?  @db.VarChar(500)
   maxPoints    Int      @default(5)
@@ -372,6 +413,7 @@ model InterviewCriterion {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   scores InterviewEvaluationScore[]
   groupItems InterviewCriterionGroupItem[]
   assignments InterviewCriterionAssignment[]
@@ -426,6 +468,7 @@ model CandidateStatusHistory {
 model AuditEvent {
   id         String   @id @default(uuid()) @db.VarChar(36)
   actorId    String?  @db.VarChar(36)
+  companyId  String?  @db.VarChar(36)
   agencyId   String?  @db.VarChar(36)
   action     String   @db.VarChar(80)
   entityType String   @db.VarChar(80)
@@ -433,9 +476,11 @@ model AuditEvent {
   summary    String   @db.VarChar(500)
   createdAt  DateTime @default(now())
 
-  actor  User?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor   User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   agency Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
+  @@index([companyId, createdAt])
   @@index([agencyId, createdAt])
   @@index([actorId, createdAt])
   @@index([entityType, entityId, createdAt])
