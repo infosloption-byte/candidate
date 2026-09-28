@@ -6,6 +6,9 @@ import { RecruitmentProvider } from '../domain/recruitmentContext';
 import { LoginPage } from '../features/auth/LoginPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { PlatformDashboardPage } from '../features/dashboard/PlatformDashboardPage';
+import { PlatformReportsPage } from '../features/dashboard/PlatformReportsPage';
+import { PlatformActivityPage } from '../features/dashboard/PlatformActivityPage';
+import { BillingRevenuePage } from '../features/dashboard/BillingRevenuePage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { JobsPage } from '../features/jobs/JobsPage';
 import { JobDetailPage } from '../features/jobs/JobDetailPage';
@@ -94,6 +97,12 @@ const AuthenticatedApp = ({
     switch (activeView) {
       case 'calendar': return <CalendarPage role={role} />;
       case 'reports': return <ReportsPage role={role} />;
+      case 'platform-reports':
+        return role === 'ADMIN' ? <PlatformReportsPage /> : <DashboardPage role={role} />;
+      case 'platform-activity':
+        return role === 'ADMIN' ? <PlatformActivityPage /> : <DashboardPage role={role} />;
+      case 'billing':
+        return role === 'ADMIN' ? <BillingRevenuePage /> : <DashboardPage role={role} />;
       case 'jobs':
         return <JobsPage role={role} onOpenJob={(jobId) => navigate('job-detail', jobId)} />;
       case 'job-detail':
