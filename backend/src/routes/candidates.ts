@@ -15,6 +15,7 @@ interface CandidateWorkflowBody { jobId?: string | null; }
 
 const candidateSelect = {
   id: true,
+  companyId: true,
   agencyId: true,
   reference: true,
   agencyRegisterNo: true,
@@ -234,6 +235,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       const candidate = await prisma.$transaction(async (tx) => {
         const created = await tx.candidate.create({
           data: {
+            companyId: agency.companyId ?? request.authUser!.companyId!,
             agencyId: agency.id,
             reference: getReference(),
             agencyRegisterNo: request.body.agencyRegisterNo!.trim(),
