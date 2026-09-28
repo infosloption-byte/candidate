@@ -28,7 +28,7 @@ const conflictResponse = (reply: FastifyReply, code: string, message: string) =>
   reply.code(409).send({ success: false, error: { code, message } });
 
 export const companyRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/companies', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+  app.get('/companies', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
     const companies = await getPrisma().company.findMany({
       where: { id: request.authUser!.companyId ?? '__missing__' },
       orderBy: { createdAt: 'desc' },
@@ -51,7 +51,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
     if (request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only view your own company.' } });
     }
@@ -68,7 +68,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: { ...company, counts: company._count } });
   });
 
-  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY')] }, async (request, reply) => {
+  app.patch<{ Params: { id: string }; Body: CompanyBody }>('/companies/:id', { preHandler: [requireAuth, requireRole('COMPANY_ADMIN')] }, async (request, reply) => {
     if (request.params.id !== request.authUser!.companyId) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You can only manage your own company.' } });
     }
