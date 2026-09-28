@@ -45,8 +45,14 @@ const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
   });
   if (existing.length) return existing;
 
+  const interview = await getPrisma().interview.findUnique({
+    where: { id: interviewId },
+    select: { companyId: true },
+  });
+  if (!interview) return [];
+
   const criteria = await getPrisma().interviewCriterion.findMany({
-    where: { active: true },
+    where: { active: true, companyId: interview.companyId },
     select: { id: true, name: true, description: true, maxPoints: true, responseType: true, required: true, options: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -595,17 +601,20 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       const user = request.authUser!;
       const allowed =
-        user.role === 'COMPANY_ADMIN'
-        || (user.role === 'AGENCY' && user.agencyId === interview.candidate.agencyId)
+        user.role === 'ADMIN'
+        || (user.role === 'COMPANY_ADMIN' && user.companyId === interview.companyId)
+        || (user.role === 'AGENCY' && user.companyId === interview.companyId && user.agencyId === interview.candidate.agencyId)
         || (user.role === 'INTERVIEWER' && isPanelInterviewer(interview, user.id))
-        || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidateId);
+        || (user.role === 'INTERVIEWEE' && user.companyId === interview.companyId && user.candidateId === interview.candidateId);
 
       if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to these evaluations.' } });
 
       const assignments = await getAssignments(interview.id);
       const evaluations = user.role === 'INTERVIEWER'
         ? interview.evaluations.filter((item) => item.status === 'SUBMITTED' || item.interviewerId === user.id)
-        : interview.evaluations.filter((item) => item.status === 'SUBMITTED');
+        : user.role === 'INTERVIEWEE'
+          ? []
+          : interview.evaluations.filter((item) => item.status === 'SUBMITTED');
 
       return reply.send({
         success: true,
