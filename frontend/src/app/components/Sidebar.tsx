@@ -21,7 +21,8 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
     ]},
     { label: 'Administration', items: [
       { view: 'criteria', label: 'Interview Criteria', icon: 'target' },
-      { view: 'agencies', label: 'Companies & Users', icon: 'users' },
+      { view: 'companies', label: 'Companies', icon: 'building' },
+      { view: 'agencies', label: 'Platform Users', icon: 'users' },
       { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
