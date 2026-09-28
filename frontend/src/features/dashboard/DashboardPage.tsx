@@ -128,7 +128,7 @@ const PipelineCard = ({ label, value, total, tone = 'cyan' }: { label: string; v
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</span>
+        <span className="truncate text-[10px] font-black uppercase tracking-wider text-slate-400">{t(label)}</span>
         <span className="text-sm font-black text-slate-950">{value}</span>
       </div>
       <div className="mt-3">
@@ -477,7 +477,7 @@ export const DashboardPage = ({ role }: Props) => {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t('Remaining')}</p><p className="mt-1 text-xl font-black">{counts.remainingOpenings}</p></div>
-                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t(t('Hired'))}</p><p className="mt-1 text-xl font-black">{candidateStatuses.HIRED ?? 0}</p></div>
+                <div className="rounded-2xl bg-slate-50 p-3.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{t('Hired')}</p><p className="mt-1 text-xl font-black">{candidateStatuses.HIRED ?? 0}</p></div>
               </div>
             </Card>
 
