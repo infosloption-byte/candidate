@@ -104,9 +104,9 @@ const getInterviewers = async (ids: string[], agencyIds: string[]) => {
   });
 };
 
-const getCriterionGroups = async (groupIds: string[]) => {
+const getCriterionGroups = async (groupIds: string[], companyId: string | null) => {
   const groups = await getPrisma().interviewCriterionGroup.findMany({
-    where: { id: { in: groupIds }, active: true },
+    where: { id: { in: groupIds }, active: true, companyId: companyId ?? undefined },
     include: {
       criteria: {
         orderBy: { sortOrder: 'asc' },
@@ -343,7 +343,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const candidates = await getPrisma().candidate.findMany({
         where: { id: { in: candidateIds } },
-        select: { id: true, agencyId: true, firstName: true, lastName: true, status: true },
+        select: { id: true, companyId: true, agencyId: true, firstName: true, lastName: true, status: true },
       });
       if (candidates.length !== candidateIds.length) {
         return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'One or more selected candidates could not be found.' } });
@@ -399,7 +399,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!criterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group before scheduling.' } });
       }
-      const criterionSetups = await getCriterionGroups(criterionGroupIds);
+      const criterionSetups = await getCriterionGroups(criterionGroupIds, request.authUser!.companyId);
       if (criterionSetups.length !== criterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
@@ -435,6 +435,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
           const candidate = candidates.find((item) => item.id === slot.candidateId)!;
           const interview = await tx.interview.create({
             data: {
+              companyId: candidate.companyId ?? request.authUser!.companyId!,
               candidateId: candidate.id,
               jobId: job?.id ?? null,
               type: request.body.type!,
@@ -513,7 +514,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true, firstName: true, lastName: true, status: true },
+        select: { id: true, companyId: true, agencyId: true, firstName: true, lastName: true, status: true },
       });
       if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
@@ -552,7 +553,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       if (!criterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'CRITERION_GROUP_REQUIRED', message: 'Select at least one active interview criteria group before scheduling.' } });
       }
-      const criterionSetups = await getCriterionGroups(criterionGroupIds);
+      const criterionSetups = await getCriterionGroups(criterionGroupIds, request.authUser!.companyId);
       if (criterionSetups.length !== criterionGroupIds.length) {
         return reply.code(400).send({ success: false, error: { code: 'INVALID_CRITERION_GROUP', message: 'One or more selected interview criteria groups are missing, inactive, or have no active criteria.' } });
       }
