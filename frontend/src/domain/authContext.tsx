@@ -145,7 +145,7 @@ export const developmentUser = (role: UserRole): User => ({
   id: 'dev-' + role.toLowerCase(),
   companyId: role === 'INTERVIEWEE' ? null : 'company-1',
   companyName: role === 'INTERVIEWEE' ? null : 'BuildHire Demo Company',
-  agencyId: role === 'INTERVIEWEE' ? null : 'agency-1',
+  agencyId: role === 'AGENCY' ? 'agency-1' : null,
   candidateId: role === 'INTERVIEWEE' ? 'candidate-1' : null,
   name: 'Development Session',
   email: 'dev-' + role.toLowerCase() + '@buildhire.local',
