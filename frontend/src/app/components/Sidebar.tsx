@@ -25,7 +25,7 @@ const navByRole: Record<UserRole, Array<{ label: string; items: Array<{ view: Ap
       { view: 'billing', label: 'Billing & Revenue', icon: 'chart' },
     ]},
     { label: 'System', items: [
-      { view: 'settings', label: 'Platform Settings', icon: 'settings' },
+      { view: 'settings', label: 'Settings', icon: 'settings' },
     ]},
   ],
   COMPANY_ADMIN: [
