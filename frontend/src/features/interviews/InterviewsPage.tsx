@@ -202,7 +202,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   );
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER' && item.active) : []);
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>(developmentMode ? state.interviewCriterionGroups.filter((item) => item.active) : []);
-  const [agencyId, setAgencyId] = useState(user?.role === 'ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
+  const [agencyId, setAgencyId] = useState(user?.role === 'COMPANY' ? '' : (user?.agencyId ?? 'agency-1'));
   const [candidateId, setCandidateId] = useState('');
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
@@ -287,9 +287,9 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       Promise<User[]>,
     ] = [
       apiFetch<InterviewRecord[]>('/interviews'),
-      ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Candidate[]>('/candidates') : Promise.resolve([] as Candidate[]),
-      ['ADMIN', 'AGENCY'].includes(role) ? apiFetch<Job[]>('/jobs') : Promise.resolve([] as Job[]),
-      role === 'ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
+      ['COMPANY', 'AGENCY'].includes(role) ? apiFetch<Candidate[]>('/candidates') : Promise.resolve([] as Candidate[]),
+      ['COMPANY', 'AGENCY'].includes(role) ? apiFetch<Job[]>('/jobs') : Promise.resolve([] as Job[]),
+      role === 'COMPANY' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
       Promise.resolve([] as User[]),
     ];
 
@@ -318,13 +318,13 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         }
 
         if (agencyResult.status === 'fulfilled') {
-          if (role === 'ADMIN') {
+          if (role === 'COMPANY') {
             setAgencies(agencyResult.value);
             setAgencyOptions(agencyResult.value.filter((item) => item.status === 'ACTIVE').map((item) => ({ id: item.id, name: item.name })));
             const firstAgency = agencyResult.value.find((item) => item.status === 'ACTIVE');
             setAgencyId((current) => current || firstAgency?.id || '');
           }
-        } else if (role === 'ADMIN') {
+        } else if (role === 'COMPANY') {
           failures.push('Unable to load agencies.');
         }
 
@@ -353,7 +353,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       return;
     }
 
-    if (role === 'ADMIN' || role === 'AGENCY') {
+    if (role === 'COMPANY' || role === 'AGENCY') {
       Promise.all([
         apiFetch<User[]>('/interviewers?agencyId=' + encodeURIComponent(agencyId)),
         apiFetch<InterviewCriterionGroup[]>('/interview-criteria-groups'),
@@ -481,7 +481,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const openScheduleForm = () => {
     const firstInterviewer = interviewers[0];
     const defaultAgencyId = agencyId
-      || (role === 'ADMIN' ? agencies.find((item) => item.status === 'ACTIVE')?.id ?? '' : user?.agencyId ?? '');
+      || (role === 'COMPANY' ? agencies.find((item) => item.status === 'ACTIVE')?.id ?? '' : user?.agencyId ?? '');
     setEditingInterviewId(null);
     setAgencyId(defaultAgencyId);
     setForm(defaultForm);
@@ -1221,10 +1221,10 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'ADMIN' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
+        eyebrow={role === 'COMPANY' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
         description={role === 'INTERVIEWER' ? 'Complete the assigned interview criteria and submit your scorecard.' : role === 'INTERVIEWEE' ? 'Review your assigned interview schedule.' : 'Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.'}
-        action={role === 'ADMIN' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
+        action={role === 'COMPANY' || role === 'AGENCY' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
       {error && <StateMessage kind="error" title="Interview action failed" description={error} floating={showScheduleForm || Boolean(evaluationFor) || Boolean(detailFor) || Boolean(profileCandidate)} />}
@@ -1252,7 +1252,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
           </button>
 
           <div id="mobile-interview-filters" className="contents">
-            {(['ADMIN', 'AGENCY'].includes(role)) && (
+            {(['COMPANY', 'AGENCY'].includes(role)) && (
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Job</label>
                 <SelectMenu
@@ -1267,7 +1267,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                 />
               </div>
             )}
-            {(['ADMIN', 'INTERVIEWER'].includes(role)) && (
+            {(['COMPANY', 'INTERVIEWER'].includes(role)) && (
               <div className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                 <label className="field-label">Agency</label>
                 <SelectMenu
@@ -1722,13 +1722,13 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                         </button>
                       )}
 
-                      {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                      {(role === 'COMPANY' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                         <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                           <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                         </button>
                       )}
 
-                      {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
+                      {(['COMPANY', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
                         <InterviewActionMenu
                           interview={interview}
                           role={role}
@@ -1802,17 +1802,17 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
                             </button>
                           )}
-                          {(role === 'ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
+                          {(role === 'COMPANY' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
                             <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
                             </button>
                           )}
-                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
+                          {(['COMPANY', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
                             <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
                               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
                             </button>
                           )}
-                          {(['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
+                          {(['COMPANY', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
                             <InterviewActionMenu
                               interview={interview}
                               role={role}
@@ -1843,7 +1843,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
         />
       )}
 
-      {evaluationFor && ['ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (
+      {evaluationFor && ['COMPANY', 'AGENCY', 'INTERVIEWER'].includes(role) && (
         <div className="fixed inset-0 z-40 pointer-events-none">
           <div
             className={
