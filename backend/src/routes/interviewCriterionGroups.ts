@@ -28,8 +28,9 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
   app.get(
     '/interview-criteria-groups',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
-    async (_request, reply) => {
+    async (request, reply) => {
       const groups = await getPrisma().interviewCriterionGroup.findMany({
+        where: { companyId: request.authUser!.companyId ?? undefined },
         include: groupInclude,
         orderBy: [{ active: 'desc' }, { name: 'asc' }],
       });
@@ -48,7 +49,7 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
 
       const criterionIds = [...new Set(request.body.criterionIds ?? [])];
       const criteria = await getPrisma().interviewCriterion.findMany({
-        where: { id: { in: criterionIds }, active: true },
+        where: { id: { in: criterionIds }, active: true, companyId: request.authUser!.companyId ?? undefined },
         select: criterionSelect,
       });
       if (criteria.length !== criterionIds.length) {
@@ -58,6 +59,7 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
       const order = new Map(criterionIds.map((id, index) => [id, index]));
       const group = await getPrisma().interviewCriterionGroup.create({
         data: {
+          companyId: request.authUser!.companyId!,
           name: request.body.name!.trim(),
           category: request.body.category?.trim() || null,
           description: request.body.description?.trim() || null,
@@ -86,8 +88,8 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
     '/interview-criteria-groups/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
     async (request, reply) => {
-      const existing = await getPrisma().interviewCriterionGroup.findUnique({
-        where: { id: request.params.id },
+      const existing = await getPrisma().interviewCriterionGroup.findFirst({
+        where: { id: request.params.id, companyId: request.authUser!.companyId ?? undefined },
         include: { criteria: { select: { criterionId: true, sortOrder: true } } },
       });
       if (!existing) {
@@ -103,7 +105,7 @@ export const interviewCriterionGroupRoutes: FastifyPluginAsync = async (app) => 
         ? existing.criteria.sort((a, b) => a.sortOrder - b.sortOrder).map((item) => item.criterionId)
         : [...new Set(request.body.criterionIds)];
       const criteria = await getPrisma().interviewCriterion.findMany({
-        where: { id: { in: criterionIds }, active: true },
+        where: { id: { in: criterionIds }, active: true, companyId: request.authUser!.companyId ?? undefined },
         select: criterionSelect,
       });
       if (criteria.length !== criterionIds.length) {
