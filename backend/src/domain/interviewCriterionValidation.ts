@@ -30,8 +30,8 @@ export const validateInterviewCriterionInput = (
     errors.push('Invalid criterion response type.');
   }
   const maxPoints = input.maxPoints ?? (mode === 'create' ? 5 : undefined);
-  if (maxPoints !== undefined && (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100)) {
-    errors.push('Maximum points must be a whole number between 1 and 100.');
+  if (maxPoints !== undefined && (!Number.isInteger(maxPoints) || maxPoints < 0 || maxPoints > 100)) {
+    errors.push('Maximum points must be a whole number between 0 and 100.');
   }
   if (input.required !== undefined && typeof input.required !== 'boolean') {
     errors.push('Criterion required flag must be true or false.');
