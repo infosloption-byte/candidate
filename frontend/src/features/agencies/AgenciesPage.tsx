@@ -19,11 +19,11 @@ interface AgencyRecord extends Agency {
 }
 
 type ActiveTab = 'system-users' | 'agencies' | 'interviewers';
-type SystemUserRole = 'ADMIN' | 'AGENCY';
+type SystemUserRole = 'COMPANY' | 'AGENCY';
 type InterviewerScope = 'AGENCY' | 'GLOBAL';
 type ModalMode = 'SYSTEM_USER' | 'EDIT_SYSTEM_USER' | 'AGENCY' | 'INTERVIEWER' | 'EDIT_INTERVIEWER' | null;
 
-const emptySystemUser = { name: '', email: '', password: '', role: 'AGENCY' as SystemUserRole, agencyId: '' };
+const emptySystemUser = { name: '', email: '', password: '', role: 'COMPANY' as SystemUserRole, agencyId: '' };
 const emptyAgency = { name: '', slug: '' };
 const emptyInterviewer = { name: '', email: '', password: '', scope: 'GLOBAL' as InterviewerScope, agencyId: '' };
 
@@ -71,7 +71,7 @@ export const AgenciesPage = () => {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('system-users');
   const [agencies, setAgencies] = useState<AgencyRecord[]>(developmentMode ? fixtureAgencies : []);
-  const [systemUsers, setSystemUsers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'ADMIN' || item.role === 'AGENCY') : []);
+  const [systemUsers, setSystemUsers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'COMPANY' || item.role === 'AGENCY') : []);
   const [interviewers, setInterviewers] = useState<User[]>(developmentMode ? state.users.filter((item) => item.role === 'INTERVIEWER') : []);
 
   const [loading, setLoading] = useState(!developmentMode);
@@ -89,7 +89,7 @@ export const AgenciesPage = () => {
   useEffect(() => {
     if (developmentMode) {
       setAgencies(fixtureAgencies);
-      setSystemUsers(state.users.filter((item) => item.role === 'ADMIN' || item.role === 'AGENCY'));
+      setSystemUsers(state.users.filter((item) => item.role === 'COMPANY' || item.role === 'AGENCY'));
       setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER'));
       setLoading(false);
       return;
@@ -320,7 +320,7 @@ export const AgenciesPage = () => {
 
       setSystemUserForm({ ...emptySystemUser });
       closeModal();
-      setSuccess(systemUserForm.role === 'ADMIN' ? 'System administrator was created.' : 'Agency user was created.');
+      setSuccess(systemUserForm.role === 'COMPANY' ? 'Company administrator was created.' : 'Agency user was created.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to create the system user.');
     } finally {
@@ -514,7 +514,7 @@ export const AgenciesPage = () => {
     {
       key: 'agency',
       header: 'Agency',
-      render: (item: User) => <span className="text-xs font-semibold text-slate-600">{item.role === 'ADMIN' ? 'System' : agencyNameFor(item.agencyId)}</span>,
+      render: (item: User) => <span className="text-xs font-semibold text-slate-600">{item.role === 'COMPANY' ? 'Company' : agencyNameFor(item.agencyId)}</span>,
     },
     { key: 'status', header: 'Status', render: (item: User) => <StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} /> },
     {
@@ -616,7 +616,7 @@ export const AgenciesPage = () => {
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
         eyebrow="System administration"
-        title="Users & Agencies"
+        title="Agencies & Team"
         description="Manage platform users, agency workspaces, and interviewers from one administration area. Interviewers can belong to one agency or remain global."
       />
 
@@ -707,10 +707,10 @@ export const AgenciesPage = () => {
             <FormField label="Role">
               <SelectMenu
                 value={systemUserForm.role}
-                onChange={(value) => setSystemUserForm({ ...systemUserForm, role: value as SystemUserRole, agencyId: value === 'ADMIN' ? '' : systemUserForm.agencyId })}
+                onChange={(value) => setSystemUserForm({ ...systemUserForm, role: value as SystemUserRole, agencyId: value === 'COMPANY' ? '' : systemUserForm.agencyId })}
                 options={[
                   { value: 'AGENCY', label: 'Agency' },
-                  { value: 'ADMIN', label: 'Admin' },
+                  { value: 'COMPANY', label: 'Admin' },
                 ]}
                 ariaLabel="Select system user role"
               />
