@@ -10,6 +10,7 @@ interface AgencyBody {
   name?: string;
   slug?: string;
   status?: AgencyStatus;
+  companyId?: string | null;
 }
 
 interface UserBody {
@@ -53,9 +54,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: agencies });
   });
 
-  app.get('/agencies', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (_request, reply) => {
+  app.get('/agencies', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
     const agencies = await getPrisma().agency.findMany({
-      where: { companyId: request.authUser!.companyId },
+      where: request.authUser!.role === 'ADMIN' ? undefined : { companyId: request.authUser!.companyId },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { users: true, candidates: true } } },
     });
@@ -75,8 +76,8 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get<{ Params: { id: string } }>('/agencies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
-    const agency = await getPrisma().agency.findUnique({
-      where: { id: request.params.id },
+    const agency = await getPrisma().agency.findFirst({
+      where: request.authUser!.role === 'ADMIN' ? { id: request.params.id } : { id: request.params.id, companyId: request.authUser!.companyId },
       include: { _count: { select: { users: true, candidates: true } } },
     });
 
@@ -90,8 +91,9 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Body: AgencyBody }>('/agencies', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
     const name = request.body.name?.trim();
     const slug = slugify(request.body.slug ?? request.body.name ?? '');
+    const companyId = request.authUser!.role === 'ADMIN' ? request.body.companyId ?? null : request.authUser!.companyId;
 
-    if (!name || !slug) {
+    if (!name || !slug || !companyId) {
       return reply.code(400).send({ success: false, error: { code: 'INVALID_AGENCY', message: 'Agency name and a valid slug are required.' } });
     }
     if (name.length < 2 || name.length > 160 || slug.length > 100) {
@@ -99,7 +101,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const agency = await getPrisma().agency.create({ data: { name, slug, companyId: request.authUser!.companyId } });
+      const agency = await getPrisma().agency.create({ data: { name, slug, companyId } });
       await recordAuditEvent({
         actorId: request.authUser!.id,
         agencyId: agency.id,
@@ -118,7 +120,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.patch<{ Params: { id: string }; Body: AgencyBody }>('/agencies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
-    const existing = await getPrisma().agency.findUnique({ where: { id: request.params.id } });
+    const existing = await getPrisma().agency.findFirst({ where: request.authUser!.role === 'ADMIN' ? { id: request.params.id } : { id: request.params.id, companyId: request.authUser!.companyId } });
     if (!existing) {
       return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
     }
@@ -162,7 +164,7 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.delete<{ Params: { id: string } }>('/agencies/:id', { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] }, async (request, reply) => {
-    const existing = await getPrisma().agency.findUnique({ where: { id: request.params.id } });
+    const existing = await getPrisma().agency.findFirst({ where: request.authUser!.role === 'ADMIN' ? { id: request.params.id } : { id: request.params.id, companyId: request.authUser!.companyId } });
     if (!existing) {
       return reply.code(404).send({ success: false, error: { code: 'AGENCY_NOT_FOUND', message: 'Agency not found.' } });
     }
