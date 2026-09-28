@@ -66,7 +66,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Querystring: AnalyticsQuery }>(
     '/analytics/summary',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY', 'INTERVIEWER')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY', 'INTERVIEWER')] },
     async (request, reply) => {
       const prisma = getPrisma();
       const user = request.authUser!;
@@ -77,7 +77,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         : { agencyId: user.agencyId ?? undefined };
       const baseJobWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : { agencyId: user.role === 'ADMIN' ? undefined : user.agencyId ?? '__missing__' };
+        : { agencyId: user.role === 'COMPANY' ? undefined : user.agencyId ?? '__missing__' };
       const baseInterviewWhere = user.role === 'INTERVIEWER'
         ? { panel: { some: { userId: user.id } } }
         : { candidate: { agencyId: user.agencyId ?? '__missing__' } };
@@ -131,8 +131,8 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         filledWorkers,
         pendingInterviewerEvaluations,
       ] = await Promise.all([
-        user.role === 'ADMIN' ? prisma.agency.count() : Promise.resolve(0),
-        user.role === 'ADMIN' ? prisma.agency.count({ where: { status: 'ACTIVE' } }) : Promise.resolve(0),
+        user.role === 'COMPANY' ? prisma.agency.count() : Promise.resolve(0),
+        user.role === 'COMPANY' ? prisma.agency.count({ where: { status: 'ACTIVE' } }) : Promise.resolve(0),
         prisma.candidate.count({ where: candidateWhere }),
         prisma.job.count({ where: jobWhere }),
         prisma.job.count({ where: { ...jobWhere, status: 'PUBLISHED' } }),
@@ -256,11 +256,11 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
 
   app.get(
     '/audit-events',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const user = request.authUser!;
       const events = await getPrisma().auditEvent.findMany({
-        where: user.role === 'ADMIN' ? undefined : { agencyId: user.agencyId ?? '__missing__' },
+        where: user.role === 'COMPANY' ? undefined : { agencyId: user.agencyId ?? '__missing__' },
         orderBy: { createdAt: 'desc' },
         take: 50,
         include: {
