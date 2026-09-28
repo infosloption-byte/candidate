@@ -41,7 +41,8 @@ const titles: Record<AppView, string> = {
 
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
-  AGENCY: 'Company Admin',
+  COMPANY_ADMIN: 'Company Admin',
+  AGENCY: 'Agency',
   INTERVIEWER: 'Interviewer',
   INTERVIEWEE: 'Interviewee',
 };
@@ -191,7 +192,7 @@ export const TopBar = ({
         <div ref={profileMenuRef} className="relative">
           <button type="button" onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-haspopup="menu" className="flex items-center gap-2 rounded-xl border border-transparent px-1.5 py-1.5 text-left transition hover:border-slate-200 hover:bg-slate-50">
             <div className="grid size-9 shrink-0 place-items-center rounded-full bg-slate-950 text-[11px] font-extrabold text-white shadow-sm">
-              {role === 'INTERVIEWEE' ? 'IN' : role === 'INTERVIEWER' ? 'IR' : role === 'AGENCY' ? 'CA' : 'AD'}
+              {role === 'INTERVIEWEE' ? 'IN' : role === 'INTERVIEWER' ? 'IR' : role === 'AGENCY' ? 'AG' : role === 'COMPANY_ADMIN' ? 'CA' : 'AD'}
             </div>
             <div className="hidden min-w-0 lg:block">
               <p className="max-w-44 truncate text-xs font-extrabold text-slate-900">{user.name}</p>
