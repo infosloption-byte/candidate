@@ -368,7 +368,7 @@ export const DashboardPage = ({ role }: Props) => {
                 <div className="min-w-0">
                   <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">{t('Next interview')}</p>
                   <p className="mt-1 truncate text-sm font-black text-white">{nextInterview.candidate.name}</p>
-                  <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{nextInterview.job?.title ?? 'Platform interview'} · {t(statusLabel(nextInterview.type))}</p>
+                  <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{nextInterview.job?.title ?? t('Platform interview')} · {t(statusLabel(nextInterview.type))}</p>
                 </div>
                 <div className="shrink-0 sm:text-right">
                   <p className="text-sm font-black text-white">{new Date(nextInterview.scheduledAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}</p>
@@ -390,7 +390,7 @@ export const DashboardPage = ({ role }: Props) => {
             />
             <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300 lg:justify-start">
               <span>{t('Updated')}</span>
-              <span className="ml-2 text-slate-100">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="ml-2 text-slate-100">{new Date().toLocaleTimeString(language === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </div>
         </div>
@@ -399,10 +399,10 @@ export const DashboardPage = ({ role }: Props) => {
       {role === 'INTERVIEWER' ? (
         <>
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="Assigned interviews" value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' ' + t('scheduled')} icon="calendar" tone="cyan" />
-            <MetricCard label="Today" value={todayInterviews.length} hint={t('sessions visible in the next queue')} icon="clock" tone="violet" />
-            <MetricCard label="Needs evaluation" value={counts.pendingInterviewerEvaluations} hint={t('in progress or completed')} icon="alert" tone="amber" />
-            <MetricCard label="Completion" value={completionRate + '%'} hint={(interviewStatuses.COMPLETED ?? 0) + ' ' + t('completed')} icon="target" tone="emerald" />
+            <MetricCard label={t('Assigned interviews')} value={counts.interviews} hint={(interviewStatuses.SCHEDULED ?? 0) + ' ' + t('scheduled')} icon="calendar" tone="cyan" />
+            <MetricCard label={t('Today')} value={todayInterviews.length} hint={t('sessions visible in the next queue')} icon="clock" tone="violet" />
+            <MetricCard label={t('Needs evaluation')} value={counts.pendingInterviewerEvaluations} hint={t('in progress or completed')} icon="alert" tone="amber" />
+            <MetricCard label={t('Completion')} value={completionRate + '%'} hint={(interviewStatuses.COMPLETED ?? 0) + ' ' + t('completed')} icon="target" tone="emerald" />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
@@ -416,7 +416,7 @@ export const DashboardPage = ({ role }: Props) => {
                 <div className="grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-700"><Icon name="calendar" size={17} /></div>
               </div>
               <div className="mt-4 space-y-2.5">
-                {upcomingInterviews.length ? upcomingInterviews.map((item) => <ScheduleItem key={item.id} item={item} interviewer />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">{t('No upcoming assigned interviews.')}<</div>}
+                {upcomingInterviews.length ? upcomingInterviews.map((item) => <ScheduleItem key={item.id} item={item} interviewer />) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-semibold text-slate-400">{t('No upcoming assigned interviews.')}</div>}
               </div>
             </Card>
 
@@ -487,7 +487,7 @@ export const DashboardPage = ({ role }: Props) => {
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-600">{t('Pipeline')}</p>
                   <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{t('Candidate movement')}</h2>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600"{decisionRate}% {t('finalised')}</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">{decisionRate}% {t('finalised')}</span>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <PipelineCard label="Pool" value={candidateStatuses.POOL ?? 0} total={counts.candidates} tone="cyan" />
