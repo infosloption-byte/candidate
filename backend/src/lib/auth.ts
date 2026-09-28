@@ -12,6 +12,7 @@ export const SESSION_COOKIE_NAME = 'buildhire_session';
 
 export interface AuthUser {
   id: string;
+  companyId: string | null;
   agencyId: string | null;
   candidateId: string | null;
   name: string;
@@ -137,6 +138,7 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
 
   return {
     id: session.user.id,
+    companyId: session.user.companyId,
     agencyId: session.user.agencyId,
     candidateId: session.user.candidateId,
     name: session.user.name,
