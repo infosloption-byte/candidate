@@ -81,7 +81,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             name: adminName,
             email,
             passwordHash: await hashPassword(password),
-            role: 'COMPANY',
+            role: 'COMPANY_ADMIN',
             active: true,
           },
           select: {
