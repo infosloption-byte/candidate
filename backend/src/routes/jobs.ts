@@ -41,7 +41,7 @@ const totalRequired = (positions: Array<{ requiredCount: number }>): number =>
 export const jobRoutes: FastifyPluginAsync = async (app) => {
   app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['COMPANY', 'AGENCY'].includes(user.role)) {
+    if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({
         success: false,
         error: { code: 'FORBIDDEN', message: 'Jobs are available only to recruitment managers.' },
@@ -81,7 +81,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: JobParams }>('/jobs/:id', { preHandler: requireAuth }, async (request, reply) => {
     const user = request.authUser!;
-    if (!['COMPANY', 'AGENCY'].includes(user.role)) {
+    if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
     }
 
@@ -137,7 +137,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: JobInput }>(
     '/jobs',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const errors = validateJobInput(request.body, 'create');
       if (errors.length) {
@@ -178,7 +178,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: JobParams; Body: JobInput }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -258,7 +258,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: JobParams; Body: JobCandidatesBody }>(
     '/jobs/:id/candidates',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -316,7 +316,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: { id: string; candidateId: string } }>(
     '/jobs/:id/candidates/:candidateId',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -363,7 +363,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id/permanent',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -413,7 +413,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY_ADMIN', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
