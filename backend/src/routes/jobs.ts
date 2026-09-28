@@ -89,7 +89,6 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       where: { id: request.params.id },
       include: {
         positions: { orderBy: { sortOrder: 'asc' } },
-        agency: { select: { id: true, name: true, slug: true, status: true } },
         candidatePool: {
           orderBy: { createdAt: 'desc' },
           include: { candidate: { select: candidateSelect } },
@@ -138,7 +137,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: JobInput }>(
     '/jobs',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const errors = validateJobInput(request.body, 'create');
       if (errors.length) {
@@ -152,8 +151,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       const job = await getPrisma().job.create({
         data: {
           companyId: request.authUser!.companyId!,
-          agencyId: request.authUser!.agencyId,
-          title: request.body.title!.trim(),
+                    title: request.body.title!.trim(),
           description: request.body.description?.trim() || null,
           location: request.body.location?.trim() || null,
           openings,
@@ -168,7 +166,6 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
-        agencyId: request.authUser!.agencyId,
         action: 'JOB_CREATED',
         entityType: 'Job',
         entityId: job.id,
@@ -181,7 +178,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: JobParams; Body: JobInput }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -190,7 +187,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
@@ -261,14 +258,14 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: JobParams; Body: JobCandidatesBody }>(
     '/jobs/:id/candidates',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
         select: { id: true, companyId: true, agencyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId || job.agencyId !== request.authUser!.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
       if (job.status === 'CLOSED') {
@@ -319,7 +316,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: { id: string; candidateId: string } }>(
     '/jobs/:id/candidates/:candidateId',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -366,14 +363,13 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id/permanent',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
         select: {
           id: true,
           companyId: true,
-          agencyId: true,
           title: true,
           candidatePool: { select: { status: true } },
           interviews: { select: { id: true } },
@@ -382,7 +378,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
@@ -417,14 +413,14 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'AGENCY')] },
+    { preHandler: [requireAuth, requireRole('COMPANY', 'AGENCY')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
         include: { positions: true },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId || existing.agencyId !== request.authUser!.agencyId)) {
+      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
         return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
       }
 
