@@ -21,6 +21,7 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { InterviewCriteriaPage } from '../features/interviews/InterviewCriteriaPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { LanguageProvider } from '../i18n/LanguageContext';
+import { MarketingSite } from '../features/marketing/MarketingSite';
 
 const roleDefaults: Record<UserRole, AppView> = {
   ADMIN: 'dashboard',
@@ -33,6 +34,20 @@ const roleDefaults: Record<UserRole, AppView> = {
 const AppContent = () => {
   const { user, loading, developmentMode, logout } = useAuth();
   const [developmentRole, setDevelopmentRole] = useState<UserRole>('ADMIN');
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (user && (pathname === '/login' || pathname === '/login/')) {
+      window.history.replaceState({}, '', '/app');
+      setPathname('/app');
+    }
+  }, [pathname, user]);
 
   if (loading) {
     return (
@@ -42,8 +57,18 @@ const AppContent = () => {
     );
   }
 
+  const publicPath = pathname === '/' || pathname === '/features' || pathname === '/security';
+
+  if (publicPath) {
+    return <MarketingSite />;
+  }
+
   if (!user && !developmentMode) {
     return <LoginPage />;
+  }
+
+  if (!user && pathname !== '/app' && pathname !== '/login') {
+    return <MarketingSite />;
   }
 
   const role = user?.role ?? developmentRole;
