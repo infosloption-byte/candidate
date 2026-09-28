@@ -77,7 +77,7 @@ export const operationalRoutes: FastifyPluginAsync = async (app) => {
         : user.role === 'ADMIN' ? {} : { companyId: user.companyId ?? '__missing__' };
       const baseJobWhere = user.role === 'INTERVIEWER'
         ? { interviews: { some: { panel: { some: { userId: user.id } } } } }
-        : user.role === 'ADMIN' ? {} : user.role === 'COMPANY_ADMIN' ? { companyId: user.companyId ?? '__missing__' } : { agencyId: user.agencyId ?? '__missing__' };
+        : user.role === 'ADMIN' ? {} : { companyId: user.companyId ?? '__missing__' };
       const baseInterviewWhere = user.role === 'INTERVIEWER'
         ? { panel: { some: { userId: user.id } } }
         : user.role === 'ADMIN' ? {} : user.role === 'COMPANY_ADMIN' ? { companyId: user.companyId ?? '__missing__' } : { candidate: { agencyId: user.agencyId ?? '__missing__' } };
