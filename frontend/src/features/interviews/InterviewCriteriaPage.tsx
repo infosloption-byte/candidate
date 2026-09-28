@@ -8,13 +8,14 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
+import { Icon } from '../../shared/components/Icon';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionResponseType, UserRole } from '../../domain/types';
 
 interface Props { role: UserRole; }
 
-const emptyCriterionForm = { name: '', description: '', maxPoints: '5', responseType: 'TEXT' as InterviewCriterionResponseType, required: true, optionsText: '' };
+const emptyCriterionForm = { name: '', maxPoints: '5', responseType: 'TEXT' as InterviewCriterionResponseType, required: true, optionsText: '' };
 const criterionResponseOptions = [
   { value: 'TEXT', label: 'Text answer' },
   { value: 'MULTI_SELECT', label: 'Multiple tag selection' },
@@ -151,7 +152,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const openEditCriterion = (criterion: InterviewCriterion) => {
     setCriterionForm({
       name: criterion.name,
-      description: criterion.description ?? '',
       maxPoints: String(criterion.maxPoints),
       responseType: criterion.responseType,
       required: criterion.required,
@@ -205,8 +205,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
       return;
     }
     const maxPoints = Number(criterionForm.maxPoints);
-    if (!Number.isInteger(maxPoints) || maxPoints < 1 || maxPoints > 100) {
-      setError('Maximum points must be a whole number from 1 to 100.');
+    if (!Number.isInteger(maxPoints) || maxPoints < 0 || maxPoints > 100) {
+      setError('Maximum points must be a whole number from 0 to 100.');
       return;
     }
     const options = criterionForm.optionsText.split(/\r?\n|,/).map((option) => option.trim()).filter(Boolean);
@@ -245,7 +245,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           saved = {
             ...existingCriterion,
             name: criterionForm.name.trim(),
-            description: criterionForm.description.trim() || null,
             maxPoints,
             responseType: criterionForm.responseType,
             required: criterionForm.required,
@@ -255,7 +254,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           saved = {
             id: 'criterion-' + Date.now(),
             name: criterionForm.name.trim(),
-            description: criterionForm.description.trim() || null,
             maxPoints,
             responseType: criterionForm.responseType,
             required: criterionForm.required,
@@ -277,7 +275,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           method: 'PATCH',
           body: JSON.stringify({
             name: criterionForm.name.trim(),
-            description: criterionForm.description.trim() || null,
             maxPoints,
             responseType: criterionForm.responseType,
             required: criterionForm.required,
@@ -290,7 +287,6 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           method: 'POST',
           body: JSON.stringify({
             name: criterionForm.name.trim(),
-            description: criterionForm.description.trim() || null,
             maxPoints,
             responseType: criterionForm.responseType,
             required: criterionForm.required,
@@ -322,7 +318,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           });
       setCriteria((current) => current.map((item) => item.id === updated.id ? updated : item));
       if (developmentMode) dispatch({ type: 'UPDATE_CRITERION', criterion: updated });
-      setSuccess('Criterion "' + criterion.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
+      setSuccess('Criterion "' + criterion.name + '" is now ' + (updated.active ? 'enabled' : 'disabled') + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the criterion.');
     }
@@ -464,7 +460,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
           });
       setGroups((current) => current.map((item) => item.id === updated.id ? updated : item));
       if (developmentMode) dispatch({ type: 'UPDATE_CRITERION_GROUP', group: updated });
-      setSuccess('Criteria group "' + group.name + '" is now ' + (updated.active ? 'active' : 'inactive') + '.');
+      setSuccess('Criteria group "' + group.name + '" is now ' + (updated.active ? 'enabled' : 'disabled') + '.');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update the criteria group.');
     }
@@ -514,14 +510,8 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               </FormField>
 
               <FormField label="Maximum points" hint="Every criterion receives points during the interview.">
-                <input type="number" min="1" max="100" className="field-input" value={criterionForm.maxPoints} onChange={(event) => setCriterionForm({ ...criterionForm, maxPoints: event.target.value })} />
+                <input type="number" min="0" max="100" className="field-input" value={criterionForm.maxPoints} onChange={(event) => setCriterionForm({ ...criterionForm, maxPoints: event.target.value })} />
               </FormField>
-
-              <div className="md:col-span-2">
-                <FormField label="Description">
-                  <textarea className="field-input min-h-20 resize-y" value={criterionForm.description} onChange={(event) => setCriterionForm({ ...criterionForm, description: event.target.value })} placeholder="What should the interviewer assess?" />
-                </FormField>
-              </div>
 
               {(criterionForm.responseType === 'MULTI_SELECT' || criterionForm.responseType === 'SINGLE_SELECT') && (
                 <div className="md:col-span-2">
@@ -699,13 +689,39 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p>
                               <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
                             </div>
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => openViewGroup(group)}>View</Button>
-                              {canManage && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit</Button>}
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openViewGroup(group)}
+                                title="View criteria group"
+                                aria-label={'View criteria group ' + group.name}
+                                className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                              >
+                                <Icon name="eye" size={16} />
+                              </button>
                               {canManage && (
-                                <Button size="sm" variant={group.active ? 'danger' : 'secondary'} onClick={() => void toggleGroup(group)}>
-                                  {group.active ? 'Deactivate' : 'Activate'}
-                                </Button>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditGroup(group)}
+                                  title="Edit criteria group"
+                                  aria-label={'Edit criteria group ' + group.name}
+                                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                                >
+                                  <Icon name="pencil" size={16} />
+                                </button>
+                              )}
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  onClick={() => void toggleGroup(group)}
+                                  title={group.active ? 'Disable criteria group' : 'Enable criteria group'}
+                                  aria-label={(group.active ? 'Disable' : 'Enable') + ' criteria group ' + group.name}
+                                  className={'grid size-9 place-items-center rounded-xl border transition ' + (group.active
+                                    ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
+                                    : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
+                                >
+                                  <Icon name={group.active ? 'lock' : 'check'} size={16} />
+                                </button>
                               )}
                             </div>
                           </div>
@@ -735,7 +751,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview library</p>
                   <h2 className="text-lg font-black text-slate-950">Criteria</h2>
-                  <p className="mt-1 text-xs text-slate-500">Deactivate individual criteria instead of deleting them so older scorecards remain readable.</p>
+                  <p className="mt-1 text-xs text-slate-500">Disable individual criteria instead of deleting them so older scorecards remain readable.</p>
                 </div>
                 <p className="text-xs text-slate-400">{criteria.length} criterion/criteria</p>
               </div>
@@ -758,13 +774,41 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                             <p className="text-sm font-black text-slate-900">{criterion.maxPoints} pts</p>
                             <p className="mt-0.5 text-[9px] font-bold text-slate-400">{criterion.responseType === 'MULTI_SELECT' ? 'Multiple tag option' : 'Standard answer'}</p>
                           </div>
-                          <Button size="sm" variant="ghost" onClick={() => openViewCriterion(criterion)}>View</Button>
-                          {canManage && <Button size="sm" variant="secondary" onClick={() => openEditCriterion(criterion)}>Edit</Button>}
-                          {canManage && (
-                            <Button size="sm" variant={criterion.active ? 'danger' : 'secondary'} onClick={() => void toggleCriterion(criterion)}>
-                              {criterion.active ? 'Deactivate' : 'Activate'}
-                            </Button>
-                          )}
+                          <div className="ml-auto flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openViewCriterion(criterion)}
+                              title="View criterion"
+                              aria-label={'View criterion ' + criterion.name}
+                              className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                            >
+                              <Icon name="eye" size={16} />
+                            </button>
+                            {canManage && (
+                              <button
+                                type="button"
+                                onClick={() => openEditCriterion(criterion)}
+                                title="Edit criterion"
+                                aria-label={'Edit criterion ' + criterion.name}
+                                className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                              >
+                                <Icon name="pencil" size={16} />
+                              </button>
+                            )}
+                            {canManage && (
+                              <button
+                                type="button"
+                                onClick={() => void toggleCriterion(criterion)}
+                                title={criterion.active ? 'Disable criterion' : 'Enable criterion'}
+                                aria-label={(criterion.active ? 'Disable' : 'Enable') + ' criterion ' + criterion.name}
+                                className={'grid size-9 place-items-center rounded-xl border transition ' + (criterion.active
+                                  ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
+                                  : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
+                              >
+                                <Icon name={criterion.active ? 'lock' : 'check'} size={16} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </Card>
