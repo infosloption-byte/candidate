@@ -24,6 +24,7 @@ const emails = {
 
 let app: Awaited<ReturnType<typeof buildApp>> | null = null;
 let prisma: ReturnType<typeof getPrisma> | null = null;
+let companyId = '';
 let agencyAId = '';
 let agencyBId = '';
 let adminId = '';
@@ -71,18 +72,20 @@ before(async () => {
   const passwordHash = await hashPassword(password);
 
   const setup = await prisma.$transaction(async (tx) => {
-    const agencyA = await tx.agency.create({ data: { name: 'QA Agency A ' + suffix, slug: 'qa-agency-a-' + suffix } });
-    const agencyB = await tx.agency.create({ data: { name: 'QA Agency B ' + suffix, slug: 'qa-agency-b-' + suffix } });
+    const company = await tx.company.create({ data: { name: 'QA Company ' + suffix, slug: 'qa-company-' + suffix } });
+    const agencyA = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency A ' + suffix, slug: 'qa-agency-a-' + suffix } });
+    const agencyB = await tx.agency.create({ data: { companyId: company.id, name: 'QA Agency B ' + suffix, slug: 'qa-agency-b-' + suffix } });
 
     const admin = await tx.user.create({ data: { name: 'QA Admin', email: emails.admin, passwordHash, role: 'ADMIN' } });
-    const agencyAUser = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Agency A', email: emails.agencyA, passwordHash, role: 'AGENCY' } });
-    const agencyBUser = await tx.user.create({ data: { agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
-    const interviewer = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
-    const interviewerB = await tx.user.create({ data: { agencyId: agencyA.id, name: 'QA Interviewer B', email: emails.interviewerB, passwordHash, role: 'INTERVIEWER' } });
+    const agencyAUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Agency A', email: emails.agencyA, passwordHash, role: 'AGENCY' } });
+    const agencyBUser = await tx.user.create({ data: { companyId: company.id, agencyId: agencyB.id, name: 'QA Agency B', email: emails.agencyB, passwordHash, role: 'AGENCY' } });
+    const interviewer = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer', email: emails.interviewer, passwordHash, role: 'INTERVIEWER' } });
+    const interviewerB = await tx.user.create({ data: { companyId: company.id, agencyId: agencyA.id, name: 'QA Interviewer B', email: emails.interviewerB, passwordHash, role: 'INTERVIEWER' } });
     const globalInterviewer = await tx.user.create({ data: { agencyId: null, name: 'QA Global Interviewer', email: emails.globalInterviewer, passwordHash, role: 'INTERVIEWER' } });
 
     const candidate = await tx.candidate.create({
       data: {
+        companyId: company.id,
         agencyId: agencyA.id,
         reference: 'QA-' + suffix,
         agencyRegisterNo: 'AGR-' + suffix,
@@ -103,6 +106,7 @@ before(async () => {
 
     const candidateUser = await tx.user.create({
       data: {
+        companyId: company.id,
         candidateId: candidate.id,
         name: 'QA Candidate',
         email: emails.interviewee,
@@ -112,21 +116,22 @@ before(async () => {
     });
 
     const jobA = await tx.job.create({
-      data: { agencyId: agencyA.id, title: 'QA Mason A', description: 'Agency A position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { companyId: company.id, agencyId: agencyA.id, title: 'QA Mason A', description: 'Agency A position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
     const jobB = await tx.job.create({
-      data: { agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
+      data: { companyId: company.id, agencyId: agencyB.id, title: 'QA Mason B', description: 'Agency B position', openings: 2, status: 'PUBLISHED', publishedAt: new Date() },
     });
 
     const criterionA = await tx.interviewCriterion.create({
-      data: { name: 'Technical skill', description: 'Technical ability', maxPoints: 10, active: true },
+      data: { companyId: company.id, name: 'Technical skill', description: 'Technical ability', maxPoints: 10, active: true },
     });
     const criterionB = await tx.interviewCriterion.create({
-      data: { name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
+      data: { companyId: company.id, name: 'Communication', description: 'Communication and teamwork', maxPoints: 5, active: true },
     });
 
     const criterionGroup = await tx.interviewCriterionGroup.create({
       data: {
+        companyId: company.id,
         name: 'QA Technical Group',
         category: 'Masonry',
         description: 'Technical interview QA scorecard.',
@@ -139,9 +144,10 @@ before(async () => {
       },
     });
 
-    return { agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, globalInterviewer, candidateUser, candidate, jobA, jobB, criterionA, criterionB, criterionGroup };
+    return { company, agencyA, agencyB, admin, agencyAUser, agencyBUser, interviewer, interviewerB, globalInterviewer, candidateUser, candidate, jobA, jobB, criterionA, criterionB, criterionGroup };
   });
 
+  companyId = setup.company.id;
   agencyAId = setup.agencyA.id;
   agencyBId = setup.agencyB.id;
   adminId = setup.admin.id;
@@ -170,6 +176,7 @@ after(async () => {
       where: { id: { in: [adminId, agencyAUserId, agencyBUserId, interviewerId, interviewerBId, globalInterviewerId, candidateUserId] } },
     });
     await prisma.agency.deleteMany({ where: { id: { in: [agencyAId, agencyBId] } } });
+    await prisma.company.deleteMany({ where: { id: companyId } });
   } finally {
     if (app) {
       await app.close();
@@ -516,6 +523,7 @@ dbTest('global interviewer can be assigned to an agency interview and sees the a
 
   const candidate = await prisma.candidate.create({
     data: {
+      companyId,
       agencyId: agencyAId,
       reference: 'GLOBAL-I-' + suffix,
       agencyRegisterNo: 'GLOBAL-I-' + suffix,
@@ -569,6 +577,7 @@ dbTest('multiple interviewers can independently save and submit one shared inter
   const agencyCookie = await login(emails.agencyA);
   const panelCandidate = await prisma!.candidate.create({
     data: {
+      companyId,
       agencyId: agencyAId,
       reference: 'PANEL-I-' + suffix,
       agencyRegisterNo: 'PANEL-I-' + suffix,
@@ -731,6 +740,7 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
   const agencyCookie = await login(emails.agencyA);
   const candidateOne = await prisma!.candidate.create({
     data: {
+      companyId,
       agencyId: agencyAId,
       reference: 'BULK-I-' + suffix + '-1',
       agencyRegisterNo: 'BULK-I-' + suffix + '-1',
@@ -748,6 +758,7 @@ dbTest('bulk interview scheduling creates consecutive interview slots for select
   });
   const candidateTwo = await prisma!.candidate.create({
     data: {
+      companyId,
       agencyId: agencyAId,
       reference: 'BULK-I-' + suffix + '-2',
       agencyRegisterNo: 'BULK-I-' + suffix + '-2',
