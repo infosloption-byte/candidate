@@ -175,7 +175,7 @@ export const LoginPage = () => {
                   ['04', 'Selection', 'Decision with a reason', false],
                   ['05', 'Deployment', 'Documents and next handoff', false],
                 ].map(([number, title, text, active]) => (
-                  <div key={number} className={'bh-auth-pipeline-item' + (active ? ' active' : '')}>
+                  <div key={String(number)} className={'bh-auth-pipeline-item' + (active ? ' active' : '')}>
                     <span className="bh-auth-pipeline-num">{number}</span>
                     <div>
                       <strong>{title}</strong>
