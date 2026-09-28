@@ -18,7 +18,7 @@ export interface AuthUser {
   candidateId: string | null;
   name: string;
   email: string;
-  role: 'ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
+  role: 'COMPANY' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
   active: boolean;
 }
 
@@ -125,14 +125,14 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
 
   const agencyStatus = session.user.agency?.status
     ?? session.user.candidate?.agency.status
-    ?? (session.user.role === 'ADMIN' ? 'ACTIVE' : null);
+    ?? (session.user.role === 'COMPANY' ? 'ACTIVE' : null);
 
   const globalInterviewer = session.user.role === 'INTERVIEWER' && session.user.agencyId === null;
 
   if (
     session.expiresAt.getTime() <= Date.now()
     || !session.user.active
-    || (!globalInterviewer && session.user.role !== 'ADMIN' && agencyStatus !== 'ACTIVE')
+    || (!globalInterviewer && session.user.role !== 'COMPANY' && agencyStatus !== 'ACTIVE')
   ) {
     await getPrisma().session.deleteMany({ where: { id: session.id } });
     return null;
@@ -174,7 +174,28 @@ export const requireRole = (...roles: AuthUser['role'][]): preHandlerHookHandler
 export const requireAgencyAccess = (paramName = 'agencyId'): preHandlerHookHandler => async (request, reply) => {
   const agencyId = (request.params as Record<string, string>)[paramName];
 
-  if (!request.authUser || (request.authUser.role !== 'ADMIN' && request.authUser.agencyId !== agencyId)) {
+  if (!request.authUser) {
+    return reply.code(403).send({
+      success: false,
+      error: { code: 'AGENCY_ACCESS_DENIED', message: 'You do not have access to this agency.' },
+    });
+  }
+
+  if (request.authUser.role === 'COMPANY') {
+    const agency = await getPrisma().agency.findUnique({
+      where: { id: agencyId },
+      select: { companyId: true },
+    });
+    if (!agency || agency.companyId !== request.authUser.companyId) {
+      return reply.code(403).send({
+        success: false,
+        error: { code: 'AGENCY_ACCESS_DENIED', message: 'You do not have access to this agency.' },
+      });
+    }
+    return;
+  }
+
+  if (request.authUser.agencyId !== agencyId) {
     return reply.code(403).send({
       success: false,
       error: { code: 'AGENCY_ACCESS_DENIED', message: 'You do not have access to this agency.' },
