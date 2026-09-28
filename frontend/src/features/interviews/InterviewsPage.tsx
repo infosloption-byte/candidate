@@ -1708,12 +1708,10 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                         </div>
                       </div>
 
-                      {job && (
-                        <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Company')}</span>
-                          <span className="min-w-0 text-sm font-bold text-slate-800">{user?.companyName ?? 'Not specified'}</span>
-                        </div>
-                      )}
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Company')}</span>
+                        <span className="min-w-0 text-sm font-bold text-slate-800">{user?.companyName ?? 'Not specified'}</span>
+                      </div>
                     </div>
                   </div>
 
