@@ -344,7 +344,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
   const [agencies, setAgencies] = useState<Agency[]>(developmentMode ? state.agencies : []);
   const [jobs, setJobs] = useState<Job[]>(developmentMode ? state.jobs : []);
-  const [agencyId, setAgencyId] = useState(user?.role === 'COMPANY' ? '' : (user?.agencyId ?? 'agency-1'));
+  const [agencyId, setAgencyId] = useState(user?.role === 'COMPANY_ADMIN' ? '' : (user?.agencyId ?? 'agency-1'));
   const [jobId, setJobId] = useState(initialJobId ?? '');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -392,12 +392,12 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
     let cancelled = false;
     Promise.all([
       apiFetch<Job[]>('/jobs'),
-      role === 'COMPANY' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
+      role === 'COMPANY_ADMIN' ? apiFetch<Agency[]>('/agencies') : Promise.resolve([] as Agency[]),
     ])
       .then(([jobResult, agencyResult]) => {
         if (cancelled) return;
         setJobs(jobResult);
-        if (role === 'COMPANY') setAgencies(agencyResult);
+        if (role === 'COMPANY_ADMIN') setAgencies(agencyResult);
       })
       .catch((requestError: unknown) => { if (!cancelled) setError(requestError instanceof Error ? requestError.message : 'Unable to load candidate setup.'); });
     return () => { cancelled = true; };
@@ -655,7 +655,7 @@ const filterOptions = useMemo(() => ({
       const matchesStatus = !statusFilter || item.status === statusFilter;
       const matchesProfession = !professionFilter || item.requestedProfession === professionFilter;
       const matchesPassport = passportMatches(item);
-      const matchesAgency = role !== 'COMPANY' || item.agencyId === agencyId || !agencyId;
+      const matchesAgency = role !== 'COMPANY_ADMIN' || item.agencyId === agencyId || !agencyId;
       const matchesQuery = !query || [
         item.name,
         item.firstName,
@@ -703,7 +703,7 @@ const filterOptions = useMemo(() => ({
       setError('Agency register number, first name, last name, birth date, passport details, and requested profession are required.');
       return;
     }
-    if (role === 'COMPANY' && !agencyId) {
+    if (role === 'COMPANY_ADMIN' && !agencyId) {
       setError('Select an agency workspace.');
       return;
     }
@@ -907,7 +907,7 @@ const filterOptions = useMemo(() => ({
   };
 
   const openImportModal = () => {
-    setImportAgencyId(role === 'COMPANY' ? '' : agencyId);
+    setImportAgencyId(role === 'COMPANY_ADMIN' ? '' : agencyId);
     setImportFile(null);
     setShowImportModal(true);
     setError('');
@@ -982,7 +982,7 @@ const filterOptions = useMemo(() => ({
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'COMPANY' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Candidate profile' : 'Candidate pool'}
+        eyebrow={role === 'COMPANY_ADMIN' ? 'All agency workspaces' : role === 'INTERVIEWEE' ? 'Candidate profile' : 'Candidate pool'}
         title={role === 'INTERVIEWEE' ? 'My Profile' : 'Candidates'}
         description={role === 'INTERVIEWEE' ? 'Maintain your candidate profile and documents.' : 'Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.'}
         action={role !== 'INTERVIEWEE' ? (
@@ -1021,7 +1021,7 @@ const filterOptions = useMemo(() => ({
             <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
             <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
             <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
-            {role === 'COMPANY' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
+            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
             <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
           </div>
 <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
@@ -1078,17 +1078,17 @@ const filterOptions = useMemo(() => ({
 
               <div>
                 <label className="field-label">Agency</label>
-                <select className="field-input mt-1 w-full" value={importAgencyId} onChange={(event) => setImportAgencyId(event.target.value)} disabled={role !== 'COMPANY'}>
+                <select className="field-input mt-1 w-full" value={importAgencyId} onChange={(event) => setImportAgencyId(event.target.value)} disabled={role !== 'COMPANY_ADMIN'}>
                   <option value="">Select an agency</option>
                   {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => (
                     <option key={agency.id} value={agency.id}>{agency.name}</option>
                   ))}
-                  {role !== 'COMPANY' && agencyId && !agencies.some((item) => item.id === agencyId) && (
+                  {role !== 'COMPANY_ADMIN' && agencyId && !agencies.some((item) => item.id === agencyId) && (
                     <option value={agencyId}>Current agency</option>
                   )}
                 </select>
-                {role !== 'COMPANY' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
-                {role === 'COMPANY' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
+                {role !== 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
+                {role === 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
               </div>
 
               <div>
@@ -1188,7 +1188,7 @@ const filterOptions = useMemo(() => ({
                 </svg>
               </button>
 
-              {role === 'COMPANY' && (
+              {role === 'COMPANY_ADMIN' && (
                 <div id="mobile-candidate-filters" className={mobileFiltersOpen ? 'min-w-0' : 'hidden min-w-0 md:block'}>
                   <label className="field-label">Agency</label>
                   <SelectMenu
