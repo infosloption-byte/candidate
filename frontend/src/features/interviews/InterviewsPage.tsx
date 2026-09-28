@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
@@ -191,6 +192,7 @@ const buildCriterionAssignments = (
 
 export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props) => {
   const { user, developmentMode } = useAuth();
+  const { t } = useLanguage();
   const { state, dispatch } = useRecruitment();
   const [interviews, setInterviews] = useState<InterviewRecord[]>(developmentMode ? state.interviews : []);
   const [candidates, setCandidates] = useState<Candidate[]>(developmentMode ? state.candidates : []);
@@ -1221,9 +1223,9 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   return (
     <section className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <SectionHeading
-        eyebrow={role === 'COMPANY_ADMIN' ? 'All agency operations' : role === 'INTERVIEWER' ? 'Interview desk' : role === 'INTERVIEWEE' ? 'Candidate portal' : 'Recruitment operations'}
+        eyebrow={role === 'COMPANY_ADMIN' ? t('Interview management') : role === 'INTERVIEWER' ? t('Interview desk') : role === 'INTERVIEWEE' ? t('Candidate portal') : t('Recruitment operations')}
         title={role === 'INTERVIEWER' ? 'My Interviews' : role === 'INTERVIEWEE' ? 'My Interviews' : 'Interviews'}
-        description={role === 'INTERVIEWER' ? 'Complete the assigned interview criteria and submit your scorecard.' : role === 'INTERVIEWEE' ? 'Review your assigned interview schedule.' : 'Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.'}
+        description={role === 'INTERVIEWER' ? t('Complete the assigned interview criteria and submit your scorecard.') : role === 'INTERVIEWEE' ? t('Review your assigned interview schedule.') : t('Assign candidates directly from the candidate pool, schedule interview panels, score criteria, and complete the final candidate status.')}
         action={role === 'COMPANY_ADMIN' ? <Button onClick={openScheduleForm}>Create interview</Button> : undefined}
       />
 
@@ -1642,7 +1644,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                 <div className="p-3.5 sm:p-4">
                   <header className="flex items-center justify-between gap-2.5 border-b border-slate-100 pb-2.5">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Interview code</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">{t('Interview code')}</p>
                       <p className="mt-0.5 truncate font-mono text-[11px] font-black text-slate-900">{interviewCode}</p>
                     </div>
                     <StatusPill value={interview.status} />
@@ -1661,12 +1663,17 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       </div>
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Birthdate</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Birthdate')}</span>
                         <span className="min-w-0 text-sm font-bold text-slate-800">{formatDateOnly(candidate?.birthdate)}</span>
                       </div>
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Age</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Agency code')}</span>
+                        <span className="min-w-0 break-all text-sm font-bold text-slate-800">{candidate?.agency?.slug ?? 'Not specified'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Age')}</span>
                         <span className="text-sm font-extrabold text-cyan-700">{age ? `${age.years} years ${age.months} months` : 'Not available'}</span>
                       </div>
 
@@ -1684,7 +1691,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       </div>
 
                       <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Venue / location</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Venue / location')}</span>
                         <span className="min-w-0 break-words text-sm font-bold text-slate-800">{interview.location ?? 'Not specified'}</span>
                       </div>
 
@@ -1703,8 +1710,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
                       {job && (
                         <div className="grid grid-cols-[minmax(110px,0.8fr)_minmax(0,2fr)] items-center gap-2 px-3 py-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Position</span>
-                          <span className="min-w-0 text-sm font-bold text-slate-800">{job.title}</span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{t('Company')}</span>
+                          <span className="min-w-0 text-sm font-bold text-slate-800">{user?.companyName ?? 'Not specified'}</span>
                         </div>
                       )}
                     </div>
