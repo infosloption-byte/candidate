@@ -29,20 +29,27 @@ const upsertUser = async (
   name: string,
   role: 'ADMIN' | 'AGENCY' | 'INTERVIEWER',
   agencyId: string | null,
+  companyId: string | null,
 ) => {
   const passwordHash = await hashPassword(seedPassword);
   return prisma.user.upsert({
     where: { email },
-    update: { name, role, agencyId, active: true, passwordHash },
-    create: { email, name, role, agencyId, passwordHash },
+    update: { name, role, agencyId, companyId, active: true, passwordHash },
+    create: { email, name, role, agencyId, companyId, passwordHash },
   });
 };
 
 const main = async () => {
+  const company = await prisma.company.upsert({
+    where: { slug: 'buildhire-demo' },
+    update: { name: 'BuildHire Demo Company', status: 'ACTIVE' },
+    create: { name: 'BuildHire Demo Company', slug: 'buildhire-demo', status: 'ACTIVE' },
+  });
+
   const agency = await prisma.agency.upsert({
     where: { slug: 'demo-agency' },
-    update: { name: 'Demo Agency', status: 'ACTIVE' },
-    create: { name: 'Demo Agency', slug: 'demo-agency', status: 'ACTIVE' },
+    update: { companyId: company.id, name: 'Demo Agency', status: 'ACTIVE' },
+    create: { companyId: company.id, name: 'Demo Agency', slug: 'demo-agency', status: 'ACTIVE' },
   });
 
   const admin = await upsertUser(
@@ -50,18 +57,21 @@ const main = async () => {
     'BuildHire Admin',
     'ADMIN',
     null,
+    null,
   );
   const agencyUser = await upsertUser(
     process.env.BUILDHIRE_AGENCY_EMAIL ?? 'agency@buildhire.local',
     'Demo Agency User',
     'AGENCY',
     agency.id,
+    company.id,
   );
   const interviewer = await upsertUser(
     process.env.BUILDHIRE_INTERVIEWER_EMAIL ?? 'interviewer@buildhire.local',
     'Demo Interviewer',
     'INTERVIEWER',
     agency.id,
+    company.id,
   );
 
   const defaultCriteria = [
@@ -72,10 +82,10 @@ const main = async () => {
     { name: 'Sub Professions', description: 'Other professions or trades the candidate can perform.', maxPoints: 5, responseType: 'MULTI_SELECT' as const, required: true, options: null },
   ];
 
-  // Interview criteria are a global library (no agencyId since 20260920110000_global_interview_criteria_library).
+  // Interview criteria are company-scoped in the SaaS tenancy model.
   for (const criterion of defaultCriteria) {
     const existing = await prisma.interviewCriterion.findFirst({
-      where: { name: criterion.name },
+      where: { companyId: company.id, name: criterion.name },
       select: { id: true },
     });
 
@@ -87,6 +97,7 @@ const main = async () => {
     } else {
       await prisma.interviewCriterion.create({
         data: {
+          companyId: company.id,
           name: criterion.name,
           description: criterion.description,
           maxPoints: criterion.maxPoints,
@@ -99,7 +110,7 @@ const main = async () => {
     }
   }
 
-  console.log(`Seeded admin=${admin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
+  console.log(`Seeded company=${company.slug}, admin=${admin.email}, agency=${agencyUser.email}, interviewer=${interviewer.email}, agencyId=${agency.id}`);
 };
 
 main()
