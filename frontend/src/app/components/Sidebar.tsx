@@ -111,7 +111,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
         <div key={t(group.label)} className="mb-6 last:mb-0">
           {!collapsed && (
             <p className="px-2.5 pb-2.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-500">
-              {group.label}
+              {t(group.label)}
             </p>
           )}
           <div className="space-y-1">
