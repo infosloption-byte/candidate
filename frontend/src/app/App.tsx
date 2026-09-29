@@ -111,8 +111,17 @@ const AppContent = () => {
 
   if (loading) {
     return (
-      <main className="grid min-h-dvh place-items-center bg-slate-100 p-6">
-        <p className="text-sm font-semibold text-slate-500">Loading BuildHire…</p>
+      <main className="buildhire-loading min-h-dvh" aria-live="polite" aria-busy="true">
+        <div className="buildhire-loader">
+          <div className="buildhire-loader-mark" aria-hidden="true">
+            <span>B</span>
+          </div>
+          <div className="buildhire-loader-brand">BuildHire</div>
+          <div className="buildhire-loader-track" aria-hidden="true">
+            <span />
+          </div>
+          <p className="buildhire-loader-text">Loading BuildHire<span className="buildhire-loader-dots" aria-hidden="true">...</span></p>
+        </div>
       </main>
     );
   }
