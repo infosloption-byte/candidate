@@ -40,7 +40,7 @@ const ActionButton = ({ children, onClick, variant = 'primary' }: { children: Re
 const Eyebrow = ({ children }: { children: ReactNode }) => <p className="bh-eyebrow">{children}</p>;
 
 // Public subscription price. Change it here and the pricing section updates.
-const PLAN = { price: '$49', period: '/ month', trialDays: 7 };
+const PLAN = { price: '$29', period: '/ month', trialDays: 7 };
 
 const stages = [
   ['Intake', 'Capture the candidate once.'],
