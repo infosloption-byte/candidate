@@ -62,7 +62,7 @@ const routeForView = (view: AppView, jobId: string | null = null): string => {
 };
 
 const routeFromLocation = (pathname: string, search = ''): { view: AppView; jobId: string | null } => {
-  const normalizedPath = pathname.replace(/\\/+$/, '') || '/';
+  const normalizedPath = pathname.replace(/\/+$/, '') || '/';
   if (normalizedPath === '/app') return { view: 'dashboard', jobId: null };
 
   const segments = normalizedPath.split('/').filter(Boolean);
