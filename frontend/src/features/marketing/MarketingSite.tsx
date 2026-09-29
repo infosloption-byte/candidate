@@ -39,8 +39,47 @@ const ActionButton = ({ children, onClick, variant = 'primary' }: { children: Re
 
 const Eyebrow = ({ children }: { children: ReactNode }) => <p className="bh-eyebrow">{children}</p>;
 
-// Public subscription price. Change it here and the pricing section updates.
-const PLAN = { price: '$29', period: '/ month', trialDays: 7 };
+// Public subscription plans. Change them here and the pricing section + FAQ update.
+const TRIAL_DAYS = 7;
+const PRICE_PERIOD = '/ month';
+
+type Plan = { name: string; tagline: string; price: string; annual: string; features: string[]; extras: string; featured?: boolean };
+
+const PLANS: Plan[] = [
+  {
+    name: 'Starter',
+    tagline: 'For small agencies getting started.',
+    price: '$29',
+    annual: 'or $290 / year billed annually · save 17%',
+    features: ['Up to 2 recruiter seats', '5 active jobs', '40 interviews / month', '500 candidate records', 'Email support'],
+    extras: 'Extra seats $10 each · extra interviews $0.50 each',
+  },
+  {
+    name: 'Growth',
+    tagline: 'For growing agencies with a full hiring team.',
+    price: '$79',
+    annual: 'or $790 / year billed annually · save 17%',
+    features: ['Up to 8 recruiter seats', '25 active jobs', '200 interviews / month', '5,000 candidate records', 'Email support with faster response'],
+    extras: 'Extra seats $8 each · extra interviews $0.35 each',
+    featured: true,
+  },
+  {
+    name: 'Business',
+    tagline: 'For large and multi-branch agencies.',
+    price: '$179',
+    annual: 'or $1,790 / year billed annually · save 17%',
+    features: ['Up to 25 recruiter seats', '100 active jobs', '800 interviews / month', 'Unlimited candidate records', 'Priority support'],
+    extras: 'Extra seats $6 each · extra interviews $0.25 each',
+  },
+];
+
+const PLAN_INCLUDES = [
+  'Company workspace with role-based access',
+  'Candidate intake and bulk CSV import',
+  'Jobs, panel interviews and structured scoring',
+  'Decisions with reasons and a full audit trail',
+  'Passport, documents and deployment tracking',
+];
 
 const stages = [
   ['Intake', 'Capture the candidate once.'],
@@ -76,7 +115,7 @@ const faqs: [string, string][] = [
   ['How is recruitment data controlled?', 'The product is structured around company and agency workspaces, role-based access, explicit relationships and connected history.'],
   ['Does BuildHire work on mobile?', 'Yes. The recruitment surfaces are responsive for phones, tablets and desktops.'],
   ['How long does onboarding take?', 'There is no honest one-size-fits-all number. Setup depends on your template, roles, agencies and interview criteria.'],
-  ['How does the 7-day free trial work?', 'Create your company workspace and use every feature for 7 days. After the trial, the subscription is ' + PLAN.price + ' per month for your company workspace.'],
+  ['How does the 7-day free trial work?', 'Create your company workspace and use every feature for 7 days. After the trial, choose Starter (' + PLANS[0].price + '), Growth (' + PLANS[1].price + ') or Business (' + PLANS[2].price + ') per month for your company workspace.'],
   ['What support is available?', 'Start with a company workspace and map your candidate intake and interview process into BuildHire.'],
 ];
 
@@ -364,23 +403,32 @@ export const MarketingSite = () => {
           <div className="bh-container">
             <div className="bh-section-head bh-center bh-reveal">
               <Eyebrow>Pricing</Eyebrow>
-              <h2 id="pricing-title" className="bh-title">One plan. Everything included.</h2>
-              <p className="bh-lead">Try BuildHire free for {PLAN.trialDays} days. After that, one simple monthly price for your whole company workspace.</p>
+              <h2 id="pricing-title" className="bh-title">Simple plans that grow with your team.</h2>
+              <p className="bh-lead">Try BuildHire free for 7 days. After that, pick the plan that fits your recruiters and interview volume.</p>
             </div>
-            <article className="bh-plan bh-reveal">
-              <span className="bh-badge">{PLAN.trialDays}-day free trial</span>
-              <div className="bh-price"><strong>{PLAN.price}</strong><span>{PLAN.period}</span></div>
-              <p className="bh-plan-sub">per company workspace · billed monthly</p>
+            <div className="bh-plans">
+              {PLANS.map((plan) => (
+                <article key={plan.name} className={'bh-plan bh-reveal' + (plan.featured ? ' featured' : '')}>
+                  {plan.featured && <span className="bh-badge bh-plan-flag">Most popular</span>}
+                  <h3 className="bh-plan-name">{plan.name}</h3>
+                  <p className="bh-plan-sub">{plan.tagline}</p>
+                  <div className="bh-price"><strong>{plan.price}</strong><span>{PRICE_PERIOD}</span></div>
+                  <p className="bh-plan-annual">{plan.annual}</p>
+                  <ul>
+                    {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
+                  </ul>
+                  <ActionButton onClick={start} variant={plan.featured ? 'primary' : 'secondary'}>Start 7-day free trial <Arrow /></ActionButton>
+                  <p className="bh-plan-note">{plan.extras}</p>
+                </article>
+              ))}
+            </div>
+            <div className="bh-plan-includes bh-reveal">
+              <p className="bh-plan-includes-title">Every plan includes</p>
               <ul>
-                <li>Company workspace with role-based access</li>
-                <li>Candidate intake and bulk CSV import</li>
-                <li>Jobs, panel interviews and structured scoring</li>
-                <li>Decisions with reasons and a full audit trail</li>
-                <li>Passport, documents and deployment tracking</li>
+                {PLAN_INCLUDES.map((item) => <li key={item}>{item}</li>)}
               </ul>
-              <ActionButton onClick={start}>Start {PLAN.trialDays}-day free trial <Arrow /></ActionButton>
-              <p className="bh-plan-note">Then {PLAN.price}/month. Cancel anytime.</p>
-            </article>
+              <p className="bh-plan-note">All prices are per company workspace, in USD. Cancel anytime.</p>
+            </div>
           </div>
         </section>
 

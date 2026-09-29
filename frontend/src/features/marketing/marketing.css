@@ -209,6 +209,26 @@
 .bh-plan .bh-btn { width: 100%; }
 .bh-plan-note { margin: 12px 0 0; text-align: center; color: var(--bh-muted); font-size: 0.82rem; }
 
+/* Pricing tiers */
+.bh-plans { display: grid; gap: 28px; max-width: 480px; margin: 0 auto; }
+.bh-plans .bh-plan { max-width: none; margin: 0; padding: clamp(24px, 3vw, 32px); box-shadow: 6px 6px 0 var(--bh-line); display: flex; flex-direction: column; }
+.bh-plans .bh-plan.featured { box-shadow: 10px 10px 0 var(--bh-accent); }
+.bh-plan-flag { position: absolute; top: -14px; left: 24px; background: var(--bh-accent); color: #15171C; }
+.bh-plan-name { margin: 0; font: 800 1.25rem/1.2 var(--bh-font-display); letter-spacing: -0.02em; }
+.bh-plans .bh-plan-sub { min-height: 2.6em; }
+.bh-plans .bh-price { margin-top: 14px; }
+.bh-plans .bh-price strong { font-size: clamp(2.6rem, 5vw, 3.4rem); }
+.bh-plan-annual { margin: 6px 0 0; color: var(--bh-muted); font-size: 0.82rem; }
+.bh-plans .bh-plan ul { flex: 1; margin: 22px 0 24px; padding-top: 20px; }
+.bh-plan-includes { max-width: 720px; margin: 44px auto 0; text-align: center; }
+.bh-plan-includes-title { margin: 0 0 14px; font-weight: 700; }
+.bh-plan-includes ul { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; color: var(--bh-muted); font-size: 0.92rem; }
+.bh-plan-includes li::before { content: "✓ "; color: var(--bh-good); font-weight: 800; }
+@media (min-width: 960px) {
+  .bh-plans { grid-template-columns: repeat(3, 1fr); max-width: 1080px; align-items: stretch; }
+}
+html[dir="rtl"] .marketing-site .bh-plan-flag { left: auto; right: 24px; }
+
 /* FAQ */
 .bh-faq-grid { display: grid; gap: 36px; }
 .bh-faq-list { display: grid; gap: 10px; }
