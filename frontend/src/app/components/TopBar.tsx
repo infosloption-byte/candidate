@@ -135,7 +135,7 @@ export const TopBar = ({
           </div>
           <div className="mt-0.5 flex items-center gap-2">
             <h1 className="truncate text-[15px] font-extrabold tracking-[-0.01em] text-slate-950 sm:text-base">{t(titles[activeView])}</h1>
-            <span className="hidden rounded-full border border-cyan-100 bg-cyan-50 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-cyan-700 md:inline-flex">
+            <span className="hidden rounded-full border border-[#E8D77A] bg-[#FFF6C2] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[#6B5500] md:inline-flex">
               {t(roleLabels[role])}
             </span>
           </div>
@@ -171,7 +171,7 @@ export const TopBar = ({
           <div ref={notificationMenuRef} className="relative">
           <button type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label={unreadCount > 0 ? unreadCount + ' ' + t('unread notifications') : t('Notifications')} className="relative grid size-10 place-items-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">
             <Icon name="bell" size={18} />
-            {unreadCount > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-cyan-600 px-1 text-[9px] font-black leading-4 text-white shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            {unreadCount > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-[#15171C] px-1 text-[9px] font-black leading-4 text-white shadow-sm">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
           {notificationsOpen && (
             <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[350px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
@@ -186,7 +186,7 @@ export const TopBar = ({
                   <button key={notification.id} type="button" onClick={() => void markRead(notification)} className={`block w-full rounded-xl px-3 py-3 text-left transition hover:bg-slate-50 ${notification.readAt ? 'opacity-60' : ''}`}>
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-xs font-bold text-slate-900">{notification.title}</p>
-                      {!notification.readAt && <span className="mt-1 size-1.5 shrink-0 rounded-full bg-cyan-600" />}
+                      {!notification.readAt && <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#15171C]" />}
                     </div>
                     <p className="mt-1 text-[11px] leading-5 text-slate-500">{notification.message}</p>
                     <p className="mt-1 text-[10px] text-slate-400">{new Date(notification.createdAt).toLocaleString()}</p>

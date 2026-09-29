@@ -11,7 +11,7 @@ interface StateMessageProps {
 }
 
 const config: Record<StateMessageKind, { icon: 'clock' | 'file' | 'alert' | 'check'; className: string }> = {
-  loading: { icon: 'clock', className: 'border-cyan-100 bg-cyan-50 text-cyan-800' },
+  loading: { icon: 'clock', className: 'border-[#E8D77A] bg-[#FFF6C2] text-[#6B5500]' },
   empty: { icon: 'file', className: 'border-slate-200 bg-slate-50 text-slate-700' },
   error: { icon: 'alert', className: 'border-rose-200 bg-rose-50 text-rose-800' },
   success: { icon: 'check', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },

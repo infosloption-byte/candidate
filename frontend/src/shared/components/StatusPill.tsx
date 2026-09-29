@@ -35,9 +35,9 @@ const toneClasses: Record<string, string> = {
   SCREENING: 'border-amber-200 bg-amber-50 text-amber-800',
   DRAFT: 'border-slate-200 bg-slate-50 text-slate-600',
   NOT_STARTED: 'border-slate-200 bg-slate-50 text-slate-600',
-  SCHEDULED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
-  INTERVIEW: 'border-cyan-200 bg-cyan-50 text-cyan-700',
-  APPLIED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+  SCHEDULED: 'border-[#E8D77A] bg-[#FFF6C2] text-[#6B5500]',
+  INTERVIEW: 'border-slate-200 bg-slate-50 text-slate-700',
+  APPLIED: 'border-slate-200 bg-slate-50 text-slate-700',
   SHORTLISTED: 'border-violet-200 bg-violet-50 text-violet-700',
   INACTIVE: 'border-slate-300 bg-slate-100 text-slate-500',
   CLOSED: 'border-slate-300 bg-slate-100 text-slate-600',
@@ -45,7 +45,7 @@ const toneClasses: Record<string, string> = {
   WITHDRAWN: 'border-rose-200 bg-rose-50 text-rose-700',
   CANCELLED: 'border-rose-200 bg-rose-50 text-rose-700',
   NO_SHOW: 'border-rose-200 bg-rose-50 text-rose-700',
-  SUBMITTED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+  SUBMITTED: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
 export const StatusPill = ({ value }: StatusPillProps) => {
