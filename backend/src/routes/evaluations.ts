@@ -484,6 +484,14 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const result = await getPrisma().$transaction(async (tx) => {
+        // Serialize concurrent submissions for the same interview. Without this lock, two panelists
+        // submitting together each count the other's row as still-draft (uncommitted), so nobody
+        // completes the interview and it stays IN_PROGRESS forever.
+        const locked = await tx.$queryRaw<Array<{ status: string }>>`SELECT status FROM Interview WHERE id = ${interview.id} FOR UPDATE`;
+        if (locked[0]?.status !== 'IN_PROGRESS') return { conflict: 'INTERVIEW_NOT_IN_PROGRESS' as const };
+        const current = await tx.interviewEvaluation.findUnique({ where: { id: existingEvaluation.id }, select: { status: true } });
+        if (current?.status === 'SUBMITTED') return { conflict: 'EVALUATION_ALREADY_SUBMITTED' as const };
+
         const evaluation = await tx.interviewEvaluation.update({
           where: { id: existingEvaluation.id },
           data: { status: 'SUBMITTED', submittedAt: new Date() },
@@ -499,7 +507,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         });
 
         let interviewCompleted = false;
-        if (submissions.length === interview.panel.length) {
+        if (submissions.length >= interview.panel.length) {
           interviewCompleted = true;
           await tx.interview.update({
             where: { id: interview.id },
@@ -536,6 +544,15 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
         return { evaluation, submissions, interviewCompleted };
       });
+
+      if ('conflict' in result) {
+        return reply.code(409).send({
+          success: false,
+          error: result.conflict === 'EVALUATION_ALREADY_SUBMITTED'
+            ? { code: 'EVALUATION_ALREADY_SUBMITTED', message: 'You have already submitted this interview scorecard.' }
+            : { code: 'INTERVIEW_NOT_IN_PROGRESS', message: 'The interview is not currently in progress.' },
+        });
+      }
 
       const summary = toSummary(result.submissions, assignments, interview.panel.length);
 
