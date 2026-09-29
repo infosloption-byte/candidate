@@ -88,7 +88,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
   return (
   <aside className="flex h-full w-full flex-col bg-slate-950 text-white" aria-label={t('Primary navigation')}>
     <div className={`relative flex min-h-[72px] items-center border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
-      <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-400 font-black text-[15px] text-slate-950 shadow-lg shadow-cyan-950/20">B</div>
+      <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#FFD60A] font-black text-[15px] text-[#15171C] shadow-lg shadow-black/20">B</div>
       {!collapsed && (
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-extrabold tracking-tight">BuildHire</p>
@@ -128,7 +128,7 @@ export const Sidebar = ({ role, activeView, onNavigate, collapsed, onToggleColla
                     'group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition',
                     collapsed ? 'justify-center' : '',
                     active
-                      ? 'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/20'
+                      ? 'bg-[#FFD60A] text-[#15171C] shadow-lg shadow-black/20'
                       : 'text-slate-300 hover:bg-white/[0.06] hover:text-white',
                   ].join(' ')}
                 >
