@@ -88,7 +88,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [mobileTab, setMobileTab] = useState<'groups' | 'criteria'>('groups');
+  const [activeTab, setActiveTab] = useState<'groups' | 'criteria'>('groups');
 
   useEffect(() => {
     if (developmentMode) {
@@ -617,31 +617,29 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
 
       {!loading && (
         <>
-          <div className="md:hidden">
-            <div role="tablist" aria-label="Interview criteria sections" className="grid grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileTab === 'groups'}
-                onClick={() => setMobileTab('groups')}
-                className={`rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${mobileTab === 'groups' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}
-              >
-                Groups <span className="ml-1 text-[10px] opacity-60">{groups.length}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileTab === 'criteria'}
-                onClick={() => setMobileTab('criteria')}
-                className={`rounded-xl px-3 py-2.5 text-xs font-extrabold transition ${mobileTab === 'criteria' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}
-              >
-                Criteria <span className="ml-1 text-[10px] opacity-60">{criteria.length}</span>
-              </button>
-            </div>
+          <div role="tablist" aria-label="Interview criteria sections" className="grid w-full max-w-xl grid-cols-2 rounded-2xl border border-slate-200 bg-slate-100 p-1 shadow-sm">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'groups'}
+              onClick={() => setActiveTab('groups')}
+              className={`rounded-xl px-4 py-3 text-xs font-extrabold transition sm:text-sm ${activeTab === 'groups' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Criteria Groups <span className="ml-1 text-[10px] opacity-60">{groups.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'criteria'}
+              onClick={() => setActiveTab('criteria')}
+              className={`rounded-xl px-4 py-3 text-xs font-extrabold transition sm:text-sm ${activeTab === 'criteria' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Criteria <span className="ml-1 text-[10px] opacity-60">{criteria.length}</span>
+            </button>
           </div>
 
-          <div className="space-y-8">
-            <section className={mobileTab === 'groups' ? 'block' : 'hidden md:block'}>
+          <div className="space-y-5">
+            <section className={activeTab === 'groups' ? 'block' : 'hidden'}>
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Reusable scorecards</p>
@@ -710,7 +708,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
               )}
             </section>
 
-            <section className={mobileTab === 'criteria' ? 'block' : 'hidden md:block'}>
+            <section className={activeTab === 'criteria' ? 'block' : 'hidden'}>
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Interview library</p>
