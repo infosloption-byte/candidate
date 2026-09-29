@@ -49,6 +49,61 @@ select.field-input option { color: #15171c; background: #fff; }
 }
 
 
+
+/* BuildHire authenticated application theme.
+   Marketing uses the same brand tokens: near-black, warm neutrals and safety yellow.
+   These overrides are scoped so the public marketing site remains independently styled. */
+.buildhire-app {
+  --buildhire-bg: #FBFAF6;
+  --buildhire-bg-2: #F3F1E9;
+  --buildhire-card: #FFFFFF;
+  --buildhire-ink: #15171C;
+  --buildhire-muted: #5B616C;
+  --buildhire-line: #E4E1D6;
+  --buildhire-accent: #FFD60A;
+  --buildhire-accent-soft: #FFF6C2;
+  --buildhire-accent-ink: #15171C;
+  color: var(--buildhire-ink);
+  background: var(--buildhire-bg);
+}
+
+/* Warm the existing neutral Tailwind surfaces without rewriting every feature component. */
+.buildhire-app [class~="bg-slate-100"] { background-color: var(--buildhire-bg-2); }
+.buildhire-app [class~="bg-slate-50"] { background-color: #F7F5EE; }
+.buildhire-app [class~="border-slate-200"] { border-color: var(--buildhire-line); }
+.buildhire-app [class~="border-slate-100"] { border-color: #EEEAE0; }
+.buildhire-app [class~="border-slate-300"] { border-color: #D5D1C6; }
+.buildhire-app [class~="text-slate-950"] { color: var(--buildhire-ink); }
+.buildhire-app [class~="text-slate-900"] { color: #1E2025; }
+.buildhire-app [class~="text-slate-700"] { color: #3F4248; }
+.buildhire-app [class~="text-slate-600"] { color: var(--buildhire-muted); }
+.buildhire-app [class~="text-slate-500"] { color: #666B73; }
+.buildhire-app [class~="text-slate-400"] { color: #7A7F87; }
+.buildhire-app [class~="bg-white"] { background-color: var(--buildhire-card); }
+
+.buildhire-app [class~="hover:bg-slate-50"]:hover { background-color: #F7F5EE; }
+.buildhire-app [class~="hover:bg-slate-100"]:hover { background-color: var(--buildhire-bg-2); }
+.buildhire-app [class~="hover:border-slate-300"]:hover { border-color: #D5D1C6; }
+
+/* Replace cyan's old product-brand role with BuildHire safety yellow and warm gold. */
+.buildhire-app [class~="bg-cyan-400"] { background-color: var(--buildhire-accent); }
+.buildhire-app [class~="bg-cyan-600"] { background-color: var(--buildhire-ink); }
+.buildhire-app [class~="bg-cyan-50"] { background-color: var(--buildhire-accent-soft); }
+.buildhire-app [class~="bg-cyan-50\/50"] { background-color: rgba(255, 246, 194, 0.55); }
+.buildhire-app [class~="text-cyan-600"] { color: #6B5500; }
+.buildhire-app [class~="text-cyan-700"] { color: #6B5500; }
+.buildhire-app [class~="text-cyan-800"] { color: #584600; }
+.buildhire-app [class~="border-cyan-100"] { border-color: #E8D77A; }
+.buildhire-app [class~="border-cyan-200"] { border-color: #E0CA52; }
+.buildhire-app [class~="hover:bg-cyan-50"]:hover { background-color: var(--buildhire-accent-soft); }
+.buildhire-app [class~="hover:bg-cyan-600"]:hover { background-color: #FFE03D; }
+.buildhire-app [class~="focus\\:border-cyan-500"]:focus { border-color: #C9A900; }
+.buildhire-app [class~="focus\\:ring-cyan-100"]:focus { --tw-ring-color: rgba(255, 214, 10, 0.32); }
+
+.buildhire-app [class~="shadow-cyan-950/20"] {
+  box-shadow: 0 14px 28px -18px rgba(21, 23, 28, 0.6);
+}
+
 /* BuildHire internationalization and Hebrew RTL support */
 html[dir="rtl"] {
   direction: rtl;
