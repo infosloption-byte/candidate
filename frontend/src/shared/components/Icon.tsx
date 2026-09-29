@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from 'react';
 
-export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders' | 'refresh' | 'eye' | 'pencil' | 'send' | 'lock' | 'upload' | 'trash';
+export type IconName = 'menu' | 'chevron-left' | 'chevron-right' | 'grid' | 'users' | 'calendar' | 'briefcase' | 'target' | 'chart' | 'settings' | 'search' | 'plus' | 'bell' | 'x' | 'arrow-left' | 'arrow-right' | 'check' | 'clock' | 'alert' | 'more' | 'phone' | 'map-pin' | 'car' | 'file' | 'sparkles' | 'download' | 'sliders' | 'refresh' | 'eye' | 'pencil' | 'send' | 'lock' | 'upload' | 'trash' | 'ban' | 'log-in' | 'user' | 'clipboard-check' | 'arrow-up' | 'arrow-down' | 'chevron-down' | 'chevron-up' | 'more-vertical' | 'filter-x' | 'play' | 'minus' | 'maximize' | 'restore';
 
 const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
@@ -37,6 +37,20 @@ const paths: Record<IconName, ReactNode> = {
   lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
   upload: <><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 14v5h14v-5"/></>,
   trash: <><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M7 7l1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></>,
+  ban: <><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></>,
+  'log-in': <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/></>,
+  user: <><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5"/></>,
+  'clipboard-check': <><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h3M8 16h8"/><path d="m14 13 2 2 3.5-3.5"/></>,
+  'arrow-up': <path d="M12 19V5m0 0-5 5m5-5 5 5" />,
+  'arrow-down': <path d="M12 5v14m0 0-5-5m5 5 5-5" />,
+  'chevron-down': <path d="m6 9 6 6 6-6" />,
+  'chevron-up': <path d="m6 15 6-6 6 6" />,
+  'more-vertical': <><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
+  'filter-x': <><path d="M3 5h18l-7 8v5l-4 2v-7L3 5Z"/></>,
+  play: <path d="M8 5.7v12.6a1 1 0 0 0 1.5.86l9.7-6.3a1 1 0 0 0 0-1.72l-9.7-6.3A1 1 0 0 0 8 5.7Z" />,
+  minus: <path d="M5 12h14" />,
+  maximize: <rect x="5" y="5" width="14" height="14" rx="2" />,
+  restore: <><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15V7a2 2 0 0 1 2-2h8"/></>,
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'children'> { name: IconName; size?: number; }

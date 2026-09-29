@@ -9,7 +9,7 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
-import { Icon } from '../../shared/components/Icon';
+import { IconButton } from '../../shared/components/IconButton';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { InterviewCriterion, InterviewCriterionGroup, InterviewCriterionResponseType, UserRole } from '../../domain/types';
@@ -571,9 +571,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                                 <p className="text-xs font-extrabold text-slate-900">{criterion.name}</p>
                                 <p className="mt-0.5 text-[10px] text-slate-400">{criterion.maxPoints} pts · {criterionResponseLabel(criterion.responseType)}</p>
                               </div>
-                              <button type="button" title="Move up" aria-label={`Move ${criterion.name} up`} disabled={index === 0} onClick={() => moveGroupCriterion(criterion.id, -1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
-                              <button type="button" title="Move down" aria-label={`Move ${criterion.name} down`} disabled={index === groupForm.criterionIds.length - 1} onClick={() => moveGroupCriterion(criterion.id, 1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
-                              <button type="button" title="Remove" aria-label={`Remove ${criterion.name}`} onClick={() => toggleGroupCriterion(criterion.id)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                              <IconButton icon="arrow-up" size="sm" label="Move up" ariaLabel={`Move ${criterion.name} up`} disabled={index === 0} onClick={() => moveGroupCriterion(criterion.id, -1)} />
+                              <IconButton icon="arrow-down" size="sm" label="Move down" ariaLabel={`Move ${criterion.name} down`} disabled={index === groupForm.criterionIds.length - 1} onClick={() => moveGroupCriterion(criterion.id, 1)} />
+                              <IconButton icon="x" size="sm" variant="danger" label="Remove" ariaLabel={`Remove ${criterion.name}`} onClick={() => toggleGroupCriterion(criterion.id)} />
                             </div>
                           );
                         })}
@@ -663,7 +663,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
                             </div>
                             {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
-                            <p className="mt-2 text-xs leading-5 text-slate-500">{group.description && <p className="mt-2 text-xs leading-5 text-slate-500">{group.description}</p>}</p>
+                            {group.description && <p className="mt-2 text-xs leading-5 text-slate-500">{group.description}</p>}
                           </div>
 
                           <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
@@ -672,38 +672,12 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
                             </div>
                             <div className="flex flex-wrap justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => openViewGroup(group)}
-                                title={t('View criteria group')}
-                                aria-label={t('View criteria group') + ' ' + group.name}
-                                className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                              >
-                                <Icon name="eye" size={16} />
-                              </button>
+                              <IconButton icon="eye" label={t('View criteria group')} ariaLabel={t('View criteria group') + ' ' + group.name} onClick={() => openViewGroup(group)} />
                               {canManage && (
-                                <button
-                                  type="button"
-                                  onClick={() => openEditGroup(group)}
-                                  title={t('Edit criteria group')}
-                                  aria-label={t('Edit criteria group') + ' ' + group.name}
-                                  className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                                >
-                                  <Icon name="pencil" size={16} />
-                                </button>
+                                <IconButton icon="pencil" label={t('Edit criteria group')} ariaLabel={t('Edit criteria group') + ' ' + group.name} onClick={() => openEditGroup(group)} />
                               )}
                               {canManage && (
-                                <button
-                                  type="button"
-                                  onClick={() => void toggleGroup(group)}
-                                  title={group.active ? t('Disable criteria group') : t('Enable criteria group')}
-                                  aria-label={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name}
-                                  className={'grid size-9 place-items-center rounded-xl border transition ' + (group.active
-                                    ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
-                                    : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
-                                >
-                                  <Icon name={group.active ? 'lock' : 'check'} size={16} />
-                                </button>
+                                <IconButton icon={group.active ? 'ban' : 'check'} variant={group.active ? 'danger' : 'success'} label={group.active ? t('Disable criteria group') : t('Enable criteria group')} ariaLabel={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name} variant={group.active ? "danger" : "success"} onClick={() => void toggleGroup(group)} />
                               )}
                             </div>
                           </div>
@@ -756,38 +730,12 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                             <p className="mt-0.5 text-[9px] font-bold text-slate-400">{criterion.responseType === 'MULTI_SELECT' ? 'Multiple tag option' : 'Standard answer'}</p>
                           </div>
                           <div className="ml-auto flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openViewCriterion(criterion)}
-                              title={t('View criteria')}
-                              aria-label={t('View criteria') + ' ' + criterion.name}
-                              className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                            >
-                              <Icon name="eye" size={16} />
-                            </button>
+                            <IconButton icon="eye" label={t('View criteria')} ariaLabel={t('View criteria') + ' ' + criterion.name} onClick={() => openViewCriterion(criterion)} />
                             {canManage && (
-                              <button
-                                type="button"
-                                onClick={() => openEditCriterion(criterion)}
-                                title="Edit criterion"
-                                aria-label={'Edit criterion ' + criterion.name}
-                                className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                              >
-                                <Icon name="pencil" size={16} />
-                              </button>
+                              <IconButton icon="pencil" label="Edit criterion" ariaLabel={'Edit criterion ' + criterion.name} onClick={() => openEditCriterion(criterion)} />
                             )}
                             {canManage && (
-                              <button
-                                type="button"
-                                onClick={() => void toggleCriterion(criterion)}
-                                title={criterion.active ? t('Disable criteria') : t('Enable criterion')}
-                                aria-label={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name}
-                                className={'grid size-9 place-items-center rounded-xl border transition ' + (criterion.active
-                                  ? 'border-rose-100 bg-rose-50 text-rose-600 hover:border-rose-200 hover:bg-rose-100'
-                                  : 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:border-emerald-200 hover:bg-emerald-100')}
-                              >
-                                <Icon name={criterion.active ? 'lock' : 'check'} size={16} />
-                              </button>
+                              <IconButton icon={criterion.active ? 'ban' : 'check'} variant={criterion.active ? 'danger' : 'success'} label={criterion.active ? t('Disable criteria') : t('Enable criterion')} ariaLabel={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name} variant={criterion.active ? "danger" : "success"} onClick={() => void toggleCriterion(criterion)} />
                             )}
                           </div>
                         </div>

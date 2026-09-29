@@ -4,6 +4,7 @@ import { useRecruitment } from '../../domain/recruitmentContext';
 import type { Candidate, Interview, InterviewStatus, InterviewType, Job, User, UserRole } from '../../domain/types';
 import { apiFetch } from '../../shared/lib/api';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Card } from '../../shared/components/Card';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StateMessage } from '../../shared/components/StateMessage';
@@ -284,8 +285,8 @@ export const CalendarPage = ({ role }: Props) => {
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="secondary" onClick={goToToday}>Today</Button>
-            <button type="button" aria-label="Previous month" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" onClick={() => moveMonth(-1)}>‹</button>
-            <button type="button" aria-label="Next month" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" onClick={() => moveMonth(1)}>›</button>
+            <IconButton icon="chevron-left" label="Previous month" className="rtl:rotate-180" onClick={() => moveMonth(-1)} />
+            <IconButton icon="chevron-right" label="Next month" className="rtl:rotate-180" onClick={() => moveMonth(1)} />
             <h2 className="ml-1 text-base font-black text-slate-950 sm:text-lg">{formatMonth(visibleMonth)}</h2>
           </div>
 

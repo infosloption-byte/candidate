@@ -4,10 +4,10 @@ import type { Company } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { Card } from '../../shared/components/Card';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
-import { Icon } from '../../shared/components/Icon';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
@@ -292,11 +292,9 @@ export const CompaniesPage = () => {
                   <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.candidates ?? 0}</td>
                   <td className="space-x-2 px-4 py-4 text-right">
                     {isPlatformAdmin && company.status === 'ACTIVE' && (
-                      <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Open workspace" aria-label="Open workspace" onClick={() => setWorkspaceTarget(company)}><Icon name="eye" size={15} /></Button>
+                      <IconButton icon="log-in" label={"Open workspace"} onClick={() => setWorkspaceTarget(company)} />
                     )}
-                    <Button size="sm" variant={company.status === 'ACTIVE' ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} aria-label={company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleStatus(company)}>
-                      <Icon name={company.status === 'ACTIVE' ? 'lock' : 'check'} size={15} />
-                    </Button>
+                    <IconButton icon={company.status === 'ACTIVE' ? 'ban' : 'check'} variant={company.status === 'ACTIVE' ? 'danger' : 'success'} label={company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleStatus(company)} />
                   </td>
                 </tr>
               ))}

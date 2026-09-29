@@ -96,7 +96,8 @@
   height: 38px; border: 1px solid var(--bh-line); border-radius: 10px; background: transparent; color: var(--bh-ink);
 }
 .bh-icon-btn { width: 38px; display: grid; place-items: center; }
-.bh-lang-toggle { padding: 0 8px; font-size: 0.82rem; font-weight: 600; }
+.bh-lang-toggle { padding: 0 10px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; cursor: pointer; }
+.bh-lang-toggle:hover { background: var(--bh-bg-2); }
 .bh-lang-toggle option { color: #15171C; }
 .bh-mobile-menu-btn { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--bh-line); border-radius: 10px; background: transparent; color: var(--bh-ink); }
 

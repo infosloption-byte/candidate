@@ -5,6 +5,7 @@ import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { SelectMenu } from '../../shared/components/SelectMenu';
@@ -1717,20 +1718,14 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
                   <footer className="relative mt-2.5 border-t border-slate-100 pt-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button type="button" title={t("View interview details")} aria-label={t("View interview details")} className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
-                      </button>
+                      <IconButton icon="eye" label={t("View interview details")} variant="primary" onClick={() => void openInterviewDetails(interview)} />
 
                       {candidate && (
-                        <button type="button" title={t("Open full candidate profile")} aria-label={t("Open full candidate profile")} className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
-                        </button>
+                        <IconButton icon="user" label={t("Open full candidate profile")} variant="secondary" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }} />
                       )}
 
                       {role === 'COMPANY_ADMIN' && interview.status === 'SCHEDULED' && (
-                        <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
-                          <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
-                        </button>
+                        <IconButton icon="pencil" label={"Edit interview"} variant="secondary" onClick={() => openReschedule(interview)} />
                       )}
 
                       {(['COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
@@ -1799,23 +1794,15 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          <button type="button" title="View interview details" aria-label="View interview details" className="grid size-9 place-items-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800" onClick={() => void openInterviewDetails(interview)}>
-                            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></svg>
-                          </button>
+                          <IconButton icon="eye" label={"View interview details"} variant="primary" onClick={() => void openInterviewDetails(interview)} />
                           {candidate && (
-                            <button type="button" title="Open full candidate profile" aria-label="Open full candidate profile" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }}>
-                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3" /><path d="M5 20c.8-3.2 3.1-5 7-5s6.2 1.8 7 5" /></svg>
-                            </button>
+                            <IconButton icon="user" label={"Open full candidate profile"} variant="secondary" onClick={() => { setProfileCandidate(candidate); setProfileMinimized(false); setProfileMaximized(false); }} />
                           )}
                           {(role === 'COMPANY_ADMIN' || role === 'AGENCY') && interview.status === 'SCHEDULED' && (
-                            <button type="button" title="Edit interview" aria-label="Edit interview" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => openReschedule(interview)}>
-                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m4 16.5-.5 3.5 3.5-.5L18 8.5 15.5 6 4 17.5ZM14.5 7l2.5 2.5M18 4.5l1.5-1.5a1.4 1.4 0 0 1 2 2L20 6.5 18 4.5Z" /></svg>
-                            </button>
+                            <IconButton icon="pencil" label={"Edit interview"} variant="secondary" onClick={() => openReschedule(interview)} />
                           )}
                           {(['COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role)) && interview.status === 'COMPLETED' && (
-                            <button type="button" title="Open interview panel" aria-label="Open interview panel" className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-cyan-700 transition hover:bg-cyan-50 hover:text-cyan-800" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }}>
-                              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 8h8M8 12h5M8 16h8" /><path d="m15 12 2 2 3-3" /></svg>
-                            </button>
+                            <IconButton icon="clipboard-check" label={"Open interview panel"} variant="info" onClick={() => { setListView('cards'); void openEvaluationWorkspace(interview); }} />
                           )}
                           {(['COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (role === 'INTERVIEWER' || ['SCHEDULED', 'IN_PROGRESS'].includes(interview.status))) && (
                             <InterviewActionMenu

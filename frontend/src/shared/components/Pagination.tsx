@@ -1,3 +1,5 @@
+import { Icon } from './Icon';
+
 interface PaginationProps {
   page: number;
   pageSize: number;
@@ -38,7 +40,7 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: PaginationPr
           aria-label="First page"
           title="First page"
         >
-          <span aria-hidden="true">«</span><span className="sr-only">First</span>
+          <span aria-hidden="true" className="flex rtl:rotate-180"><Icon name="chevron-left" size={15} className="-me-1.5" /><Icon name="chevron-left" size={15} /></span><span className="sr-only">First</span>
         </button>
         <button
           type="button"
@@ -48,7 +50,7 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: PaginationPr
           aria-label="Previous page"
           title="Previous page"
         >
-          <span aria-hidden="true">‹</span><span className="sr-only">Previous</span>
+          <Icon name="chevron-left" size={16} className="rtl:rotate-180" /><span className="sr-only">Previous</span>
         </button>
 
         {pages.map((value) => (
@@ -72,7 +74,7 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: PaginationPr
           aria-label="Next page"
           title="Next page"
         >
-          <span aria-hidden="true">›</span><span className="sr-only">Next</span>
+          <Icon name="chevron-right" size={16} className="rtl:rotate-180" /><span className="sr-only">Next</span>
         </button>
         <button
           type="button"
@@ -82,7 +84,7 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: PaginationPr
           aria-label="Last page"
           title="Last page"
         >
-          <span aria-hidden="true">»</span><span className="sr-only">Last</span>
+          <span aria-hidden="true" className="flex rtl:rotate-180"><Icon name="chevron-right" size={15} className="-me-1.5" /><Icon name="chevron-right" size={15} /></span><span className="sr-only">Last</span>
         </button>
       </div>
     </nav>

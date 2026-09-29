@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { useRecruitment } from '../../domain/recruitmentContext';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
@@ -651,12 +652,12 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         <Button variant="secondary" size="sm" onClick={onBack}><Icon name="chevron-left" size={15} /> Jobs</Button>
         {canManage && (
           <div className="flex items-center gap-1.5">
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Add candidate" aria-label="Add candidate" disabled={job.status === 'CLOSED'} onClick={openCandidateModal}><Icon name="plus" size={16} /></Button>
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Upload candidates" aria-label="Upload candidates" disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }}><Icon name="upload" size={16} /></Button>
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Download PDF report" aria-label="Download PDF report" onClick={() => printJobPdf(job, positions, job.candidatePool, job.interviews)}><Icon name="file" size={16} /></Button>
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Download Excel report" aria-label="Download Excel report" onClick={() => downloadJobExcel(job, positions, job.candidatePool, job.interviews)}><Icon name="download" size={16} /></Button>
-            <Button variant="secondary" size="sm" className="!size-10 !min-h-10 !p-0" title="Schedule interview" aria-label="Schedule interview" disabled={job.status === 'CLOSED' || candidateCount === 0} onClick={() => void openScheduleModal()}><Icon name="calendar" size={16} /></Button>
-            <Button variant="danger" size="sm" className="!size-10 !min-h-10 !p-0" title="Delete job" aria-label="Delete job" onClick={() => setDeleteConfirm(true)}><Icon name="trash" size={16} /></Button>
+            <IconButton icon="plus" size="lg" label={"Add candidate"} disabled={job.status === 'CLOSED'} onClick={openCandidateModal} />
+            <IconButton icon="upload" size="lg" label={"Upload candidates"} disabled={job.status === 'CLOSED'} onClick={() => { setUploadAgencyId(user?.agencyId ?? agencies.find((item) => item.status === 'ACTIVE')?.id ?? ''); setUploadModal(true); }} />
+            <IconButton icon="file" size="lg" label={"Download PDF report"} onClick={() => printJobPdf(job, positions, job.candidatePool, job.interviews)} />
+            <IconButton icon="download" size="lg" label={"Download Excel report"} onClick={() => downloadJobExcel(job, positions, job.candidatePool, job.interviews)} />
+            <IconButton icon="calendar" size="lg" label={"Schedule interview"} disabled={job.status === 'CLOSED' || candidateCount === 0} onClick={() => void openScheduleModal()} />
+            <IconButton icon="trash" size="lg" variant="danger" label={"Delete job"} onClick={() => setDeleteConfirm(true)} />
           </div>
         )}
       </div>
@@ -942,9 +943,9 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                                   <p className="truncate text-xs font-extrabold text-slate-800">{group.name}</p>
                                   <p className="mt-0.5 truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
                                 </div>
-                                <button type="button" title="Move group up" aria-label={`Move ${group.name} up`} disabled={index === 0} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
-                                <button type="button" title="Move group down" aria-label={`Move ${group.name} down`} disabled={index === selectedCriteriaGroups.length - 1} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
-                                <button type="button" title="Remove group" aria-label={`Remove ${group.name}`} onClick={() => setSelectedCriteriaGroups((current) => current.filter((id) => id !== group.id))} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                                <IconButton icon="arrow-up" size="sm" label="Move group up" ariaLabel={`Move ${group.name} up`} disabled={index === 0} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} />
+                                <IconButton icon="arrow-down" size="sm" label="Move group down" ariaLabel={`Move ${group.name} down`} disabled={index === selectedCriteriaGroups.length - 1} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} />
+                                <IconButton icon="x" size="sm" variant="danger" label="Remove group" ariaLabel={`Remove ${group.name}`} onClick={() => setSelectedCriteriaGroups((current) => current.filter((id) => id !== group.id))} />
                               </div>
                             );
                           })}

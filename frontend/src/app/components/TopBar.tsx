@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../shared/components/Icon';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useAuth } from '../../domain/authContext';
 import { apiFetch } from '../../shared/lib/api';
 import type { AppView } from './AppShell';
@@ -143,24 +144,29 @@ export const TopBar = ({
         {showDevelopmentRoleSelector && (
           <div className="hidden items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 sm:flex">
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Dev role</span>
-            <select value={role} onChange={(event) => onRoleChange(event.target.value as UserRole)} className="bg-transparent text-[11px] font-bold text-slate-700 outline-none">
-              {(Object.keys(roleLabels) as UserRole[]).map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
-            </select>
+            <SelectMenu
+              size="sm"
+              value={role}
+              onChange={(value) => onRoleChange(value as UserRole)}
+              options={(Object.keys(roleLabels) as UserRole[]).map((item) => ({ value: item, label: roleLabels[item] }))}
+              ariaLabel="Development role"
+              className="w-44"
+              triggerClassName="min-h-7 gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-[11px] text-slate-700 hover:bg-white"
+            />
           </div>
         )}
 
         <div className="flex items-center gap-1">
           <div className="relative">
-            <select
+            <SelectMenu
+              size="sm"
               value={language}
-              onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}
-              aria-label={t('Language')}
-              title={t('Language')}
-              className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50 focus:border-cyan-500"
-            >
-              <option value="en">EN · English</option>
-              <option value="he">HE · עברית</option>
-            </select>
+              onChange={(value) => setLanguage(value as 'en' | 'he')}
+              options={[{ value: 'en', label: 'EN · English' }, { value: 'he', label: 'HE · עברית' }]}
+              ariaLabel={t('Language')}
+              className="w-[7.5rem]"
+              minPanelWidth={150}
+            />
           </div>
           <div ref={notificationMenuRef} className="relative">
           <button type="button" onClick={() => setNotificationsOpen((current) => !current)} aria-label={unreadCount > 0 ? unreadCount + ' ' + t('unread notifications') : t('Notifications')} className="relative grid size-10 place-items-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">

@@ -6,6 +6,7 @@ import { agencies as fixtureAgencies } from '../../domain/fixtures';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Icon } from '../../shared/components/Icon';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
@@ -525,9 +526,7 @@ export const AgenciesPage = () => {
       header: 'Actions',
       render: (item: User) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit account" aria-label="Edit account" onClick={() => openEditSystemUserWithId(item)}>
-            <Icon name="pencil" size={15} />
-          </Button>
+          <IconButton icon="pencil" label={"Edit account"} onClick={() => openEditSystemUserWithId(item)} />
           <Button
             size="sm"
             variant={item.active ? 'danger' : 'secondary'}
@@ -562,9 +561,7 @@ export const AgenciesPage = () => {
       key: 'actions',
       header: 'Actions',
       render: (item: AgencyRecord) => (
-        <Button size="sm" variant={item.status === 'ACTIVE' ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} aria-label={item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleAgency(item)}>
-          <Icon name={item.status === 'ACTIVE' ? 'lock' : 'check'} size={15} />
-        </Button>
+        <IconButton icon={item.status === 'ACTIVE' ? 'ban' : 'check'} variant={item.status === 'ACTIVE' ? 'danger' : 'success'} label={item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleAgency(item)} />
       ),
     },
   ];
@@ -593,12 +590,8 @@ export const AgenciesPage = () => {
       header: 'Actions',
       render: (item: User) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit account" aria-label="Edit account" onClick={() => openEditInterviewer(item)}>
-            <Icon name="pencil" size={15} />
-          </Button>
-          <Button size="sm" variant={item.active ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.active ? 'Deactivate' : 'Activate'} aria-label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleInterviewer(item)}>
-            <Icon name={item.active ? 'lock' : 'check'} size={15} />
-          </Button>
+          <IconButton icon="pencil" label={"Edit account"} onClick={() => openEditInterviewer(item)} />
+          <IconButton icon={item.active ? 'ban' : 'check'} variant={item.active ? 'danger' : 'success'} label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleInterviewer(item)} />
         </div>
       ),
     },

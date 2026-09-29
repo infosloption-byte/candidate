@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import './marketing.css';
 
 type Theme = 'light' | 'dark';
@@ -164,7 +165,7 @@ export const MarketingSite = () => {
           </nav>
           <div className="bh-nav-actions">
             <button type="button" className="bh-icon-btn" onClick={toggleTheme} aria-label="Toggle theme"><ThemeIcon dark={theme === 'light'} /></button>
-            <select className="bh-lang-toggle" aria-label="Language" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}><option value="en">EN</option><option value="he">HE</option></select>
+            <SelectMenu size="sm" className="w-[4.5rem]" triggerClassName="bh-lang-toggle" ariaLabel="Language" value={language} onChange={(value) => setLanguage(value as 'en' | 'he')} options={[{ value: 'en', label: 'EN' }, { value: 'he', label: 'HE' }]} minPanelWidth={112} />
             <button type="button" className="bh-nav-action" onClick={login}>Login</button>
             <ActionButton onClick={start}>Start 7-day trial <Arrow /></ActionButton>
           </div>
@@ -186,7 +187,7 @@ export const MarketingSite = () => {
             <div className="bh-menu-actions">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <button type="button" className="bh-btn bh-btn-secondary" onClick={toggleTheme}><ThemeIcon dark={theme === 'light'} /> Theme</button>
-                <label className="bh-btn bh-btn-secondary" style={{ position: 'relative' }}><span>{language === 'en' ? 'English' : 'עברית'}</span><select aria-label="Mobile language" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'he')} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}><option value="en">English</option><option value="he">עברית</option></select></label>
+                <SelectMenu className="w-full" triggerClassName="bh-btn bh-btn-secondary !w-full !justify-between" ariaLabel="Mobile language" value={language} onChange={(value) => setLanguage(value as 'en' | 'he')} options={[{ value: 'en', label: 'English' }, { value: 'he', label: 'עברית' }]} />
               </div>
               <ActionButton onClick={login} variant="secondary">Login</ActionButton>
               <ActionButton onClick={start}>Start 7-day free trial <Arrow /></ActionButton>

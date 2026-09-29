@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CandidateStatus, Interview, InterviewStatus, InterviewType, Job, UserRole } from '../../domain/types';
 import { apiFetch } from '../../shared/lib/api';
 import { Card } from '../../shared/components/Card';
-import { Icon } from '../../shared/components/Icon';
+import { IconButton } from '../../shared/components/IconButton';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
@@ -230,8 +230,8 @@ export const ReportsPage = ({ role }: Props) => {
             ariaLabel="Filter reports by job"
             className="min-w-0 sm:w-56"
           />
-          <button type="button" onClick={() => downloadCsv(rows)} className="grid size-11 place-items-center rounded-xl bg-slate-950 text-white shadow-sm transition hover:bg-slate-800" title="Download CSV" aria-label="Download CSV"><Icon name="download" size={17} /></button>
-          <button type="button" onClick={() => window.print()} className="grid size-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50" title="Print / Save PDF" aria-label="Print / Save PDF"><Icon name="file" size={17} /></button>
+          <IconButton icon="download" size="lg" variant="primary" label="Download CSV" onClick={() => downloadCsv(rows)} />
+          <IconButton icon="file" size="lg" label="Print / Save PDF" onClick={() => window.print()} />
         </div>
       </div>
 
