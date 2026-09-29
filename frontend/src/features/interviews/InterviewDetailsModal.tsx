@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { Button } from '../../shared/components/Button';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import type { CandidateStatus, Interview, InterviewCriterionAssignment, UserRole } from '../../domain/types';
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
@@ -253,17 +254,17 @@ export const InterviewDetailsModal = ({ detail, open, onClose, role, onUpdateCan
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="field-label">
                   Status
-                  <select
-                    className="field-input mt-1 h-11"
+                  <SelectMenu
                     value={decisionStatus}
-                    onChange={(event) => setDecisionStatus(event.target.value as CandidateStatus)}
+                    onChange={(value) => setDecisionStatus(value as CandidateStatus)}
+                    options={[
+                      { value: '', label: 'Select final status' },
+                      ...(role === 'INTERVIEWER' ? interviewerDecisionStatuses : candidateFinalStatuses).map((status) => ({ value: status, label: statusLabel(status) })),
+                    ]}
+                    ariaLabel="Final candidate status"
                     disabled={decisionSaving}
-                  >
-                    <option value="">Select final status</option>
-                    {(role === 'INTERVIEWER' ? interviewerDecisionStatuses : candidateFinalStatuses).map((status) => (
-                      <option key={status} value={status}>{statusLabel(status)}</option>
-                    ))}
-                  </select>
+                    className="mt-1"
+                  />
                 </label>
                 <label className="field-label">
                   Reason

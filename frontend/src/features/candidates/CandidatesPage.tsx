@@ -9,6 +9,7 @@ import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { SelectMenu } from '../../shared/components/SelectMenu';
+import { Icon } from '../../shared/components/Icon';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
@@ -978,7 +979,7 @@ const filterOptions = useMemo(() => ({
     { key: 'requestedProfession', header: t('Requested profession'), render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="px-2.5" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}>Open</Button> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Open candidate" aria-label="Open candidate" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><Icon name="eye" size={15} /></Button> },
   ];
 
   return (
@@ -1023,7 +1024,7 @@ const filterOptions = useMemo(() => ({
             <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
             <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
             <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
-            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><select className="field-input" value={agencyId} onChange={(event) => setAgencyId(event.target.value)}><option value="">Select an agency</option>{agencies.filter((item) => item.status === 'ACTIVE').map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></FormField>}
+            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={agencyId} onChange={setAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name }))]} ariaLabel="Candidate agency workspace" /></FormField>}
             <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
           </div>
 <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
@@ -1080,15 +1081,19 @@ const filterOptions = useMemo(() => ({
 
               <div>
                 <label className="field-label">Agency</label>
-                <select className="field-input mt-1 w-full" value={importAgencyId} onChange={(event) => setImportAgencyId(event.target.value)} disabled={role !== 'COMPANY_ADMIN'}>
-                  <option value="">Select an agency</option>
-                  {agencies.filter((item) => item.status === 'ACTIVE').map((agency) => (
-                    <option key={agency.id} value={agency.id}>{agency.name}</option>
-                  ))}
-                  {role !== 'COMPANY_ADMIN' && agencyId && !agencies.some((item) => item.id === agencyId) && (
-                    <option value={agencyId}>Current agency</option>
-                  )}
-                </select>
+                <SelectMenu
+                  value={importAgencyId}
+                  onChange={setImportAgencyId}
+                  options={[
+                    { value: '', label: 'Select an agency' },
+                    ...agencies.filter((agency) => agency.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                    ...(agencyId && !agencies.some((agency) => agency.id === agencyId)
+                      ? [{ value: agencyId, label: 'Current agency' }]
+                      : []),
+                  ]}
+                  ariaLabel="Import agency"
+                  disabled={role !== 'COMPANY_ADMIN'}
+                />
                 {role !== 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
                 {role === 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
               </div>
@@ -1407,10 +1412,12 @@ const filterOptions = useMemo(() => ({
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="min-h-9 rounded-lg px-3 text-[10px]"
+                        className="!size-9 !min-h-9 !p-0"
+                        title="Open candidate"
+                        aria-label="Open candidate"
                         onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
                       >
-                        Open candidate
+                        <Icon name="eye" size={15} />
                       </Button>
                     </div>
                   </Card>
@@ -1563,12 +1570,13 @@ const filterOptions = useMemo(() => ({
                               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                                 <div>
                                   <label className="field-label">Status</label>
-                                  <select className="field-input mt-1 w-full sm:min-w-48" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
-                                    {statusOptions.filter((status) => {
-                                      const hasCompletedInterview = history.interviews.some((interview) => interview.status === 'COMPLETED');
-                                      return !finalStatusOptions.includes(status) || hasCompletedInterview || status === candidate.status;
-                                    }).map((status) => <option key={status} value={status}>{label(status)}</option>)}
-                                  </select>
+                                  <SelectMenu
+                                    value={statusDraft}
+                                    onChange={(value) => setStatusDraft(value as CandidateStatus)}
+                                    options={visibleStatusOptions.map((status) => ({ value: status, label: label(status) }))}
+                                    ariaLabel="Candidate status"
+                                    className="mt-1 sm:min-w-48"
+                                  />
                                 </div>
                                 <div>
                                   <label className="field-label">Reason</label>

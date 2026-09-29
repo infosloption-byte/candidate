@@ -8,6 +8,7 @@ import { Card } from '../../shared/components/Card';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { InterviewDetailsModal, type InterviewDetail } from '../interviews/InterviewDetailsModal';
 
 interface Props {
@@ -296,21 +297,21 @@ export const CalendarPage = ({ role }: Props) => {
               placeholder="Search candidate, passport, job or interviewer…"
               aria-label="Search calendar"
             />
-            <select className="field-input sm:w-36" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as InterviewStatus | '')}>
-              <option value="">All status</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="IN_PROGRESS">In progress</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="NO_SHOW">No show</option>
-            </select>
-            <select className="field-input sm:w-36" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as InterviewType | '')}>
-              <option value="">All types</option>
-              <option value="SCREENING">Screening</option>
-              <option value="TECHNICAL">Technical</option>
-              <option value="PRACTICAL">Practical</option>
-              <option value="FINAL">Final</option>
-            </select>
+            <SelectMenu value={statusFilter} onChange={(value) => setStatusFilter(value as InterviewStatus | '')} options={[
+                { value: '', label: 'All status' },
+                { value: 'SCHEDULED', label: 'Scheduled' },
+                { value: 'IN_PROGRESS', label: 'In progress' },
+                { value: 'COMPLETED', label: 'Completed' },
+                { value: 'CANCELLED', label: 'Cancelled' },
+                { value: 'NO_SHOW', label: 'No show' },
+              ]} ariaLabel="Filter by interview status" className="sm:w-36" />
+            <SelectMenu value={typeFilter} onChange={(value) => setTypeFilter(value as InterviewType | '')} options={[
+                { value: '', label: 'All types' },
+                { value: 'SCREENING', label: 'Screening' },
+                { value: 'TECHNICAL', label: 'Technical' },
+                { value: 'PRACTICAL', label: 'Practical' },
+                { value: 'FINAL', label: 'Final' },
+              ]} ariaLabel="Filter by interview type" className="sm:w-36" />
             <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
               {(['month', 'agenda'] as CalendarMode[]).map((item) => (
                 <button

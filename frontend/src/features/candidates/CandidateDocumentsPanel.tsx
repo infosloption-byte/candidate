@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../shared/components/Button';
+import { Icon } from '../../shared/components/Icon';
 import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiDownload, apiFetch } from '../../shared/lib/api';
@@ -179,8 +180,8 @@ export const CandidateDocumentsPanel = ({ candidateId, apiEnabled, readOnly = fa
                 <p className="mt-1 text-xs text-slate-400">{formatBytes(document.sizeBytes)} · {new Date(document.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" className="px-3 py-1.5" onClick={() => void download(document)}>Download</Button>
-                {!readOnly && <Button variant="ghost" className="px-3 py-1.5 text-rose-600" disabled={busy} onClick={() => void remove(document)}>Delete</Button>}
+                <Button variant="secondary" size="sm" className="!size-9 !min-h-9 !p-0" title="Download document" aria-label="Download document" onClick={() => void download(document)}><Icon name="download" size={15} /></Button>
+                {!readOnly && <Button variant="ghost" size="sm" className="!size-9 !min-h-9 !p-0 text-rose-600" title="Delete document" aria-label="Delete document" disabled={busy} onClick={() => void remove(document)}><Icon name="trash" size={15} /></Button>}
               </div>
             </div>
           ))}

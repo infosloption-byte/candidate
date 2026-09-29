@@ -7,6 +7,8 @@ import { Button } from '../../shared/components/Button';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { Icon } from '../../shared/components/Icon';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 
@@ -124,10 +126,15 @@ const EnterWorkspaceModal = ({
             <input className="field-input" value={reason} maxLength={255} onChange={(event) => setReason(event.target.value)} placeholder="Ticket #1234 - customer cannot see interview" />
           </FormField>
           <FormField label="Access level">
-            <select className="field-input" value={mode} onChange={(event) => setMode(event.target.value as EnterWorkspaceInput['mode'])}>
-              <option value="READ_ONLY">Read-only (recommended)</option>
-              <option value="READ_WRITE">Write mode (every change is logged)</option>
-            </select>
+            <SelectMenu
+              value={mode}
+              onChange={(value) => setMode(value as EnterWorkspaceInput['mode'])}
+              options={[
+                { value: 'READ_ONLY', label: 'Read-only (recommended)' },
+                { value: 'READ_WRITE', label: 'Write mode (every change is logged)' },
+              ]}
+              ariaLabel="Workspace access mode"
+            />
           </FormField>
           {mode === 'READ_WRITE' && (
             <FormField label="Confirm your password">
@@ -285,10 +292,10 @@ export const CompaniesPage = () => {
                   <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.candidates ?? 0}</td>
                   <td className="space-x-2 px-4 py-4 text-right">
                     {isPlatformAdmin && company.status === 'ACTIVE' && (
-                      <Button size="sm" variant="secondary" onClick={() => setWorkspaceTarget(company)}>Open workspace</Button>
+                      <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Open workspace" aria-label="Open workspace" onClick={() => setWorkspaceTarget(company)}><Icon name="eye" size={15} /></Button>
                     )}
-                    <Button size="sm" variant={company.status === 'ACTIVE' ? 'danger' : 'secondary'} onClick={() => void toggleStatus(company)}>
-                      {company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                    <Button size="sm" variant={company.status === 'ACTIVE' ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} aria-label={company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleStatus(company)}>
+                      <Icon name={company.status === 'ACTIVE' ? 'lock' : 'check'} size={15} />
                     </Button>
                   </td>
                 </tr>

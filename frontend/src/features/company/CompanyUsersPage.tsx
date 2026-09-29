@@ -8,6 +8,8 @@ import { Button } from '../../shared/components/Button';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { Icon } from '../../shared/components/Icon';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 
@@ -215,9 +217,9 @@ export const CompanyUsersPage = () => {
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} />
-                <Button size="sm" variant="secondary" onClick={() => openEdit(item)}>Edit</Button>
-                <Button size="sm" variant={item.active ? 'danger' : 'secondary'} onClick={() => void toggleActive(item)} disabled={item.id === user?.id}>
-                  {item.active ? 'Deactivate' : 'Activate'}
+                <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit user" aria-label="Edit user" onClick={() => openEdit(item)}><Icon name="pencil" size={15} /></Button>
+                <Button size="sm" variant={item.active ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.active ? 'Deactivate' : 'Activate'} aria-label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleActive(item)} disabled={item.id === user?.id}>
+                  <Icon name={item.active ? 'lock' : 'check'} size={15} />
                 </Button>
               </div>
             </div>
@@ -239,10 +241,15 @@ export const CompanyUsersPage = () => {
               <input type="email" className="field-input" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} autoComplete="email" />
             </FormField>
             <FormField label="Role">
-              <select className="field-input" value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as TeamRole }))}>
-                <option value="AGENCY">Company Admin</option>
-                <option value="INTERVIEWER">Interviewer</option>
-              </select>
+              <SelectMenu
+                value={form.role}
+                onChange={(value) => setForm((current) => ({ ...current, role: value as TeamRole }))}
+                options={[
+                  { value: 'AGENCY', label: 'Company Admin' },
+                  { value: 'INTERVIEWER', label: 'Interviewer' },
+                ]}
+                ariaLabel="Company user role"
+              />
             </FormField>
             <FormField label={modalMode === 'CREATE' ? 'Password' : 'New password'} hint={modalMode === 'EDIT' ? 'Leave blank to keep the current password.' : undefined}>
               <input type="password" className="field-input" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} autoComplete={modalMode === 'CREATE' ? 'new-password' : 'new-password'} />

@@ -4,6 +4,7 @@ import { apiFetch } from '../../shared/lib/api';
 import { Card } from '../../shared/components/Card';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 
 export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'agencyRegisterNo' | 'firstName' | 'lastName' | 'name' | 'birthdate' | 'passportNumber' | 'passportExpiry' | 'requestedProfession' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills'>;
@@ -549,9 +550,13 @@ export const CandidateProfilePanel = ({
                   <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto]">
                     <label className="block">
                       <span className="field-label">Lifecycle status</span>
-                      <select className="field-input mt-1 w-full" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as CandidateStatus)}>
-                        {visibleStatusOptions.map((status) => <option key={status} value={status}>{label(status)}</option>)}
-                      </select>
+                      <SelectMenu
+                        value={statusDraft}
+                        onChange={(value) => setStatusDraft(value as CandidateStatus)}
+                        options={visibleStatusOptions.map((status) => ({ value: status, label: label(status) }))}
+                        ariaLabel="Candidate status"
+                        className="mt-1"
+                      />
                     </label>
                     <label className="block">
                       <span className="field-label">Reason / decision note</span>
