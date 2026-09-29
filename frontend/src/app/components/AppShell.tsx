@@ -47,7 +47,7 @@ export const AppShell = ({
   };
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-slate-100">
+    <div className="buildhire-app flex h-dvh overflow-hidden bg-slate-100">
       <aside className={`hidden shrink-0 border-r border-slate-900/10 transition-[width] duration-200 lg:block ${sidebarCollapsed ? 'w-[72px]' : 'w-[248px]'}`}>
         <Sidebar role={role} activeView={activeView} onNavigate={navigate} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
       </aside>
