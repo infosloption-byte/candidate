@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { IconButton } from './IconButton';
+import { SelectMenu } from './SelectMenu';
 
 interface DatePickerProps {
   value: string;
@@ -125,6 +127,9 @@ export const DatePicker = ({
     if (!open) return;
     updatePanelPosition();
     const handleOutsidePointer = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      // Dropdowns opened from inside the picker (month, year, time) render in a portal outside of it.
+      if (target?.closest?.('[data-select-menu-panel]')) return;
       if (!rootRef.current?.contains(event.target as Node) && !panelRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -227,6 +232,25 @@ export const DatePicker = ({
   const displayHour = selectedTime.hour % 12 || 12;
   const period = selectedTime.hour >= 12 ? 'PM' : 'AM';
 
+  const monthOptions = Array.from({ length: 12 }, (_, month) => ({
+    value: String(month),
+    label: new Intl.DateTimeFormat(undefined, { month: 'long' }).format(new Date(2000, month, 1)),
+  }));
+  const firstYear = minimumDate?.getFullYear() ?? (showTime ? new Date().getFullYear() : 1900);
+  const lastYear = maximumDate?.getFullYear() ?? new Date().getFullYear() + 10;
+  const yearOptions = Array.from({ length: Math.max(1, lastYear - firstYear + 1) }, (_, index) => {
+    const year = String(firstYear + index);
+    return { value: year, label: year };
+  });
+  // Keep the visible year selectable even when it falls outside the configured range.
+  if (!yearOptions.some((option) => option.value === String(viewDate.getFullYear()))) {
+    yearOptions.push({ value: String(viewDate.getFullYear()), label: String(viewDate.getFullYear()) });
+    yearOptions.sort((left, right) => Number(left.value) - Number(right.value));
+  }
+  const hourOptions = hours.map((hour) => ({ value: String(hour), label: pad(hour) }));
+  const minuteOptions = minutes.map((minute) => ({ value: String(minute), label: pad(minute) }));
+  const periodOptions = [{ value: 'AM', label: 'AM' }, { value: 'PM', label: 'PM' }];
+
   return (
     <div ref={rootRef} className={`relative min-w-0 ${className}`}>
       <button
@@ -259,50 +283,28 @@ export const DatePicker = ({
         >
           <div className="border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                onClick={() => shiftMonth(-1)}
-                aria-label="Previous month"
-              >
-                ‹
-              </button>
+              <IconButton icon="chevron-left" label="Previous month" size="md" onClick={() => shiftMonth(-1)} />
 
-              <select
-                className="field-input h-9 min-w-0 flex-1 bg-white px-2 text-xs font-extrabold text-slate-800"
-                value={viewDate.getMonth()}
-                onChange={(event) => setViewDate((current) => new Date(current.getFullYear(), Number(event.target.value), 1))}
-                aria-label="Select month"
-              >
-                {Array.from({ length: 12 }, (_, month) => (
-                  <option key={month} value={month}>
-                    {new Intl.DateTimeFormat(undefined, { month: 'long' }).format(new Date(2000, month, 1))}
-                  </option>
-                ))}
-              </select>
+              <SelectMenu
+                size="sm"
+                className="min-w-0 flex-1"
+                value={String(viewDate.getMonth())}
+                onChange={(next) => setViewDate((current) => new Date(current.getFullYear(), Number(next), 1))}
+                options={monthOptions}
+                ariaLabel="Select month"
+                minPanelWidth={150}
+              />
 
-              <select
-                className="field-input h-9 w-24 shrink-0 bg-white px-2 text-xs font-extrabold text-slate-800"
-                value={viewDate.getFullYear()}
-                onChange={(event) => setViewDate((current) => new Date(Number(event.target.value), current.getMonth(), 1))}
-                aria-label="Select year"
-              >
-                {Array.from(
-                  { length: Math.max(1, (maximumDate?.getFullYear() ?? new Date().getFullYear() + 10) - (minimumDate?.getFullYear() ?? (showTime ? new Date().getFullYear() : 1900)) + 1) },
-                  (_, index) => (minimumDate?.getFullYear() ?? (showTime ? new Date().getFullYear() : 1900)) + index,
-                ).map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              <SelectMenu
+                size="sm"
+                className="w-24 shrink-0"
+                value={String(viewDate.getFullYear())}
+                onChange={(next) => setViewDate((current) => new Date(Number(next), current.getMonth(), 1))}
+                options={yearOptions}
+                ariaLabel="Select year"
+              />
 
-              <button
-                type="button"
-                className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                onClick={() => shiftMonth(1)}
-                aria-label="Next month"
-              >
-                ›
-              </button>
+              <IconButton icon="chevron-right" label="Next month" size="md" onClick={() => shiftMonth(1)} />
             </div>
 
             <div className="mt-2 flex items-center justify-between gap-2">
@@ -352,43 +354,38 @@ export const DatePicker = ({
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <select
-                  className="field-input h-10 min-w-0 appearance-none bg-white px-2 text-xs"
-                  value={displayHour}
-                  onChange={(event) => {
-                    const nextDisplayHour = Number(event.target.value);
+                <SelectMenu
+                  size="sm"
+                  value={String(displayHour)}
+                  onChange={(next) => {
+                    const nextDisplayHour = Number(next);
                     const nextHour = period === 'PM'
                       ? (nextDisplayHour === 12 ? 12 : nextDisplayHour + 12)
                       : (nextDisplayHour === 12 ? 0 : nextDisplayHour);
                     applyTime(nextHour, selectedTime.minute);
                   }}
-                  aria-label="Hour"
-                >
-                  {hours.map((hour) => <option key={hour} value={hour}>{pad(hour)}</option>)}
-                </select>
-                <select
-                  className="field-input h-10 min-w-0 appearance-none bg-white px-2 text-xs"
-                  value={selectedTime.minute}
-                  onChange={(event) => applyTime(selectedTime.hour, Number(event.target.value))}
-                  aria-label="Minute"
-                >
-                  {minutes.map((minute) => <option key={minute} value={minute}>{pad(minute)}</option>)}
-                </select>
-                <select
-                  className="field-input h-10 min-w-0 appearance-none bg-white px-2 text-xs"
+                  options={hourOptions}
+                  ariaLabel="Hour"
+                />
+                <SelectMenu
+                  size="sm"
+                  value={String(selectedTime.minute)}
+                  onChange={(next) => applyTime(selectedTime.hour, Number(next))}
+                  options={minuteOptions}
+                  ariaLabel="Minute"
+                />
+                <SelectMenu
+                  size="sm"
                   value={period}
-                  onChange={(event) => {
-                    const nextPeriod = event.target.value;
+                  onChange={(nextPeriod) => {
                     const nextHour = nextPeriod === 'PM'
                       ? (selectedTime.hour % 12) + 12
                       : selectedTime.hour % 12;
                     applyTime(nextHour === 24 ? 12 : nextHour, selectedTime.minute);
                   }}
-                  aria-label="AM or PM"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+                  options={periodOptions}
+                  ariaLabel="AM or PM"
+                />
               </div>
             </div>
           )}

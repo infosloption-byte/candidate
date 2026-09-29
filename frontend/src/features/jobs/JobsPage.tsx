@@ -5,6 +5,7 @@ import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Icon } from '../../shared/components/Icon';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
@@ -328,34 +329,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
 
   const renderJobActions = (job: Job, _compact = false) => (
     <div className="flex items-center gap-1.5">
-      <Button
-        variant="secondary"
-        size="sm"
-        className="!size-9 !min-h-9 !p-0"
-        title={t('Edit job')}
-        aria-label={t('Edit job')}
-        onClick={(event) => {
-          event.stopPropagation();
-          beginEdit(job);
-        }}
-      >
-        <Icon name="pencil" size={15} />
-      </Button>
+      <IconButton icon="pencil" label={t('Edit job')} onClick={(event) => { event.stopPropagation(); beginEdit(job); }} />
       {role !== 'INTERVIEWEE' && job.status === 'PUBLISHED' && (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="!size-9 !min-h-9 !p-0"
-          title={t('Close job')}
-          aria-label={t('Close job')}
-          disabled={(job.filledCount ?? 0) < job.openings}
-          onClick={(event) => {
-            event.stopPropagation();
-            void setStatus(job);
-          }}
-        >
-          <Icon name="lock" size={15} />
-        </Button>
+        <IconButton icon="lock" label={t('Close job')} disabled={(job.filledCount ?? 0) < job.openings} onClick={(event) => { event.stopPropagation(); void setStatus(job); }} />
       )}
     </div>
   );
@@ -896,16 +872,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
               className: 'whitespace-nowrap',
               render: (job) => (
                 <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="!size-9 !min-h-9 !p-0"
-                    title={t('View job')}
-                    aria-label={t('View job')}
-                    onClick={() => onOpenJob?.(job.id)}
-                  >
-                    <Icon name="eye" size={15} />
-                  </Button>
+                  <IconButton icon="eye" label={t('View job')} onClick={() => onOpenJob?.(job.id)} />
                   {role !== 'INTERVIEWEE' && (
                     <div onClick={(event) => event.stopPropagation()}>
                       {renderJobActions(job, true)}

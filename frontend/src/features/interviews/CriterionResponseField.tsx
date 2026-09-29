@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import type { InterviewCriterionAssignment } from '../../domain/types';
 
 interface Props {
@@ -117,18 +118,14 @@ export const CriterionResponseField = ({
             )}
           </div>
         ) : assignment.responseType === 'SINGLE_SELECT' ? (
-          <select
-            className="field-input !mt-0"
-            disabled={disabled}
+          <SelectMenu
             value={selectedOptions[0] ?? ''}
-            onChange={(event) => onSelectedOptionsChange(event.target.value ? [event.target.value] : [])}
-            aria-label={assignment.name + ' answer'}
-          >
-            <option value="">Select one option</option>
-            {(assignment.options ?? []).map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            disabled={disabled}
+            onChange={(value) => onSelectedOptionsChange(value ? [value] : [])}
+            options={[{ value: '', label: 'Select one option' }, ...(assignment.options ?? []).map((option) => ({ value: option, label: option }))]}
+            placeholder="Select one option"
+            ariaLabel={assignment.name + ' answer'}
+          />
         ) : (
           <input
             type="text"

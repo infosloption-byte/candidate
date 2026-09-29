@@ -5,11 +5,11 @@ import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { SelectMenu } from '../../shared/components/SelectMenu';
-import { Icon } from '../../shared/components/Icon';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { apiFetch } from '../../shared/lib/api';
@@ -979,7 +979,7 @@ const filterOptions = useMemo(() => ({
     { key: 'requestedProfession', header: t('Requested profession'), render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Open candidate" aria-label="Open candidate" onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><Icon name="eye" size={15} /></Button> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <IconButton icon="eye" label={"Open candidate"} onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }} /> },
   ];
 
   return (
@@ -990,17 +990,8 @@ const filterOptions = useMemo(() => ({
         description={role === 'INTERVIEWEE' ? t('Maintain your candidate profile and documents.') : t('Candidates enter the system once and remain in the pool throughout their recruitment history. Interviews are assigned directly to candidates.')}
         action={role !== 'INTERVIEWEE' ? (
           <div className="flex items-center gap-2">
-            <button type="button" title="Download CSV template" aria-label="Download CSV template" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" onClick={downloadCsvTemplate}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14" />
-              </svg>
-            </button>
-            <button type="button" title="Import candidates from CSV" aria-label="Import candidates from CSV" className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300" disabled={bulkImporting} onClick={openImportModal}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 21V10m0 0-4 4m4-4 4 4M5 5h9l5 5v9H5z" />
-                <path d="M14 5v5h5" />
-              </svg>
-            </button>
+            <IconButton icon="download" size="lg" label="Download CSV template" onClick={downloadCsvTemplate} />
+            <IconButton icon="upload" size="lg" label="Import candidates from CSV" disabled={bulkImporting} onClick={openImportModal} />
             <Button onClick={() => { setForm(emptyForm); setShowForm(true); setError(''); }}>New candidate</Button>
           </div>
         ) : undefined}
@@ -1265,17 +1256,7 @@ const filterOptions = useMemo(() => ({
 
             <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className={mobileFiltersOpen ? 'flex items-center gap-2' : 'hidden items-center gap-2 md:flex'}>
-                <button
-                  type="button"
-                  title={showAdvancedFilters ? t('Hide advanced filters') : t('More filters')}
-                  aria-label={showAdvancedFilters ? t('Hide advanced filters') : t('More filters')}
-                  className={`grid size-10 place-items-center rounded-xl border transition ${showAdvancedFilters ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
-                  onClick={() => setShowAdvancedFilters((value) => !value)}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M4 6h16M7 12h10M10 18h4" />
-                  </svg>
-                </button>
+                <IconButton icon="sliders" size="lg" active={showAdvancedFilters} label={showAdvancedFilters ? t('Hide advanced filters') : t('More filters')} onClick={() => setShowAdvancedFilters((value) => !value)} />
                 <span className="text-[10px] font-bold text-slate-400">
                   {showAdvancedFilters ? t('Advanced filters') : t('More filters')}
                 </span>
@@ -1298,39 +1279,20 @@ const filterOptions = useMemo(() => ({
                     ariaLabel="Sort candidates by"
                     className="w-32 sm:w-36"
                   />
-                  <button
-                    type="button"
-                    title={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
-                    aria-label={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'}
-                    className="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-                    onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4">
-                      {sortDirection === 'asc'
-                        ? <path d="M12 19V5m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        : <path d="M12 5v14m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-                    </svg>
-                  </button>
+                  <IconButton icon={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} label={sortDirection === 'asc' ? 'Ascending order' : 'Descending order'} ariaLabel={sortDirection === 'asc' ? 'Switch to descending sort' : 'Switch to ascending sort'} onClick={() => setSortDirection((value) => value === 'asc' ? 'desc' : 'asc')} />
                 </div>
 
                 {(search || statusFilter || professionFilter || passportFilter) && (
-                  <button
-                    type="button"
-                    title="Clear filters"
-                    aria-label="Clear filters"
-                    className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                  <IconButton
+                    icon="filter-x"
+                    label="Clear filters"
                     onClick={() => {
                       setSearch('');
                       setStatusFilter('');
                       setProfessionFilter('');
                       setPassportFilter('');
                     }}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path d="M3 6h18M6 12h12M10 18h4" />
-                      <path d="M7 6l1-2h8l1 2" />
-                    </svg>
-                  </button>
+                  />
                 )}
 
                 <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Candidate list view">
@@ -1409,16 +1371,7 @@ const filterOptions = useMemo(() => ({
                      </div>
 
                     <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="!size-9 !min-h-9 !p-0"
-                        title="Open candidate"
-                        aria-label="Open candidate"
-                        onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
-                      >
-                        <Icon name="eye" size={15} />
-                      </Button>
+                      <IconButton icon="eye" label={"Open candidate"} onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }} />
                     </div>
                   </Card>
                 );
@@ -1573,7 +1526,10 @@ const filterOptions = useMemo(() => ({
                                   <SelectMenu
                                     value={statusDraft}
                                     onChange={(value) => setStatusDraft(value as CandidateStatus)}
-                                    options={finalStatusOptions.map((status) => ({ value: status, label: label(status) }))}
+                                    options={(role === 'INTERVIEWER'
+                                      ? Array.from(new Set([candidate.status, ...finalStatusOptions]))
+                                      : statusOptions.filter((status) => !finalStatusOptions.includes(status) || history.interviews.some((interview) => interview.status === 'COMPLETED') || status === candidate.status)
+                                    ).map((status) => ({ value: status, label: label(status) }))}
                                     ariaLabel="Candidate status"
                                     className="mt-1 sm:min-w-48"
                                   />

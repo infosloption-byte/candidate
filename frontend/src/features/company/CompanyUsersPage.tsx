@@ -5,10 +5,10 @@ import type { User } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { Card } from '../../shared/components/Card';
 import { Button } from '../../shared/components/Button';
+import { IconButton } from '../../shared/components/IconButton';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
-import { Icon } from '../../shared/components/Icon';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
@@ -217,10 +217,8 @@ export const CompanyUsersPage = () => {
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <StatusPill value={item.active ? 'ACTIVE' : 'INACTIVE'} />
-                <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit user" aria-label="Edit user" onClick={() => openEdit(item)}><Icon name="pencil" size={15} /></Button>
-                <Button size="sm" variant={item.active ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.active ? 'Deactivate' : 'Activate'} aria-label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleActive(item)} disabled={item.id === user?.id}>
-                  <Icon name={item.active ? 'lock' : 'check'} size={15} />
-                </Button>
+                <IconButton icon="pencil" label={"Edit user"} onClick={() => openEdit(item)} />
+                <IconButton icon={item.active ? 'ban' : 'check'} variant={item.active ? 'danger' : 'success'} label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleActive(item)} disabled={item.id === user?.id} />
               </div>
             </div>
           ))}
