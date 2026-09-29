@@ -97,8 +97,8 @@ select.field-input option { color: #15171c; background: #fff; }
 .buildhire-app [class~="border-cyan-200"] { border-color: #E0CA52; }
 .buildhire-app [class~="hover:bg-cyan-50"]:hover { background-color: var(--buildhire-accent-soft); }
 .buildhire-app [class~="hover:bg-cyan-600"]:hover { background-color: #FFE03D; }
-.buildhire-app [class~="focus\\:border-cyan-500"]:focus { border-color: #C9A900; }
-.buildhire-app [class~="focus\\:ring-cyan-100"]:focus { --tw-ring-color: rgba(255, 214, 10, 0.32); }
+.buildhire-app [class~="focus:border-cyan-500"]:focus { border-color: #C9A900; }
+.buildhire-app [class~="focus:ring-cyan-100"]:focus { --tw-ring-color: rgba(255, 214, 10, 0.32); }
 
 .buildhire-app [class~="shadow-cyan-950/20"] {
   box-shadow: 0 14px 28px -18px rgba(21, 23, 28, 0.6);
