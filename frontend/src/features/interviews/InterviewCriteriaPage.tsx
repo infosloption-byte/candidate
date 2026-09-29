@@ -718,8 +718,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <p className="text-xs text-slate-400">{criteria.length} {t('criterion/criteria')}</p>
               </div>
               {criteria.length > 0 ? (
-                <DataTable
-                  rows={criteria}
+                <div className="max-h-[60vh] overflow-auto rounded-3xl scrollbar-thin">
+                  <DataTable
+                    rows={criteria}
                   getRowKey={(criterion) => criterion.id}
                   columns={[
                     {
@@ -769,8 +770,9 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                       ),
                     },
                   ]}
-                  emptyMessage="No criteria configured."
-                />
+                    emptyMessage="No criteria configured."
+                  />
+                </div>
               ) : (
                 <StateMessage kind="empty" title="No criteria configured" description="Add at least one active criterion before creating criteria groups or scoring interviews." />
               )}
