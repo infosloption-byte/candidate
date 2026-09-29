@@ -1573,7 +1573,7 @@ const filterOptions = useMemo(() => ({
                                   <SelectMenu
                                     value={statusDraft}
                                     onChange={(value) => setStatusDraft(value as CandidateStatus)}
-                                    options={visibleStatusOptions.map((status) => ({ value: status, label: label(status) }))}
+                                    options={finalStatusOptions.map((status) => ({ value: status, label: label(status) }))}
                                     ariaLabel="Candidate status"
                                     className="mt-1 sm:min-w-48"
                                   />
