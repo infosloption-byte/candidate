@@ -6,6 +6,7 @@ import { agencies as fixtureAgencies } from '../../domain/fixtures';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
+import { Icon } from '../../shared/components/Icon';
 import { Card } from '../../shared/components/Card';
 import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
@@ -524,16 +525,18 @@ export const AgenciesPage = () => {
       header: 'Actions',
       render: (item: User) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={() => openEditSystemUserWithId(item)}>
-            Edit account
+          <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit account" aria-label="Edit account" onClick={() => openEditSystemUserWithId(item)}>
+            <Icon name="pencil" size={15} />
           </Button>
           <Button
             size="sm"
             variant={item.active ? 'danger' : 'secondary'}
             onClick={() => void toggleSystemUser(item)}
             disabled={item.id === user?.id}
+                    title={item.active ? 'Deactivate' : 'Activate'}
+            aria-label={item.active ? 'Deactivate' : 'Activate'}
           >
-            {item.active ? 'Deactivate' : 'Activate'}
+            <Icon name={item.active ? 'lock' : 'check'} size={15} />
           </Button>
         </div>
       ),
@@ -559,8 +562,8 @@ export const AgenciesPage = () => {
       key: 'actions',
       header: 'Actions',
       render: (item: AgencyRecord) => (
-        <Button size="sm" variant={item.status === 'ACTIVE' ? 'danger' : 'secondary'} onClick={() => void toggleAgency(item)}>
-          {item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+        <Button size="sm" variant={item.status === 'ACTIVE' ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} aria-label={item.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} onClick={() => void toggleAgency(item)}>
+          <Icon name={item.status === 'ACTIVE' ? 'lock' : 'check'} size={15} />
         </Button>
       ),
     },
@@ -590,11 +593,11 @@ export const AgenciesPage = () => {
       header: 'Actions',
       render: (item: User) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={() => openEditInterviewer(item)}>
-            Edit account
+          <Button size="sm" variant="secondary" className="!size-9 !min-h-9 !p-0" title="Edit account" aria-label="Edit account" onClick={() => openEditInterviewer(item)}>
+            <Icon name="pencil" size={15} />
           </Button>
-          <Button size="sm" variant={item.active ? 'danger' : 'secondary'} onClick={() => void toggleInterviewer(item)}>
-            {item.active ? 'Deactivate' : 'Activate'}
+          <Button size="sm" variant={item.active ? 'danger' : 'secondary'} className="!size-9 !min-h-9 !p-0" title={item.active ? 'Deactivate' : 'Activate'} aria-label={item.active ? 'Deactivate' : 'Activate'} onClick={() => void toggleInterviewer(item)}>
+            <Icon name={item.active ? 'lock' : 'check'} size={15} />
           </Button>
         </div>
       ),

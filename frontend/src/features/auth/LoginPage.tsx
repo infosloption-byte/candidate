@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../../domain/authContext';
 import { FormField } from '../../shared/components/FormField';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import './auth.css';
 
 type AuthMode = 'login' | 'company-register';
@@ -114,15 +115,13 @@ export const LoginPage = () => {
 
               <div className="bh-auth-header-actions">
                 <button type="button" className="bh-auth-link" onClick={goHome}>Back to website</button>
-                <select
-                  className="bh-auth-lang"
-                  aria-label="Language"
+                <SelectMenu
                   value={language}
-                  onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}
-                >
-                  <option value="en">EN</option>
-                  <option value="he">HE</option>
-                </select>
+                  onChange={(value) => setLanguage(value as 'en' | 'he')}
+                  options={[{ value: 'en', label: 'EN' }, { value: 'he', label: 'HE' }]}
+                  ariaLabel="Language"
+                  className="w-20"
+                />
               </div>
             </div>
 

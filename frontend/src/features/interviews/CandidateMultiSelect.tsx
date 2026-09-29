@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Candidate } from '../../domain/types';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 
 interface AgencyOption {
   id: string;
@@ -71,15 +72,13 @@ export const CandidateMultiSelect = ({
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(180px,0.7fr)]">
           <div>
             <label className="field-label">Browse agency</label>
-            <select
-              className="field-input mt-1 h-10"
+            <SelectMenu
               value={activeAgencyId}
-              onChange={(event) => onAgencyChange(event.target.value)}
-              aria-label="Browse candidates by agency"
-            >
-              <option value="">Select an agency</option>
-              {agencyOptions.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
-            </select>
+              onChange={onAgencyChange}
+              options={[{ value: '', label: 'Select an agency' }, ...agencyOptions.map((agency) => ({ value: agency.id, label: agency.name }))]}
+              ariaLabel="Browse candidates by agency"
+              className="mt-1"
+            />
           </div>
           <div>
             <label className="field-label">Search candidates</label>

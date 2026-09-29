@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { Icon } from '../../shared/components/Icon';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
 
 export const SettingsPage = () => {
@@ -124,10 +125,10 @@ export const SettingsPage = () => {
           </div>
           <div className="mt-5 space-y-4">
             <FormField label={t("Language")}>
-              <select className="field-input" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'he')}>
-                <option value="en">English</option>
-                <option value="he">עברית</option>
-              </select>
+              <SelectMenu value={language} onChange={(value) => setLanguage(value as 'en' | 'he')} options={[
+                { value: 'en', label: 'English' },
+                { value: 'he', label: 'עברית' },
+              ]} ariaLabel="Interface language" />
             </FormField>
             <div className="rounded-2xl bg-slate-50 p-3.5 text-xs leading-5 text-slate-500">
               {t('Sidebar collapse state and language preference are stored locally in this browser. Platform-wide configuration belongs in a future persistent platform configuration service.')}

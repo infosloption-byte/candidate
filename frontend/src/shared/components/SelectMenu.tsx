@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface SelectMenuOption {
   value: string;
@@ -16,6 +17,12 @@ interface SelectMenuProps {
   disabled?: boolean;
 }
 
+interface MenuPosition {
+  top: number;
+  left: number;
+  width: number;
+}
+
 export const SelectMenu = ({
   value,
   options,
@@ -26,7 +33,11 @@ export const SelectMenu = ({
   disabled = false,
 }: SelectMenuProps) => {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<MenuPosition | null>(null);
+  const [placement, setPlacement] = useState<'top' | 'bottom'>('bottom');
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = options.find((option) => option.value === value);
 
   useEffect(() => {
@@ -37,10 +48,14 @@ export const SelectMenu = ({
     if (!open) return;
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
 
     document.addEventListener('mousedown', handlePointerDown);
@@ -51,9 +66,56 @@ export const SelectMenu = ({
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const reposition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const gap = 8;
+      const viewportPadding = 12;
+      const spaceAbove = triggerRect.top - viewportPadding;
+      const spaceBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
+      const nextPlacement: 'top' | 'bottom' =
+        spaceBelow >= menuRect.height + gap || spaceBelow >= spaceAbove ? 'bottom' : 'top';
+
+      const rawTop = nextPlacement === 'top'
+        ? triggerRect.top - menuRect.height - gap
+        : triggerRect.bottom + gap;
+      const top = Math.min(
+        Math.max(viewportPadding, rawTop),
+        Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding),
+      );
+      const width = Math.min(Math.max(triggerRect.width, 192), window.innerWidth - viewportPadding * 2);
+      const rawLeft = triggerRect.left;
+      const left = Math.min(
+        Math.max(viewportPadding, rawLeft),
+        Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
+      );
+
+      setPlacement(nextPlacement);
+      setPosition({ top, left, width });
+    };
+
+    const frame = window.requestAnimationFrame(reposition);
+    window.addEventListener('resize', reposition);
+    document.addEventListener('scroll', reposition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', reposition);
+      document.removeEventListener('scroll', reposition, true);
+    };
+  }, [open, options.length]);
+
   return (
     <div ref={rootRef} className={`relative min-w-0 ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white"
@@ -63,6 +125,7 @@ export const SelectMenu = ({
         aria-disabled={disabled}
         onClick={() => {
           if (disabled) return;
+          setPosition(null);
           setOpen((current) => !current);
         }}
       >
@@ -83,11 +146,18 @@ export const SelectMenu = ({
         </svg>
       </button>
 
-      {open && !disabled && (
+      {open && !disabled && createPortal(
         <div
+          ref={menuRef}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 top-full z-40 mt-2 max-h-64 w-full min-w-48 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl ring-1 ring-slate-950/5"
+          className="fixed z-[80] max-h-[min(20rem,calc(100dvh-1.5rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl ring-1 ring-slate-950/5"
+          style={{
+            top: position?.top ?? 0,
+            left: position?.left ?? 0,
+            width: position?.width ?? 192,
+            visibility: position ? 'visible' : 'hidden',
+          }}
         >
           {options.map((option) => {
             const isSelected = option.value === value;
@@ -114,7 +184,9 @@ export const SelectMenu = ({
               </button>
             );
           })}
-        </div>
+
+        </div>,
+        document.body,
       )}
     </div>
   );
