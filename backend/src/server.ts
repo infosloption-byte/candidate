@@ -6,12 +6,16 @@ const start = async (): Promise<void> => {
   const app = buildApp();
 
   try {
+    // Hooks must be registered BEFORE listen()
+    const stopMaintenance = startInterviewMaintenance(app.log);
+    app.addHook('onClose', async () => {
+      stopMaintenance();
+    });
+
     await app.listen({
       host: env.host,
       port: env.port,
     });
-    const stopMaintenance = startInterviewMaintenance(app.log);
-    app.addHook('onClose', async () => stopMaintenance());
   } catch (error) {
     app.log.error({ err: error }, 'Backend server failed to start');
     process.exit(1);
