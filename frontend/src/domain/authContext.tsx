@@ -26,6 +26,13 @@ interface RegisterIntervieweeInput {
   skills: string[];
 }
 
+export interface EnterWorkspaceInput {
+  reason: string;
+  mode: 'READ_ONLY' | 'READ_WRITE';
+  password?: string;
+  durationMins?: number;
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
@@ -36,6 +43,8 @@ interface AuthContextValue {
   registerCompany: (input: RegisterCompanyInput) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  enterWorkspace: (companyId: string, input: EnterWorkspaceInput) => Promise<void>;
+  exitWorkspace: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -117,6 +126,19 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setDevelopmentMode(false);
   };
 
+  const enterWorkspace = async (companyId: string, input: EnterWorkspaceInput): Promise<void> => {
+    const result = await apiFetch<{ user: User }>('/admin/act-as/' + encodeURIComponent(companyId), {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    setUser(result.user);
+  };
+
+  const exitWorkspace = async (): Promise<void> => {
+    const result = await apiFetch<{ user: User }>('/admin/act-as', { method: 'DELETE' });
+    setUser(result.user);
+  };
+
   const logout = async (): Promise<void> => {
     setError(null);
 
@@ -128,7 +150,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   const value = useMemo(
-    () => ({ user, loading, error, developmentMode, login, registerCompany, registerInterviewee, logout, refreshUser }),
+    () => ({ user, loading, error, developmentMode, login, registerCompany, registerInterviewee, logout, refreshUser, enterWorkspace, exitWorkspace }),
     [user, loading, error, developmentMode],
   );
 

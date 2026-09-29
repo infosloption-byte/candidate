@@ -42,6 +42,16 @@ export interface User {
   email: string;
   role: UserRole;
   active: boolean;
+  /** Set while a platform administrator is working inside a company workspace (role is then COMPANY_ADMIN). */
+  actingAs?: ActingContext | null;
+}
+
+export interface ActingContext {
+  companyId: string;
+  companyName: string;
+  mode: 'READ_ONLY' | 'READ_WRITE';
+  reason: string;
+  until: string;
 }
 
 export interface CandidateDocument {

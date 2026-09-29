@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { requireAuth, requireRole } from '../lib/auth.js';
+import { denyWhileActing, requireRole, requireTenantAuth } from '../lib/auth.js';
+import { inCompany } from '../lib/tenant.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateJobInput, type JobInput, type JobPositionInput } from '../domain/jobValidation.js';
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
@@ -39,7 +40,7 @@ const totalRequired = (positions: Array<{ requiredCount: number }>): number =>
   positions.reduce((sum, item) => sum + item.requiredCount, 0);
 
 export const jobRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/jobs', { preHandler: requireAuth }, async (request, reply) => {
+  app.get('/jobs', { preHandler: requireTenantAuth }, async (request, reply) => {
     const user = request.authUser!;
     if (!['ADMIN', 'COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({
@@ -79,7 +80,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     });
   });
 
-  app.get<{ Params: JobParams }>('/jobs/:id', { preHandler: requireAuth }, async (request, reply) => {
+  app.get<{ Params: JobParams }>('/jobs/:id', { preHandler: requireTenantAuth }, async (request, reply) => {
     const user = request.authUser!;
     if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
       return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
@@ -90,10 +91,12 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       include: {
         positions: { orderBy: { sortOrder: 'asc' } },
         candidatePool: {
+          ...(user.role === 'AGENCY' ? { where: { candidate: { agencyId: user.agencyId ?? '__missing__' } } } : {}),
           orderBy: { createdAt: 'desc' },
           include: { candidate: { select: candidateSelect } },
         },
         interviews: {
+          ...(user.role === 'AGENCY' ? { where: { candidate: { agencyId: user.agencyId ?? '__missing__' } } } : {}),
           orderBy: { scheduledAt: 'desc' },
           include: {
             candidate: { select: candidateSelect },
@@ -115,8 +118,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     if (!job) {
       return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
     }
-    if (job.companyId !== user.companyId) {
-      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+    if (!inCompany(user, job.companyId)) {
+      return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
     }
 
     const hiredCount = job.candidatePool.filter((item) => item.status === 'HIRED').length;
@@ -137,7 +140,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: JobInput }>(
     '/jobs',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const errors = validateJobInput(request.body, 'create');
       if (errors.length) {
@@ -178,7 +181,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: JobParams; Body: JobInput }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -187,8 +190,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      if (!inCompany(request.authUser!, existing.companyId)) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
 
       const errors = validateJobInput(request.body, 'update');
@@ -258,15 +261,15 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: JobParams; Body: JobCandidatesBody }>(
     '/jobs/:id/candidates',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
         select: { id: true, companyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (job.companyId !== request.authUser!.companyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      if (!inCompany(request.authUser!, job.companyId)) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
       if (job.status === 'CLOSED') {
         return reply.code(409).send({ success: false, error: { code: 'JOB_CLOSED', message: 'Candidates cannot be added to a closed job.' } });
@@ -278,7 +281,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const candidates = await getPrisma().candidate.findMany({
-        where: { id: { in: candidateIds } },
+        where: { id: { in: candidateIds }, companyId: job.companyId },
         select: { id: true },
       });
       if (candidates.length !== candidateIds.length) {
@@ -316,13 +319,13 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: { id: string; candidateId: string } }>(
     '/jobs/:id/candidates/:candidateId',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
         where: { id: request.params.id },
-        select: { id: true, title: true },
+        select: { id: true, companyId: true, title: true },
       });
-      if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+      if (!job || !inCompany(request.authUser!, job.companyId)) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
 
       const membership = await getPrisma().jobCandidate.findUnique({
         where: { jobId_candidateId: { jobId: job.id, candidateId: request.params.candidateId } },
@@ -363,7 +366,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id/permanent',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
@@ -378,9 +381,13 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      if (!inCompany(request.authUser!, existing.companyId)) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
+
+      // Irreversible: platform support may not permanently delete a customer's data.
+      const blocked = denyWhileActing(request, reply, 'Platform support cannot permanently delete jobs. Ask the company administrator to do it.');
+      if (blocked) return blocked;
 
       if (existing.interviews.length) {
         return reply.code(409).send({
@@ -413,15 +420,15 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: JobParams }>(
     '/jobs/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
         where: { id: request.params.id },
         include: { positions: true },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
-      if (request.authUser!.role === 'AGENCY' && (existing.companyId !== request.authUser!.companyId)) {
-        return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+      if (!inCompany(request.authUser!, existing.companyId)) {
+        return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
 
       const filledCount = await getPrisma().jobCandidate.count({

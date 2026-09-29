@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { requireAuth } from '../lib/auth.js';
+import { requireTenantAuth } from '../lib/auth.js';
+import { inCompany } from '../lib/tenant.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { notifyAgencyUsers, notifyCandidateAccount } from '../lib/notifications.js';
@@ -37,7 +38,7 @@ const assignmentSelect = {
   sortOrder: true,
 } as const;
 
-const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
+const getAssignments = async (interviewId: string, companyId: string): Promise<Assignment[]> => {
   const existing = await getPrisma().interviewCriterionAssignment.findMany({
     where: { interviewId },
     select: assignmentSelect,
@@ -46,7 +47,7 @@ const getAssignments = async (interviewId: string): Promise<Assignment[]> => {
   if (existing.length) return existing;
 
   const criteria = await getPrisma().interviewCriterion.findMany({
-    where: { active: true },
+    where: { active: true, companyId },
     select: { id: true, name: true, description: true, maxPoints: true, responseType: true, required: true, options: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -144,12 +145,12 @@ const validateResponses = (responses: EvaluationInput['responses'], assignments:
   return errors;
 };
 
-const ensureInterviewAssignments = async (interviewId: string) => {
+const ensureInterviewAssignments = async (interviewId: string, companyId: string) => {
   const existing = await getPrisma().interviewCriterionAssignment.count({ where: { interviewId } });
   if (existing > 0) return;
 
   const criteria = await getPrisma().interviewCriterion.findMany({
-    where: { active: true },
+    where: { active: true, companyId },
     select: { id: true, name: true, description: true, maxPoints: true, responseType: true, required: true, options: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -173,7 +174,7 @@ const ensureInterviewAssignments = async (interviewId: string) => {
 export const evaluationRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: InterviewParams }>(
     '/interviews/:interviewId/start',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const user = request.authUser!;
       if (user.role !== 'INTERVIEWER') {
@@ -192,7 +193,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'PANEL_ACCESS_DENIED', message: 'You are not assigned to this interview panel.' } });
       }
       if (interview.status === 'IN_PROGRESS') {
-        await ensureInterviewAssignments(interview.id);
+        await ensureInterviewAssignments(interview.id, interview.companyId);
 
         const current = await getPrisma().interview.findUnique({
           where: { id: interview.id },
@@ -219,7 +220,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_START_WINDOW_PASSED', message: 'The scheduled start window has passed. Review the interview instead of starting a new session.' } });
       }
 
-      await ensureInterviewAssignments(interview.id);
+      await ensureInterviewAssignments(interview.id, interview.companyId);
 
       const updated = await getPrisma().interview.update({
         where: { id: interview.id },
@@ -246,7 +247,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: InterviewParams }>(
     '/interviews/:interviewId/evaluation',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const user = request.authUser!;
       if (user.role !== 'INTERVIEWER') {
@@ -274,7 +275,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(403).send({ success: false, error: { code: 'PANEL_ACCESS_DENIED', message: 'You are not assigned to this interview panel.' } });
       }
 
-      const assignments = await getAssignments(interview.id);
+      const assignments = await getAssignments(interview.id, interview.companyId);
       const ownEvaluation = interview.evaluations.find((item) => item.interviewerId === user.id) ?? null;
       return reply.send({
         success: true,
@@ -300,7 +301,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
   app.put<{ Params: InterviewParams; Body: EvaluationInput }>(
     '/interviews/:interviewId/evaluation',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const user = request.authUser!;
       if (user.role !== 'INTERVIEWER') {
@@ -325,8 +326,8 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_IN_PROGRESS', message: 'Start the interview before saving the scorecard.' } });
       }
 
-      await ensureInterviewAssignments(interview.id);
-      const assignments = await getAssignments(interview.id);
+      await ensureInterviewAssignments(interview.id, interview.companyId);
+      const assignments = await getAssignments(interview.id, interview.companyId);
       const scoreErrors = validateScores(request.body.scores ?? [], assignments);
       const responseErrors = validateResponses(request.body.responses ?? [], assignments);
       if (scoreErrors.length || responseErrors.length) {
@@ -404,7 +405,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: InterviewParams }>(
     '/interviews/:interviewId/evaluation/submit',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const user = request.authUser!;
       if (user.role !== 'INTERVIEWER') {
@@ -426,8 +427,8 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_IN_PROGRESS', message: 'The interview is not currently in progress.' } });
       }
 
-      await ensureInterviewAssignments(interview.id);
-      const assignments = await getAssignments(interview.id);
+      await ensureInterviewAssignments(interview.id, interview.companyId);
+      const assignments = await getAssignments(interview.id, interview.companyId);
       const existingEvaluation = await getPrisma().interviewEvaluation.findUnique({
         where: { interviewId_interviewerId: { interviewId: interview.id, interviewerId: user.id } },
         include: {
@@ -574,7 +575,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: InterviewParams }>(
     '/interviews/:interviewId/evaluations',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const interview = await getPrisma().interview.findUnique({
         where: { id: request.params.interviewId },
@@ -595,14 +596,14 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
 
       const user = request.authUser!;
       const allowed =
-        user.role === 'COMPANY_ADMIN'
-        || (user.role === 'AGENCY' && user.agencyId === interview.candidate.agencyId)
+        (user.role === 'COMPANY_ADMIN' && inCompany(user, interview.companyId))
+        || (user.role === 'AGENCY' && inCompany(user, interview.companyId) && user.agencyId === interview.candidate.agencyId)
         || (user.role === 'INTERVIEWER' && isPanelInterviewer(interview, user.id))
         || (user.role === 'INTERVIEWEE' && user.candidateId === interview.candidateId);
 
       if (!allowed) return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to these evaluations.' } });
 
-      const assignments = await getAssignments(interview.id);
+      const assignments = await getAssignments(interview.id, interview.companyId);
       const evaluations = user.role === 'INTERVIEWER'
         ? interview.evaluations.filter((item) => item.status === 'SUBMITTED' || item.interviewerId === user.id)
         : interview.evaluations.filter((item) => item.status === 'SUBMITTED');

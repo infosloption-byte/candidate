@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import {
   clearSessionCookie,
   createSession,
+  denyWhileActing,
   destroySession,
   getSessionUser,
   hashPassword,
@@ -313,6 +314,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.patch<{
     Body: { name?: string; email?: string; password?: string };
   }>('/auth/me', { preHandler: requireAuth }, async (request, reply) => {
+    const blocked = denyWhileActing(request, reply, 'Leave the company workspace before editing your own profile.');
+    if (blocked) return blocked;
+
     const name = request.body.name?.trim();
     const email = request.body.email?.trim().toLowerCase();
     const password = request.body.password;
@@ -397,7 +401,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ success: true, data: { loggedOut: true } });
   });
 
-  app.post('/auth/logout-all', { preHandler: requireAuth }, async (request, reply) => {
+  app.post('/auth/logout-all', { preHandler: requireAuth, config: { actingExempt: true } }, async (request, reply) => {
     await getPrisma().session.deleteMany({ where: { userId: request.authUser!.id } });
     clearSessionCookie(reply);
     return reply.send({ success: true, data: { loggedOut: true } });

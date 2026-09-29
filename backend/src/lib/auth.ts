@@ -10,6 +10,17 @@ const PASSWORD_PREFIX = 'scrypt';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const SESSION_COOKIE_NAME = 'buildhire_session';
 
+export type ActingMode = 'READ_ONLY' | 'READ_WRITE';
+
+/** Present only while a platform administrator is working inside a company workspace. */
+export interface ActingContext {
+  companyId: string;
+  companyName: string;
+  mode: ActingMode;
+  reason: string;
+  until: string;
+}
+
 export interface AuthUser {
   id: string;
   companyId: string | null;
@@ -20,13 +31,23 @@ export interface AuthUser {
   email: string;
   role: 'ADMIN' | 'COMPANY_ADMIN' | 'AGENCY' | 'INTERVIEWER' | 'INTERVIEWEE';
   active: boolean;
+  /** Set only for a platform ADMIN acting inside a company. While set, `role` is COMPANY_ADMIN. */
+  actingAs?: ActingContext | null;
 }
 
 declare module 'fastify' {
   interface FastifyRequest {
     authUser: AuthUser | null;
   }
+  interface FastifyContextConfig {
+    /** Route stays usable in READ_ONLY acting mode (enter/exit endpoints). */
+    actingExempt?: boolean;
+  }
 }
+
+export const ACTING_DEFAULT_MINUTES = 60;
+export const ACTING_MAX_MINUTES = 240;
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export const toPublicUser = (user: AuthUser): AuthUser => ({ ...user });
 
@@ -59,7 +80,13 @@ const getCookie = (request: FastifyRequest, name: string): string | null => {
 
   for (const part of header.split(';')) {
     const [key, ...value] = part.trim().split('=');
-    if (key === name) return decodeURIComponent(value.join('='));
+    if (key === name) {
+      try {
+        return decodeURIComponent(value.join('='));
+      } catch {
+        return null; // malformed cookie -> treat as "no session" instead of a 500
+      }
+    }
   }
 
   return null;
@@ -104,6 +131,62 @@ export const destroySession = async (request: FastifyRequest, reply: FastifyRepl
   clearSessionCookie(reply);
 };
 
+type SessionActingFields = {
+  id: string;
+  actingCompanyId: string | null;
+  actingMode: ActingMode | null;
+  actingReason: string | null;
+  actingUntil: Date | null;
+};
+
+const clearActingFields = { actingCompanyId: null, actingMode: null, actingReason: null, actingUntil: null } as const;
+
+/** Returns the live acting context, or clears an expired/invalid one and returns null. */
+const resolveActingContext = async (session: SessionActingFields): Promise<ActingContext | null> => {
+  if (session.actingCompanyId && session.actingMode && session.actingUntil && session.actingUntil.getTime() > Date.now()) {
+    const company = await getPrisma().company.findUnique({
+      where: { id: session.actingCompanyId },
+      select: { id: true, name: true, status: true },
+    });
+    if (company && company.status === 'ACTIVE') {
+      return {
+        companyId: company.id,
+        companyName: company.name,
+        mode: session.actingMode,
+        reason: session.actingReason ?? '',
+        until: session.actingUntil.toISOString(),
+      };
+    }
+  }
+
+  await getPrisma().session.updateMany({ where: { id: session.id }, data: clearActingFields });
+  return null;
+};
+
+export const startActing = async (
+  request: FastifyRequest,
+  data: { companyId: string; mode: ActingMode; reason: string; minutes: number },
+): Promise<boolean> => {
+  const token = getCookie(request, SESSION_COOKIE_NAME);
+  if (!token) return false;
+  const result = await getPrisma().session.updateMany({
+    where: { tokenHash: hashSessionToken(token) },
+    data: {
+      actingCompanyId: data.companyId,
+      actingMode: data.mode,
+      actingReason: data.reason,
+      actingUntil: new Date(Date.now() + data.minutes * 60_000),
+    },
+  });
+  return result.count > 0;
+};
+
+export const stopActing = async (request: FastifyRequest): Promise<void> => {
+  const token = getCookie(request, SESSION_COOKIE_NAME);
+  if (!token) return;
+  await getPrisma().session.updateMany({ where: { tokenHash: hashSessionToken(token) }, data: clearActingFields });
+};
+
 export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser | null> => {
   const token = getCookie(request, SESSION_COOKIE_NAME);
   if (!token) return null;
@@ -141,6 +224,26 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
     return null;
   }
 
+  if (platformAdmin && session.actingCompanyId) {
+    const acting = await resolveActingContext(session);
+    if (acting) {
+      return {
+        id: session.user.id,
+        companyId: acting.companyId,
+        companyName: acting.companyName,
+        agencyId: null,
+        candidateId: null,
+        name: session.user.name,
+        email: session.user.email,
+        // The admin is deliberately downgraded to a company administrator of the target company, so
+        // every existing company/agency scoping rule applies to them unchanged.
+        role: 'COMPANY_ADMIN',
+        active: session.user.active,
+        actingAs: acting,
+      };
+    }
+  }
+
   return {
     id: session.user.id,
     companyId: session.user.companyId,
@@ -154,7 +257,7 @@ export const getSessionUser = async (request: FastifyRequest): Promise<AuthUser 
   };
 };
 
-export const requireAuth: preHandlerHookHandler = async (request, reply) => {
+const authenticate = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | undefined> => {
   request.authUser = await getSessionUser(request);
 
   if (!request.authUser) {
@@ -163,6 +266,39 @@ export const requireAuth: preHandlerHookHandler = async (request, reply) => {
       error: { code: 'AUTH_REQUIRED', message: 'Authentication is required.' },
     });
   }
+
+  const acting = request.authUser.actingAs;
+  if (acting && acting.mode === 'READ_ONLY' && !SAFE_METHODS.has(request.method) && !request.routeOptions.config?.actingExempt) {
+    return reply.code(403).send({
+      success: false,
+      error: { code: 'ACTING_READ_ONLY', message: 'You are viewing this workspace in read-only support mode. Re-enter it in write mode to make changes.' },
+    });
+  }
+};
+
+export const requireAuth: preHandlerHookHandler = async (request, reply) => authenticate(request, reply);
+
+/**
+ * Authentication for every route that touches tenant data (candidates, jobs, interviews, documents,
+ * criteria). A platform ADMIN has no company of their own, so they must first "act as" a company;
+ * while doing so they arrive here as a COMPANY_ADMIN of that company only.
+ */
+export const requireTenantAuth: preHandlerHookHandler = async (request, reply) => {
+  const denied = await authenticate(request, reply);
+  if (denied) return denied;
+
+  if (request.authUser!.role === 'ADMIN') {
+    return reply.code(403).send({
+      success: false,
+      error: { code: 'COMPANY_CONTEXT_REQUIRED', message: 'Enter a company workspace before accessing its data.' },
+    });
+  }
+};
+
+/** Use inside handlers for actions a platform admin must never perform on a tenant's behalf. */
+export const denyWhileActing = (request: FastifyRequest, reply: FastifyReply, message: string): FastifyReply | null => {
+  if (!request.authUser?.actingAs) return null;
+  return reply.code(403).send({ success: false, error: { code: 'ACTING_ACTION_BLOCKED', message } });
 };
 
 export const requireRole = (...roles: AuthUser['role'][]): preHandlerHookHandler => async (request, reply) => {

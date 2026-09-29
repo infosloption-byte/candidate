@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { ActingBanner } from './ActingBanner';
 import type { User, UserRole } from '../../domain/types';
 
 export type AppView = 'dashboard' | 'calendar' | 'reports' | 'platform-reports' | 'platform-activity' | 'billing' | 'jobs' | 'job-detail' | 'candidates' | 'interviews' | 'criteria' | 'companies' | 'agencies' | 'settings';
@@ -57,6 +58,7 @@ export const AppShell = ({
         <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="absolute right-3 top-3 grid size-9 place-items-center rounded-xl bg-white/10 text-white">×</button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
+        <ActingBanner />
         <TopBar
           role={role}
           activeView={activeView}

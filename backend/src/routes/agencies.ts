@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
-import { hashPassword, requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
+import { denyWhileActing, hashPassword, requireAgencyAccess, requireAuth, requireRole } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 
@@ -290,6 +290,10 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     '/system-users/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
+      if (request.body.password !== undefined || request.body.email !== undefined) {
+        const blocked = denyWhileActing(request, reply, 'Platform support cannot change a user\'s email or password. Use the password-reset flow instead.');
+        if (blocked) return blocked;
+      }
       const existing = await getPrisma().user.findFirst({
         where: request.authUser!.role === 'ADMIN'
           ? { id: request.params.id, role: { in: ['COMPANY_ADMIN', 'AGENCY'] } }
@@ -479,6 +483,10 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     '/interviewers/:id',
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
+      if (request.body.password !== undefined || request.body.email !== undefined) {
+        const blocked = denyWhileActing(request, reply, 'Platform support cannot change a user\'s email or password. Use the password-reset flow instead.');
+        if (blocked) return blocked;
+      }
       const existing = await getPrisma().user.findFirst({
         where: { id: request.params.id, companyId: request.authUser!.companyId, agencyId: null, role: 'INTERVIEWER' },
       });
@@ -605,6 +613,10 @@ export const agencyRoutes: FastifyPluginAsync = async (app) => {
     '/agencies/:agencyId/users/:userId',
     { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY'), requireAgencyAccess()] },
     async (request, reply) => {
+      if (request.body.password !== undefined || request.body.email !== undefined) {
+        const blocked = denyWhileActing(request, reply, 'Platform support cannot change a user\'s email or password. Use the password-reset flow instead.');
+        if (blocked) return blocked;
+      }
       const existing = await getPrisma().user.findFirst({
         where: { id: request.params.userId, agencyId: request.params.agencyId, role: { in: ['AGENCY', 'INTERVIEWER'] } },
       });

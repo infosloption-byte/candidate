@@ -25,6 +25,11 @@ enum CompanyStatus {
   INACTIVE
 }
 
+enum ActingMode {
+  READ_ONLY
+  READ_WRITE
+}
+
 enum OnboardingStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -111,6 +116,7 @@ model Company {
   criteria  InterviewCriterion[]
   criterionGroups InterviewCriterionGroup[]
   auditEvents AuditEvent[]
+  actingSessions Session[] @relation("SessionActingCompany")
 }
 
 model Agency {
@@ -164,9 +170,17 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Platform-admin "act as company" context (null for everyone else / when not acting).
+  actingCompanyId String?     @db.VarChar(36)
+  actingMode      ActingMode?
+  actingReason    String?     @db.VarChar(255)
+  actingUntil     DateTime?
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actingCompany Company? @relation("SessionActingCompany", fields: [actingCompanyId], references: [id], onDelete: SetNull)
 
   @@index([userId, expiresAt])
+  @@index([actingCompanyId])
 }
 
 model Candidate {

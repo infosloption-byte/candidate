@@ -1,5 +1,5 @@
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { useAuth } from '../../domain/authContext';
+import { useAuth, type EnterWorkspaceInput } from '../../domain/authContext';
 import type { Company } from '../../domain/types';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { Card } from '../../shared/components/Card';
@@ -75,12 +75,114 @@ const CompanyModal = ({
   );
 };
 
+const EnterWorkspaceModal = ({
+  company,
+  onClose,
+  onEnter,
+}: {
+  company: Company;
+  onClose: () => void;
+  onEnter: (input: EnterWorkspaceInput) => Promise<void>;
+}) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
+  const [reason, setReason] = useState('');
+  const [mode, setMode] = useState<EnterWorkspaceInput['mode']>('READ_ONLY');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    if (reason.trim().length < 5) {
+      setError('Enter a reason (for example a support ticket number).');
+      return;
+    }
+    if (mode === 'READ_WRITE' && !password) {
+      setError('Write mode requires your password.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await onEnter({ reason: reason.trim(), mode, ...(mode === 'READ_WRITE' ? { password } : {}) });
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to open the workspace.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5" role="presentation">
+      <button type="button" aria-label="Close dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
+      <div ref={modalRef} role="dialog" aria-modal="true" tabIndex={-1} className="relative z-10 w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform support</p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">Open {company.name}</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Access lasts 60 minutes, is limited to this company, and is recorded in the company&apos;s access log with your reason.</p>
+        </div>
+        <div className="space-y-4 p-5">
+          <FormField label="Reason" hint="Support ticket or customer request. Visible to the company administrators.">
+            <input className="field-input" value={reason} maxLength={255} onChange={(event) => setReason(event.target.value)} placeholder="Ticket #1234 - customer cannot see interview" />
+          </FormField>
+          <FormField label="Access level">
+            <select className="field-input" value={mode} onChange={(event) => setMode(event.target.value as EnterWorkspaceInput['mode'])}>
+              <option value="READ_ONLY">Read-only (recommended)</option>
+              <option value="READ_WRITE">Write mode (every change is logged)</option>
+            </select>
+          </FormField>
+          {mode === 'READ_WRITE' && (
+            <FormField label="Confirm your password">
+              <input className="field-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+            </FormField>
+          )}
+          {error && <p role="alert" className="text-xs font-bold text-rose-600">{error}</p>}
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+            <Button onClick={() => void submit()} disabled={busy}>{busy ? 'Opening…' : 'Open workspace'}</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface AccessLogItem { id: string; action: string; summary: string; createdAt: string; actor: { id: string; name: string } | null }
+
+/** Transparency for customers: when platform support entered this workspace and what they changed. */
+const AccessLogCard = () => {
+  const [items, setItems] = useState<AccessLogItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    apiFetch<AccessLogItem[]>('/company/access-log').then(setItems).catch(() => setFailed(true));
+  }, []);
+
+  if (failed) return null;
+
+  return (
+    <Card>
+      <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform support access</p>
+      <h3 className="mt-1 text-base font-black text-slate-950">Who has accessed this workspace</h3>
+      {items === null && <p className="mt-3 text-xs font-semibold text-slate-400">Loading…</p>}
+      {items?.length === 0 && <p className="mt-3 text-xs font-semibold text-slate-500">BuildHire support has not accessed your workspace.</p>}
+      <ul className="mt-3 divide-y divide-slate-100">
+        {items?.map((item) => (
+          <li key={item.id} className="py-2">
+            <p className="text-xs font-bold text-slate-800">{item.summary}</p>
+            <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{new Date(item.createdAt).toLocaleString()}</p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+};
+
 export const CompaniesPage = () => {
-  const { user } = useAuth();
+  const { user, enterWorkspace } = useAuth();
   const isPlatformAdmin = user?.role === 'ADMIN';
   const [companies, setCompanies] = useState<Array<Company & { counts?: { users: number; jobs: number; candidates: number; interviews?: number } }>>([]);
   const [form, setForm] = useState(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
+  const [workspaceTarget, setWorkspaceTarget] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -181,7 +283,10 @@ export const CompaniesPage = () => {
                   <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.users ?? 0}</td>
                   <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.jobs ?? 0}</td>
                   <td className="px-4 py-4 text-sm font-bold text-slate-700">{company.counts?.candidates ?? 0}</td>
-                  <td className="px-4 py-4 text-right">
+                  <td className="space-x-2 px-4 py-4 text-right">
+                    {isPlatformAdmin && company.status === 'ACTIVE' && (
+                      <Button size="sm" variant="secondary" onClick={() => setWorkspaceTarget(company)}>Open workspace</Button>
+                    )}
                     <Button size="sm" variant={company.status === 'ACTIVE' ? 'danger' : 'secondary'} onClick={() => void toggleStatus(company)}>
                       {company.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                     </Button>
@@ -193,6 +298,16 @@ export const CompaniesPage = () => {
           {!companies.length && !loading && <p className="p-10 text-center text-xs font-semibold text-slate-400">No companies yet.</p>}
         </div>
       </Card>
+
+      {user?.role === 'COMPANY_ADMIN' && !user.actingAs && <AccessLogCard />}
+
+      {workspaceTarget && isPlatformAdmin && (
+        <EnterWorkspaceModal
+          company={workspaceTarget}
+          onClose={() => setWorkspaceTarget(null)}
+          onEnter={async (input) => { await enterWorkspace(workspaceTarget.id, input); }}
+        />
+      )}
 
       {modalOpen && isPlatformAdmin && (
         <CompanyModal

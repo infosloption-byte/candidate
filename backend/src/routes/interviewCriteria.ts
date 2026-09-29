@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { Prisma } from '../generated/prisma/client.js';
-import { requireAuth, requireRole } from '../lib/auth.js';
+import { requireRole, requireTenantAuth } from '../lib/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { validateInterviewCriterionInput, type InterviewCriterionInput } from '../domain/interviewCriterionValidation.js';
 import { recordAuditEvent } from '../lib/audit.js';
@@ -23,10 +23,10 @@ const select = {
 export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/interview-criteria',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const criteria = await getPrisma().interviewCriterion.findMany({
-        where: { companyId: request.authUser!.companyId ?? undefined },
+        where: { companyId: request.authUser!.companyId ?? '__missing__' },
         select,
         orderBy: [{ active: 'desc' }, { createdAt: 'asc' }],
       });
@@ -36,7 +36,7 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Body: InterviewCriterionInput }>(
     '/interview-criteria',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const errors = validateInterviewCriterionInput(request.body, 'create');
       if (errors.length) {
@@ -72,9 +72,9 @@ export const interviewCriterionRoutes: FastifyPluginAsync = async (app) => {
 
   app.patch<{ Params: CriterionParams; Body: InterviewCriterionInput }>(
     '/interview-criteria/:id',
-    { preHandler: [requireAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
-      const existing = await getPrisma().interviewCriterion.findUnique({ where: { id: request.params.id }, select });
+      const existing = await getPrisma().interviewCriterion.findFirst({ where: { id: request.params.id, companyId: request.authUser!.companyId ?? '__missing__' }, select });
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'CRITERION_NOT_FOUND', message: 'Interview criterion not found.' } });
       }

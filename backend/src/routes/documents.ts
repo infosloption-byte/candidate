@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest } from 'fastify';
-import { requireAuth } from '../lib/auth.js';
+import { denyWhileActing, requireTenantAuth } from '../lib/auth.js';
+import { canManageInAgency, inCompany } from '../lib/tenant.js';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import {
@@ -30,13 +31,12 @@ const documentSelect = {
 
 const allowedToAccessCandidate = async (
   user: NonNullable<FastifyRequest['authUser']>,
-  agencyId: string,
-  candidateId: string,
+  candidate: { id: string; companyId: string; agencyId: string },
 ): Promise<boolean> => {
-  if (user.role === 'COMPANY_ADMIN') return true;
+  const candidateId = candidate.id;
   if (user.role === 'INTERVIEWEE') return user.candidateId === candidateId;
-  if (user.role === 'AGENCY') return user.agencyId === agencyId;
-  if (user.role === 'INTERVIEWER') {
+  if (user.role === 'COMPANY_ADMIN' || user.role === 'AGENCY') return canManageInAgency(user, candidate);
+  if (user.role === 'INTERVIEWER' && inCompany(user, candidate.companyId)) {
     const assignment = await getPrisma().interviewParticipant.findFirst({
       where: { userId: user.id, interview: { candidateId } },
       select: { interviewId: true },
@@ -49,32 +49,24 @@ const allowedToAccessCandidate = async (
 const sanitizeDownloadName = (fileName: string): string => fileName.replace(/[\r\n"]/g, '_');
 const canManageCandidateDocuments = (
   user: NonNullable<FastifyRequest['authUser']>,
-  agencyId: string,
-): boolean =>
-  user.role === 'COMPANY_ADMIN' || (user.role === 'AGENCY' && user.agencyId === agencyId);
+  candidate: { companyId: string; agencyId: string },
+): boolean => canManageInAgency(user, candidate);
 
 
 export const documentRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: CandidateParams }>(
     '/candidates/:candidateId/documents',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true },
+        select: { id: true, companyId: true, agencyId: true },
       });
 
-      if (!candidate) {
+      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate))) {
         return reply.code(404).send({
           success: false,
           error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' },
-        });
-      }
-
-      if (!(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, candidate.id))) {
-        return reply.code(403).send({
-          success: false,
-          error: { code: 'FORBIDDEN', message: 'You do not have access to this candidate.' },
         });
       }
 
@@ -90,24 +82,17 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: CandidateParams; Body: DocumentUploadInput }>(
     '/candidates/:candidateId/documents',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: request.params.candidateId },
-        select: { id: true, agencyId: true, firstName: true, lastName: true },
+        select: { id: true, companyId: true, agencyId: true, firstName: true, lastName: true },
       });
 
-      if (!candidate) {
+      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate)) {
         return reply.code(404).send({
           success: false,
           error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' },
-        });
-      }
-
-      if (!canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
-        return reply.code(403).send({
-          success: false,
-          error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can upload candidate documents.' },
         });
       }
 
@@ -167,7 +152,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: DocumentParams }>(
     '/candidates/:candidateId/documents/:documentId',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const document = await getPrisma().candidateDocument.findFirst({
         where: { id: request.params.documentId, candidateId: request.params.candidateId },
@@ -189,13 +174,13 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: document.candidateId },
-        select: { agencyId: true },
+        select: { id: true, companyId: true, agencyId: true },
       });
 
-      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate.agencyId, document.candidateId))) {
-        return reply.code(403).send({
+      if (!candidate || !(await allowedToAccessCandidate(request.authUser!, candidate))) {
+        return reply.code(404).send({
           success: false,
-          error: { code: 'FORBIDDEN', message: 'You do not have access to this document.' },
+          error: { code: 'DOCUMENT_NOT_FOUND', message: 'Document not found.' },
         });
       }
 
@@ -212,7 +197,7 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete<{ Params: DocumentParams }>(
     '/candidates/:candidateId/documents/:documentId',
-    { preHandler: requireAuth },
+    { preHandler: requireTenantAuth },
     async (request, reply) => {
       const document = await getPrisma().candidateDocument.findFirst({
         where: { id: request.params.documentId, candidateId: request.params.candidateId },
@@ -233,15 +218,19 @@ export const documentRoutes: FastifyPluginAsync = async (app) => {
 
       const candidate = await getPrisma().candidate.findUnique({
         where: { id: document.candidateId },
-        select: { agencyId: true, firstName: true, lastName: true },
+        select: { companyId: true, agencyId: true, firstName: true, lastName: true },
       });
 
-      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate.agencyId)) {
-        return reply.code(403).send({
+      if (!candidate || !canManageCandidateDocuments(request.authUser!, candidate)) {
+        return reply.code(404).send({
           success: false,
-          error: { code: 'FORBIDDEN', message: 'Only administrators and agency users can delete candidate documents.' },
+          error: { code: 'DOCUMENT_NOT_FOUND', message: 'Document not found.' },
         });
       }
+
+      // Irreversible: platform support may not delete a customer's documents.
+      const blocked = denyWhileActing(request, reply, 'Platform support cannot delete candidate documents. Ask the company administrator to do it.');
+      if (blocked) return blocked;
 
       await getPrisma().candidateDocument.delete({ where: { id: document.id } });
       await deleteDocument(document.storageKey);

@@ -2,6 +2,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { env } from './config/env.js';
+import { recordAuditEvent } from './lib/audit.js';
+import { actAsRoutes } from './routes/actAs.js';
 import { agencyRoutes } from './routes/agencies.js';
 import { authRoutes } from './routes/auth.js';
 import { candidateRoutes } from './routes/candidates.js';
@@ -31,8 +33,28 @@ export const buildApp = (): FastifyInstance => {
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
+  // Every successful change a platform admin makes while acting inside a company is logged against
+  // that company, so customers can see exactly what support did. (Reads are covered by the
+  // ADMIN_ACT_AS_STARTED / ENDED events, which carry the reason and mode.)
+  app.addHook('onResponse', async (request, reply) => {
+    const acting = request.authUser?.actingAs;
+    if (!acting || reply.statusCode >= 400) return;
+    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method) || request.routeOptions.config?.actingExempt) return;
+
+    const summary = request.method + ' ' + request.routeOptions.url + ' (' + reply.statusCode + '). Reason: ' + acting.reason;
+    await recordAuditEvent({
+      actorId: request.authUser!.id,
+      companyId: acting.companyId,
+      action: 'ADMIN_ACTING_WRITE',
+      entityType: 'Company',
+      entityId: acting.companyId,
+      summary: summary.length > 500 ? summary.slice(0, 499) + '…' : summary,
+    });
+  });
+
   void app.register(healthRoutes, { prefix: '/api/v1' });
   void app.register(authRoutes, { prefix: '/api/v1' });
+  void app.register(actAsRoutes, { prefix: '/api/v1' });
   void app.register(agencyRoutes, { prefix: '/api/v1' });
   void app.register(companyRoutes, { prefix: '/api/v1' });
   void app.register(jobRoutes, { prefix: '/api/v1' });
