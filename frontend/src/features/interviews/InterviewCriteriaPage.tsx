@@ -677,7 +677,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                                 <IconButton icon="pencil" label={t('Edit criteria group')} ariaLabel={t('Edit criteria group') + ' ' + group.name} onClick={() => openEditGroup(group)} />
                               )}
                               {canManage && (
-                                <IconButton icon={group.active ? 'ban' : 'check'} variant={group.active ? 'danger' : 'success'} label={group.active ? t('Disable criteria group') : t('Enable criteria group')} ariaLabel={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name} variant={group.active ? "danger" : "success"} onClick={() => void toggleGroup(group)} />
+                                <IconButton icon={group.active ? 'ban' : 'check'} label={group.active ? t('Disable criteria group') : t('Enable criteria group')} ariaLabel={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name} variant={group.active ? "danger" : "success"} onClick={() => void toggleGroup(group)} />
                               )}
                             </div>
                           </div>
@@ -735,7 +735,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                               <IconButton icon="pencil" label="Edit criterion" ariaLabel={'Edit criterion ' + criterion.name} onClick={() => openEditCriterion(criterion)} />
                             )}
                             {canManage && (
-                              <IconButton icon={criterion.active ? 'ban' : 'check'} variant={criterion.active ? 'danger' : 'success'} label={criterion.active ? t('Disable criteria') : t('Enable criterion')} ariaLabel={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name} variant={criterion.active ? "danger" : "success"} onClick={() => void toggleCriterion(criterion)} />
+                              <IconButton icon={criterion.active ? 'ban' : 'check'} label={criterion.active ? t('Disable criteria') : t('Enable criterion')} ariaLabel={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name} variant={criterion.active ? "danger" : "success"} onClick={() => void toggleCriterion(criterion)} />
                             )}
                           </div>
                         </div>
