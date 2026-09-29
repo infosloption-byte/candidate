@@ -170,12 +170,23 @@ const AuthenticatedApp = ({
   const previousRole = useRef(role);
 
   useEffect(() => {
-    if (previousRole.current === role) return;
-    previousRole.current = role;
-    const nextView = roleDefaults[role];
-    setActiveView(nextView);
-    setActiveJobId(null);
-    window.history.pushState({}, '', routeForView(nextView));
+    const currentRoute = routeFromLocation(window.location.pathname, window.location.search);
+
+    if (previousRole.current !== role) {
+      previousRole.current = role;
+      const nextView = roleDefaults[role];
+      setActiveView(nextView);
+      setActiveJobId(null);
+      window.history.pushState({}, '', routeForView(nextView));
+      return;
+    }
+
+    if (!isViewAccessible(role, currentRoute.view)) {
+      const nextView = roleDefaults[role];
+      setActiveView(nextView);
+      setActiveJobId(null);
+      window.history.replaceState({}, '', routeForView(nextView));
+    }
   }, [role]);
 
   useEffect(() => {
