@@ -5,7 +5,7 @@ import { useRecruitment } from '../../domain/recruitmentContext';
 import { SectionHeading } from '../../shared/components/SectionHeading';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
-import { Card } from '../../shared/components/Card';
+import { DataTable } from '../../shared/components/DataTable';
 import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
@@ -640,7 +640,7 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-8">
             <section className={mobileTab === 'groups' ? 'block' : 'hidden md:block'}>
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
@@ -651,52 +651,60 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <p className="text-xs text-slate-400">{groups.length} group(s)</p>
               </div>
               {groups.length > 0 ? (
-                <div className="space-y-3">
-                  {groups.map((group) => {
-                    const totalMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
-                    return (
-                      <Card key={group.id} padded={false} className="p-4">
-                        <div className="flex flex-col gap-4">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-sm font-black text-slate-950">{group.name}</h3>
-                              <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
-                            </div>
-                            {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
-                            {group.description && <p className="mt-2 text-xs leading-5 text-slate-500">{group.description}</p>}
+                <DataTable
+                  rows={groups}
+                  getRowKey={(group) => group.id}
+                  columns={[
+                    {
+                      key: 'group',
+                      header: 'Group',
+                      className: 'min-w-[280px]',
+                      render: (group) => (
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-extrabold text-slate-900">{group.name}</p>
+                            <StatusPill value={group.active ? 'ACTIVE' : 'INACTIVE'} />
                           </div>
-
-                          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                            <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
-                              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p>
-                              <p className="text-sm font-black text-slate-900">{totalMax} pts</p>
-                            </div>
-                            <div className="flex flex-wrap justify-end gap-1.5">
-                              <IconButton icon="eye" label={t('View criteria group')} ariaLabel={t('View criteria group') + ' ' + group.name} onClick={() => openViewGroup(group)} />
-                              {canManage && (
-                                <IconButton icon="pencil" label={t('Edit criteria group')} ariaLabel={t('Edit criteria group') + ' ' + group.name} onClick={() => openEditGroup(group)} />
-                              )}
-                              {canManage && (
-                                <IconButton icon={group.active ? 'ban' : 'check'} label={group.active ? t('Disable criteria group') : t('Enable criteria group')} ariaLabel={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name} variant={group.active ? "danger" : "success"} onClick={() => void toggleGroup(group)} />
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
-                            {group.criteria.slice(0, 4).map((item) => (
-                              <span key={item.criterionId} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                                {item.criterion.name} · {item.criterion.maxPoints} pts{item.criterion.responseType === 'MULTI_SELECT' ? ' · tags' : ''}
-                              </span>
-                            ))}
-                            {group.criteria.length > 4 && (
-                              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">+{group.criteria.length - 4} more</span>
-                            )}
-                          </div>
+                          {group.category && <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">{group.category}</p>}
+                          {group.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{group.description}</p>}
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
+                      ),
+                    },
+                    {
+                      key: 'criteria',
+                      header: 'Criteria',
+                      className: 'min-w-[240px]',
+                      render: (group) => (
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-900">{group.criteria.length} {group.criteria.length === 1 ? 'criterion' : 'criteria'}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                            {group.criteria.slice(0, 2).map((item) => item.criterion.name).join(' · ')}
+                            {group.criteria.length > 2 ? ' · +' + (group.criteria.length - 2) + ' more' : ''}
+                          </p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'score',
+                      header: 'Max score',
+                      className: 'w-[1%] whitespace-nowrap',
+                      render: (group) => <span className="font-black text-slate-900">{group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0)} pts</span>,
+                    },
+                    {
+                      key: 'actions',
+                      header: 'Actions',
+                      className: 'w-[1%] whitespace-nowrap text-right',
+                      render: (group) => (
+                        <div className="flex justify-end gap-1.5">
+                          <IconButton icon="eye" label={t('View criteria group')} ariaLabel={t('View criteria group') + ' ' + group.name} onClick={() => openViewGroup(group)} />
+                          {canManage && <IconButton icon="pencil" label={t('Edit criteria group')} ariaLabel={t('Edit criteria group') + ' ' + group.name} onClick={() => openEditGroup(group)} />}
+                          {canManage && <IconButton icon={group.active ? 'ban' : 'check'} label={group.active ? t('Disable criteria group') : t('Enable criteria group')} ariaLabel={(group.active ? t('Disable') : t('Enable')) + ' ' + t('criteria group') + ' ' + group.name} variant={group.active ? 'danger' : 'success'} onClick={() => void toggleGroup(group)} />}
+                        </div>
+                      ),
+                    },
+                  ]}
+                  emptyMessage="No criteria groups configured."
+                />
               ) : (
                 <StateMessage kind="empty" title="No criteria groups configured" description="Create a reusable group so each new interview can use a job-specific scorecard." />
               )}
@@ -712,37 +720,59 @@ export const InterviewCriteriaPage = ({ role }: Props) => {
                 <p className="text-xs text-slate-400">{criteria.length} {t('criterion/criteria')}</p>
               </div>
               {criteria.length > 0 ? (
-                <div className="space-y-3">
-                  {criteria.map((criterion) => (
-                    <Card key={criterion.id}>
-                      <div className="flex flex-col gap-4">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-sm font-black text-slate-950">{criterion.name}</h2>
-                            <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-slate-500">{criterion.responseType === 'MULTI_SELECT' ? 'MULTI TAG' : criterion.responseType.replace('_', ' ')}</span>
-                          </div>
+                <DataTable
+                  rows={criteria}
+                  getRowKey={(criterion) => criterion.id}
+                  columns={[
+                    {
+                      key: 'criterion',
+                      header: 'Criterion',
+                      className: 'min-w-[260px]',
+                      render: (criterion) => (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-extrabold text-slate-900">{criterion.name}</p>
+                          <StatusPill value={criterion.active ? 'ACTIVE' : 'INACTIVE'} />
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                          <div className="mr-auto rounded-xl bg-slate-50 px-3 py-2 text-center">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Points</p>
-                            <p className="text-sm font-black text-slate-900">{criterion.maxPoints} pts</p>
-                            <p className="mt-0.5 text-[9px] font-bold text-slate-400">{criterion.responseType === 'MULTI_SELECT' ? 'Multiple tag option' : 'Standard answer'}</p>
-                          </div>
-                          <div className="ml-auto flex items-center gap-1.5">
-                            <IconButton icon="eye" label={t('View criteria')} ariaLabel={t('View criteria') + ' ' + criterion.name} onClick={() => openViewCriterion(criterion)} />
-                            {canManage && (
-                              <IconButton icon="pencil" label="Edit criterion" ariaLabel={'Edit criterion ' + criterion.name} onClick={() => openEditCriterion(criterion)} />
-                            )}
-                            {canManage && (
-                              <IconButton icon={criterion.active ? 'ban' : 'check'} label={criterion.active ? t('Disable criteria') : t('Enable criterion')} ariaLabel={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name} variant={criterion.active ? "danger" : "success"} onClick={() => void toggleCriterion(criterion)} />
-                            )}
-                          </div>
+                      ),
+                    },
+                    {
+                      key: 'response',
+                      header: 'Response',
+                      className: 'min-w-[170px]',
+                      render: (criterion) => (
+                        <div>
+                          <p className="font-bold text-slate-700">{criterionResponseLabel(criterion.responseType)}</p>
+                          {criterion.options?.length ? <p className="mt-1 text-xs text-slate-400">{criterion.options.length} option(s)</p> : null}
                         </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                      ),
+                    },
+                    {
+                      key: 'points',
+                      header: 'Max points',
+                      className: 'w-[1%] whitespace-nowrap',
+                      render: (criterion) => <span className="font-black text-slate-900">{criterion.maxPoints} pts</span>,
+                    },
+                    {
+                      key: 'used-in',
+                      header: 'Used in groups',
+                      className: 'w-[1%] whitespace-nowrap',
+                      render: (criterion) => <span className="font-bold text-slate-700">{groups.filter((group) => group.criteria.some((item) => item.criterionId === criterion.id)).length}</span>,
+                    },
+                    {
+                      key: 'actions',
+                      header: 'Actions',
+                      className: 'w-[1%] whitespace-nowrap text-right',
+                      render: (criterion) => (
+                        <div className="flex justify-end gap-1.5">
+                          <IconButton icon="eye" label={t('View criteria')} ariaLabel={t('View criteria') + ' ' + criterion.name} onClick={() => openViewCriterion(criterion)} />
+                          {canManage && <IconButton icon="pencil" label="Edit criterion" ariaLabel={'Edit criterion ' + criterion.name} onClick={() => openEditCriterion(criterion)} />}
+                          {canManage && <IconButton icon={criterion.active ? 'ban' : 'check'} label={criterion.active ? t('Disable criteria') : t('Enable criterion')} ariaLabel={(criterion.active ? t('Disable criteria') : t('Enable criterion')) + ' ' + criterion.name} variant={criterion.active ? 'danger' : 'success'} onClick={() => void toggleCriterion(criterion)} />}
+                        </div>
+                      ),
+                    },
+                  ]}
+                  emptyMessage="No criteria configured."
+                />
               ) : (
                 <StateMessage kind="empty" title="No criteria configured" description="Add at least one active criterion before creating criteria groups or scoring interviews." />
               )}
