@@ -244,11 +244,26 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
     const interviews = await getPrisma().interview.findMany({
       where: user.role === 'COMPANY_ADMIN'
-        ? { deletedAt: null, companyId: user.companyId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+        ? {
+            deletedAt: null,
+            companyId: user.companyId ?? '__missing__',
+            ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
+            candidate: { deletedAt: null },
+          }
         : user.role === 'INTERVIEWER'
-          ? { deletedAt: null, panel: { some: { userId: user.id } }, ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+          ? {
+            deletedAt: null,
+            panel: { some: { userId: user.id } },
+            ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
+            candidate: { deletedAt: null },
+          }
           : user.role === 'INTERVIEWEE'
-            ? { deletedAt: null, candidateId: user.candidateId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+            ? {
+            deletedAt: null,
+            candidateId: user.candidateId ?? '__missing__',
+            ...(request.query.jobId ? { jobId: request.query.jobId } : {}),
+            candidate: { deletedAt: null },
+          }
             : {
                 companyId: user.companyId ?? '__missing__',
                 candidate: { agencyId: user.agencyId ?? '__missing__' },
@@ -268,8 +283,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get<{ Params: InterviewParams }>('/interviews/:id', { preHandler: requireTenantAuth }, async (request, reply) => {
-    const interview = await getPrisma().interview.findUnique({
-      where: { id: request.params.id, deletedAt: null },
+    const interview = await getPrisma().interview.findFirst({
+      where: { id: request.params.id, deletedAt: null, candidate: { deletedAt: null } },
       include: {
         ...interviewInclude,
         evaluations: {
@@ -735,8 +750,8 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
     '/interviews/:id',
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
-      const existing = await getPrisma().interview.findUnique({
-        where: { id: request.params.id },
+      const existing = await getPrisma().interview.findFirst({
+        where: { id: request.params.id, deletedAt: null, candidate: { deletedAt: null } },
         include: {
           candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
           job: { select: { id: true, title: true, status: true } },
