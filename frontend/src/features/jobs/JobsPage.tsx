@@ -281,7 +281,7 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       if (developmentMode) {
         dispatch({ type: 'DELETE_JOB', jobId: target.id });
       } else {
-        await apiFetch('/jobs/' + target.id + '/permanent', { method: 'DELETE' });
+        await apiFetch('/jobs/' + target.id + '/delete', { method: 'DELETE' });
       }
       setJobs((current) => current.filter((job) => job.id !== target.id));
       setDeleteJobId(null);
