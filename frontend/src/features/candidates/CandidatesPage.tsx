@@ -12,6 +12,7 @@ import { DataTable } from '../../shared/components/DataTable';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, Job, JobCandidate, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
@@ -363,6 +364,8 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
   const [sortBy, setSortBy] = useState<'name' | 'profession' | 'passport' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const [deletingCandidate, setDeletingCandidate] = useState(false);
   const [statusDraft, setStatusDraft] = useState<CandidateStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
   const [history, setHistory] = useState<CandidateProfileHistory>({ statusHistory: [], interviews: [], auditEvents: [] });
@@ -969,6 +972,30 @@ const filterOptions = useMemo(() => ({
     } catch (requestError: unknown) { setError(requestError instanceof Error ? requestError.message : 'Unable to update onboarding status.'); }
   };
 
+  const deleteCandidate = async () => {
+    if (!deleteCandidateId) return;
+    const target = candidates.find((item) => item.id === deleteCandidateId);
+    if (!target) return;
+    setDeletingCandidate(true);
+    setError('');
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'DELETE_CANDIDATE', candidateId: target.id });
+      } else {
+        await apiFetch('/candidates/' + target.id, { method: 'DELETE' });
+      }
+      setCandidates((current) => current.filter((item) => item.id !== target.id));
+      if (selectedCandidateId === target.id) setSelectedCandidateId('');
+      setDeleteCandidateId(null);
+      setSuccessTitle('Candidate removed');
+      setSuccess('"' + target.name + '" was safely removed from the active candidate pool. Recruitment history remains stored.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to remove the candidate.');
+    } finally {
+      setDeletingCandidate(false);
+    }
+  };
+
   const displayPassport = (value: string | null) => value?.trim() || 'Not provided';
 
   const columns = [
@@ -979,7 +1006,12 @@ const filterOptions = useMemo(() => ({
     { key: 'requestedProfession', header: t('Requested profession'), render: (item: Candidate) => <span className="text-xs font-semibold text-slate-700">{item.requestedProfession}</span> },
     { key: 'status', header: 'Status', render: (item: Candidate) => <StatusPill value={item.status} /> },
     { key: 'onboarding', header: 'Onboarding', render: (item: Candidate) => <StatusPill value={item.onboardingStatus} /> },
-    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => <IconButton icon="eye" label={"Open candidate"} onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }} /> },
+    { key: 'actions', header: '', className: 'text-right', render: (item: Candidate) => (
+      <div className="flex items-center justify-end gap-1.5">
+        <IconButton icon="eye" label={"Open candidate"} onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }} />
+        {(role === 'COMPANY_ADMIN' || role === 'AGENCY') && <IconButton icon="trash" variant="danger" label="Remove candidate" onClick={() => setDeleteCandidateId(item.id)} />}
+      </div>
+    ) },
   ];
 
   return (
@@ -1370,8 +1402,9 @@ const filterOptions = useMemo(() => ({
                        </div>
                      </div>
 
-                    <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
+                    <div className="mt-3 flex justify-end gap-1.5 border-t border-slate-100 pt-3">
                       <IconButton icon="eye" label={"Open candidate"} onClick={() => { setSelectedCandidateId(item.id); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }} />
+                      {(role === 'COMPANY_ADMIN' || role === 'AGENCY') && <IconButton icon="trash" variant="danger" label="Remove candidate" onClick={() => setDeleteCandidateId(item.id)} />}
                     </div>
                   </Card>
                 );
@@ -1636,6 +1669,17 @@ const filterOptions = useMemo(() => ({
 
         </>
       )}
+      <ConfirmDialog
+        open={Boolean(deleteCandidateId)}
+        title="Remove this candidate?"
+        description="The candidate will be hidden from the active workspace. Candidates with scheduled or in-progress interviews cannot be removed. Existing recruitment history remains stored."
+        confirmLabel="Remove candidate"
+        cancelLabel="Keep candidate"
+        danger
+        busy={deletingCandidate}
+        onCancel={() => { if (!deletingCandidate) setDeleteCandidateId(null); }}
+        onConfirm={() => void deleteCandidate()}
+      />
     </section>
   );
 };
