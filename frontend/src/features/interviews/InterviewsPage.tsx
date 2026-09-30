@@ -630,6 +630,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
               method: 'PATCH',
               body: JSON.stringify({
                 type: form.type,
+                status: 'SCHEDULED',
                 scheduledAt,
                 durationMins,
                 location: form.location.trim() || null,
