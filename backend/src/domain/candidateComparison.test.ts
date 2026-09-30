@@ -3,7 +3,7 @@ import test from 'node:test';
 import { buildJobComparison as buildJob, type ComparisonCandidate, type ComparisonInterview } from './candidateComparison.js';
 
 const candidate = (id: string, name: string, profession = 'Welder'): ComparisonCandidate => ({
-  id, name, reference: 'CA-' + id, requestedProfession: profession, agencyId: 'agency-1', poolStatus: 'INTERVIEW_COMPLETED',
+  id, name, reference: 'CA-' + id, requestedProfession: profession, agencyId: 'agency-1', poolStatus: 'INTERVIEW_COMPLETED', candidateStatus: 'INTERVIEW_COMPLETED',
 });
 
 // Single-position helper: keeps the original tests focused on ranking maths.
