@@ -22,11 +22,13 @@ type RecruitmentAction =
   | { type: 'REMOVE_JOB_CANDIDATE'; jobId: string; candidateId: string }
   | { type: 'CREATE_CANDIDATE'; candidate: Candidate }
   | { type: 'UPDATE_CANDIDATE'; candidate: Candidate }
+  | { type: 'DELETE_CANDIDATE'; candidateId: string }
   | { type: 'SET_ONBOARDING_STATUS'; candidateId: string; status: Candidate['onboardingStatus'] }
   | { type: 'SET_CANDIDATE_STATUS'; candidateId: string; status: Candidate['status'] }
   | { type: 'SCHEDULE_INTERVIEW'; interview: Interview }
   | { type: 'SET_INTERVIEW_STATUS'; interviewId: string; status: Interview['status'] }
   | { type: 'UPDATE_INTERVIEW'; interview: Interview }
+  | { type: 'DELETE_INTERVIEW'; interviewId: string }
   | { type: 'CREATE_CRITERION'; criterion: InterviewCriterion }
   | { type: 'UPDATE_CRITERION'; criterion: InterviewCriterion }
   | { type: 'CREATE_CRITERION_GROUP'; group: InterviewCriterionGroup }
@@ -66,6 +68,13 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
       return { ...state, candidates: [action.candidate, ...state.candidates] };
     case 'UPDATE_CANDIDATE':
       return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidate.id ? action.candidate : candidate) };
+    case 'DELETE_CANDIDATE':
+      return {
+        ...state,
+        candidates: state.candidates.filter((candidate) => candidate.id !== action.candidateId),
+        jobCandidates: state.jobCandidates.filter((item) => item.candidateId !== action.candidateId),
+        interviews: state.interviews.filter((item) => item.candidateId !== action.candidateId),
+      };
     case 'SET_ONBOARDING_STATUS':
       return { ...state, candidates: state.candidates.map((candidate) => candidate.id === action.candidateId ? { ...candidate, onboardingStatus: action.status } : candidate) };
     case 'SET_CANDIDATE_STATUS':
@@ -92,6 +101,8 @@ const reducer = (state: RecruitmentState, action: RecruitmentAction): Recruitmen
     }
     case 'UPDATE_INTERVIEW':
       return { ...state, interviews: state.interviews.map((interview) => interview.id === action.interview.id ? action.interview : interview) };
+    case 'DELETE_INTERVIEW':
+      return { ...state, interviews: state.interviews.filter((interview) => interview.id !== action.interviewId) };
     case 'CREATE_CRITERION':
       return { ...state, interviewCriteria: [action.criterion, ...state.interviewCriteria] };
     case 'UPDATE_CRITERION':
