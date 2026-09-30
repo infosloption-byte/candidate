@@ -1098,6 +1098,12 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{target.status === 'SCHEDULED' ? 'Interview settings' : 'Interview reschedule'}</p>
                   <h2 className="mt-1 text-lg font-black text-slate-950">{target.candidate?.name ?? 'Candidate'} · {label(target.type)}</h2>
                   <p className="mt-1 text-xs text-slate-500">Set a new date and adjust the interviewer panel. Saving returns this interview to Scheduled.</p>
+                  {error && (
+                    <div role="alert" aria-live="assertive" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
+                    </div>
+                  )}
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     <FormField label="Date & time"><DatePicker value={rescheduleForm.scheduledAt} onChange={(value) => setRescheduleForm((current) => ({ ...current, scheduledAt: value }))} showTime placeholder="Select date and time" ariaLabel="Reschedule date and time" /></FormField>
                     <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={rescheduleForm.durationMins} onChange={(event) => setRescheduleForm((current) => ({ ...current, durationMins: event.target.value }))} /></FormField>

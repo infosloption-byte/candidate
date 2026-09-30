@@ -1439,6 +1439,12 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
               </div>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
+              {editingInterviewId && error && (
+                <div role="alert" aria-live="assertive" className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
+                </div>
+              )}
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                   <FormField label="Job / position" hint="Select the job whose candidate pool contains the selected workers.">
