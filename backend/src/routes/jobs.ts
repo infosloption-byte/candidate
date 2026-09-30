@@ -95,12 +95,23 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       include: {
         positions: { orderBy: { sortOrder: 'asc' } },
         candidatePool: {
-          ...(user.role === 'AGENCY' ? { where: { candidate: { agencyId: user.agencyId ?? '__missing__' } } } : {}),
+          where: {
+            candidate: {
+              deletedAt: null,
+              ...(user.role === 'AGENCY' ? { agencyId: user.agencyId ?? '__missing__' } : {}),
+            },
+          },
           orderBy: { createdAt: 'desc' },
           include: { candidate: { select: candidateSelect } },
         },
         interviews: {
-          ...(user.role === 'AGENCY' ? { where: { candidate: { agencyId: user.agencyId ?? '__missing__' } } } : {}),
+          where: {
+            deletedAt: null,
+            candidate: {
+              deletedAt: null,
+              ...(user.role === 'AGENCY' ? { agencyId: user.agencyId ?? '__missing__' } : {}),
+            },
+          },
           orderBy: { scheduledAt: 'desc' },
           include: {
             candidate: { select: candidateSelect },
@@ -149,8 +160,6 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Agencies only ever see their own candidates, exactly like GET /jobs/:id.
-    const candidateScope = user.role === 'AGENCY' ? { candidate: { agencyId: user.agencyId ?? '__missing__' } } : {};
-
     const job = await getPrisma().job.findUnique({
       where: { id: request.params.id, deletedAt: null },
       select: {
@@ -160,7 +169,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         positions: { orderBy: { sortOrder: 'asc' }, select: { id: true, position: true, requiredCount: true } },
         candidatePool: {
           where: user.role === 'AGENCY'
-            ? { status: { notIn: [] }, candidate: { agencyId: user.agencyId ?? '__missing__', deletedAt: null } }
+            ? { candidate: { agencyId: user.agencyId ?? '__missing__', deletedAt: null } }
             : { candidate: { deletedAt: null } },
           select: { status: true, candidate: { select: candidateSelect } },
         },
