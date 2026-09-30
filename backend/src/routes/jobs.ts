@@ -6,6 +6,7 @@ import { validateJobInput, type JobInput, type JobPositionInput } from '../domai
 import { jobListWhereForUser } from '../domain/jobsAccess.js';
 import { recordAuditEvent } from '../lib/audit.js';
 import { withCandidateDisplayName } from '../domain/candidateDisplay.js';
+import { buildJobComparison } from '../domain/candidateComparison.js';
 
 interface JobParams { id: string; }
 interface JobCandidatesBody { candidateIds?: string[]; }
@@ -136,6 +137,78 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         filledCount: hiredCount,
       },
     });
+  });
+
+  app.get<{ Params: JobParams }>('/jobs/:id/comparison', { preHandler: requireTenantAuth }, async (request, reply) => {
+    const user = request.authUser!;
+    if (!['COMPANY_ADMIN', 'AGENCY'].includes(user.role)) {
+      return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'You do not have access to this job.' } });
+    }
+
+    // Agencies only ever see their own candidates, exactly like GET /jobs/:id.
+    const candidateScope = user.role === 'AGENCY' ? { candidate: { agencyId: user.agencyId ?? '__missing__' } } : {};
+
+    const job = await getPrisma().job.findUnique({
+      where: { id: request.params.id },
+      select: {
+        id: true,
+        companyId: true,
+        candidatePool: {
+          where: candidateScope,
+          select: { status: true, candidate: { select: candidateSelect } },
+        },
+        interviews: {
+          where: candidateScope,
+          select: {
+            id: true,
+            candidateId: true,
+            type: true,
+            status: true,
+            scheduledAt: true,
+            _count: { select: { panel: true } },
+            criterionAssignments: {
+              select: {
+                criterionId: true,
+                maxPoints: true,
+                responseType: true,
+                groupId: true,
+                group: { select: { id: true, name: true } },
+              },
+            },
+            evaluations: {
+              where: { status: 'SUBMITTED' },
+              select: {
+                interviewerId: true,
+                status: true,
+                interviewer: { select: { id: true, name: true } },
+                scores: { select: { criterionId: true, points: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!job || !inCompany(user, job.companyId)) {
+      return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
+    }
+
+    const comparison = buildJobComparison(
+      job.candidatePool.map((item) => {
+        const candidate = withCandidateDisplayName(item.candidate);
+        return {
+          id: candidate.id,
+          name: candidate.name,
+          reference: candidate.reference,
+          requestedProfession: candidate.requestedProfession,
+          agencyId: candidate.agencyId,
+          poolStatus: item.status,
+        };
+      }),
+      job.interviews.map(({ _count, ...interview }) => ({ ...interview, panelSize: _count.panel })),
+    );
+
+    return reply.send({ success: true, data: comparison });
   });
 
   app.post<{ Body: JobInput }>(

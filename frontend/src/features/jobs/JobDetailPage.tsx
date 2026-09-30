@@ -12,6 +12,7 @@ import { SelectMenu } from '../../shared/components/SelectMenu';
 import { DatePicker } from '../../shared/components/DatePicker';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { CandidateMultiSelect } from '../interviews/CandidateMultiSelect';
+import { CandidateComparisonCard } from './CandidateComparisonCard';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, Job, JobCandidate, JobDetail, User, UserRole } from '../../domain/types';
@@ -843,6 +844,13 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
           )}
         </Card>
       </div>
+
+
+      <CandidateComparisonCard
+        jobId={job.id}
+        developmentMode={developmentMode}
+        refreshKey={job.interviews.map((item) => item.id + ':' + item.status + ':' + (item.updatedAt ?? '')).join('|')}
+      />
 
       {candidateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">

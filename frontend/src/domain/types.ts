@@ -271,3 +271,39 @@ export interface CandidateHistoryInterview {
     interviewer?: { id: string; name: string; email: string };
   }>;
 }
+export interface CandidateComparisonGroupScore {
+  groupId: string;
+  groupName: string;
+  percentage: number;
+}
+
+export interface CandidateComparisonInterview {
+  interviewId: string;
+  type: InterviewType;
+  scheduledAt: string;
+  percentage: number;
+  submittedInterviewers: number;
+  requiredInterviewers: number;
+  interviewerTotals: Array<{ interviewerId: string; name: string; percentage: number }>;
+}
+
+export interface CandidateComparisonRow {
+  rank: number | null;
+  candidateId: string;
+  name: string;
+  reference: string;
+  requestedProfession: string;
+  agencyId: string;
+  poolStatus: JobCandidateStatus;
+  averagePercentage: number | null;
+  scoredInterviews: number;
+  pendingInterviews: number;
+  groupScores: CandidateComparisonGroupScore[];
+  interviews: CandidateComparisonInterview[];
+}
+
+export interface JobComparison {
+  groups: Array<{ groupId: string; groupName: string }>;
+  rows: CandidateComparisonRow[];
+}
+
