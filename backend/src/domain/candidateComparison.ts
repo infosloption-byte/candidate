@@ -42,6 +42,7 @@ export interface ComparisonCandidate {
   requestedProfession: string;
   agencyId: string;
   poolStatus: string;
+  candidateStatus: string;
 }
 
 export interface GroupScore {
@@ -70,6 +71,7 @@ export interface CandidateComparisonRow {
   requestedProfession: string;
   agencyId: string;
   poolStatus: string;
+  candidateStatus: string;
   averagePercentage: number | null;
   scoredInterviews: number;
   pendingInterviews: number;
@@ -188,6 +190,7 @@ export const buildPositionComparison = (
       requestedProfession: candidate.requestedProfession,
       agencyId: candidate.agencyId,
       poolStatus: candidate.poolStatus,
+      candidateStatus: candidate.candidateStatus,
       averagePercentage: summaries.length ? round2(mean(summaries.map((item) => item.summary.percentage))) : null,
       scoredInterviews: summaries.length,
       pendingInterviews: candidateInterviews.length - summaries.length,
