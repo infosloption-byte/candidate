@@ -250,10 +250,17 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const [criteriaGroups, setCriteriaGroups] = useState<InterviewCriterionGroup[]>([]);
   const [selectedCriteriaGroups, setSelectedCriteriaGroups] = useState<string[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [rescheduleInterviewId, setRescheduleInterviewId] = useState<string | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({ scheduledAt: '', durationMins: '45', location: '' });
+  const [rescheduleInterviewerIds, setRescheduleInterviewerIds] = useState<string[]>([]);
+  const [rescheduleSaving, setRescheduleSaving] = useState(false);
+  const [deleteInterviewId, setDeleteInterviewId] = useState<string | null>(null);
+  const [deletingInterview, setDeletingInterview] = useState(false);
 
   const candidateTrap = useFocusTrap<HTMLDivElement>({ enabled: candidateModal, onEscape: () => setCandidateModal(false) });
   const uploadTrap = useFocusTrap<HTMLDivElement>({ enabled: uploadModal, onEscape: () => setUploadModal(false) });
   const scheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: scheduleModal, onEscape: () => setScheduleModal(false) });
+  const rescheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: Boolean(rescheduleInterviewId), onEscape: () => { if (!rescheduleSaving) setRescheduleInterviewId(null); } });
 
   const stateJob = useMemo(() => (jobId ? state.jobs.find((item) => item.id === jobId) : undefined), [jobId, state.jobs]);
 
@@ -486,6 +493,80 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       setScheduleModal(true);
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load interview setup.');
+    }
+  };
+
+  const openInterviewEditor = async (interview: Interview) => {
+    setError('');
+    setSuccess('');
+    setRescheduleInterviewId(interview.id);
+    setRescheduleForm({ scheduledAt: toDateTimeLocal(interview.scheduledAt), durationMins: String(interview.durationMins), location: interview.location ?? '' });
+    setRescheduleInterviewerIds(interview.panel?.map((item) => item.userId) ?? interview.panelUserIds);
+    try {
+      const agencyId = interview.candidate?.agencyId ?? '';
+      if (developmentMode) {
+        setInterviewers(state.users.filter((item) => item.role === 'INTERVIEWER' && item.active && (!agencyId || item.agencyId === null || item.agencyId === agencyId)));
+      } else if (agencyId) {
+        const result = await apiFetch<User[]>('/interviewers?agencyId=' + encodeURIComponent(agencyId));
+        setInterviewers(result.filter((item) => item.active));
+      }
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load interviewers for rescheduling.');
+    }
+  };
+
+  const saveInterviewEditor = async () => {
+    if (!rescheduleInterviewId || !job) return;
+    if (!rescheduleForm.scheduledAt) { setError('Select a new interview date and time.'); return; }
+    if (!rescheduleInterviewerIds.length) { setError('Select at least one interviewer.'); return; }
+    const target = job.interviews.find((item) => item.id === rescheduleInterviewId);
+    if (!target) return;
+    const scheduledAt = new Date(rescheduleForm.scheduledAt);
+    if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now()) { setError('The new interview date and time must be in the future.'); return; }
+    setRescheduleSaving(true);
+    setError('');
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'UPDATE_INTERVIEW', interview: { ...target, status: 'SCHEDULED', scheduledAt: scheduledAt.toISOString(), durationMins: Math.max(15, Number(rescheduleForm.durationMins) || 30), location: rescheduleForm.location.trim() || null, panelUserIds: rescheduleInterviewerIds } });
+      } else {
+        await apiFetch('/interviews/' + target.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status: 'SCHEDULED',
+            scheduledAt: scheduledAt.toISOString(),
+            durationMins: Math.max(15, Number(rescheduleForm.durationMins) || 30),
+            location: rescheduleForm.location.trim() || null,
+            interviewerIds: rescheduleInterviewerIds,
+            criterionGroupIds: target.criterionGroupIds ?? target.criterionGroups?.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((item) => item.id),
+          }),
+        });
+      }
+      setRescheduleInterviewId(null);
+      setSuccess(target.status === 'SCHEDULED' ? 'Interview updated.' : 'Interview rescheduled and returned to scheduled status.');
+      await refreshJob();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to update the interview.');
+    } finally {
+      setRescheduleSaving(false);
+    }
+  };
+
+  const deleteInterview = async () => {
+    if (!deleteInterviewId || !job) return;
+    const target = job.interviews.find((item) => item.id === deleteInterviewId);
+    if (!target) return;
+    setDeletingInterview(true);
+    setError('');
+    try {
+      if (developmentMode) dispatch({ type: 'DELETE_INTERVIEW', interviewId: target.id });
+      else await apiFetch('/interviews/' + target.id, { method: 'DELETE' });
+      setDeleteInterviewId(null);
+      setSuccess('Interview was safely removed. Its record and scoring history remains stored.');
+      await refreshJob();
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to remove the interview.');
+    } finally {
+      setDeletingInterview(false);
     }
   };
 
@@ -827,6 +908,16 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
                   <StatusPill value={interview.status} />
                 </div>
                 <div className="mt-2 text-[10px] font-semibold text-slate-400">{interview.durationMins} min · {interview.panel?.length ?? interview.panelUserIds.length} interviewer(s)</div>
+                {canManage && (
+                  <div className="mt-3 flex justify-end gap-1.5 border-t border-slate-200 pt-3">
+                    {['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(interview.status) && (
+                      <IconButton icon="pencil" label={interview.status === 'SCHEDULED' ? 'Edit interview' : 'Reschedule interview'} onClick={() => void openInterviewEditor(interview)} />
+                    )}
+                    {['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(interview.status) && (
+                      <IconButton icon="trash" variant="danger" label="Remove interview" onClick={() => setDeleteInterviewId(interview.id)} />
+                    )}
+                  </div>
+                )}
               </div>
             )) : <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">{job.interviews.length ? 'No interviews match the current search.' : 'No interviews scheduled yet.'}</p></div>}
           </div>
@@ -994,10 +1085,58 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         </div>
       )}
 
+      {rescheduleInterviewId && (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close interview edit dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => { if (!rescheduleSaving) setRescheduleInterviewId(null); }} />
+          <div ref={rescheduleTrap} role="dialog" aria-modal="true" className="relative z-10 w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            {(() => {
+              const target = job.interviews.find((item) => item.id === rescheduleInterviewId);
+              if (!target) return null;
+              return (
+                <>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{target.status === 'SCHEDULED' ? 'Interview settings' : 'Interview reschedule'}</p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950">{target.candidate?.name ?? 'Candidate'} · {label(target.type)}</h2>
+                  <p className="mt-1 text-xs text-slate-500">Set a new date and adjust the interviewer panel. Saving returns this interview to Scheduled.</p>
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <FormField label="Date & time"><DatePicker value={rescheduleForm.scheduledAt} onChange={(value) => setRescheduleForm((current) => ({ ...current, scheduledAt: value }))} showTime placeholder="Select date and time" ariaLabel="Reschedule date and time" /></FormField>
+                    <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={rescheduleForm.durationMins} onChange={(event) => setRescheduleForm((current) => ({ ...current, durationMins: event.target.value }))} /></FormField>
+                    <FormField label="Location"><input className="field-input" value={rescheduleForm.location} onChange={(event) => setRescheduleForm((current) => ({ ...current, location: event.target.value }))} /></FormField>
+                  </div>
+                  <div className="mt-5">
+                    <p className="field-label">Interviewers</p>
+                    <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200">
+                      {interviewers.length ? interviewers.map((item) => (
+                        <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0">
+                          <input type="checkbox" checked={rescheduleInterviewerIds.includes(item.id)} onChange={() => setRescheduleInterviewerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />
+                          <span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span>
+                        </label>
+                      )) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this candidate's agency.</p>}
+                    </div>
+                  </div>
+                  <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" disabled={rescheduleSaving} onClick={() => setRescheduleInterviewId(null)}>Cancel</Button><Button disabled={rescheduleSaving || !rescheduleInterviewerIds.length} onClick={() => void saveInterviewEditor()}>{rescheduleSaving ? 'Saving…' : target.status === 'SCHEDULED' ? 'Save changes' : 'Reschedule interview'}</Button></div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(deleteInterviewId)}
+        title="Remove this interview?"
+        description="The interview will be hidden from the active workflow. Scheduled or in-progress interviews cannot be removed. Its interview record and scoring history remain stored."
+        confirmLabel="Remove interview"
+        cancelLabel="Keep interview"
+        danger
+        busy={deletingInterview}
+        onCancel={() => { if (!deletingInterview) setDeleteInterviewId(null); }}
+        onConfirm={() => void deleteInterview()}
+      />
+
       <ConfirmDialog
         open={deleteConfirm}
         title="Delete this job?"
-        description="The job will be permanently removed. Jobs with interview records or hired candidates cannot be deleted."
+        description="The job will be hidden from the active workspace. Jobs with scheduled or in-progress interviews cannot be deleted. Existing recruitment history remains stored."
         confirmLabel="Delete job"
         cancelLabel="Keep job"
         danger
