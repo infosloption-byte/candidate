@@ -343,7 +343,7 @@ export const CandidateProfilePanel = ({
   const displayCandidate = candidateOverride ?? candidate;
   if (!displayCandidate) return null;
 
-  const canEditProfile = role === 'ADMIN' || role === 'AGENCY';
+  const canEditProfile = role === 'ADMIN' || role === 'COMPANY_ADMIN' || role === 'AGENCY';
   const hasCompletedInterview = history.interviews.some((item) => item.status === 'COMPLETED');
   const hasScheduledInterview = history.interviews.some((item) => item.status === 'SCHEDULED');
   const candidateStatusOptions: CandidateStatus[] = ['POOL', 'READY_FOR_INTERVIEW', 'INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED', 'PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
