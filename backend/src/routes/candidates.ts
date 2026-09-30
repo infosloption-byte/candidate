@@ -93,15 +93,16 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     const candidates = await getPrisma().candidate.findMany({
       where: request.query.jobId
         ? {
+            deletedAt: null,
             companyId: user.companyId ?? '__missing__',
             ...(user.role === 'AGENCY' ? { agencyId: user.agencyId ?? '__missing__' } : {}),
             jobMemberships: { some: { jobId: request.query.jobId } },
           }
         : user.role === 'COMPANY_ADMIN'
-          ? { companyId: user.companyId ?? '__missing__' }
+          ? { deletedAt: null, companyId: user.companyId ?? '__missing__' }
           : user.role === 'INTERVIEWEE'
-            ? user.candidateId ? { id: user.candidateId } : { id: '__not_found__' }
-            : { companyId: user.companyId ?? '__missing__', agencyId: user.agencyId ?? '__missing__' },
+            ? user.candidateId ? { deletedAt: null, id: user.candidateId } : { deletedAt: null, id: '__not_found__' }
+            : { deletedAt: null, companyId: user.companyId ?? '__missing__', agencyId: user.agencyId ?? '__missing__' },
       select: candidateSelect,
       orderBy: { createdAt: 'desc' },
     });
@@ -109,7 +110,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get<{ Params: CandidateParams }>('/candidates/:id', { preHandler: requireTenantAuth }, async (request, reply) => {
-    const candidate = await getPrisma().candidate.findUnique({ where: { id: request.params.id }, select: candidateSelect });
+    const candidate = await getPrisma().candidate.findUnique({ where: { id: request.params.id, deletedAt: null }, select: candidateSelect });
     if (!candidate) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
     const user = request.authUser!;
@@ -125,7 +126,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requireTenantAuth },
     async (request, reply) => {
       const candidate = await getPrisma().candidate.findUnique({
-        where: { id: request.params.id },
+        where: { id: request.params.id, deletedAt: null },
         select: {
           ...candidateSelect,
           agency: { select: { id: true, name: true, slug: true, status: true } },
@@ -153,7 +154,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           orderBy: { createdAt: 'desc' },
         }),
         getPrisma().interview.findMany({
-          where: { candidateId: candidate.id },
+          where: { candidateId: candidate.id, deletedAt: null },
           include: {
             job: { select: { id: true, title: true, location: true } },
             panel: { select: { userId: true, assignedAt: true, user: { select: { id: true, name: true, email: true, active: true } } } },
@@ -572,7 +573,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
               select: { id: true },
             }),
             getPrisma().interview.findFirst({
-              where: { candidateId: existing.id, status: 'SCHEDULED' },
+              where: { candidateId: existing.id, deletedAt: null, status: 'SCHEDULED' },
               select: { id: true },
             }),
           ]);
@@ -695,6 +696,66 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           : 'Updated candidate "' + withCandidateDisplayName(candidate).name + '".',
       });
       return reply.send({ success: true, data: withCandidateDisplayName(candidate) });
+    },
+  );
+
+  app.delete<{ Params: CandidateParams }>(
+    '/candidates/:id',
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const user = request.authUser!;
+      const existing = await getPrisma().candidate.findUnique({
+        where: { id: request.params.id, deletedAt: null },
+        select: { id: true, companyId: true, agencyId: true, firstName: true, lastName: true },
+      });
+      if (!existing) {
+        return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
+      }
+      if (!canManageCandidate(user, existing)) {
+        return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
+      }
+
+      const activeInterview = await getPrisma().interview.findFirst({
+        where: {
+          candidateId: existing.id,
+          deletedAt: null,
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+        },
+        select: { id: true },
+      });
+      if (activeInterview) {
+        return reply.code(409).send({
+          success: false,
+          error: {
+            code: 'CANDIDATE_HAS_ACTIVE_INTERVIEWS',
+            message: 'This candidate cannot be removed while they have a scheduled or in-progress interview.',
+          },
+        });
+      }
+
+      await getPrisma().$transaction(async (tx) => {
+        await tx.candidate.update({
+          where: { id: existing.id },
+          data: { deletedAt: new Date() },
+        });
+        // Prevent a soft-deleted interviewee account from continuing to access a hidden profile.
+        await tx.user.updateMany({
+          where: { candidateId: existing.id },
+          data: { active: false },
+        });
+      });
+
+      const displayName = [existing.firstName, existing.lastName].filter(Boolean).join(' ');
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: existing.agencyId,
+        action: 'CANDIDATE_SOFT_DELETED',
+        entityType: 'Candidate',
+        entityId: existing.id,
+        summary: 'Soft-deleted candidate "' + displayName + '".',
+      });
+
+      return reply.send({ success: true, data: { deleted: true, id: existing.id } });
     },
   );
 };
