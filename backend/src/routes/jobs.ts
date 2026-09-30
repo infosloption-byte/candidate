@@ -152,7 +152,9 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
       where: { id: request.params.id },
       select: {
         id: true,
+        title: true,
         companyId: true,
+        positions: { orderBy: { sortOrder: 'asc' }, select: { id: true, position: true, requiredCount: true } },
         candidatePool: {
           where: candidateScope,
           select: { status: true, candidate: { select: candidateSelect } },
@@ -194,6 +196,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const comparison = buildJobComparison(
+      job.title,
+      job.positions,
       job.candidatePool.map((item) => {
         const candidate = withCandidateDisplayName(item.candidate);
         return {
