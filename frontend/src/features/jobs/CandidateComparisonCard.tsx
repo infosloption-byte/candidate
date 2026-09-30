@@ -146,6 +146,7 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">{headerButton('rank', 'Overall')}</th>
                 {section.groups.map((group) => <th key={group.groupId} className="px-3 py-3">{headerButton(group.groupId, group.groupName)}</th>)}
+                <th className="px-3 py-3 font-extrabold uppercase tracking-wider">Decision</th>
                 <th className="px-3 py-3 font-extrabold uppercase tracking-wider">Interviews</th>
               </tr>
             </thead>
@@ -170,6 +171,22 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
                         const value = row.groupScores.find((item) => item.groupId === group.groupId)?.percentage ?? null;
                         return <td key={group.groupId} className={'px-3 py-3 font-black ' + scoreTone(value)}>{pct(value)}</td>;
                       })}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <StatusPill value={row.candidateStatus} />
+                          {row.averagePercentage !== null && (
+                            <button
+                              type="button"
+                              className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                              aria-label={'Set final status for ' + row.name}
+                              title="Set final status"
+                              onClick={(event) => { event.stopPropagation(); openDecision(row); }}
+                            >
+                              <Icon name="pencil" size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-3 text-[10px] font-semibold text-slate-500">
                         {row.scoredInterviews} scored{row.pendingInterviews > 0 ? ' · ' + row.pendingInterviews + ' pending' : ''}
                         {canExpand && <span className="ml-1 inline-block align-middle text-slate-400"><Icon name={open ? 'chevron-up' : 'chevron-down'} size={12} /></span>}
