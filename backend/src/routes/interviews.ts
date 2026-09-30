@@ -207,6 +207,7 @@ const hasScheduleConflict = async (
 ): Promise<boolean> => {
   const interviews = await getPrisma().interview.findMany({
     where: {
+      deletedAt: null,
       status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
       id: excludeInterviewId ? { not: excludeInterviewId } : undefined,
       OR: [
@@ -243,11 +244,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
     const interviews = await getPrisma().interview.findMany({
       where: user.role === 'COMPANY_ADMIN'
-        ? { companyId: user.companyId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+        ? { deletedAt: null, companyId: user.companyId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
         : user.role === 'INTERVIEWER'
-          ? { panel: { some: { userId: user.id } }, ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+          ? { deletedAt: null, panel: { some: { userId: user.id } }, ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
           : user.role === 'INTERVIEWEE'
-            ? { candidateId: user.candidateId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
+            ? { deletedAt: null, candidateId: user.candidateId ?? '__missing__', ...(request.query.jobId ? { jobId: request.query.jobId } : {}) }
             : {
                 companyId: user.companyId ?? '__missing__',
                 candidate: { agencyId: user.agencyId ?? '__missing__' },
@@ -268,7 +269,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
   app.get<{ Params: InterviewParams }>('/interviews/:id', { preHandler: requireTenantAuth }, async (request, reply) => {
     const interview = await getPrisma().interview.findUnique({
-      where: { id: request.params.id },
+      where: { id: request.params.id, deletedAt: null },
       include: {
         ...interviewInclude,
         evaluations: {
@@ -647,7 +648,7 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const existing = await getPrisma().interview.findUnique({
-        where: { id: request.params.id },
+        where: { id: request.params.id, deletedAt: null },
         include: {
           candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true, status: true } },
           job: { select: { id: true, title: true, status: true } },
@@ -751,8 +752,11 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
 
       const errors = validateInterviewInput(request.body, 'update');
       if (errors.length) return reply.code(400).send({ success: false, error: { code: 'INVALID_INTERVIEW', message: errors.join(' ') } });
-      if (existing.status !== 'SCHEDULED') {
-        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_OPEN', message: 'Only scheduled interviews can be edited or rescheduled.' } });
+      if (!['SCHEDULED', 'CANCELLED', 'NO_SHOW'].includes(existing.status)) {
+        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_NOT_OPEN', message: 'Only scheduled, cancelled, or no-show interviews can be edited or rescheduled.' } });
+      }
+      if (['CANCELLED', 'NO_SHOW'].includes(existing.status) && request.body.status !== 'SCHEDULED') {
+        return reply.code(409).send({ success: false, error: { code: 'INTERVIEW_RESCHEDULE_REQUIRED', message: 'Cancelled or no-show interviews must be rescheduled back to scheduled status.' } });
       }
 
       const nextScheduledAt = request.body.scheduledAt ? new Date(request.body.scheduledAt) : existing.scheduledAt;
@@ -894,6 +898,54 @@ export const interviewRoutes: FastifyPluginAsync = async (app) => {
       );
 
       return reply.send({ success: true, data: normalizeInterviewRecord(result) });
+    },
+  );
+
+  app.delete<{ Params: InterviewParams }>(
+    '/interviews/:id',
+    { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN', 'AGENCY')] },
+    async (request, reply) => {
+      const user = request.authUser!;
+      const existing = await getPrisma().interview.findUnique({
+        where: { id: request.params.id, deletedAt: null },
+        include: {
+          candidate: { select: { id: true, agencyId: true, firstName: true, lastName: true } },
+        },
+      });
+      if (!existing) {
+        return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
+      }
+
+      if (!canManageInAgency(user, { companyId: existing.companyId, agencyId: existing.candidate.agencyId })) {
+        return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
+      }
+
+      if (['SCHEDULED', 'IN_PROGRESS'].includes(existing.status)) {
+        return reply.code(409).send({
+          success: false,
+          error: {
+            code: 'INTERVIEW_ACTIVE',
+            message: 'This interview cannot be removed while it is scheduled or in progress.',
+          },
+        });
+      }
+
+      await getPrisma().interview.update({
+        where: { id: existing.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const candidateName = getCandidateDisplayName(existing.candidate);
+      await recordAuditEvent({
+        actorId: user.id,
+        agencyId: existing.candidate.agencyId,
+        action: 'INTERVIEW_SOFT_DELETED',
+        entityType: 'Interview',
+        entityId: existing.id,
+        summary: 'Soft-deleted ' + existing.type + ' interview for "' + candidateName + '".',
+      });
+
+      return reply.send({ success: true, data: { deleted: true, id: existing.id } });
     },
   );
 };
