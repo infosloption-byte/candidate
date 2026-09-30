@@ -82,6 +82,7 @@ export interface Candidate {
   statusUpdatedAt: string;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
 
   // Legacy read compatibility for older UI surfaces while they are phased out.
   email?: string | null;
@@ -120,6 +121,7 @@ export interface Job {
   candidateCount?: number;
   interviewCount?: number;
   filledCount?: number;
+  deletedAt?: string | null;
   }
 
 export interface JobCandidate {
@@ -213,6 +215,7 @@ export interface Interview {
   panelUserIds: string[];
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
   criterionGroupId?: string | null;
   criterionGroupIds?: string[];
   criterionGroup?: Pick<InterviewCriterionGroup, 'id' | 'name' | 'category' | 'description' | 'active'> | null;
@@ -297,6 +300,7 @@ export interface CandidateComparisonRow {
   requestedProfession: string;
   agencyId: string;
   poolStatus: JobCandidateStatus;
+  candidateStatus: CandidateStatus;
   averagePercentage: number | null;
   scoredInterviews: number;
   pendingInterviews: number;
