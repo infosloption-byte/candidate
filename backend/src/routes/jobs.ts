@@ -459,7 +459,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
   );
 
   app.delete<{ Params: JobParams }>(
-    '/jobs/:id/permanent',
+    '/jobs/:id/delete',
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
