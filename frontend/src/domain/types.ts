@@ -302,6 +302,8 @@ export interface CandidateComparisonRow {
   poolStatus: JobCandidateStatus;
   candidateStatus: CandidateStatus;
   averagePercentage: number | null;
+  /** Non-cancelled interviews that are COMPLETED; a final status can be recorded once this is above 0. */
+  completedInterviews: number;
   scoredInterviews: number;
   pendingInterviews: number;
   groupScores: CandidateComparisonGroupScore[];

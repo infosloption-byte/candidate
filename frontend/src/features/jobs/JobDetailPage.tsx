@@ -942,6 +942,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
         jobId={job.id}
         developmentMode={developmentMode}
         refreshKey={job.interviews.map((item) => item.id + ':' + item.status + ':' + (item.updatedAt ?? '')).join('|')}
+        onCandidateStatusChanged={refreshJob}
       />
 
       {candidateModal && (

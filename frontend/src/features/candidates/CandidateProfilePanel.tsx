@@ -378,6 +378,7 @@ export const CandidateProfilePanel = ({
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[70]">
+      <div className="pointer-events-auto absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" aria-hidden="true" />
       <div className={frameClass + ' pointer-events-auto flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-4rem)]'}>
         <header className="shrink-0 border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
           <div className="flex items-start gap-3">

@@ -73,6 +73,8 @@ export interface CandidateComparisonRow {
   poolStatus: string;
   candidateStatus: string;
   averagePercentage: number | null;
+  /** Non-cancelled interviews whose status is COMPLETED (a final status can be recorded). */
+  completedInterviews: number;
   scoredInterviews: number;
   pendingInterviews: number;
   groupScores: GroupScore[];
@@ -106,9 +108,14 @@ export const NO_GROUP_ID = '__ungrouped__';
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 const mean = (values: number[]): number => values.reduce((sum, value) => sum + value, 0) / values.length;
 
-/** Only SCORE criteria carry points; TEXT / SELECT / BOOLEAN criteria are ignored. */
+/**
+ * Every criterion that carries points counts, whatever its answer type. Interviewers award points
+ * on TEXT / dropdown / tag criteria exactly like SCORE criteria (the scorecard and the interview
+ * details popup total them all), so filtering on responseType made completed interviews look
+ * unscored whenever a scorecard used those types. Criteria with 0 max points are answer-only.
+ */
 const scoredAssignments = (interview: ComparisonInterview): ComparisonAssignment[] =>
-  interview.criterionAssignments.filter((item) => item.responseType === 'SCORE' && item.maxPoints > 0);
+  interview.criterionAssignments.filter((item) => item.maxPoints > 0);
 
 const evaluationPoints = (evaluation: ComparisonEvaluation, allowed: Set<string>): number =>
   evaluation.scores.reduce((sum, score) => sum + (allowed.has(score.criterionId) ? score.points : 0), 0);
@@ -192,6 +199,7 @@ export const buildPositionComparison = (
       poolStatus: candidate.poolStatus,
       candidateStatus: candidate.candidateStatus,
       averagePercentage: summaries.length ? round2(mean(summaries.map((item) => item.summary.percentage))) : null,
+      completedInterviews: completed.length,
       scoredInterviews: summaries.length,
       pendingInterviews: candidateInterviews.length - summaries.length,
       groupScores: [...groupAccumulator].map(([groupId, group]) => ({

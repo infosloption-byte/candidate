@@ -7,7 +7,8 @@ import type { CandidateStatus, Interview, InterviewCriterionAssignment, UserRole
 
 const statusLabel = (value: string): string => value.replaceAll('_', ' ');
 
-const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
+/** Final outcomes an Admin / Agency can record. Shared with the candidate comparison decision popup. */
+export const candidateFinalStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'ON_HOLD', 'HIRED', 'INACTIVE'];
 const interviewerDecisionStatuses: CandidateStatus[] = ['PASSED', 'REJECTED', 'HIRED'];
 
 export interface InterviewDetail extends Omit<Interview, 'evaluations'> {

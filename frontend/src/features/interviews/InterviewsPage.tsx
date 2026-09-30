@@ -1870,6 +1870,7 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
 
       {evaluationFor && ['COMPANY_ADMIN', 'AGENCY', 'INTERVIEWER'].includes(role) && (
         <div className="fixed inset-0 z-40 pointer-events-none">
+          {!evaluationMinimized && <div className="pointer-events-auto absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" aria-hidden="true" />}
           <div
             className={
               evaluationMinimized

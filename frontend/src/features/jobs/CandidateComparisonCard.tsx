@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { candidateFinalStatuses } from '../interviews/InterviewDetailsModal';
 import type { CandidateComparisonRow, CandidateStatus, JobComparison, PositionComparisonSection } from '../../domain/types';
 
 interface CandidateComparisonCardProps {
@@ -15,9 +16,13 @@ interface CandidateComparisonCardProps {
   developmentMode: boolean;
   /** Changes whenever interviews change, so the table refreshes after scoring. */
   refreshKey: string;
+  /** Called after a final status is saved from the comparison so the rest of the job page can refresh. */
+  onCandidateStatusChanged?: () => void | Promise<void>;
 }
 
 type SortKey = 'rank' | 'name' | string; // string = a criterion-group id
+
+const statusText = (value: string): string => value.replaceAll('_', ' ');
 
 const pct = (value: number | null | undefined): string => (value === null || value === undefined ? '—' : value.toFixed(1) + '%');
 
@@ -71,7 +76,7 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
 
   const openDecision = (row: CandidateComparisonRow) => {
     setDecisionCandidate(row);
-    setDecisionStatus(['PASSED', 'REJECTED', 'HIRED'].includes(row.candidateStatus) ? row.candidateStatus : '');
+    setDecisionStatus(candidateFinalStatuses.includes(row.candidateStatus) ? row.candidateStatus : '');
     setDecisionReason('');
     setDecisionError('');
   };
@@ -173,15 +178,16 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
                           <StatusPill value={row.candidateStatus} />
-                          {row.averagePercentage !== null && (
+                          {(row.completedInterviews > 0 || row.averagePercentage !== null) && (
                             <button
                               type="button"
-                              className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                              className="inline-flex min-h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-extrabold text-slate-600 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
                               aria-label={'Set final status for ' + row.name}
                               title="Set final status"
                               onClick={(event) => { event.stopPropagation(); openDecision(row); }}
                             >
-                              <Icon name="pencil" size={12} />
+                              <Icon name="pencil" size={11} />
+                              Set status
                             </button>
                           )}
                         </div>
@@ -232,12 +238,15 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
           <div ref={decisionTrap} role="dialog" aria-modal="true" className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate decision</p>
             <h3 className="mt-1 text-base font-black text-slate-950">{decisionCandidate.name}</h3>
-            <p className="mt-1 text-xs text-slate-500">Update the final status after reviewing the completed interview scores.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Update the final status after reviewing the completed interview scores.
+              {decisionCandidate.averagePercentage !== null && <span className="mt-1 block font-bold text-slate-700">Overall score {pct(decisionCandidate.averagePercentage)}{decisionCandidate.rank !== null ? ' · Rank ' + decisionCandidate.rank : ''}</span>}
+            </p>
             {decisionError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">{decisionError}</p>}
             <div className="mt-4 space-y-3">
               <label className="block">
                 <span className="field-label">Final status</span>
-                <SelectMenu value={decisionStatus} onChange={(value) => setDecisionStatus(value as CandidateStatus)} options={[{ value: '', label: 'Select final status' }, { value: 'PASSED', label: 'Passed' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'HIRED', label: 'Hired' }]} ariaLabel="Final candidate status" className="mt-1" disabled={decisionSaving} />
+                <SelectMenu value={decisionStatus} onChange={(value) => setDecisionStatus(value as CandidateStatus)} options={[{ value: '', label: 'Select final status' }, ...candidateFinalStatuses.map((status) => ({ value: status, label: statusText(status) }))]} ariaLabel="Final candidate status" className="mt-1" disabled={decisionSaving} />
               </label>
               <label className="block">
                 <span className="field-label">Reason <span className="font-normal normal-case tracking-normal text-slate-400">(optional)</span></span>
@@ -258,23 +267,24 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
   );
 };
 
-export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey }: CandidateComparisonCardProps) => {
+export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey, onCandidateStatusChanged }: CandidateComparisonCardProps) => {
   const [data, setData] = useState<JobComparison | null>(null);
   const [loading, setLoading] = useState(!developmentMode);
   const [error, setError] = useState('');
   const [scoredOnly, setScoredOnly] = useState(false);
 
+  // Refreshes in place after a final status is saved. It deliberately does not flip `loading`, so the
+  // tables (and the decision popup that triggered the refresh) stay mounted instead of flashing a spinner.
   const reloadComparison = async () => {
     if (developmentMode) return;
-    setLoading(true);
-    setError('');
     try {
       setData(await apiFetch<JobComparison>('/jobs/' + jobId + '/comparison'));
+      setError('');
     } catch (requestError: unknown) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load the candidate comparison.');
-    } finally {
-      setLoading(false);
     }
+    // The status is already saved; a failed page refresh must not be reported as a failed update.
+    try { await onCandidateStatusChanged?.(); } catch { /* the job page refreshes on its next load */ }
   };
 
   useEffect(() => {

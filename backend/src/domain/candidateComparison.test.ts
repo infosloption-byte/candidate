@@ -171,3 +171,59 @@ test('a job with a single position puts every candidate in one section regardles
   assert.equal(result.sections.length, 1);
   assert.equal(result.sections[0].rows.length, 2);
 });
+
+test('criteria of every answer type that carry points are scored, not just SCORE criteria', () => {
+  const scorecard = [
+    { criterionId: 'c-text', maxPoints: 5, responseType: 'TEXT', groupId: groupA.id, group: groupA },
+    { criterionId: 'c-select', maxPoints: 5, responseType: 'SINGLE_SELECT', groupId: groupA.id, group: groupA },
+    { criterionId: 'c-tags', maxPoints: 10, responseType: 'MULTI_SELECT', groupId: groupB.id, group: groupB },
+    { criterionId: 'c-answer-only', maxPoints: 0, responseType: 'TEXT', groupId: groupB.id, group: groupB },
+  ];
+  const result = buildJobComparison(
+    [candidate('a', 'Alice')],
+    [
+      interview('i1', 'a', [{ interviewerId: 'p1', skills: 0, personal: 0 }], {
+        criterionAssignments: scorecard,
+        evaluations: [{
+          interviewerId: 'p1',
+          status: 'SUBMITTED',
+          interviewer: { id: 'p1', name: 'Panelist p1' },
+          scores: [
+            { criterionId: 'c-text', points: 5 },
+            { criterionId: 'c-select', points: 3 },
+            { criterionId: 'c-tags', points: 8 },
+            { criterionId: 'c-answer-only', points: 0 },
+          ],
+        }],
+      }),
+    ],
+  );
+  const row = result.rows[0];
+  // 16 of 20 available points; the 0-point answer-only criterion is ignored.
+  assert.equal(row.averagePercentage, 80);
+  assert.equal(row.rank, 1);
+  assert.equal(row.scoredInterviews, 1);
+  assert.equal(row.completedInterviews, 1);
+});
+
+test('completedInterviews counts completed interviews even when the panel is still partial', () => {
+  const result = buildJobComparison(
+    [candidate('a', 'Alice')],
+    [
+      interview('i1', 'a', [
+        { interviewerId: 'p1', skills: 10, personal: 10 },
+        { interviewerId: 'p2', skills: 10, personal: 10 },
+      ], {
+        evaluations: [{
+          interviewerId: 'p1',
+          status: 'SUBMITTED',
+          interviewer: { id: 'p1', name: 'Panelist p1' },
+          scores: [{ criterionId: 'c-skills', points: 10 }, { criterionId: 'c-personal', points: 10 }],
+        }],
+      }),
+      interview('i2', 'a', [{ interviewerId: 'p1', skills: 10, personal: 10 }], { status: 'CANCELLED' }),
+    ],
+  );
+  assert.equal(result.rows[0].averagePercentage, null);
+  assert.equal(result.rows[0].completedInterviews, 1);
+});
