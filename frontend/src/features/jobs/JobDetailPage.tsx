@@ -47,9 +47,10 @@ const defaultInterview = {
   notes: '',
 };
 
-const toDateTimeLocal = (date: Date): string => {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+const toDateTimeLocal = (date: Date | string): string => {
+  const value = date instanceof Date ? date : new Date(date);
+  const pad = (item: number) => String(item).padStart(2, '0');
+  return value.getFullYear() + '-' + pad(value.getMonth() + 1) + '-' + pad(value.getDate()) + 'T' + pad(value.getHours()) + ':' + pad(value.getMinutes());
 };
 
 const escapeReportHtml = (value: unknown): string => String(value ?? '')
