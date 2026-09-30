@@ -12,6 +12,7 @@ import { DataTable } from '../../shared/components/DataTable';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { apiFetch } from '../../shared/lib/api';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -47,6 +48,8 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [jobPage, setJobPage] = useState(1);
+  const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
+  const [deletingJob, setDeletingJob] = useState(false);
 
   const formModalOpen = showForm && role !== 'INTERVIEWEE';
   const formModalRef = useFocusTrap<HTMLDivElement>({
@@ -268,6 +271,29 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
     }
   };
 
+  const deleteJob = async () => {
+    if (!deleteJobId) return;
+    const target = jobs.find((job) => job.id === deleteJobId);
+    if (!target) return;
+    setDeletingJob(true);
+    setError('');
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'DELETE_JOB', jobId: target.id });
+      } else {
+        await apiFetch('/jobs/' + target.id + '/permanent', { method: 'DELETE' });
+      }
+      setJobs((current) => current.filter((job) => job.id !== target.id));
+      setDeleteJobId(null);
+      setSuccessTitle(t('Job deleted'));
+      setSuccess(t('The job was safely removed from the active workspace. Its history remains stored.'));
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : t('Unable to delete the job.'));
+    } finally {
+      setDeletingJob(false);
+    }
+  };
+
   const displayJobs = useMemo(
     () => developmentMode
       ? jobs.map((job) => {
@@ -332,6 +358,9 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       <IconButton icon="pencil" label={t('Edit job')} onClick={(event) => { event.stopPropagation(); beginEdit(job); }} />
       {role !== 'INTERVIEWEE' && job.status === 'PUBLISHED' && (
         <IconButton icon="lock" label={t('Close job')} disabled={(job.filledCount ?? 0) < job.openings} onClick={(event) => { event.stopPropagation(); void setStatus(job); }} />
+      )}
+      {role !== 'INTERVIEWEE' && (
+        <IconButton icon="trash" variant="danger" label={t('Delete job')} onClick={(event) => { event.stopPropagation(); setDeleteJobId(job.id); }} />
       )}
     </div>
   );
@@ -893,6 +922,18 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
           onPageChange={setJobPage}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteJobId)}
+        title={t('Delete this job?')}
+        description={t('The job will be hidden from the active workspace. Jobs with scheduled or in-progress interviews cannot be deleted. Existing recruitment history stays in the database.')}
+        confirmLabel={t('Delete job')}
+        cancelLabel={t('Keep job')}
+        danger
+        busy={deletingJob}
+        onCancel={() => { if (!deletingJob) setDeleteJobId(null); }}
+        onConfirm={() => void deleteJob()}
+      />
     </section>
   );
 };
