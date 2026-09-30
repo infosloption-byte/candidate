@@ -85,8 +85,6 @@ test('ties share a rank and unscored candidates are listed last without a rank',
 
 test('partial panels do not count as scored comparisons', () => {
   const result = buildJobComparison(
-    'Welder',
-    [{ id: 'position-1', position: 'Welder', requiredCount: 1 }],
     [candidate('a', 'Alice')],
     [
       interview('i1', 'a', [
@@ -102,7 +100,7 @@ test('partial panels do not count as scored comparisons', () => {
       }),
     ],
   );
-  assert.equal(result.sections[0].rows[0].averagePercentage, null);
+  assert.equal(result.rows[0].averagePercentage, null);
 });
 
 test('only COMPLETED interviews are ranked and cancelled ones are ignored', () => {
