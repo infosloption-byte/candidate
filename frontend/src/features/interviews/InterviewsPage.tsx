@@ -1964,15 +1964,17 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
                                 className="min-w-0 flex-1"
                                 ariaLabel="Candidate birthdate"
                               />
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="shrink-0"
-                                disabled={savingBirthdate || evaluationStatus === 'SUBMITTED' || !birthdateDraft || birthdateDraft === (activeCandidate?.birthdate ? activeCandidate.birthdate.slice(0, 10) : '')}
-                                onClick={() => void saveCandidateBirthdate(activeCandidate ?? undefined)}
-                              >
-                                {savingBirthdate ? 'Saving…' : 'Save'}
-                              </Button>
+                              {birthdateDraft && birthdateDraft !== (activeCandidate?.birthdate ? activeCandidate.birthdate.slice(0, 10) : '') && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="shrink-0"
+                                  disabled={savingBirthdate || evaluationStatus === 'SUBMITTED'}
+                                  onClick={() => void saveCandidateBirthdate(activeCandidate ?? undefined)}
+                                >
+                                  {savingBirthdate ? 'Saving…' : 'Save'}
+                                </Button>
+                              )}
                             </div>
                           ) : (
                             <p className="mt-0.5 text-sm font-black text-slate-900">{activeCandidate?.birthdate ? new Date(activeCandidate.birthdate).toLocaleDateString() : 'Not provided'}</p>

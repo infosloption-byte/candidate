@@ -204,7 +204,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
           },
         });
 
-        return reply.send({ success: true, data: current });
+        return reply.send({ success: true, data: { ...current, candidate: { ...current.candidate, name: getCandidateDisplayName(current.candidate) } } });
       }
 
       if (interview.status !== 'SCHEDULED') {
@@ -241,7 +241,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         summary: 'Started interview for "' + getCandidateDisplayName(interview.candidate) + '".',
       });
 
-      return reply.send({ success: true, data: updated });
+      return reply.send({ success: true, data: { ...updated, candidate: { ...updated.candidate, name: getCandidateDisplayName(updated.candidate) } } });
     },
   );
 
@@ -282,7 +282,7 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
         data: {
           interview: {
             id: interview.id,
-            candidate: interview.candidate,
+            candidate: { ...interview.candidate, name: getCandidateDisplayName(interview.candidate) },
             status: interview.status,
             scheduledAt: interview.scheduledAt,
             durationMins: interview.durationMins,
