@@ -3,8 +3,11 @@ import { Card } from '../../shared/components/Card';
 import { Icon } from '../../shared/components/Icon';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
+import { Button } from '../../shared/components/Button';
+import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
-import type { CandidateComparisonRow, JobComparison, PositionComparisonSection } from '../../domain/types';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import type { CandidateComparisonRow, CandidateStatus, JobComparison, PositionComparisonSection } from '../../domain/types';
 
 interface CandidateComparisonCardProps {
   jobId: string;
@@ -35,10 +38,16 @@ const ScoreBar = ({ value }: { value: number | null }) => (
 );
 
 /** One ranked table for a single position. Candidates are only ever compared inside their own position. */
-const PositionTable = ({ section, scoredOnly }: { section: PositionComparisonSection; scoredOnly: boolean }) => {
+const PositionTable = ({ section, scoredOnly, onStatusUpdated }: { section: PositionComparisonSection; scoredOnly: boolean; onStatusUpdated: () => Promise<void> }) => {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDesc, setSortDesc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [decisionCandidate, setDecisionCandidate] = useState<CandidateComparisonRow | null>(null);
+  const [decisionStatus, setDecisionStatus] = useState<CandidateStatus | ''>('');
+  const [decisionReason, setDecisionReason] = useState('');
+  const [decisionError, setDecisionError] = useState('');
+  const [decisionSaving, setDecisionSaving] = useState(false);
+  const decisionTrap = useFocusTrap<HTMLDivElement>({ enabled: Boolean(decisionCandidate), onEscape: () => { if (!decisionSaving) setDecisionCandidate(null); } });
 
   const rows = useMemo(() => {
     const base = scoredOnly ? section.rows.filter((row) => row.averagePercentage !== null) : section.rows;
@@ -59,6 +68,31 @@ const PositionTable = ({ section, scoredOnly }: { section: PositionComparisonSec
       return (defaultDescending ? -order : order) * (sortDesc ? -1 : 1);
     });
   }, [section.rows, scoredOnly, sortKey, sortDesc]);
+
+  const openDecision = (row: CandidateComparisonRow) => {
+    setDecisionCandidate(row);
+    setDecisionStatus(['PASSED', 'REJECTED', 'HIRED'].includes(row.candidateStatus) ? row.candidateStatus : '');
+    setDecisionReason('');
+    setDecisionError('');
+  };
+
+  const saveDecision = async () => {
+    if (!decisionCandidate || !decisionStatus) return;
+    setDecisionSaving(true);
+    setDecisionError('');
+    try {
+      await apiFetch('/candidates/' + decisionCandidate.candidateId, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: decisionStatus, statusReason: decisionReason.trim() || null }),
+      });
+      await onStatusUpdated();
+      setDecisionCandidate(null);
+    } catch (requestError: unknown) {
+      setDecisionError(requestError instanceof Error ? requestError.message : 'Unable to update the final candidate status.');
+    } finally {
+      setDecisionSaving(false);
+    }
+  };
 
   const changeSort = (key: SortKey) => {
     if (key === sortKey) setSortDesc((value) => !value);
@@ -142,7 +176,7 @@ const PositionTable = ({ section, scoredOnly }: { section: PositionComparisonSec
                     {open && (
                       <tr className="bg-slate-50/60">
                         <td />
-                        <td colSpan={section.groups.length + 4} className="px-3 py-3">
+                        <td colSpan={section.groups.length + 5} className="px-3 py-3">
                           <div className="grid gap-2 md:grid-cols-2">
                             {row.interviews.map((interview) => (
                               <div key={interview.interviewId} className="rounded-xl border border-slate-200 bg-white p-3">
@@ -174,6 +208,36 @@ const PositionTable = ({ section, scoredOnly }: { section: PositionComparisonSec
       )}
     </section>
   );
+
+      {decisionCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="presentation">
+          <button type="button" aria-label="Close final status dialog" className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]" onClick={() => { if (!decisionSaving) setDecisionCandidate(null); }} />
+          <div ref={decisionTrap} role="dialog" aria-modal="true" className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate decision</p>
+            <h3 className="mt-1 text-base font-black text-slate-950">{decisionCandidate.name}</h3>
+            <p className="mt-1 text-xs text-slate-500">Update the final status after reviewing the completed interview scores.</p>
+            {decisionError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">{decisionError}</p>}
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="field-label">Final status</span>
+                <SelectMenu value={decisionStatus} onChange={(value) => setDecisionStatus(value as CandidateStatus)} options={[{ value: '', label: 'Select final status' }, { value: 'PASSED', label: 'Passed' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'HIRED', label: 'Hired' }]} ariaLabel="Final candidate status" className="mt-1" disabled={decisionSaving} />
+              </label>
+              <label className="block">
+                <span className="field-label">Reason <span className="font-normal normal-case tracking-normal text-slate-400">(optional)</span></span>
+                <input className="field-input mt-1" value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} placeholder="Decision note" disabled={decisionSaving} />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="secondary" disabled={decisionSaving} onClick={() => setDecisionCandidate(null)}>Cancel</Button>
+              <Button disabled={!decisionStatus || decisionStatus === decisionCandidate.candidateStatus || decisionSaving} onClick={() => void saveDecision()}>
+                {decisionSaving ? 'Updating…' : 'Update status'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 };
 
 export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey }: CandidateComparisonCardProps) => {
@@ -182,9 +246,22 @@ export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey }: 
   const [error, setError] = useState('');
   const [scoredOnly, setScoredOnly] = useState(false);
 
-  useEffect(() => {
+  const reloadComparison = async () => {
     if (developmentMode) return;
+    setLoading(true);
+    setError('');
+    try {
+      setData(await apiFetch<JobComparison>('/jobs/' + jobId + '/comparison'));
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to load the candidate comparison.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     let cancelled = false;
+    if (developmentMode) return;
     setLoading(true);
     setError('');
     apiFetch<JobComparison>('/jobs/' + jobId + '/comparison')
@@ -223,7 +300,7 @@ export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey }: 
         ) : !data || !totalCandidates ? (
           <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No candidates in this job pool yet.</p></div>
         ) : (
-          data.sections.map((section) => <PositionTable key={section.positionId ?? 'unmatched'} section={section} scoredOnly={scoredOnly} />)
+          data.sections.map((section) => <PositionTable key={section.positionId ?? 'unmatched'} section={section} scoredOnly={scoredOnly} onStatusUpdated={reloadComparison} />)
         )}
       </div>
     </Card>
