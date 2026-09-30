@@ -248,6 +248,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const [evaluationSaving, setEvaluationSaving] = useState(false);
   const [interviewStatusUpdating, setInterviewStatusUpdating] = useState<string | null>(null);
   const [pendingInterviewStatus, setPendingInterviewStatus] = useState<{ interview: InterviewRecord; status: 'CANCELLED' | 'NO_SHOW' } | null>(null);
+  const [deleteInterviewId, setDeleteInterviewId] = useState<string | null>(null);
+  const [deletingInterview, setDeletingInterview] = useState(false);
   const [loading, setLoading] = useState(!developmentMode);
   const [saving, setSaving] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
@@ -733,6 +735,30 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const requestInterviewStatusChange = (interview: InterviewRecord, status: 'CANCELLED' | 'NO_SHOW') => {
     setError('');
     setPendingInterviewStatus({ interview, status });
+  };
+
+  const deleteInterview = async () => {
+    if (!deleteInterviewId) return;
+    const target = interviews.find((item) => item.id === deleteInterviewId);
+    if (!target) return;
+    setDeletingInterview(true);
+    setError('');
+    try {
+      if (developmentMode) {
+        dispatch({ type: 'DELETE_INTERVIEW', interviewId: target.id });
+      } else {
+        await apiFetch('/interviews/' + target.id, { method: 'DELETE' });
+      }
+      setInterviews((current) => current.filter((item) => item.id !== target.id));
+      if (detailFor === target.id) closeInterviewDetails();
+      if (evaluationFor === target.id) setEvaluationFor(null);
+      setDeleteInterviewId(null);
+      setSuccess('Interview was safely removed. Its interview and scoring history remains stored.');
+    } catch (requestError: unknown) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to remove the interview.');
+    } finally {
+      setDeletingInterview(false);
+    }
   };
 
   const changeInterviewStatus = async () => {
@@ -2140,6 +2166,18 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
           if (!interviewStatusUpdating) setPendingInterviewStatus(null);
         }}
         onConfirm={() => void changeInterviewStatus()}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteInterviewId)}
+        title="Remove this interview?"
+        description="The interview will be hidden from the active workflow. Scheduled or in-progress interviews cannot be removed. Its interview record, scorecards, and audit history remain stored."
+        confirmLabel="Remove interview"
+        cancelLabel="Keep interview"
+        danger
+        busy={deletingInterview}
+        onCancel={() => { if (!deletingInterview) setDeleteInterviewId(null); }}
+        onConfirm={() => void deleteInterview()}
       />
 
       <CandidateProfilePanel
