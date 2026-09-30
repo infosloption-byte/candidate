@@ -204,6 +204,10 @@ export const evaluationRoutes: FastifyPluginAsync = async (app) => {
           },
         });
 
+        if (!current) {
+          return reply.code(404).send({ success: false, error: { code: 'INTERVIEW_NOT_FOUND', message: 'Interview not found.' } });
+        }
+
         return reply.send({ success: true, data: { ...current, candidate: { ...current.candidate, name: getCandidateDisplayName(current.candidate) } } });
       }
 
