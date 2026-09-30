@@ -119,7 +119,7 @@ export const summarizeInterview = (
   const assignments = scoredAssignments(interview);
   const maxPoints = assignments.reduce((sum, item) => sum + item.maxPoints, 0);
   const submitted = interview.evaluations.filter((item) => item.status === 'SUBMITTED');
-  if (!maxPoints || !submitted.length) return null;
+  if (!maxPoints || submitted.length < interview.panelSize) return null;
 
   const allowed = new Set(assignments.map((item) => item.criterionId));
   const interviewerTotals = submitted.map((evaluation) => ({
