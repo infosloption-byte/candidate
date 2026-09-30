@@ -83,6 +83,28 @@ test('ties share a rank and unscored candidates are listed last without a rank',
   assert.equal(result.rows[3].pendingInterviews, 1);
 });
 
+test('partial panels do not count as scored comparisons', () => {
+  const result = buildJobComparison(
+    'Welder',
+    [{ id: 'position-1', position: 'Welder', requiredCount: 1 }],
+    [candidate('a', 'Alice')],
+    [
+      interview('i1', 'a', [
+        { interviewerId: 'p1', skills: 10, personal: 10 },
+        { interviewerId: 'p2', skills: 10, personal: 10 },
+      ], {
+        evaluations: [{
+          interviewerId: 'p1',
+          status: 'SUBMITTED',
+          interviewer: { id: 'p1', name: 'Panelist p1' },
+          scores: [{ criterionId: 'c-skills', points: 10 }, { criterionId: 'c-personal', points: 10 }],
+        }],
+      }),
+    ],
+  );
+  assert.equal(result.sections[0].rows[0].averagePercentage, null);
+});
+
 test('only COMPLETED interviews are ranked and cancelled ones are ignored', () => {
   const result = buildJobComparison(
     [candidate('a', 'Alice')],
