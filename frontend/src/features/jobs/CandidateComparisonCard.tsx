@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Card } from '../../shared/components/Card';
 import { Icon } from '../../shared/components/Icon';
 import { StateMessage } from '../../shared/components/StateMessage';
@@ -109,7 +110,8 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
   const selectedCount = section.rows.filter((row) => row.withinOpenings).length;
 
   return (
-    <section className="rounded-2xl border border-slate-200 p-3">
+    <>
+      <section className="rounded-2xl border border-slate-200 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-3">
         <div>
           <h3 className="text-sm font-black text-slate-900">{section.position}</h3>
@@ -207,7 +209,6 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
         </div>
       )}
     </section>
-  );
 
       {decisionCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="presentation">
@@ -236,7 +237,8 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
           </div>
         </div>
       )}
-    </section>
+    </>
+
   );
 };
 
