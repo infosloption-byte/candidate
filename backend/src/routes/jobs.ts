@@ -51,12 +51,15 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const jobs = await getPrisma().job.findMany({
-      where: jobListWhereForUser({
-        role: user.role,
-        companyId: user.companyId,
-        agencyId: user.agencyId,
-        candidateAgencyId: null,
-      }),
+      where: {
+        ...jobListWhereForUser({
+          role: user.role,
+          companyId: user.companyId,
+          agencyId: user.agencyId,
+          candidateAgencyId: null,
+        }),
+        deletedAt: null,
+      },
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
       include: {
         positions: { orderBy: { sortOrder: 'asc' } },
@@ -88,7 +91,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const job = await getPrisma().job.findUnique({
-      where: { id: request.params.id },
+      where: { id: request.params.id, deletedAt: null },
       include: {
         positions: { orderBy: { sortOrder: 'asc' } },
         candidatePool: {
@@ -261,7 +264,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
-        where: { id: request.params.id },
+        where: { id: request.params.id, deletedAt: null },
         include: { positions: { orderBy: { sortOrder: 'asc' } } },
       });
       if (!existing) {
@@ -341,7 +344,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const job = await getPrisma().job.findUnique({
-        where: { id: request.params.id },
+        where: { id: request.params.id, deletedAt: null },
         select: { id: true, companyId: true, title: true, status: true },
       });
       if (!job) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
@@ -446,14 +449,8 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
-        where: { id: request.params.id },
-        select: {
-          id: true,
-          companyId: true,
-          title: true,
-          candidatePool: { select: { status: true } },
-          interviews: { select: { id: true } },
-        },
+        where: { id: request.params.id, deletedAt: null },
+        select: { id: true, companyId: true, title: true },
       });
       if (!existing) {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
@@ -462,33 +459,36 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       }
 
-      // Irreversible: platform support may not permanently delete a customer's data.
-      const blocked = denyWhileActing(request, reply, 'Platform support cannot permanently delete jobs. Ask the company administrator to do it.');
-      if (blocked) return blocked;
-
-      if (existing.interviews.length) {
+      const activeInterview = await getPrisma().interview.findFirst({
+        where: {
+          jobId: existing.id,
+          deletedAt: null,
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+        },
+        select: { id: true },
+      });
+      if (activeInterview) {
         return reply.code(409).send({
           success: false,
-          error: { code: 'JOB_HAS_INTERVIEWS', message: 'This job cannot be deleted because it has interview records. Close the job instead.' },
+          error: {
+            code: 'JOB_HAS_ACTIVE_INTERVIEWS',
+            message: 'This job cannot be deleted while it has a scheduled or in-progress interview.',
+          },
         });
       }
 
-      if (existing.candidatePool.some((item) => item.status === 'HIRED')) {
-        return reply.code(409).send({
-          success: false,
-          error: { code: 'JOB_HAS_HIRED_CANDIDATES', message: 'This job cannot be deleted because it has hired candidates.' },
-        });
-      }
-
-      await getPrisma().job.delete({ where: { id: existing.id } });
+      await getPrisma().job.update({
+        where: { id: existing.id },
+        data: { deletedAt: new Date() },
+      });
 
       await recordAuditEvent({
         actorId: request.authUser!.id,
         agencyId: request.authUser!.agencyId,
-        action: 'JOB_DELETED',
+        action: 'JOB_SOFT_DELETED',
         entityType: 'Job',
         entityId: existing.id,
-        summary: 'Deleted job "' + existing.title + '".',
+        summary: 'Soft-deleted job "' + existing.title + '".',
       });
 
       return reply.send({ success: true, data: { deleted: true, id: existing.id } });
@@ -500,7 +500,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireTenantAuth, requireRole('ADMIN', 'COMPANY_ADMIN')] },
     async (request, reply) => {
       const existing = await getPrisma().job.findUnique({
-        where: { id: request.params.id },
+        where: { id: request.params.id, deletedAt: null },
         include: { positions: true },
       });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
