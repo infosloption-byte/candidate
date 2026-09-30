@@ -152,18 +152,22 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     const candidateScope = user.role === 'AGENCY' ? { candidate: { agencyId: user.agencyId ?? '__missing__' } } : {};
 
     const job = await getPrisma().job.findUnique({
-      where: { id: request.params.id },
+      where: { id: request.params.id, deletedAt: null },
       select: {
         id: true,
         title: true,
         companyId: true,
         positions: { orderBy: { sortOrder: 'asc' }, select: { id: true, position: true, requiredCount: true } },
         candidatePool: {
-          where: candidateScope,
+          where: user.role === 'AGENCY'
+            ? { status: { notIn: [] }, candidate: { agencyId: user.agencyId ?? '__missing__', deletedAt: null } }
+            : { candidate: { deletedAt: null } },
           select: { status: true, candidate: { select: candidateSelect } },
         },
         interviews: {
-          where: candidateScope,
+          where: user.role === 'AGENCY'
+            ? { deletedAt: null, candidate: { agencyId: user.agencyId ?? '__missing__' } }
+            : { deletedAt: null },
           select: {
             id: true,
             candidateId: true,
@@ -210,6 +214,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
           requestedProfession: candidate.requestedProfession,
           agencyId: candidate.agencyId,
           poolStatus: item.status,
+          candidateStatus: candidate.status,
         };
       }),
       job.interviews.map(({ _count, ...interview }) => ({ ...interview, panelSize: _count.panel })),
