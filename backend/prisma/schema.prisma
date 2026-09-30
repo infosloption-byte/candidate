@@ -211,6 +211,7 @@ model Candidate {
   jobMemberships JobCandidate[]
 
   @@index([companyId, status])
+  @@index([companyId, deletedAt])
   @@unique([agencyId, reference])
   @@unique([agencyId, agencyRegisterNo])
   @@index([agencyId, firstName, lastName])
@@ -259,6 +260,7 @@ model Job {
   publishedAt   DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
 
   company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   positions     JobPosition[]
@@ -266,6 +268,7 @@ model Job {
   candidatePool JobCandidate[]
 
   @@index([companyId, status])
+  @@index([companyId, deletedAt])
 }
 
 model JobPosition {
@@ -313,6 +316,8 @@ model Interview {
   @@index([criterionGroupId])
   @@index([jobId, scheduledAt])
   @@index([status, scheduledAt])
+  @@index([companyId, deletedAt])
+  @@index([candidateId, deletedAt])
 }
 
 model InterviewParticipant {
