@@ -510,7 +510,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
     '/candidates/:id',
     { preHandler: requireTenantAuth },
     async (request, reply) => {
-      const existing = await getPrisma().candidate.findUnique({ where: { id: request.params.id }, select: candidateSelect });
+      const existing = await getPrisma().candidate.findUnique({ where: { id: request.params.id, deletedAt: null }, select: candidateSelect });
       if (!existing) return reply.code(404).send({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found.' } });
 
       const user = request.authUser!;
@@ -519,14 +519,14 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
       // Interviewers may record a final result only for a candidate they interviewed in this company.
       const isPanelistOfCompletedInterview = user.role === 'INTERVIEWER' && inCompany(user, existing.companyId)
         ? Boolean(await getPrisma().interviewParticipant.findFirst({
-            where: { userId: user.id, interview: { candidateId: existing.id, status: 'COMPLETED' } },
+            where: { userId: user.id, interview: { candidateId: existing.id, deletedAt: null, status: 'COMPLETED' } },
             select: { interviewId: true },
           }))
         : false;
       const canSetFinalStatus = canManage || isPanelistOfCompletedInterview;
       const requestedFinalStatus = request.body.status !== undefined && ['PASSED', 'REJECTED', 'HIRED'].includes(request.body.status);
       const requestedJob = request.body.jobId
-        ? await getPrisma().job.findUnique({ where: { id: request.body.jobId }, select: { id: true, companyId: true, title: true, openings: true, status: true } })
+        ? await getPrisma().job.findUnique({ where: { id: request.body.jobId, deletedAt: null }, select: { id: true, companyId: true, title: true, openings: true, status: true } })
         : null;
       if (request.body.jobId && (!requestedJob || requestedJob.companyId !== existing.companyId)) return reply.code(404).send({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found.' } });
       if (requestedJob && requestedJob.status === 'CLOSED' && request.body.status !== undefined) {
@@ -569,7 +569,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
           }
           const [completedInterview, scheduledInterview] = await Promise.all([
             getPrisma().interview.findFirst({
-              where: { candidateId: existing.id, status: 'COMPLETED' },
+              where: { candidateId: existing.id, deletedAt: null, status: 'COMPLETED' },
               select: { id: true },
             }),
             getPrisma().interview.findFirst({
@@ -593,7 +593,7 @@ export const candidateRoutes: FastifyPluginAsync = async (app) => {
 
         if (request.body.status === 'INACTIVE') {
           const scheduledInterview = await getPrisma().interview.findFirst({
-            where: { candidateId: existing.id, status: 'SCHEDULED' },
+            where: { candidateId: existing.id, deletedAt: null, status: 'SCHEDULED' },
             select: { id: true },
           });
           if (scheduledInterview) {
