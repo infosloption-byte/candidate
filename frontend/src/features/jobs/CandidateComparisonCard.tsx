@@ -38,7 +38,7 @@ const ScoreBar = ({ value }: { value: number | null }) => (
 );
 
 /** One ranked table for a single position. Candidates are only ever compared inside their own position. */
-const PositionTable = ({ section, scoredOnly, onStatusUpdated }: { section: PositionComparisonSection; scoredOnly: boolean; onStatusUpdated: () => Promise<void> }) => {
+const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId: string; section: PositionComparisonSection; scoredOnly: boolean; onStatusUpdated: () => Promise<void> }) => {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDesc, setSortDesc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -83,7 +83,7 @@ const PositionTable = ({ section, scoredOnly, onStatusUpdated }: { section: Posi
     try {
       await apiFetch('/candidates/' + decisionCandidate.candidateId, {
         method: 'PATCH',
-        body: JSON.stringify({ status: decisionStatus, statusReason: decisionReason.trim() || null }),
+        body: JSON.stringify({ jobId, status: decisionStatus, statusReason: decisionReason.trim() || null }),
       });
       await onStatusUpdated();
       setDecisionCandidate(null);
@@ -300,7 +300,7 @@ export const CandidateComparisonCard = ({ jobId, developmentMode, refreshKey }: 
         ) : !data || !totalCandidates ? (
           <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center"><p className="text-sm font-bold text-slate-700">No candidates in this job pool yet.</p></div>
         ) : (
-          data.sections.map((section) => <PositionTable key={section.positionId ?? 'unmatched'} section={section} scoredOnly={scoredOnly} onStatusUpdated={reloadComparison} />)
+          data.sections.map((section) => <PositionTable key={section.positionId ?? 'unmatched'} jobId={jobId} section={section} scoredOnly={scoredOnly} onStatusUpdated={reloadComparison} />)
         )}
       </div>
     </Card>
