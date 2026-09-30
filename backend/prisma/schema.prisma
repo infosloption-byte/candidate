@@ -303,6 +303,7 @@ model Interview {
   completedAt     DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
 
   company           Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   candidate         Candidate                     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
