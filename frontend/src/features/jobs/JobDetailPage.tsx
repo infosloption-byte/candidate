@@ -643,7 +643,7 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       if (developmentMode) {
         dispatch({ type: 'DELETE_JOB', jobId: job.id });
       } else {
-        await apiFetch('/jobs/' + job.id + '/permanent', { method: 'DELETE' });
+        await apiFetch('/jobs/' + job.id + '/delete', { method: 'DELETE' });
       }
       setDeleteConfirm(false);
       setSuccess('Job deleted.');
