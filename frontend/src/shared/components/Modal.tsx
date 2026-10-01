@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -46,7 +47,7 @@ export const Modal = ({
 
   if (!open) return null;
 
-  return (
+  const modal = (
     <div className={'fixed inset-0 ' + containerClassName} role="presentation">
       {dismissOnBackdrop ? (
         <button
@@ -73,4 +74,7 @@ export const Modal = ({
       </div>
     </div>
   );
+
+  // Popups live outside the scrollable <main>, so the backdrop is always viewport-wide.
+  return createPortal(modal, document.body);
 };
