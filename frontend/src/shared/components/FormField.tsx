@@ -20,11 +20,21 @@ export const FormField = ({ label, hint, error, required = false, children }: Fo
   const enhancedChildren = childNodes.map((item, index) => {
     if (index !== controlIndex || !isValidElement(item)) return item;
 
+    const props = item.props as Record<string, unknown>;
+    const elementType = typeof item.type === 'string' ? item.type : '';
+    const inputType = typeof props.type === 'string' ? props.type.toLowerCase() : 'text';
+    const placeholderTypes = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url']);
+    const shouldAddPlaceholder =
+      (elementType === 'input' || elementType === 'textarea') &&
+      typeof props.placeholder !== 'string' &&
+      (elementType === 'textarea' || placeholderTypes.has(inputType));
+
     return cloneElement(item as ReactElement<Record<string, unknown>>, {
       id: inputId,
       'aria-invalid': error ? true : undefined,
       'aria-describedby': error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined,
       required: required || undefined,
+      placeholder: shouldAddPlaceholder ? `Enter ${label.trim().toLowerCase()}` : props.placeholder,
     });
   });
 
