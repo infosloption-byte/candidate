@@ -11,17 +11,22 @@ interface FormFieldProps {
 export const FormField = ({ label, hint, error, required = false, children }: FormFieldProps) => {
   const generatedId = useId();
   const fieldId = `form-field-${generatedId.replace(/:/g, '')}`;
-  const child = Children.only(children);
-  const existingId = isValidElement(child) ? (child.props as { id?: string }).id : undefined;
+  const childNodes = Children.toArray(children);
+  const controlIndex = childNodes.findIndex((item) => isValidElement(item));
+  const control = controlIndex >= 0 ? childNodes[controlIndex] : null;
+  const existingId = isValidElement(control) ? (control.props as { id?: string }).id : undefined;
   const inputId = existingId ?? fieldId;
-  const enhancedChild = isValidElement(child)
-    ? cloneElement(child as ReactElement<Record<string, unknown>>, {
-        id: inputId,
-        'aria-invalid': error ? true : undefined,
-        'aria-describedby': error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined,
-        required: required || undefined,
-      })
-    : child;
+
+  const enhancedChildren = childNodes.map((item, index) => {
+    if (index !== controlIndex || !isValidElement(item)) return item;
+
+    return cloneElement(item as ReactElement<Record<string, unknown>>, {
+      id: inputId,
+      'aria-invalid': error ? true : undefined,
+      'aria-describedby': error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined,
+      required: required || undefined,
+    });
+  });
 
   return (
     <div>
@@ -29,7 +34,7 @@ export const FormField = ({ label, hint, error, required = false, children }: Fo
         {label}
         {required && <span className="ml-1 text-rose-600" aria-hidden="true">*</span>}
       </label>
-      {enhancedChild}
+      {enhancedChildren}
       {error ? (
         <p id={`${fieldId}-error`} className="mt-1.5 text-[11px] font-semibold text-rose-600" role="alert">{error}</p>
       ) : hint ? (
