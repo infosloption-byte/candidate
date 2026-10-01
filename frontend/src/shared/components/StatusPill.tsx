@@ -42,17 +42,17 @@ const toneClasses: Record<string, string> = {
   INACTIVE: 'border-slate-300 bg-slate-100 text-slate-500',
   CLOSED: 'border-slate-300 bg-slate-100 text-slate-600',
   REJECTED: 'border-rose-200 bg-rose-50 text-rose-700',
-  WITHDRAWN: 'border-rose-200 bg-rose-50 text-rose-700',
-  CANCELLED: 'border-rose-200 bg-rose-50 text-rose-700',
-  NO_SHOW: 'border-rose-200 bg-rose-50 text-rose-700',
+  WITHDRAWN: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700',
+  CANCELLED: 'border-orange-200 bg-orange-50 text-orange-700',
+  NO_SHOW: 'border-red-200 bg-red-50 text-red-700',
   SUBMITTED: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
 export const StatusPill = ({ value }: StatusPillProps) => {
   const { t } = useLanguage();
   return (
-  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${toneClasses[value] ?? 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-    {t(labels[value] ?? value)}
-  </span>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${toneClasses[value] ?? 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+      {t(labels[value] ?? value)}
+    </span>
   );
 };
