@@ -12,9 +12,11 @@ export const FormField = ({ label, hint, error, required = false, children }: Fo
   const generatedId = useId();
   const fieldId = `form-field-${generatedId.replace(/:/g, '')}`;
   const child = Children.only(children);
+  const existingId = isValidElement(child) ? (child.props as { id?: string }).id : undefined;
+  const inputId = existingId ?? fieldId;
   const enhancedChild = isValidElement(child)
     ? cloneElement(child as ReactElement<Record<string, unknown>>, {
-        id: (child.props as { id?: string }).id ?? fieldId,
+        id: inputId,
         'aria-invalid': error ? true : undefined,
         'aria-describedby': error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined,
         required: required || undefined,
@@ -23,7 +25,7 @@ export const FormField = ({ label, hint, error, required = false, children }: Fo
 
   return (
     <div>
-      <label htmlFor={(child.props as { id?: string }).id ?? fieldId} className="field-label">
+      <label htmlFor={inputId} className="field-label">
         {label}
         {required && <span className="ml-1 text-rose-600" aria-hidden="true">*</span>}
       </label>
