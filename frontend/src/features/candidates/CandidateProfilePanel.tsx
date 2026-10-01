@@ -6,6 +6,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
+import { useScrollLock } from '../../shared/hooks/useScrollLock';
 
 export type CandidateProfileData = Pick<Candidate, 'id' | 'agencyId' | 'reference' | 'agencyRegisterNo' | 'firstName' | 'lastName' | 'name' | 'birthdate' | 'passportNumber' | 'passportExpiry' | 'requestedProfession' | 'onboardingStatus' | 'source' | 'status' | 'statusUpdatedAt' | 'createdAt' | 'updatedAt' | 'email' | 'phone' | 'alternatePhone' | 'country' | 'currentLocation' | 'availability' | 'visaStatus' | 'profession' | 'experienceYears' | 'skills'>;
 
@@ -341,6 +342,8 @@ export const CandidateProfilePanel = ({
   const submittedEvaluations = history.interviews.reduce((sum, item) => sum + item.evaluations.filter((evaluation) => evaluation.status === 'SUBMITTED').length, 0);
 
   const displayCandidate = candidateOverride ?? candidate;
+  // The expanded profile dims the page, so it also freezes it; the minimized dock does not.
+  useScrollLock(Boolean(displayCandidate) && !minimized);
   if (!displayCandidate) return null;
 
   const canEditProfile = role === 'ADMIN' || role === 'COMPANY_ADMIN' || role === 'AGENCY';

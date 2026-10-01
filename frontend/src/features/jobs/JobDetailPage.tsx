@@ -11,9 +11,9 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { DatePicker } from '../../shared/components/DatePicker';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { Modal } from '../../shared/components/Modal';
 import { CandidateMultiSelect } from '../interviews/CandidateMultiSelect';
 import { CandidateComparisonCard } from './CandidateComparisonCard';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, Job, JobCandidate, JobDetail, User, UserRole } from '../../domain/types';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -258,10 +258,6 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
   const [deleteInterviewId, setDeleteInterviewId] = useState<string | null>(null);
   const [deletingInterview, setDeletingInterview] = useState(false);
 
-  const candidateTrap = useFocusTrap<HTMLDivElement>({ enabled: candidateModal, onEscape: () => setCandidateModal(false) });
-  const uploadTrap = useFocusTrap<HTMLDivElement>({ enabled: uploadModal, onEscape: () => setUploadModal(false) });
-  const scheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: scheduleModal, onEscape: () => setScheduleModal(false) });
-  const rescheduleTrap = useFocusTrap<HTMLDivElement>({ enabled: Boolean(rescheduleInterviewId), onEscape: () => { if (!rescheduleSaving) setRescheduleInterviewId(null); } });
 
   const stateJob = useMemo(() => (jobId ? state.jobs.find((item) => item.id === jobId) : undefined), [jobId, state.jobs]);
 
@@ -946,187 +942,201 @@ export const JobDetailPage = ({ role, jobId, onBack }: JobDetailPageProps) => {
       />
 
       {candidateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close add candidate dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setCandidateModal(false)} />
-          <div ref={candidateTrap} role="dialog" aria-modal="true" className="relative z-10 my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate</p><h2 className="mt-1 text-lg font-black text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Create a candidate and place them directly into this job pool.</p></div><button type="button" className="grid size-9 place-items-center rounded-xl text-xl text-slate-400 hover:bg-slate-100" onClick={() => setCandidateModal(false)} aria-label="Close">×</button></div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <FormField label="Job / position"><SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled /></FormField>
-              </div>
-              {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
-              <FormField label="Agency Register No"><input className="field-input" value={candidateForm.agencyRegisterNo} onChange={(e) => setCandidateForm({ ...candidateForm, agencyRegisterNo: e.target.value })} /></FormField>
-              <FormField label="First name"><input className="field-input" value={candidateForm.firstName} onChange={(e) => setCandidateForm({ ...candidateForm, firstName: e.target.value })} /></FormField>
-              <FormField label="Last name"><input className="field-input" value={candidateForm.lastName} onChange={(e) => setCandidateForm({ ...candidateForm, lastName: e.target.value })} /></FormField>
-              <FormField label="Birth date"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
-              <FormField label="Passport number"><input className="field-input" value={candidateForm.passportNumber} onChange={(e) => setCandidateForm({ ...candidateForm, passportNumber: e.target.value })} /></FormField>
-              <FormField label="Passport expiry"><input type="date" className="field-input" value={candidateForm.passportExpiry} onChange={(e) => setCandidateForm({ ...candidateForm, passportExpiry: e.target.value })} /></FormField>
-              <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={candidateForm.requestedProfession} onChange={(e) => setCandidateForm({ ...candidateForm, requestedProfession: e.target.value })} /></FormField></div>
+        <Modal
+          onClose={() => setCandidateModal(false)}
+          ariaLabel="Add candidate"
+          closeLabel="Close add candidate dialog"
+          dismissOnBackdrop={false}
+          panelClassName="my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+        >
+          <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate</p><h2 className="mt-1 text-lg font-black text-slate-950">Add candidate</h2><p className="mt-1 text-xs text-slate-500">Create a candidate and place them directly into this job pool.</p></div><button type="button" className="grid size-9 place-items-center rounded-xl text-xl text-slate-400 hover:bg-slate-100" onClick={() => setCandidateModal(false)} aria-label="Close">×</button></div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <FormField label="Job / position"><SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled /></FormField>
             </div>
-<div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
+            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={candidateAgencyId} onChange={setCandidateAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Candidate agency" /></FormField>}
+            <FormField label="Agency Register No"><input className="field-input" value={candidateForm.agencyRegisterNo} onChange={(e) => setCandidateForm({ ...candidateForm, agencyRegisterNo: e.target.value })} /></FormField>
+            <FormField label="First name"><input className="field-input" value={candidateForm.firstName} onChange={(e) => setCandidateForm({ ...candidateForm, firstName: e.target.value })} /></FormField>
+            <FormField label="Last name"><input className="field-input" value={candidateForm.lastName} onChange={(e) => setCandidateForm({ ...candidateForm, lastName: e.target.value })} /></FormField>
+            <FormField label="Birth date"><input type="date" className="field-input" value={candidateForm.birthdate} onChange={(e) => setCandidateForm({ ...candidateForm, birthdate: e.target.value })} /></FormField>
+            <FormField label="Passport number"><input className="field-input" value={candidateForm.passportNumber} onChange={(e) => setCandidateForm({ ...candidateForm, passportNumber: e.target.value })} /></FormField>
+            <FormField label="Passport expiry"><input type="date" className="field-input" value={candidateForm.passportExpiry} onChange={(e) => setCandidateForm({ ...candidateForm, passportExpiry: e.target.value })} /></FormField>
+            <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={candidateForm.requestedProfession} onChange={(e) => setCandidateForm({ ...candidateForm, requestedProfession: e.target.value })} /></FormField></div>
           </div>
-        </div>
+<div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setCandidateModal(false)}>Cancel</Button><Button disabled={candidateSaving || !candidateForm.agencyRegisterNo.trim() || !candidateForm.firstName.trim() || !candidateForm.lastName.trim() || !candidateForm.birthdate.trim() || !candidateForm.passportNumber.trim() || !candidateForm.passportExpiry.trim() || !candidateForm.requestedProfession.trim() || !candidateAgencyId} onClick={() => void createCandidate()}>{candidateSaving ? 'Saving…' : 'Add candidate'}</Button></div>
+        </Modal>
       )}
 
       {uploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close upload dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setUploadModal(false)} />
-          <div ref={uploadTrap} role="dialog" aria-modal="true" className="relative z-10 my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate import</p><h2 className="mt-1 text-lg font-black text-slate-950">Upload candidates</h2><p className="mt-1 text-xs leading-5 text-slate-500">Import candidates directly into this job pool using the platform CSV format.</p>
-            <div className="mt-5 space-y-4">
-              <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
-                <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
-              </FormField>
-              {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={uploadAgencyId} onChange={setUploadAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Import agency" /></FormField>}
-              <FormField label="CSV file"><input type="file" accept=".csv,text/csv" className="field-input" onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)} /></FormField>
-              {uploadFile && <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{uploadFile.name}</div>}
-            </div>
-            <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setUploadModal(false)}>Cancel</Button><Button disabled={uploading || !uploadFile || !uploadAgencyId} onClick={() => void uploadCandidates()}>{uploading ? 'Uploading…' : 'Upload candidates'}</Button></div>
+        <Modal
+          onClose={() => setUploadModal(false)}
+          ariaLabel="Upload candidates"
+          closeLabel="Close upload dialog"
+          dismissOnBackdrop={false}
+          panelClassName="my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+        >
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Job candidate import</p><h2 className="mt-1 text-lg font-black text-slate-950">Upload candidates</h2><p className="mt-1 text-xs leading-5 text-slate-500">Import candidates directly into this job pool using the platform CSV format.</p>
+          <div className="mt-5 space-y-4">
+            <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
+              <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
+            </FormField>
+            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={uploadAgencyId} onChange={setUploadAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((item) => ({ value: item.id, label: item.name }))]} ariaLabel="Import agency" /></FormField>}
+            <FormField label="CSV file"><input type="file" accept=".csv,text/csv" className="field-input" onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)} /></FormField>
+            {uploadFile && <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{uploadFile.name}</div>}
           </div>
-        </div>
+          <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setUploadModal(false)}>Cancel</Button><Button disabled={uploading || !uploadFile || !uploadAgencyId} onClick={() => void uploadCandidates()}>{uploading ? 'Uploading…' : 'Upload candidates'}</Button></div>
+        </Modal>
       )}
 
       {scheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close schedule dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setScheduleModal(false)} />
-          <div ref={scheduleTrap} role="dialog" aria-modal="true" className="relative z-10 flex w-full max-w-4xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-            <header className="shrink-0 border-b border-slate-200 px-5 py-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p><h2 className="mt-1 text-lg font-black text-slate-950">Schedule interview</h2><p className="mt-1 text-xs text-slate-500">Select candidates, interview settings, criteria and the interviewer panel.</p></header>
-            <div className="min-h-0 flex-1 overflow-y-auto p-5">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
-                  <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
-                </FormField>
-                <FormField label="Interview type"><SelectMenu value={scheduleForm.type} onChange={(value) => setScheduleForm({ ...scheduleForm, type: value as Interview['type'] })} options={[{ value: 'SCREENING', label: 'Screening' }, { value: 'TECHNICAL', label: 'Technical' }, { value: 'PRACTICAL', label: 'Practical' }, { value: 'FINAL', label: 'Final' }]} ariaLabel="Interview type" /></FormField>
-                <FormField label="Date & time"><DatePicker value={scheduleForm.scheduledAt} onChange={(value) => setScheduleForm({ ...scheduleForm, scheduledAt: value })} showTime placeholder="Select date and time" ariaLabel="Interview date and time" /></FormField>
-                <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={scheduleForm.durationMins} onChange={(e) => setScheduleForm({ ...scheduleForm, durationMins: e.target.value })} /></FormField>
-                <FormField label="Location"><input className="field-input" value={scheduleForm.location} onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })} /></FormField>
-                <FormField label="Notes"><input className="field-input" value={scheduleForm.notes} onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })} /></FormField>
-              </div>
+        <Modal
+          onClose={() => setScheduleModal(false)}
+          ariaLabel="Schedule interview"
+          closeLabel="Close schedule dialog"
+          dismissOnBackdrop={false}
+          panelClassName="flex w-full max-w-4xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+        >
+          <header className="shrink-0 border-b border-slate-200 px-5 py-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p><h2 className="mt-1 text-lg font-black text-slate-950">Schedule interview</h2><p className="mt-1 text-xs text-slate-500">Select candidates, interview settings, criteria and the interviewer panel.</p></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField label="Job / position" hint="This popup was opened from the current job, so the job is already selected.">
+                <SelectMenu value={job.id} options={[{ value: job.id, label: job.title }]} onChange={() => undefined} ariaLabel="Current job" disabled />
+              </FormField>
+              <FormField label="Interview type"><SelectMenu value={scheduleForm.type} onChange={(value) => setScheduleForm({ ...scheduleForm, type: value as Interview['type'] })} options={[{ value: 'SCREENING', label: 'Screening' }, { value: 'TECHNICAL', label: 'Technical' }, { value: 'PRACTICAL', label: 'Practical' }, { value: 'FINAL', label: 'Final' }]} ariaLabel="Interview type" /></FormField>
+              <FormField label="Date & time"><DatePicker value={scheduleForm.scheduledAt} onChange={(value) => setScheduleForm({ ...scheduleForm, scheduledAt: value })} showTime placeholder="Select date and time" ariaLabel="Interview date and time" /></FormField>
+              <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={scheduleForm.durationMins} onChange={(e) => setScheduleForm({ ...scheduleForm, durationMins: e.target.value })} /></FormField>
+              <FormField label="Location"><input className="field-input" value={scheduleForm.location} onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })} /></FormField>
+              <FormField label="Notes"><input className="field-input" value={scheduleForm.notes} onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })} /></FormField>
+            </div>
 
-              <div className="mt-5">
-                <FormField label="Candidates" hint="Browse an agency, search candidates, then move them into the selected panel. The selected job is used as the candidate pool.">
-                  <CandidateMultiSelect
-                    candidates={interviewScheduleCandidates}
-                    agencyOptions={interviewAgencyOptions}
-                    activeAgencyId={interviewAgencyId}
-                    selectedIds={selectedCandidateIds}
-                    search={candidateSearch}
-                    onAgencyChange={(value) => {
-                      setInterviewAgencyId(value);
-                      setCandidateSearch('');
-                    }}
-                    onSearchChange={setCandidateSearch}
-                    onToggle={(candidateId) => setSelectedCandidateIds((current) => current.includes(candidateId)
-                      ? current.filter((id) => id !== candidateId)
-                      : [...current, candidateId])}
-                    onRemove={(candidateId) => setSelectedCandidateIds((current) => current.filter((id) => id !== candidateId))}
-                    onClear={() => setSelectedCandidateIds([])}
-                  />
-                </FormField>
-              </div>
+            <div className="mt-5">
+              <FormField label="Candidates" hint="Browse an agency, search candidates, then move them into the selected panel. The selected job is used as the candidate pool.">
+                <CandidateMultiSelect
+                  candidates={interviewScheduleCandidates}
+                  agencyOptions={interviewAgencyOptions}
+                  activeAgencyId={interviewAgencyId}
+                  selectedIds={selectedCandidateIds}
+                  search={candidateSearch}
+                  onAgencyChange={(value) => {
+                    setInterviewAgencyId(value);
+                    setCandidateSearch('');
+                  }}
+                  onSearchChange={setCandidateSearch}
+                  onToggle={(candidateId) => setSelectedCandidateIds((current) => current.includes(candidateId)
+                    ? current.filter((id) => id !== candidateId)
+                    : [...current, candidateId])}
+                  onRemove={(candidateId) => setSelectedCandidateIds((current) => current.filter((id) => id !== candidateId))}
+                  onClear={() => setSelectedCandidateIds([])}
+                />
+              </FormField>
+            </div>
 
-              <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                <div><p className="field-label">Interviewers</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{interviewers.length ? interviewers.map((item) => { const checked = selectedInterviewers.includes(item.id); return <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input type="checkbox" checked={checked} onChange={() => setSelectedInterviewers((current) => checked ? current.filter((id) => id !== item.id) : [...current, item.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this job's candidate agencies.</p>}</div></div>
-                <div>
-                  <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
-                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
-                      {selectedCriteriaGroups.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
-                          {selectedCriteriaGroups.map((groupId, index) => {
-                            const group = criteriaGroups.find((item) => item.id === groupId);
-                            if (!group) return null;
-                            const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
-                            return (
-                              <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
-                                <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-xs font-extrabold text-slate-800">{group.name}</p>
-                                  <p className="mt-0.5 truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
-                                </div>
-                                <IconButton icon="arrow-up" size="sm" label="Move group up" ariaLabel={`Move ${group.name} up`} disabled={index === 0} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} />
-                                <IconButton icon="arrow-down" size="sm" label="Move group down" ariaLabel={`Move ${group.name} down`} disabled={index === selectedCriteriaGroups.length - 1} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} />
-                                <IconButton icon="x" size="sm" variant="danger" label="Remove group" ariaLabel={`Remove ${group.name}`} onClick={() => setSelectedCriteriaGroups((current) => current.filter((id) => id !== group.id))} />
+            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+              <div><p className="field-label">Interviewers</p><div className="mt-2 max-h-48 overflow-y-auto rounded-2xl border border-slate-200">{interviewers.length ? interviewers.map((item) => { const checked = selectedInterviewers.includes(item.id); return <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0"><input type="checkbox" checked={checked} onChange={() => setSelectedInterviewers((current) => checked ? current.filter((id) => id !== item.id) : [...current, item.id])} /><span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span></label>; }) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this job's candidate agencies.</p>}</div></div>
+              <div>
+                <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                    {selectedCriteriaGroups.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
+                        {selectedCriteriaGroups.map((groupId, index) => {
+                          const group = criteriaGroups.find((item) => item.id === groupId);
+                          if (!group) return null;
+                          const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                          return (
+                            <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
+                              <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-extrabold text-slate-800">{group.name}</p>
+                                <p className="mt-0.5 truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
-                        {criteriaGroups.length ? (
-                          <div className="grid gap-2">
-                            {orderCriteriaGroups(criteriaGroups).filter((group) => !selectedCriteriaGroups.includes(group.id)).map((group) => (
-                              <button
-                                key={group.id}
-                                type="button"
-                                onClick={() => setSelectedCriteriaGroups((current) => [...current, group.id])}
-                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block truncate text-xs font-extrabold text-slate-800">{group.name}</span>
-                                  <span className="mt-0.5 block truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
-                                </span>
-                                <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>
-                        )}
+                              <IconButton icon="arrow-up" size="sm" label="Move group up" ariaLabel={`Move ${group.name} up`} disabled={index === 0} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} />
+                              <IconButton icon="arrow-down" size="sm" label="Move group down" ariaLabel={`Move ${group.name} down`} disabled={index === selectedCriteriaGroups.length - 1} onClick={() => setSelectedCriteriaGroups((current) => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next; })} />
+                              <IconButton icon="x" size="sm" variant="danger" label="Remove group" ariaLabel={`Remove ${group.name}`} onClick={() => setSelectedCriteriaGroups((current) => current.filter((id) => id !== group.id))} />
+                            </div>
+                          );
+                        })}
                       </div>
+                    )}
+
+                    <div>
+                      <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
+                      {criteriaGroups.length ? (
+                        <div className="grid gap-2">
+                          {orderCriteriaGroups(criteriaGroups).filter((group) => !selectedCriteriaGroups.includes(group.id)).map((group) => (
+                            <button
+                              key={group.id}
+                              type="button"
+                              onClick={() => setSelectedCriteriaGroups((current) => [...current, group.id])}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-extrabold text-slate-800">{group.name}</span>
+                                <span className="mt-0.5 block truncate text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
+                              </span>
+                              <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>
+                      )}
                     </div>
-                    <p className="mt-1.5 text-[10px] font-bold text-slate-400">{selectedCriteriaGroups.length} group(s) selected</p>
-                  </FormField>
-                </div>
+                  </div>
+                  <p className="mt-1.5 text-[10px] font-bold text-slate-400">{selectedCriteriaGroups.length} group(s) selected</p>
+                </FormField>
               </div>
             </div>
-            <footer className="shrink-0 border-t border-slate-200 bg-slate-50/70 px-5 py-3"><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setScheduleModal(false)}>Cancel</Button><Button disabled={scheduleSaving} onClick={() => void scheduleInterviews()}>{scheduleSaving ? 'Scheduling…' : 'Schedule interview'}</Button></div></footer>
           </div>
-        </div>
+          <footer className="shrink-0 border-t border-slate-200 bg-slate-50/70 px-5 py-3"><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setScheduleModal(false)}>Cancel</Button><Button disabled={scheduleSaving} onClick={() => void scheduleInterviews()}>{scheduleSaving ? 'Scheduling…' : 'Schedule interview'}</Button></div></footer>
+        </Modal>
       )}
 
       {rescheduleInterviewId && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close interview edit dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => { if (!rescheduleSaving) setRescheduleInterviewId(null); }} />
-          <div ref={rescheduleTrap} role="dialog" aria-modal="true" className="relative z-10 w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-            {(() => {
-              const target = job.interviews.find((item) => item.id === rescheduleInterviewId);
-              if (!target) return null;
-              return (
-                <>
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{target.status === 'SCHEDULED' ? 'Interview settings' : 'Interview reschedule'}</p>
-                  <h2 className="mt-1 text-lg font-black text-slate-950">{target.candidate?.name ?? 'Candidate'} · {label(target.type)}</h2>
-                  <p className="mt-1 text-xs text-slate-500">Set a new date and adjust the interviewer panel. Saving returns this interview to Scheduled.</p>
-                  {error && (
-                    <div role="alert" aria-live="assertive" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
-                    </div>
-                  )}
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                    <FormField label="Date & time"><DatePicker value={rescheduleForm.scheduledAt} onChange={(value) => setRescheduleForm((current) => ({ ...current, scheduledAt: value }))} showTime placeholder="Select date and time" ariaLabel="Reschedule date and time" /></FormField>
-                    <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={rescheduleForm.durationMins} onChange={(event) => setRescheduleForm((current) => ({ ...current, durationMins: event.target.value }))} /></FormField>
-                    <FormField label="Location"><input className="field-input" value={rescheduleForm.location} onChange={(event) => setRescheduleForm((current) => ({ ...current, location: event.target.value }))} /></FormField>
+        <Modal
+          onClose={() => setRescheduleInterviewId(null)}
+          ariaLabel="Edit interview"
+          closeLabel="Close interview edit dialog"
+          dismissOnBackdrop={false}
+          busy={rescheduleSaving}
+          containerClassName="z-[55] flex items-center justify-center overflow-y-auto p-3 sm:p-6"
+          panelClassName="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+        >
+          {(() => {
+            const target = job.interviews.find((item) => item.id === rescheduleInterviewId);
+            if (!target) return null;
+            return (
+              <>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">{target.status === 'SCHEDULED' ? 'Interview settings' : 'Interview reschedule'}</p>
+                <h2 className="mt-1 text-lg font-black text-slate-950">{target.candidate?.name ?? 'Candidate'} · {label(target.type)}</h2>
+                <p className="mt-1 text-xs text-slate-500">Set a new date and adjust the interviewer panel. Saving returns this interview to Scheduled.</p>
+                {error && (
+                  <div role="alert" aria-live="assertive" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
                   </div>
-                  <div className="mt-5">
-                    <p className="field-label">Interviewers</p>
-                    <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200">
-                      {interviewers.length ? interviewers.map((item) => (
-                        <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0">
-                          <input type="checkbox" checked={rescheduleInterviewerIds.includes(item.id)} onChange={() => setRescheduleInterviewerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />
-                          <span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span>
-                        </label>
-                      )) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this candidate's agency.</p>}
-                    </div>
+                )}
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <FormField label="Date & time"><DatePicker value={rescheduleForm.scheduledAt} onChange={(value) => setRescheduleForm((current) => ({ ...current, scheduledAt: value }))} showTime placeholder="Select date and time" ariaLabel="Reschedule date and time" /></FormField>
+                  <FormField label="Duration (minutes)"><input type="number" min="15" max="480" className="field-input" value={rescheduleForm.durationMins} onChange={(event) => setRescheduleForm((current) => ({ ...current, durationMins: event.target.value }))} /></FormField>
+                  <FormField label="Location"><input className="field-input" value={rescheduleForm.location} onChange={(event) => setRescheduleForm((current) => ({ ...current, location: event.target.value }))} /></FormField>
+                </div>
+                <div className="mt-5">
+                  <p className="field-label">Interviewers</p>
+                  <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200">
+                    {interviewers.length ? interviewers.map((item) => (
+                      <label key={item.id} className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2.5 last:border-b-0">
+                        <input type="checkbox" checked={rescheduleInterviewerIds.includes(item.id)} onChange={() => setRescheduleInterviewerIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />
+                        <span className="min-w-0"><span className="block text-xs font-black text-slate-800">{item.name}</span><span className="block text-[10px] text-slate-400">{item.email}</span></span>
+                      </label>
+                    )) : <p className="p-4 text-xs text-slate-400">No active interviewers are available for this candidate's agency.</p>}
                   </div>
-                  <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" disabled={rescheduleSaving} onClick={() => setRescheduleInterviewId(null)}>Cancel</Button><Button disabled={rescheduleSaving || !rescheduleInterviewerIds.length} onClick={() => void saveInterviewEditor()}>{rescheduleSaving ? 'Saving…' : target.status === 'SCHEDULED' ? 'Save changes' : 'Reschedule interview'}</Button></div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+                </div>
+                <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" disabled={rescheduleSaving} onClick={() => setRescheduleInterviewId(null)}>Cancel</Button><Button disabled={rescheduleSaving || !rescheduleInterviewerIds.length} onClick={() => void saveInterviewEditor()}>{rescheduleSaving ? 'Saving…' : target.status === 'SCHEDULED' ? 'Save changes' : 'Reschedule interview'}</Button></div>
+              </>
+            );
+          })()}
+        </Modal>
       )}
 
       <ConfirmDialog

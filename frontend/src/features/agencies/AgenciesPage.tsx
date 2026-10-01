@@ -13,9 +13,9 @@ import { FormField } from '../../shared/components/FormField';
 import { DataTable } from '../../shared/components/DataTable';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { SelectMenu } from '../../shared/components/SelectMenu';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
 import type { Agency, User } from '../../domain/types';
+import { Modal } from '../../shared/components/Modal';
 
 interface AgencyRecord extends Agency {
   counts?: { users: number; jobs: number; candidates: number };
@@ -41,30 +41,24 @@ const AdminModal = ({
   onClose: () => void;
   children: ReactNode;
 }) => {
-  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5" role="presentation">
-      <button type="button" aria-label="Close dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="admin-dialog-title"
-        tabIndex={-1}
-        className="relative z-10 my-auto w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2.5rem)]"
-      >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">System administration</p>
-            <h2 id="admin-dialog-title" className="mt-1 text-base font-black text-slate-950 sm:text-lg">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+    <Modal
+      onClose={onClose}
+      labelledBy="admin-dialog-title"
+      dismissOnBackdrop={false}
+      containerClassName="z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5"
+      panelClassName="my-auto w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2.5rem)]"
+    >
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">System administration</p>
+          <h2 id="admin-dialog-title" className="mt-1 text-base font-black text-slate-950 sm:text-lg">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
         </div>
-        <div className="p-4 sm:p-5">{children}</div>
+        <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
       </div>
-    </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </Modal>
   );
 };
 

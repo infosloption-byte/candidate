@@ -14,6 +14,8 @@ body { min-width: 320px; background: #fbfaf6; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
+/* The app scrolls inside <main>; useScrollLock marks <html> while a popup is open. */
+html[data-scroll-locked] main { overflow: hidden; }
 :focus-visible { outline: 3px solid rgba(255, 214, 10, 0.65); outline-offset: 2px; }
 
 .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #c9c5b8 transparent; }

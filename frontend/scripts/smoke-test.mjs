@@ -36,8 +36,13 @@ for (const view of ['dashboard', 'jobs', 'candidates', 'interviews', 'criteria',
 
 assert.match(candidatesPage, /Import candidates/);
 assert.match(candidatesPage, /Open/);
-assert.match(candidatesPage, /role="dialog"/);
-assert.match(candidatesPage, /useFocusTrap/);
+// Popups go through the shared Modal, which owns the dialog semantics, focus trap and backdrop.
+const modal = read('src/shared/components/Modal.tsx');
+assert.match(modal, /role=\{role\}/);
+assert.match(modal, /aria-modal="true"/);
+assert.match(modal, /useFocusTrap/);
+assert.match(modal, /bg-slate-950\/50/);
+assert.match(candidatesPage, /<Modal/);
 assert.match(candidatesPage, /Close candidate details/);
 assert.match(candidatesPage, /Proceed with import/);
 assert.match(candidatesPage, /experienceYears/);
@@ -57,11 +62,11 @@ const interviewsPage = read('src/features/interviews/InterviewsPage.tsx');
 assert.match(interviewsPage, /Create interview/);
 assert.match(interviewsPage, /Candidates/);
 assert.match(interviewsPage, /View/);
-assert.match(interviewsPage, /role=\"dialog\"/);
+assert.match(interviewsPage, /<Modal/);
 assert.match(interviewsPage, /interviews\/bulk/);
 assert.match(interviewsPage, /Also schedule for other candidates/);
 assert.match(interviewsPage, /Edit interview/);
-assert.match(interviewsPage, /role="dialog"/);
+assert.match(interviewsPage, /<Modal/);
 assert.match(interviewsPage, /scheduleModalOpen/);
 assert.match(interviewsPage, /sortBy/);
 assert.match(interviewsPage, /typeFilter/);

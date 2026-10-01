@@ -6,9 +6,9 @@ import { StatusPill } from '../../shared/components/StatusPill';
 import { Button } from '../../shared/components/Button';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { apiFetch } from '../../shared/lib/api';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { candidateFinalStatuses } from '../interviews/InterviewDetailsModal';
 import type { CandidateComparisonRow, CandidateStatus, JobComparison, PositionComparisonSection } from '../../domain/types';
+import { Modal } from '../../shared/components/Modal';
 
 interface CandidateComparisonCardProps {
   jobId: string;
@@ -52,7 +52,6 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
   const [decisionReason, setDecisionReason] = useState('');
   const [decisionError, setDecisionError] = useState('');
   const [decisionSaving, setDecisionSaving] = useState(false);
-  const decisionTrap = useFocusTrap<HTMLDivElement>({ enabled: Boolean(decisionCandidate), onEscape: () => { if (!decisionSaving) setDecisionCandidate(null); } });
 
   const rows = useMemo(() => {
     const base = scoredOnly ? section.rows.filter((row) => row.averagePercentage !== null) : section.rows;
@@ -233,34 +232,39 @@ const PositionTable = ({ jobId, section, scoredOnly, onStatusUpdated }: { jobId:
     </section>
 
       {decisionCandidate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close final status dialog" className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]" onClick={() => { if (!decisionSaving) setDecisionCandidate(null); }} />
-          <div ref={decisionTrap} role="dialog" aria-modal="true" className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate decision</p>
-            <h3 className="mt-1 text-base font-black text-slate-950">{decisionCandidate.name}</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Update the final status after reviewing the completed interview scores.
-              {decisionCandidate.averagePercentage !== null && <span className="mt-1 block font-bold text-slate-700">Overall score {pct(decisionCandidate.averagePercentage)}{decisionCandidate.rank !== null ? ' · Rank ' + decisionCandidate.rank : ''}</span>}
-            </p>
-            {decisionError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">{decisionError}</p>}
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="field-label">Final status</span>
-                <SelectMenu value={decisionStatus} onChange={(value) => setDecisionStatus(value as CandidateStatus)} options={[{ value: '', label: 'Select final status' }, ...candidateFinalStatuses.map((status) => ({ value: status, label: statusText(status) }))]} ariaLabel="Final candidate status" className="mt-1" disabled={decisionSaving} />
-              </label>
-              <label className="block">
-                <span className="field-label">Reason <span className="font-normal normal-case tracking-normal text-slate-400">(optional)</span></span>
-                <input className="field-input mt-1" value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} placeholder="Decision note" disabled={decisionSaving} />
-              </label>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="secondary" disabled={decisionSaving} onClick={() => setDecisionCandidate(null)}>Cancel</Button>
-              <Button disabled={!decisionStatus || decisionStatus === decisionCandidate.candidateStatus || decisionSaving} onClick={() => void saveDecision()}>
-                {decisionSaving ? 'Updating…' : 'Update status'}
-              </Button>
-            </div>
+        <Modal
+          onClose={() => setDecisionCandidate(null)}
+          ariaLabel="Set final status"
+          closeLabel="Close final status dialog"
+          dismissOnBackdrop={false}
+          busy={decisionSaving}
+          containerClassName="z-50 flex items-center justify-center p-3 sm:p-6"
+          panelClassName="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+        >
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate decision</p>
+          <h3 className="mt-1 text-base font-black text-slate-950">{decisionCandidate.name}</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Update the final status after reviewing the completed interview scores.
+            {decisionCandidate.averagePercentage !== null && <span className="mt-1 block font-bold text-slate-700">Overall score {pct(decisionCandidate.averagePercentage)}{decisionCandidate.rank !== null ? ' · Rank ' + decisionCandidate.rank : ''}</span>}
+          </p>
+          {decisionError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">{decisionError}</p>}
+          <div className="mt-4 space-y-3">
+            <label className="block">
+              <span className="field-label">Final status</span>
+              <SelectMenu value={decisionStatus} onChange={(value) => setDecisionStatus(value as CandidateStatus)} options={[{ value: '', label: 'Select final status' }, ...candidateFinalStatuses.map((status) => ({ value: status, label: statusText(status) }))]} ariaLabel="Final candidate status" className="mt-1" disabled={decisionSaving} />
+            </label>
+            <label className="block">
+              <span className="field-label">Reason <span className="font-normal normal-case tracking-normal text-slate-400">(optional)</span></span>
+              <input className="field-input mt-1" value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} placeholder="Decision note" disabled={decisionSaving} />
+            </label>
           </div>
-        </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="secondary" disabled={decisionSaving} onClick={() => setDecisionCandidate(null)}>Cancel</Button>
+            <Button disabled={!decisionStatus || decisionStatus === decisionCandidate.candidateStatus || decisionSaving} onClick={() => void saveDecision()}>
+              {decisionSaving ? 'Updating…' : 'Update status'}
+            </Button>
+          </div>
+        </Modal>
       )}
     </>
 

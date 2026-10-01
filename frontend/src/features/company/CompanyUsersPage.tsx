@@ -10,8 +10,8 @@ import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
+import { Modal } from '../../shared/components/Modal';
 
 type TeamRole = 'AGENCY' | 'INTERVIEWER';
 type ModalMode = 'CREATE' | 'EDIT' | null;
@@ -36,23 +36,24 @@ const TeamModal = ({
   onClose: () => void;
   children: ReactNode;
 }) => {
-  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5" role="presentation">
-      <button type="button" aria-label="Close dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={modalRef} role="dialog" aria-modal="true" tabIndex={-1} className="relative z-10 my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Company administration</p>
-            <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+    <Modal
+      onClose={onClose}
+      ariaLabel="Company user"
+      dismissOnBackdrop={false}
+      containerClassName="z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5"
+      panelClassName="my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Company administration</p>
+          <h2 className="mt-1 text-base font-black text-slate-950 sm:text-lg">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
         </div>
-        <div className="p-4 sm:p-5">{children}</div>
+        <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
       </div>
-    </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </Modal>
   );
 };
 

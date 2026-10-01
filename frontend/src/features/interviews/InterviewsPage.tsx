@@ -13,7 +13,6 @@ import { DatePicker } from '../../shared/components/DatePicker';
 import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { CandidateProfilePanel, type CandidateProfileData } from '../candidates/CandidateProfilePanel';
 import { InterviewDetailsModal, type InterviewDetail } from './InterviewDetailsModal';
 import { CriterionResponseField } from './CriterionResponseField';
@@ -21,6 +20,8 @@ import { InterviewActionMenu } from './InterviewActionMenu';
 import { CandidateMultiSelect } from './CandidateMultiSelect';
 import { ApiError, apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateStatus, Interview, InterviewCriterionAssignment, InterviewCriterionGroup, InterviewCriterionResponseType, InterviewType, Job, User, UserRole } from '../../domain/types';
+import { Modal } from '../../shared/components/Modal';
+import { useScrollLock } from '../../shared/hooks/useScrollLock';
 
 interface Props {
   role: UserRole;
@@ -229,6 +230,8 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   const [interviewPage, setInterviewPage] = useState(1);
   const [evaluationFor, setEvaluationFor] = useState<string | null>(null);
   const [evaluationMinimized, setEvaluationMinimized] = useState(false);
+  // The open scorecard window dims the page, so it freezes it too (the minimized dock does not).
+  useScrollLock(Boolean(evaluationFor) && !evaluationMinimized);
   const [evaluationMaximized, setEvaluationMaximized] = useState(false);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
   const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
@@ -1216,19 +1219,6 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
   };
 
   const interviewDetailModalOpen = Boolean(detailFor && detail);
-  const scheduleFormTrapRef = useFocusTrap<HTMLDivElement>({
-    enabled: scheduleModalOpen,
-    onEscape: closeScheduleForm,
-  });
-
-  useEffect(() => {
-    if (!interviewDetailModalOpen && !scheduleModalOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [interviewDetailModalOpen, scheduleModalOpen]);
 
   const scheduleCounts = useMemo(() => {
     if (role !== 'INTERVIEWER') return { upcoming: 0, current: 0, past: 0 };
@@ -1425,242 +1415,246 @@ export const InterviewsPage = ({ role, initialJobId = null, onJobChange }: Props
       </div>
 
       {showScheduleForm && role !== 'INTERVIEWER' && role !== 'INTERVIEWEE' && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
-          <button type="button" aria-label="Close interview form" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeScheduleForm} />
-          <div ref={scheduleFormTrapRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" tabIndex={-1} className="relative z-10 flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border sm:border-slate-200">
-            <header className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p>
-                  <h2 id="schedule-interview-title" className="mt-0.5 text-lg font-black text-slate-950 sm:text-xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
-                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Select candidates, configure the interview, then assign the panel.</p>
-                </div>
-                <Button size="sm" variant="secondary" className="px-2.5" onClick={closeScheduleForm}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+        <Modal
+          onClose={closeScheduleForm}
+          labelledBy="schedule-interview-title"
+          closeLabel="Close interview form"
+          dismissOnBackdrop={false}
+          containerClassName="z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4"
+          panelClassName="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border sm:border-slate-200"
+        >
+          <header className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview scheduling</p>
+                <h2 id="schedule-interview-title" className="mt-0.5 text-lg font-black text-slate-950 sm:text-xl">{editingInterviewId ? 'Edit interview' : 'Create interview'}</h2>
+                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">Select candidates, configure the interview, then assign the panel.</p>
               </div>
-            </header>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
-              {editingInterviewId && error && (
-                <div role="alert" aria-live="assertive" className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
-                </div>
-              )}
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                  <FormField label="Job / position" hint="Select the job whose candidate pool contains the selected workers.">
-                    <SelectMenu
-                      value={jobId}
-                      onChange={(value) => {
-                        setJobId(value);
-                        setSelectedCandidateIds([]);
-                        setCandidateSearch('');
-                      }}
-                      options={[
-                        { value: '', label: 'Select a job' },
-                        ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
-                      ]}
-                      ariaLabel="Select job position"
-                    />
-                  </FormField>
+              <Button size="sm" variant="secondary" className="px-2.5" onClick={closeScheduleForm}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+            </div>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-4">
+            {editingInterviewId && error && (
+              <div role="alert" aria-live="assertive" className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-left">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Unable to save interview</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-rose-700">{error}</p>
+              </div>
+            )}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                <FormField label="Job / position" hint="Select the job whose candidate pool contains the selected workers.">
+                  <SelectMenu
+                    value={jobId}
+                    onChange={(value) => {
+                      setJobId(value);
+                      setSelectedCandidateIds([]);
+                      setCandidateSearch('');
+                    }}
+                    options={[
+                      { value: '', label: 'Select a job' },
+                      ...availableJobs.map((job) => ({ value: job.id, label: job.title })),
+                    ]}
+                    ariaLabel="Select job position"
+                  />
+                </FormField>
 
-                  <FormField label="Interview type">
-                    <SelectMenu
-                      value={form.type}
-                      onChange={(value) => setForm({ ...form, type: value as InterviewType })}
-                      options={[
-                        { value: 'SCREENING', label: 'Screening' },
-                        { value: 'TECHNICAL', label: 'Technical' },
-                        { value: 'PRACTICAL', label: 'Practical' },
-                        { value: 'FINAL', label: 'Final' },
-                      ]}
-                      ariaLabel="Select interview type"
-                    />
-                  </FormField>
+                <FormField label="Interview type">
+                  <SelectMenu
+                    value={form.type}
+                    onChange={(value) => setForm({ ...form, type: value as InterviewType })}
+                    options={[
+                      { value: 'SCREENING', label: 'Screening' },
+                      { value: 'TECHNICAL', label: 'Technical' },
+                      { value: 'PRACTICAL', label: 'Practical' },
+                      { value: 'FINAL', label: 'Final' },
+                    ]}
+                    ariaLabel="Select interview type"
+                  />
+                </FormField>
 
-                  <FormField label="Date & time">
-                    <DatePicker
-                      value={form.scheduledAt}
-                      onChange={(value) => setForm({ ...form, scheduledAt: value })}
-                      showTime
-                      placeholder="Select interview date & time"
-                      ariaLabel="Interview date and time"
-                    />
-                  </FormField>
+                <FormField label="Date & time">
+                  <DatePicker
+                    value={form.scheduledAt}
+                    onChange={(value) => setForm({ ...form, scheduledAt: value })}
+                    showTime
+                    placeholder="Select interview date & time"
+                    ariaLabel="Interview date and time"
+                  />
+                </FormField>
 
-                  <FormField label="Duration (minutes)">
-                    <input
-                      type="number"
-                      min="15"
-                      max="480"
-                      className="field-input"
-                      value={form.durationMins}
-                      onChange={(event) => setForm({ ...form, durationMins: event.target.value })}
-                    />
-                  </FormField>
+                <FormField label="Duration (minutes)">
+                  <input
+                    type="number"
+                    min="15"
+                    max="480"
+                    className="field-input"
+                    value={form.durationMins}
+                    onChange={(event) => setForm({ ...form, durationMins: event.target.value })}
+                  />
+                </FormField>
 
-                  <FormField label="Location">
-                    <input
-                      className="field-input"
-                      value={form.location}
-                      onChange={(event) => setForm({ ...form, location: event.target.value })}
-                      placeholder="Interview room / online"
-                    />
-                  </FormField>
+                <FormField label="Location">
+                  <input
+                    className="field-input"
+                    value={form.location}
+                    onChange={(event) => setForm({ ...form, location: event.target.value })}
+                    placeholder="Interview room / online"
+                  />
+                </FormField>
 
-                  <FormField label="Notes" hint="Optional">
-                    <input
-                      className="field-input"
-                      value={form.notes}
-                      onChange={(event) => setForm({ ...form, notes: event.target.value })}
-                      placeholder="Interview instructions or notes…"
-                    />
-                  </FormField>
-                </div>
+                <FormField label="Notes" hint="Optional">
+                  <input
+                    className="field-input"
+                    value={form.notes}
+                    onChange={(event) => setForm({ ...form, notes: event.target.value })}
+                    placeholder="Interview instructions or notes…"
+                  />
+                </FormField>
+              </div>
 
-                {editingInterviewId ? (
-                  <>
-                    <FormField label="Current candidate">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? 'Candidate unavailable'}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? 'Reference unavailable'} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
-                      </div>
-                    </FormField>
-                    <div>
-                      <FormField label="Additional candidates" hint="Select candidates from different agencies. Existing selections stay selected when you switch the browse agency.">
-                        <CandidateMultiSelect
-                          candidates={scheduleCandidates}
-                          agencyOptions={agencyOptions}
-                          activeAgencyId={agencyId}
-                          selectedIds={selectedCandidateIds}
-                          search={candidateSearch}
-                          editingCandidateId={candidateId}
-                          onAgencyChange={(value) => {
-                            setAgencyId(value);
-                            setCandidateSearch('');
-                          }}
-                          onSearchChange={setCandidateSearch}
-                          onToggle={toggleCandidateSelection}
-                          onRemove={(id) => toggleCandidateSelection(id)}
-                          onClear={() => setSelectedCandidateIds([])}
-                        />
-                        {mixedAgencySelection && (
-                          <p className="mt-1.5 text-[10px] font-bold text-amber-700">Multiple agencies selected. Job / position will remain empty for this multi-agency schedule.</p>
-                        )}
-                      </FormField>
+              {editingInterviewId ? (
+                <>
+                  <FormField label="Current candidate">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <p className="text-xs font-extrabold text-slate-900">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.name ?? 'Candidate unavailable'}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-400">{candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.reference ?? 'Reference unavailable'} · Passport: {candidateFor(interviews.find((item) => item.id === editingInterviewId) ?? interviews[0]!)?.passportNumber ?? 'Not provided'}</p>
                     </div>
-                  </>
-                ) : (
-                  <FormField label="Candidates" hint="Browse an agency, click candidates to move them into the selected panel, then switch agencies without losing previous selections.">
-                    <CandidateMultiSelect
-                      candidates={scheduleCandidates}
-                      agencyOptions={agencyOptions}
-                      activeAgencyId={agencyId}
-                      selectedIds={selectedCandidateIds}
-                      search={candidateSearch}
-                      onAgencyChange={(value) => {
-                        setAgencyId(value);
-                        setCandidateSearch('');
-                      }}
-                      onSearchChange={setCandidateSearch}
-                      onToggle={toggleCandidateSelection}
-                      onRemove={(id) => toggleCandidateSelection(id)}
-                      onClear={() => setSelectedCandidateIds([])}
-                    />
-                    {mixedAgencySelection && (
-                      <p className="mt-1.5 text-[10px] font-bold text-amber-700">Candidates from multiple source agencies can be scheduled together when they are all members of this job pool.</p>
-                    )}
                   </FormField>
-                )}
-
-                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-                  <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
-                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
-                      {criterionGroupIds.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
-                          {criterionGroupIds.map((groupId, index) => {
-                            const group = criteriaGroups.find((item) => item.id === groupId);
-                            if (!group) return null;
-                            const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
-                            return (
-                              <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
-                                <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-extrabold text-slate-800">{group.name}</p>
-                                  <p className="mt-0.5 text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
-                                </div>
-                                <button type="button" title="Move group up" aria-label={`Move ${group.name} up`} disabled={index === 0} onClick={() => moveCriterionGroup(group.id, -1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
-                                <button type="button" title="Move group down" aria-label={`Move ${group.name} down`} disabled={index === criterionGroupIds.length - 1} onClick={() => moveCriterionGroup(group.id, 1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
-                                <button type="button" title="Remove group" aria-label={`Remove ${group.name}`} onClick={() => setCriterionGroupIds((current) => current.filter((id) => id !== group.id))} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  <div>
+                    <FormField label="Additional candidates" hint="Select candidates from different agencies. Existing selections stay selected when you switch the browse agency.">
+                      <CandidateMultiSelect
+                        candidates={scheduleCandidates}
+                        agencyOptions={agencyOptions}
+                        activeAgencyId={agencyId}
+                        selectedIds={selectedCandidateIds}
+                        search={candidateSearch}
+                        editingCandidateId={candidateId}
+                        onAgencyChange={(value) => {
+                          setAgencyId(value);
+                          setCandidateSearch('');
+                        }}
+                        onSearchChange={setCandidateSearch}
+                        onToggle={toggleCandidateSelection}
+                        onRemove={(id) => toggleCandidateSelection(id)}
+                        onClear={() => setSelectedCandidateIds([])}
+                      />
+                      {mixedAgencySelection && (
+                        <p className="mt-1.5 text-[10px] font-bold text-amber-700">Multiple agencies selected. Job / position will remain empty for this multi-agency schedule.</p>
                       )}
+                    </FormField>
+                  </div>
+                </>
+              ) : (
+                <FormField label="Candidates" hint="Browse an agency, click candidates to move them into the selected panel, then switch agencies without losing previous selections.">
+                  <CandidateMultiSelect
+                    candidates={scheduleCandidates}
+                    agencyOptions={agencyOptions}
+                    activeAgencyId={agencyId}
+                    selectedIds={selectedCandidateIds}
+                    search={candidateSearch}
+                    onAgencyChange={(value) => {
+                      setAgencyId(value);
+                      setCandidateSearch('');
+                    }}
+                    onSearchChange={setCandidateSearch}
+                    onToggle={toggleCandidateSelection}
+                    onRemove={(id) => toggleCandidateSelection(id)}
+                    onClear={() => setSelectedCandidateIds([])}
+                  />
+                  {mixedAgencySelection && (
+                    <p className="mt-1.5 text-[10px] font-bold text-amber-700">Candidates from multiple source agencies can be scheduled together when they are all members of this job pool.</p>
+                  )}
+                </FormField>
+              )}
 
-                      <div>
-                        <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
-                        {criteriaGroups.length ? (
+              <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+                <FormField label="Interview criteria groups" hint="All active groups are selected by default. Group order becomes the section order in the interview panel.">
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                    {criterionGroupIds.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">Interview group order</p>
+                        {criterionGroupIds.map((groupId, index) => {
+                          const group = criteriaGroups.find((item) => item.id === groupId);
+                          if (!group) return null;
+                          const scoreMax = group.criteria.reduce((sum, item) => sum + item.criterion.maxPoints, 0);
+                          return (
+                            <div key={group.id} className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5">
+                              <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-cyan-600 text-[10px] font-black text-white">{index + 1}</div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-extrabold text-slate-800">{group.name}</p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria · {scoreMax} pts</p>
+                              </div>
+                              <button type="button" title="Move group up" aria-label={`Move ${group.name} up`} disabled={index === 0} onClick={() => moveCriterionGroup(group.id, -1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↑</button>
+                              <button type="button" title="Move group down" aria-label={`Move ${group.name} down`} disabled={index === criterionGroupIds.length - 1} onClick={() => moveCriterionGroup(group.id, 1)} className="grid size-7 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs font-black text-slate-500 disabled:opacity-30">↓</button>
+                              <button type="button" title="Remove group" aria-label={`Remove ${group.name}`} onClick={() => setCriterionGroupIds((current) => current.filter((id) => id !== group.id))} className="grid size-7 shrink-0 place-items-center rounded-lg border border-rose-100 bg-white text-xs font-black text-rose-500">×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Available groups</p>
+                      {criteriaGroups.length ? (
+                        <div className="grid gap-2">
+                          {orderCriteriaGroups(criteriaGroups).filter((group) => !criterionGroupIds.includes(group.id)).map((group) => (
+                            <button
+                              key={group.id}
+                              type="button"
+                              onClick={() => setCriterionGroupIds((current) => [...current, group.id])}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+                            >
+                              <span className="min-w-0">
+                                <span className="block text-xs font-extrabold text-slate-800">{group.name}</span>
+                                <span className="mt-0.5 block text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
+                              </span>
+                              <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>}
+                    </div>
+                  </div>
+                  <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
+                </FormField>
+
+                <FormField label="Interviewers" hint="Select one or more active interviewers from this agency or the global interviewer pool.">
+                  {interviewers.length ? (
+                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
+                      {[
+                        { label: 'Agency interviewers', items: interviewers.filter((item) => item.agencyId === agencyId) },
+                        { label: 'Global interviewers', items: interviewers.filter((item) => item.agencyId === null) },
+                      ].map((group) => group.items.length ? (
+                        <div key={group.label}>
+                          <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{group.label}</p>
                           <div className="grid gap-2">
-                            {orderCriteriaGroups(criteriaGroups).filter((group) => !criterionGroupIds.includes(group.id)).map((group) => (
-                              <button
-                                key={group.id}
-                                type="button"
-                                onClick={() => setCriterionGroupIds((current) => [...current, group.id])}
-                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
-                              >
+                            {group.items.map((interviewer) => (
+                              <label key={interviewer.id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-2.5 py-2.5 hover:bg-slate-50">
+                                <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
                                 <span className="min-w-0">
-                                  <span className="block text-xs font-extrabold text-slate-800">{group.name}</span>
-                                  <span className="mt-0.5 block text-[10px] text-slate-400">{group.category ?? 'General'} · {group.criteria.length} criteria</span>
+                                  <span className="block truncate text-xs font-bold text-slate-800">{interviewer.name}</span>
+                                  <span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span>
                                 </span>
-                                <span className="grid size-6 shrink-0 place-items-center rounded-lg border border-slate-200 text-xs font-black text-cyan-600">+</span>
-                              </button>
+                              </label>
                             ))}
                           </div>
-                        ) : <p className="p-2 text-xs text-slate-400">No active criteria groups available.</p>}
-                      </div>
+                        </div>
+                      ) : null)}
                     </div>
-                    <p className="mt-1.5 text-[10px] font-bold text-slate-400">{criterionGroupIds.length} group(s) selected</p>
-                  </FormField>
-
-                  <FormField label="Interviewers" hint="Select one or more active interviewers from this agency or the global interviewer pool.">
-                    {interviewers.length ? (
-                      <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-2.5">
-                        {[
-                          { label: 'Agency interviewers', items: interviewers.filter((item) => item.agencyId === agencyId) },
-                          { label: 'Global interviewers', items: interviewers.filter((item) => item.agencyId === null) },
-                        ].map((group) => group.items.length ? (
-                          <div key={group.label}>
-                            <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{group.label}</p>
-                            <div className="grid gap-2">
-                              {group.items.map((interviewer) => (
-                                <label key={interviewer.id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-2.5 py-2.5 hover:bg-slate-50">
-                                  <input type="checkbox" checked={panel.includes(interviewer.id)} onChange={(event) => setPanel((current) => event.target.checked ? [...new Set([...current, interviewer.id])] : current.filter((id) => id !== interviewer.id))} />
-                                  <span className="min-w-0">
-                                    <span className="block truncate text-xs font-bold text-slate-800">{interviewer.name}</span>
-                                    <span className="block truncate text-[10px] text-slate-400">{interviewer.email}</span>
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null)}
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-xs text-amber-600">No active agency or global interviewers are available.</p>
-                    )}
-                  </FormField>
-                </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-amber-600">No active agency or global interviewers are available.</p>
+                  )}
+                </FormField>
               </div>
-              <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-3 sm:px-5">
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
-                  <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
-                </div>
+            </div>
+            <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-3 sm:px-5">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="secondary" onClick={closeScheduleForm}>Cancel</Button>
+                <Button disabled={saving || !agencyId} onClick={() => void saveSchedule()}>{saving ? 'Saving…' : editingInterviewId ? 'Save schedule' : 'Assign & schedule'}</Button>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {!loading && visible.length === 0 && <StateMessage kind="empty" title="No interviews" description={role === 'INTERVIEWER' ? 'Assigned interviews will appear here.' : role === 'INTERVIEWEE' ? 'Your interview schedule will appear here.' : 'Assign a candidate from the candidate pool to start an interview.'} />}

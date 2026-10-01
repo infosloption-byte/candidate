@@ -14,9 +14,9 @@ import { Pagination } from '../../shared/components/Pagination';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { apiFetch } from '../../shared/lib/api';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { Job, UserRole } from '../../domain/types';
+import { Modal } from '../../shared/components/Modal';
 
 interface JobsPageProps {
   role: UserRole;
@@ -52,18 +52,6 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
   const [deletingJob, setDeletingJob] = useState(false);
 
   const formModalOpen = showForm && role !== 'INTERVIEWEE';
-  const formModalRef = useFocusTrap<HTMLDivElement>({
-    enabled: formModalOpen,
-    onEscape: () => closeForm(),
-  });
-
-  useEffect(() => {
-    if (!formModalOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, [formModalOpen]);
-
   useEffect(() => {
     if (developmentMode) {
       setJobs(state.jobs);
@@ -385,140 +373,131 @@ export const JobsPage = ({ role, onOpenJob }: JobsPageProps) => {
       {loading && <StateMessage kind="loading" title={t('Loading jobs')} description={t('Fetching the latest job openings.')} />}
 
       {formModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button
-            type="button"
-            aria-label={t('Close job dialog')}
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
-            onClick={closeForm}
-          />
-          <div
-            ref={formModalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="job-form-title"
-            tabIndex={-1}
-            className="relative z-10 my-auto w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">
-                  {t(editingJobId ? 'Job settings' : 'New opening')}
-                </p>
-                <h2 id="job-form-title" className="mt-1 text-lg font-black text-slate-950">
-                  {t(editingJobId ? 'Edit job' : 'Create job')}
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {t(editingJobId ? 'Update the job details without changing its recruitment history.' : 'Set the opening details first. Candidates and interviews are managed from the job workflow.')}
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label={t('Close')}
-                className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                onClick={closeForm}
-              >
-                ×
-              </button>
+        <Modal
+          onClose={closeForm}
+          labelledBy="job-form-title"
+          closeLabel={t('Close job dialog')}
+          dismissOnBackdrop={false}
+          panelClassName="my-auto w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-6"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">
+                {t(editingJobId ? 'Job settings' : 'New opening')}
+              </p>
+              <h2 id="job-form-title" className="mt-1 text-lg font-black text-slate-950">
+                {t(editingJobId ? 'Edit job' : 'Create job')}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {t(editingJobId ? 'Update the job details without changing its recruitment history.' : 'Set the opening details first. Candidates and interviews are managed from the job workflow.')}
+              </p>
             </div>
+            <button
+              type="button"
+              aria-label={t('Close')}
+              className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              onClick={closeForm}
+            >
+              ×
+            </button>
+          </div>
 
-            <div className="mt-5 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField label={t('Job title')}>
-                  <input
-                    className="field-input"
-                    value={form.title}
-                    onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder={t('e.g. Dubai Tower Project')}
-                    autoFocus
-                  />
-                </FormField>
+          <div className="mt-5 space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label={t('Job title')}>
+                <input
+                  className="field-input"
+                  value={form.title}
+                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                  placeholder={t('e.g. Dubai Tower Project')}
+                  autoFocus
+                />
+              </FormField>
 
-                <FormField label={t('Location')}>
-                  <input
-                    className="field-input"
-                    value={form.location}
-                    onChange={(event) => setForm({ ...form, location: event.target.value })}
-                    placeholder={t('Dubai, UAE')}
-                  />
-                </FormField>
-              </div>
-
-              <div>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <p className="field-label">{t('Required positions')}</p>
-                    <p className="mt-1 text-[10px] text-slate-400">{t('Add each position needed for this job and the number of workers required.')}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">
-                    {positionRows.reduce((sum, row) => sum + (Number(row.requiredCount) || 0), 0)} workers
-                  </span>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  {positionRows.map((row, index) => (
-                    <div key={index} className="grid grid-cols-[minmax(0,1fr)_7rem_auto] gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
-                      <input
-                        className="field-input min-w-0 bg-white"
-                        value={row.position}
-                        onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, position: event.target.value } : item))}
-                        placeholder={t('Position')}
-                        aria-label={t('Position') + ' ' + (index + 1)}
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        max="1000"
-                        className="field-input bg-white"
-                        value={row.requiredCount}
-                        onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, requiredCount: event.target.value } : item))}
-                        placeholder={t('Count')}
-                        aria-label={t('Required count for position') + ' ' + (index + 1)}
-                      />
-                      <button
-                        type="button"
-                        aria-label={t('Remove position') + ' ' + (index + 1)}
-                        title={t('Remove position')}
-                        disabled={positionRows.length === 1}
-                        className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
-                        onClick={() => setPositionRows((current) => current.length === 1 ? current : current.filter((_, i) => i !== index))}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50/40 hover:text-cyan-700"
-                  onClick={() => setPositionRows((current) => [...current, { position: '', requiredCount: '1' }])}
-                >
-                  <Icon name="plus" size={14} /> {t('Add position')}
-                </button>
-              </div>
-
-              <FormField label={t('Job note')}>
-                <textarea
-                  className="field-input min-h-28 resize-y"
-                  value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
-                  placeholder={t('Add notes about the project, responsibilities, requirements or other useful information.')}
+              <FormField label={t('Location')}>
+                <input
+                  className="field-input"
+                  value={form.location}
+                  onChange={(event) => setForm({ ...form, location: event.target.value })}
+                  placeholder={t('Dubai, UAE')}
                 />
               </FormField>
             </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={closeForm} disabled={saving}>{t('Cancel')}</Button>
-              <Button
-                disabled={saving || positionRows.length === 0}
-                onClick={() => void saveJob()}
+            <div>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="field-label">{t('Required positions')}</p>
+                  <p className="mt-1 text-[10px] text-slate-400">{t('Add each position needed for this job and the number of workers required.')}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700">
+                  {positionRows.reduce((sum, row) => sum + (Number(row.requiredCount) || 0), 0)} workers
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {positionRows.map((row, index) => (
+                  <div key={index} className="grid grid-cols-[minmax(0,1fr)_7rem_auto] gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                    <input
+                      className="field-input min-w-0 bg-white"
+                      value={row.position}
+                      onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, position: event.target.value } : item))}
+                      placeholder={t('Position')}
+                      aria-label={t('Position') + ' ' + (index + 1)}
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      className="field-input bg-white"
+                      value={row.requiredCount}
+                      onChange={(event) => setPositionRows((current) => current.map((item, i) => i === index ? { ...item, requiredCount: event.target.value } : item))}
+                      placeholder={t('Count')}
+                      aria-label={t('Required count for position') + ' ' + (index + 1)}
+                    />
+                    <button
+                      type="button"
+                      aria-label={t('Remove position') + ' ' + (index + 1)}
+                      title={t('Remove position')}
+                      disabled={positionRows.length === 1}
+                      className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
+                      onClick={() => setPositionRows((current) => current.length === 1 ? current : current.filter((_, i) => i !== index))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50/40 hover:text-cyan-700"
+                onClick={() => setPositionRows((current) => [...current, { position: '', requiredCount: '1' }])}
               >
-                {saving ? t('Saving…') : editingJobId ? t('Save changes') : t('Create job')}
-              </Button>
+                <Icon name="plus" size={14} /> {t('Add position')}
+              </button>
             </div>
+
+            <FormField label={t('Job note')}>
+              <textarea
+                className="field-input min-h-28 resize-y"
+                value={form.description}
+                onChange={(event) => setForm({ ...form, description: event.target.value })}
+                placeholder={t('Add notes about the project, responsibilities, requirements or other useful information.')}
+              />
+            </FormField>
           </div>
-        </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="secondary" onClick={closeForm} disabled={saving}>{t('Cancel')}</Button>
+            <Button
+              disabled={saving || positionRows.length === 0}
+              onClick={() => void saveJob()}
+            >
+              {saving ? t('Saving…') : editingJobId ? t('Save changes') : t('Create job')}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">

@@ -11,6 +11,7 @@ import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
 import { InterviewDetailsModal, type InterviewDetail } from '../interviews/InterviewDetailsModal';
+import { Modal } from '../../shared/components/Modal';
 
 interface Props {
   role: UserRole;
@@ -240,15 +241,6 @@ export const CalendarPage = ({ role }: Props) => {
     setSelectedInterviewLoading(false);
   };
 
-  useEffect(() => {
-    if (!selectedInterviewId) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [selectedInterviewId]);
-
 
   return (
     <section className="mx-auto flex min-h-full max-w-[1600px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
@@ -425,17 +417,20 @@ export const CalendarPage = ({ role }: Props) => {
         selectedInterviewDetail ? (
           <InterviewDetailsModal detail={selectedInterviewDetail} open={Boolean(selectedInterviewId)} onClose={closeInterviewDetails} role={role} />
         ) : (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <button type="button" aria-label="Close interview details" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={closeInterviewDetails} />
-            <div className="relative z-10 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="calendar-interview-loading-title">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
-              <h2 id="calendar-interview-loading-title" className="mt-1 text-lg font-black text-slate-950">Loading interview</h2>
-              {selectedInterviewLoading && <div className="mt-4"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
-              <div className="mt-4 flex justify-end">
-                <Button size="sm" variant="secondary" onClick={closeInterviewDetails}>Close</Button>
-              </div>
+          <Modal
+            onClose={closeInterviewDetails}
+            labelledBy="calendar-interview-loading-title"
+            closeLabel="Close interview details"
+            containerClassName="z-50 flex items-center justify-center p-4"
+            panelClassName="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Interview details</p>
+            <h2 id="calendar-interview-loading-title" className="mt-1 text-lg font-black text-slate-950">Loading interview</h2>
+            {selectedInterviewLoading && <div className="mt-4"><StateMessage kind="loading" title="Loading interview details" description="Fetching the complete panel and scorecard." /></div>}
+            <div className="mt-4 flex justify-end">
+              <Button size="sm" variant="secondary" onClick={closeInterviewDetails}>Close</Button>
             </div>
-          </div>
+          </Modal>
         )
       )}
 

@@ -9,8 +9,8 @@ import { FormField } from '../../shared/components/FormField';
 import { StateMessage } from '../../shared/components/StateMessage';
 import { StatusPill } from '../../shared/components/StatusPill';
 import { SelectMenu } from '../../shared/components/SelectMenu';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { apiFetch } from '../../shared/lib/api';
+import { Modal } from '../../shared/components/Modal';
 
 interface CompanyForm {
   name: string;
@@ -35,45 +35,46 @@ const CompanyModal = ({
   setForm: Dispatch<SetStateAction<CompanyForm>>;
   saving: boolean;
 }) => {
-  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5" role="presentation">
-      <button type="button" aria-label="Close dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={modalRef} role="dialog" aria-modal="true" tabIndex={-1} className="relative z-10 w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">System administration</p>
-            <h2 className="mt-1 text-lg font-black text-slate-950">Create company</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Manage your company profile and current tenant workspace.</p>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+    <Modal
+      onClose={onClose}
+      ariaLabel="Create company"
+      dismissOnBackdrop={false}
+      containerClassName="z-50 flex items-center justify-center p-3 sm:p-5"
+      panelClassName="w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">System administration</p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">Create company</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Manage your company profile and current tenant workspace.</p>
         </div>
-        <div className="space-y-4 p-4 sm:p-5">
-          <FormField label="Company name">
-            <input className="field-input" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} autoComplete="organization" placeholder="Example Manpower Services" />
+        <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+      </div>
+      <div className="space-y-4 p-4 sm:p-5">
+        <FormField label="Company name">
+          <input className="field-input" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} autoComplete="organization" placeholder="Example Manpower Services" />
+        </FormField>
+        <FormField label="Company identifier" hint="Lowercase letters, numbers and hyphens only.">
+          <input className="field-input" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') }))} placeholder="example-manpower" />
+        </FormField>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Company administrator">
+            <input className="field-input" value={form.adminName} onChange={(event) => setForm((current) => ({ ...current, adminName: event.target.value }))} placeholder="Admin name" />
           </FormField>
-          <FormField label="Company identifier" hint="Lowercase letters, numbers and hyphens only.">
-            <input className="field-input" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') }))} placeholder="example-manpower" />
+          <FormField label="Administrator email">
+            <input className="field-input" type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} placeholder="admin@example.com" />
           </FormField>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Company administrator">
-              <input className="field-input" value={form.adminName} onChange={(event) => setForm((current) => ({ ...current, adminName: event.target.value }))} placeholder="Admin name" />
-            </FormField>
-            <FormField label="Administrator email">
-              <input className="field-input" type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} placeholder="admin@example.com" />
-            </FormField>
-          </div>
-          <FormField label="Administrator password">
-            <input className="field-input" type="password" value={form.adminPassword} onChange={(event) => setForm((current) => ({ ...current, adminPassword: event.target.value }))} placeholder="Minimum 8 characters" autoComplete="new-password" />
-          </FormField>
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button onClick={onSave} disabled={saving}>{saving ? 'Creating…' : 'Create company'}</Button>
-          </div>
+        </div>
+        <FormField label="Administrator password">
+          <input className="field-input" type="password" value={form.adminPassword} onChange={(event) => setForm((current) => ({ ...current, adminPassword: event.target.value }))} placeholder="Minimum 8 characters" autoComplete="new-password" />
+        </FormField>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={onSave} disabled={saving}>{saving ? 'Creating…' : 'Create company'}</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 
@@ -86,7 +87,6 @@ const EnterWorkspaceModal = ({
   onClose: () => void;
   onEnter: (input: EnterWorkspaceInput) => Promise<void>;
 }) => {
-  const modalRef = useFocusTrap<HTMLDivElement>({ enabled: true, onEscape: onClose });
   const [reason, setReason] = useState('');
   const [mode, setMode] = useState<EnterWorkspaceInput['mode']>('READ_ONLY');
   const [password, setPassword] = useState('');
@@ -113,42 +113,45 @@ const EnterWorkspaceModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5" role="presentation">
-      <button type="button" aria-label="Close dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={modalRef} role="dialog" aria-modal="true" tabIndex={-1} className="relative z-10 w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform support</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">Open {company.name}</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Access lasts 60 minutes, is limited to this company, and is recorded in the company&apos;s access log with your reason.</p>
-        </div>
-        <div className="space-y-4 p-5">
-          <FormField label="Reason" hint="Support ticket or customer request. Visible to the company administrators.">
-            <input className="field-input" value={reason} maxLength={255} onChange={(event) => setReason(event.target.value)} placeholder="Ticket #1234 - customer cannot see interview" />
+    <Modal
+      onClose={onClose}
+      ariaLabel="Open company workspace"
+      dismissOnBackdrop={false}
+      containerClassName="z-50 flex items-center justify-center p-3 sm:p-5"
+      panelClassName="w-full max-w-lg rounded-3xl border border-slate-200 bg-white shadow-2xl"
+    >
+      <div className="border-b border-slate-100 px-5 py-4">
+        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Platform support</p>
+        <h2 className="mt-1 text-lg font-black text-slate-950">Open {company.name}</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">Access lasts 60 minutes, is limited to this company, and is recorded in the company&apos;s access log with your reason.</p>
+      </div>
+      <div className="space-y-4 p-5">
+        <FormField label="Reason" hint="Support ticket or customer request. Visible to the company administrators.">
+          <input className="field-input" value={reason} maxLength={255} onChange={(event) => setReason(event.target.value)} placeholder="Ticket #1234 - customer cannot see interview" />
+        </FormField>
+        <FormField label="Access level">
+          <SelectMenu
+            value={mode}
+            onChange={(value) => setMode(value as EnterWorkspaceInput['mode'])}
+            options={[
+              { value: 'READ_ONLY', label: 'Read-only (recommended)' },
+              { value: 'READ_WRITE', label: 'Write mode (every change is logged)' },
+            ]}
+            ariaLabel="Workspace access mode"
+          />
+        </FormField>
+        {mode === 'READ_WRITE' && (
+          <FormField label="Confirm your password">
+            <input className="field-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
           </FormField>
-          <FormField label="Access level">
-            <SelectMenu
-              value={mode}
-              onChange={(value) => setMode(value as EnterWorkspaceInput['mode'])}
-              options={[
-                { value: 'READ_ONLY', label: 'Read-only (recommended)' },
-                { value: 'READ_WRITE', label: 'Write mode (every change is logged)' },
-              ]}
-              ariaLabel="Workspace access mode"
-            />
-          </FormField>
-          {mode === 'READ_WRITE' && (
-            <FormField label="Confirm your password">
-              <input className="field-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
-            </FormField>
-          )}
-          {error && <p role="alert" className="text-xs font-bold text-rose-600">{error}</p>}
-          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-            <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
-            <Button onClick={() => void submit()} disabled={busy}>{busy ? 'Opening…' : 'Open workspace'}</Button>
-          </div>
+        )}
+        {error && <p role="alert" className="text-xs font-bold text-rose-600">{error}</p>}
+        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button onClick={() => void submit()} disabled={busy}>{busy ? 'Opening…' : 'Open workspace'}</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

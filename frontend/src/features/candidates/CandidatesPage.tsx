@@ -17,7 +17,7 @@ import { apiFetch } from '../../shared/lib/api';
 import type { Agency, Candidate, CandidateAuditEvent, CandidateHistoryInterview, CandidateStatus, CandidateStatusHistory, Job, JobCandidate, OnboardingStatus, UserRole } from '../../domain/types';
 import { CandidateDocumentsPanel } from './CandidateDocumentsPanel';
 import { CandidateProfilePanel, type CandidateProfileHistory } from './CandidateProfilePanel';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { Modal } from '../../shared/components/Modal';
 
 interface Props {
   role: UserRole;
@@ -434,31 +434,7 @@ export const CandidatesPage = ({ role, initialJobId = null, onJobChange }: Props
 
   const candidateModalOpen = Boolean(candidate && selectedCandidateId);
 
-  const candidateModalRef = useFocusTrap<HTMLDivElement>({
-    enabled: candidateModalOpen,
-    onEscape: () => {
-      setSelectedCandidateId('');
-      setEditingCandidateProfile(false);
-    },
-  });
   const candidateFormModalOpen = showForm && role !== 'INTERVIEWEE';
-  const candidateFormModalRef = useFocusTrap<HTMLDivElement>({
-    enabled: candidateFormModalOpen,
-    onEscape: () => setShowForm(false),
-  });
-  const importModalRef = useFocusTrap<HTMLDivElement>({
-    enabled: showImportModal,
-    onEscape: () => setShowImportModal(false),
-  });
-
-  useEffect(() => {
-    if (!candidateModalOpen && !candidateFormModalOpen && !showImportModal) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [candidateModalOpen, candidateFormModalOpen, showImportModal]);
 
   useEffect(() => {
     if (!candidate || role === 'INTERVIEWEE') return;
@@ -1035,133 +1011,128 @@ const filterOptions = useMemo(() => ({
       {loading && <StateMessage kind="loading" title="Loading candidates" description={t("Fetching the candidate pool")} />}
 
       {candidateFormModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button type="button" aria-label="Close new candidate dialog" className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]" onClick={() => setShowForm(false)} />
-          <div ref={candidateFormModalRef} role="dialog" aria-modal="true" aria-labelledby="new-candidate-title" tabIndex={-1} className="relative z-10 my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-5">
-                      <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <FormField label="Agency Register No"><input className="field-input" value={form.agencyRegisterNo} onChange={(event) => setForm({ ...form, agencyRegisterNo: event.target.value })} /></FormField>
-            <FormField label="First name"><input className="field-input" value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} autoComplete="given-name" /></FormField>
-            <FormField label="Last name"><input className="field-input" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} autoComplete="family-name" /></FormField>
-            <FormField label="Birth date"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
-            <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
-            <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
-            <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
-            {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={agencyId} onChange={setAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name }))]} ariaLabel="Candidate agency workspace" /></FormField>}
-            <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
-          </div>
+        <Modal
+          onClose={() => setShowForm(false)}
+          labelledBy="new-candidate-title"
+          closeLabel="Close new candidate dialog"
+          dismissOnBackdrop={false}
+          panelClassName="my-auto w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:p-5"
+        >
+                    <h2 className="text-sm font-black text-slate-950"><span id="new-candidate-title">Add candidate to pool</span></h2>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FormField label="Agency Register No"><input className="field-input" value={form.agencyRegisterNo} onChange={(event) => setForm({ ...form, agencyRegisterNo: event.target.value })} /></FormField>
+          <FormField label="First name"><input className="field-input" value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} autoComplete="given-name" /></FormField>
+          <FormField label="Last name"><input className="field-input" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} autoComplete="family-name" /></FormField>
+          <FormField label="Birth date"><input type="date" className="field-input" value={form.birthdate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm({ ...form, birthdate: event.target.value })} /></FormField>
+          <FormField label="Passport number"><input className="field-input" value={form.passportNumber} onChange={(event) => setForm({ ...form, passportNumber: event.target.value })} /></FormField>
+          <FormField label="Passport expiry"><input type="date" className="field-input" value={form.passportExpiry} onChange={(event) => setForm({ ...form, passportExpiry: event.target.value })} /></FormField>
+          <div className="md:col-span-2"><FormField label="Requested profession"><input className="field-input" value={form.requestedProfession} onChange={(event) => setForm({ ...form, requestedProfession: event.target.value })} placeholder="Mason, Welder, Electrician…" /></FormField></div>
+          {role === 'COMPANY_ADMIN' && <FormField label="Agency workspace"><SelectMenu value={agencyId} onChange={setAgencyId} options={[{ value: '', label: 'Select an agency' }, ...agencies.filter((item) => item.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name }))]} ariaLabel="Candidate agency workspace" /></FormField>}
+          <div className="md:col-span-2"><FormField label="Job / position" hint="Optional — select the job this candidate is being considered for."><SelectMenu value={jobId} onChange={(value) => { setJobId(value); onJobChange?.(value || null); }} options={[{ value: '', label: 'Select a job (optional)' }, ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title }))]} ariaLabel="Select candidate job" /></FormField></div>
+        </div>
 <div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button><Button disabled={saving || !agencyId} onClick={() => void createCandidate()}>{saving ? 'Saving…' : 'Add to pool'}</Button></div>
 
-          </div>
-        </div>
+        </Modal>
       )}
 
       {showImportModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-6" role="presentation">
-          <button
-            type="button"
-            aria-label="Close import candidates dialog"
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
-            onClick={closeImportModal}
-          />
-          <div
-            ref={importModalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="import-candidates-title"
-            tabIndex={-1}
-            className="relative z-10 w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Bulk onboarding</p>
-                <h2 id="import-candidates-title" className="mt-1 text-lg font-black text-slate-950">Import candidates</h2>
-                <p className="mt-1 text-xs text-slate-500">Choose where the candidates belong, then select the CSV file.</p>
-                <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                  <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700">1 Agency</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">2 CSV file</span>
-                </div>
+        <Modal
+          onClose={closeImportModal}
+          labelledBy="import-candidates-title"
+          closeLabel="Close import candidates dialog"
+          dismissOnBackdrop={false}
+          containerClassName="z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-6"
+          panelClassName="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Bulk onboarding</p>
+              <h2 id="import-candidates-title" className="mt-1 text-lg font-black text-slate-950">Import candidates</h2>
+              <p className="mt-1 text-xs text-slate-500">Choose where the candidates belong, then select the CSV file.</p>
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700">1 Agency</span>
+                <span className="text-slate-300">→</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">2 CSV file</span>
               </div>
-              <button type="button" aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={closeImportModal}>×</button>
+            </div>
+            <button type="button" aria-label="Close" className="grid size-9 shrink-0 place-items-center rounded-xl text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" onClick={closeImportModal}>×</button>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <label className="field-label">Job / position</label>
+              <SelectMenu
+                value={jobId}
+                onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
+                options={[
+                  { value: '', label: 'General candidate pool only' },
+                  ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
+                ]}
+                ariaLabel="Select import job"
+                className="mt-1"
+              />
+              <p className="mt-1 text-[10px] text-slate-400">Imported candidates are immediately placed into the selected job pool.</p>
             </div>
 
-            <div className="mt-5 space-y-4">
-              <div>
-                <label className="field-label">Job / position</label>
-                <SelectMenu
-                  value={jobId}
-                  onChange={(value) => { setJobId(value); onJobChange?.(value || null); }}
-                  options={[
-                    { value: '', label: 'General candidate pool only' },
-                    ...jobs.filter((job) => job.status !== 'CLOSED').map((job) => ({ value: job.id, label: job.title })),
-                  ]}
-                  ariaLabel="Select import job"
-                  className="mt-1"
-                />
-                <p className="mt-1 text-[10px] text-slate-400">Imported candidates are immediately placed into the selected job pool.</p>
-              </div>
+            <div>
+              <label className="field-label">Agency</label>
+              <SelectMenu
+                value={importAgencyId}
+                onChange={setImportAgencyId}
+                options={[
+                  { value: '', label: 'Select an agency' },
+                  ...agencies.filter((agency) => agency.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
+                  ...(agencyId && !agencies.some((agency) => agency.id === agencyId)
+                    ? [{ value: agencyId, label: 'Current agency' }]
+                    : []),
+                ]}
+                ariaLabel="Import agency"
+                disabled={role !== 'COMPANY_ADMIN'}
+              />
+              {role !== 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
+              {role === 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
+            </div>
 
-              <div>
-                <label className="field-label">Agency</label>
-                <SelectMenu
-                  value={importAgencyId}
-                  onChange={setImportAgencyId}
-                  options={[
-                    { value: '', label: 'Select an agency' },
-                    ...agencies.filter((agency) => agency.status === 'ACTIVE').map((agency) => ({ value: agency.id, label: agency.name })),
-                    ...(agencyId && !agencies.some((agency) => agency.id === agencyId)
-                      ? [{ value: agencyId, label: 'Current agency' }]
-                      : []),
-                  ]}
-                  ariaLabel="Import agency"
-                  disabled={role !== 'COMPANY_ADMIN'}
-                />
-                {role !== 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Your account is limited to its assigned agency.</p>}
-                {role === 'COMPANY_ADMIN' && <p className="mt-1 text-[10px] text-slate-400">Imported candidates will be created under the selected agency.</p>}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <label className="field-label">CSV file</label>
+                <span className="text-[10px] text-slate-400">Max 2 MB</span>
               </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label className="field-label">CSV file</label>
-                  <span className="text-[10px] text-slate-400">Max 2 MB</span>
-                </div>
-                <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-6 text-center transition hover:border-cyan-300 hover:bg-cyan-50/30">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.7">
-                    <path d="M12 16V4m0 0 4 4m-4-4L8 8" />
-                    <path d="M5 12v7h14v-7" />
-                  </svg>
-                  <span className="mt-2 text-xs font-bold text-slate-700">{importFile ? 'Change selected file' : 'Choose CSV or Excel file'}</span>
-                  <span className="mt-1 text-[10px] text-slate-400">CSV or .xlsx • max 2 MB</span>
-                  <input
-                    ref={bulkFileRef}
-                    type="file"
-                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    className="sr-only"
-                    onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
-                    disabled={bulkImporting}
-                  />
-                </label>
-                {importFile && (
-                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-slate-700">{importFile.name}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-400">{(importFile.size / 1024).toFixed(0)} KB</p>
-                    </div>
-                    {!bulkImporting && <button type="button" className="shrink-0 text-xs font-bold text-slate-500 hover:text-slate-800" onClick={() => { setImportFile(null); if (bulkFileRef.current) bulkFileRef.current.value = ''; }}>Remove</button>}
+              <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-6 text-center transition hover:border-cyan-300 hover:bg-cyan-50/30">
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <path d="M12 16V4m0 0 4 4m-4-4L8 8" />
+                  <path d="M5 12v7h14v-7" />
+                </svg>
+                <span className="mt-2 text-xs font-bold text-slate-700">{importFile ? 'Change selected file' : 'Choose CSV or Excel file'}</span>
+                <span className="mt-1 text-[10px] text-slate-400">CSV or .xlsx • max 2 MB</span>
+                <input
+                  ref={bulkFileRef}
+                  type="file"
+                  accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="sr-only"
+                  onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+                  disabled={bulkImporting}
+                />
+              </label>
+              {importFile && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-slate-700">{importFile.name}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">{(importFile.size / 1024).toFixed(0)} KB</p>
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={closeImportModal} disabled={bulkImporting}>Cancel</Button>
-              <Button onClick={() => void proceedImport()} disabled={bulkImporting || !importAgencyId || !importFile}>
-                {bulkImporting ? 'Importing…' : 'Proceed with import'}
-              </Button>
+                  {!bulkImporting && <button type="button" className="shrink-0 text-xs font-bold text-slate-500 hover:text-slate-800" onClick={() => { setImportFile(null); if (bulkFileRef.current) bulkFileRef.current.value = ''; }}>Remove</button>}
+                </div>
+              )}
             </div>
           </div>
-        </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="secondary" onClick={closeImportModal} disabled={bulkImporting}>Cancel</Button>
+            <Button onClick={() => void proceedImport()} disabled={bulkImporting || !importAgencyId || !importFile}>
+              {bulkImporting ? 'Importing…' : 'Proceed with import'}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {role === 'INTERVIEWEE' ? (
@@ -1443,228 +1414,220 @@ const filterOptions = useMemo(() => ({
           />
 
           {candidate && selectedCandidateId && (
-            <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4" role="presentation">
-              <button
-                type="button"
-                aria-label="Close candidate details"
-                className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
-                onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
-              />
-              <div
-                ref={candidateModalRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="candidate-details-title"
-                tabIndex={-1}
-                className="relative z-10 flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:rounded-3xl sm:border sm:border-slate-200"
-              >
-                <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p>
-                        <StatusPill value={candidate.status} />
-                        <StatusPill value={candidate.onboardingStatus} />
-                      </div>
-                      <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
-                      <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'}</p>
+            <Modal
+              onClose={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}
+              labelledBy="candidate-details-title"
+              closeLabel="Close candidate details"
+              dismissOnBackdrop={!editingCandidateProfile}
+              containerClassName="z-50 flex items-stretch justify-center overflow-hidden p-0 sm:items-center sm:overflow-y-auto sm:p-4"
+              panelClassName="flex h-[100dvh] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:my-auto sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:rounded-3xl sm:border sm:border-slate-200"
+            >
+              <header className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-600">Candidate profile</p>
+                      <StatusPill value={candidate.status} />
+                      <StatusPill value={candidate.onboardingStatus} />
                     </div>
-                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                      {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
-                        <Button size="sm" variant="secondary" className="col-span-2 w-full sm:col-span-1 sm:w-auto" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
-                      )}
-                      <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setProfilePanelOpen(true); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}>
-                        Full profile
-                      </Button>
-                      <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
-                        {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
-                      </Button>
-                      <Button size="sm" variant="secondary" className="w-full px-2.5 sm:w-auto" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+                    <h2 id="candidate-details-title" className="mt-1.5 text-xl font-black tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{candidate.name}</h2>
+                    <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">{candidate.reference} · {candidate.requestedProfession ?? 'Profession not set'}</p>
+                  </div>
+                  <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+                    {candidate.onboardingStatus !== 'COMPLETED' && !editingCandidateProfile && (
+                      <Button size="sm" variant="secondary" className="col-span-2 w-full sm:col-span-1 sm:w-auto" disabled={saving} onClick={() => void updateOnboarding(candidate, 'COMPLETED')}>Mark complete</Button>
+                    )}
+                    <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setProfilePanelOpen(true); setProfilePanelMinimized(false); setProfilePanelMaximized(false); }}>
+                      Full profile
+                    </Button>
+                    <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => { setEditingCandidateProfile((value) => !value); setActiveDetailTab('overview'); setError(''); }}>
+                      {editingCandidateProfile ? 'Close edit' : 'Edit profile'}
+                    </Button>
+                    <Button size="sm" variant="secondary" className="w-full px-2.5 sm:w-auto" onClick={() => { setSelectedCandidateId(''); setEditingCandidateProfile(false); setActiveDetailTab('overview'); }}><span className="text-base leading-none sm:hidden" aria-hidden="true">×</span><span className="hidden sm:inline">Close</span></Button>
+                  </div>
+                </div>
+
+              </header>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6 sm:pb-8">
+                <nav className="sticky top-0 z-20 -mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6" aria-label="Candidate profile sections">
+                  {([
+                    ['overview', 'Overview'],
+                    ['documents', 'Documents'],
+                    ['activity', 'Activity'],
+                  ] as const).map(([tab, textLabel]) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveDetailTab(tab)}
+                      className={`shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 ${activeDetailTab === tab ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                      aria-current={activeDetailTab === tab ? 'page' : undefined}
+                    >
+                      {textLabel}
+                    </button>
+                  ))}
+                </nav>
+                {editingCandidateProfile && activeDetailTab === 'overview' ? (
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-black text-slate-950">Edit profile</h3>
+                        <p className="mt-1 text-xs text-slate-500">Update the candidate's contact, identity, location, work status, profession, experience, and skills.</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-4 sm:mt-5 md:grid-cols-2">
+                      <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
+                      <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
+                      <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
+                      <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} /></FormField>
+                      <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
+                      <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
+                      <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
+                      <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
+                      <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} /></FormField>
+                      <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} /></FormField>
+                      <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
+                      <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
+                      <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
+                    </div>
+                    <div className="mt-5 flex justify-end gap-2">
+                      <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
+                      <Button disabled={saving} onClick={() => void saveManagedProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    {activeDetailTab === 'overview' && (
+                      <div className="space-y-7">
+                         <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
+                           <div><p className="field-label">Agency Register No</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.agencyRegisterNo}</p></div>
+                           <div><p className="field-label">First name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.firstName}</p></div>
+                           <div><p className="field-label">Last name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.lastName}</p></div>
+                           <div><p className="field-label">Birth date</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p></div>
+                           <div><p className="field-label">Passport number</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p></div>
+                           <div><p className="field-label">Passport expiry</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
+                           <div><p className="field-label">Requested profession</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.requestedProfession}</p></div>
+                           <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
+                           <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
+                         </div>
 
-                </header>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-8 sm:px-6 sm:py-6 sm:pb-8">
-                  <nav className="sticky top-0 z-20 -mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6" aria-label="Candidate profile sections">
-                    {([
-                      ['overview', 'Overview'],
-                      ['documents', 'Documents'],
-                      ['activity', 'Activity'],
-                    ] as const).map(([tab, textLabel]) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setActiveDetailTab(tab)}
-                        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 ${activeDetailTab === tab ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
-                        aria-current={activeDetailTab === tab ? 'page' : undefined}
-                      >
-                        {textLabel}
-                      </button>
-                    ))}
-                  </nav>
-                  {editingCandidateProfile && activeDetailTab === 'overview' ? (
-                    <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-black text-slate-950">Edit profile</h3>
-                          <p className="mt-1 text-xs text-slate-500">Update the candidate's contact, identity, location, work status, profession, experience, and skills.</p>
-                        </div>
-                      </div>
-                      <div className="mt-4 grid gap-4 sm:mt-5 md:grid-cols-2">
-                        <FormField label="Full name"><input className="field-input" value={profileForm.name} onChange={(event) => setProfileForm({ ...profileForm, name: event.target.value })} /></FormField>
-                        <FormField label="Country / nationality"><input className="field-input" value={profileForm.country} onChange={(event) => setProfileForm({ ...profileForm, country: event.target.value })} /></FormField>
-                        <FormField label="Contact number"><input className="field-input" value={profileForm.phone} onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })} /></FormField>
-                        <FormField label="Alternate contact number"><input className="field-input" value={profileForm.alternatePhone} onChange={(event) => setProfileForm({ ...profileForm, alternatePhone: event.target.value })} /></FormField>
-                        <FormField label="Email"><input type="email" className="field-input" value={profileForm.email} onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })} /></FormField>
-                        <FormField label="Passport number"><input className="field-input" value={profileForm.passportNumber} onChange={(event) => setProfileForm({ ...profileForm, passportNumber: event.target.value })} /></FormField>
-                        <FormField label="Passport expiry"><input type="date" className="field-input" value={profileForm.passportExpiry} onChange={(event) => setProfileForm({ ...profileForm, passportExpiry: event.target.value })} /></FormField>
-                        <FormField label="Current location"><input className="field-input" value={profileForm.currentLocation} onChange={(event) => setProfileForm({ ...profileForm, currentLocation: event.target.value })} /></FormField>
-                        <FormField label="Availability"><input className="field-input" value={profileForm.availability} onChange={(event) => setProfileForm({ ...profileForm, availability: event.target.value })} /></FormField>
-                        <FormField label="Visa / work status"><input className="field-input" value={profileForm.visaStatus} onChange={(event) => setProfileForm({ ...profileForm, visaStatus: event.target.value })} /></FormField>
-                        <FormField label="Profession"><input className="field-input" value={profileForm.profession} onChange={(event) => setProfileForm({ ...profileForm, profession: event.target.value })} /></FormField>
-                        <FormField label="Experience years"><input type="number" min="0" max="60" className="field-input" value={profileForm.experienceYears} onChange={(event) => setProfileForm({ ...profileForm, experienceYears: event.target.value })} /></FormField>
-                        <div className="md:col-span-2"><FormField label="Skills" hint="Separate skills with commas."><input className="field-input" value={profileForm.skills} onChange={(event) => setProfileForm({ ...profileForm, skills: event.target.value })} /></FormField></div>
-                      </div>
-                      <div className="mt-5 flex justify-end gap-2">
-                        <Button variant="secondary" onClick={() => setEditingCandidateProfile(false)}>Cancel</Button>
-                        <Button disabled={saving} onClick={() => void saveManagedProfile()}>{saving ? 'Saving…' : 'Save profile'}</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {activeDetailTab === 'overview' && (
-                        <div className="space-y-7">
-                           <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-8 sm:gap-y-5">
-                             <div><p className="field-label">Agency Register No</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.agencyRegisterNo}</p></div>
-                             <div><p className="field-label">First name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.firstName}</p></div>
-                             <div><p className="field-label">Last name</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.lastName}</p></div>
-                             <div><p className="field-label">Birth date</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.birthdate ? new Date(candidate.birthdate).toLocaleDateString() : 'Not provided'}</p></div>
-                             <div><p className="field-label">Passport number</p><p className="mt-1 text-sm font-semibold text-slate-800">{displayPassport(candidate.passportNumber)}</p></div>
-                             <div><p className="field-label">Passport expiry</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.passportExpiry ? new Date(candidate.passportExpiry).toLocaleDateString() : 'Not provided'}</p></div>
-                             <div><p className="field-label">Requested profession</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.requestedProfession}</p></div>
-                             <div><p className="field-label">Reference</p><p className="mt-1 text-sm font-semibold text-slate-800">{candidate.reference}</p></div>
-                             <div><p className="field-label">Onboarding</p><div className="mt-1"><StatusPill value={candidate.onboardingStatus} /></div></div>
-                           </div>
-
-                          <section className="border-t border-slate-200 pt-5 sm:pt-6">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <section className="border-t border-slate-200 pt-5 sm:pt-6">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-950">Lifecycle status</h3>
+                              <p className="mt-1 text-xs text-slate-500">Update the recruitment stage and record an optional reason.</p>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                               <div>
-                                <h3 className="text-sm font-black text-slate-950">Lifecycle status</h3>
-                                <p className="mt-1 text-xs text-slate-500">Update the recruitment stage and record an optional reason.</p>
+                                <label className="field-label">Status</label>
+                                <SelectMenu
+                                  value={statusDraft}
+                                  onChange={(value) => setStatusDraft(value as CandidateStatus)}
+                                  options={(role === 'INTERVIEWER'
+                                    ? Array.from(new Set([candidate.status, ...finalStatusOptions]))
+                                    : statusOptions.filter((status) => !finalStatusOptions.includes(status) || history.interviews.some((interview) => interview.status === 'COMPLETED') || status === candidate.status)
+                                  ).map((status) => ({ value: status, label: label(status) }))}
+                                  ariaLabel="Candidate status"
+                                  className="mt-1 sm:min-w-48"
+                                />
                               </div>
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                                <div>
-                                  <label className="field-label">Status</label>
-                                  <SelectMenu
-                                    value={statusDraft}
-                                    onChange={(value) => setStatusDraft(value as CandidateStatus)}
-                                    options={(role === 'INTERVIEWER'
-                                      ? Array.from(new Set([candidate.status, ...finalStatusOptions]))
-                                      : statusOptions.filter((status) => !finalStatusOptions.includes(status) || history.interviews.some((interview) => interview.status === 'COMPLETED') || status === candidate.status)
-                                    ).map((status) => ({ value: status, label: label(status) }))}
-                                    ariaLabel="Candidate status"
-                                    className="mt-1 sm:min-w-48"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="field-label">Reason</label>
-                                  <input className="field-input mt-1 w-full sm:min-w-56" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" />
-                                </div>
-                                <Button className="w-full sm:w-auto" disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save</Button>
-                              </div>
-                            </div>
-                          </section>
-
-                          <section className="border-t border-slate-200 pt-5 sm:pt-6">
-                            <div className="flex items-center justify-between gap-3">
                               <div>
-                                <h3 className="text-sm font-black text-slate-950">Interview history</h3>
-                                <p className="mt-1 text-xs text-slate-500">Past and scheduled interviews for this candidate.</p>
+                                <label className="field-label">Reason</label>
+                                <input className="field-input mt-1 w-full sm:min-w-56" value={statusReason} onChange={(event) => setStatusReason(event.target.value)} placeholder="Optional decision note" />
                               </div>
-                              {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
+                              <Button className="w-full sm:w-auto" disabled={saving || !statusDraft || statusDraft === candidate.status} onClick={() => void updateStatus()}>Save</Button>
                             </div>
-                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100 sm:mt-4">
-                              {!loadingHistory && history.interviews.length === 0 && <p className="py-6 text-xs text-slate-400">No interview history yet.</p>}
-                              {history.interviews.map((item) => {
-                                const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
-                                const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + (score.criterion?.maxPoints ?? 0), 0), 0);
-                                return (
-                                  <div key={item.id} className="py-4">
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                      <div>
-                                        <p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p>
-                                        <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min · {item.location ?? 'Location not specified'}</p>
-                                        <p className="mt-1 text-xs text-slate-400">{item.job?.title ?? 'General interview'}</p>
-                                      </div>
-                                      <StatusPill value={item.status} />
-                                    </div>
-                                    {item.evaluations.length > 0 && <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </section>
-                        </div>
-                      )}
-
-                      {activeDetailTab === 'documents' && (
-                        <div>
-                          <h3 className="text-sm font-black text-slate-950">Candidate documents</h3>
-                          <p className="mt-1 text-xs text-slate-500">Manage documents attached to this candidate profile.</p>
-                          <div className="mt-4 sm:mt-5">
-                            <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
                           </div>
-                        </div>
-                      )}
+                        </section>
 
-                      {activeDetailTab === 'activity' && (
-                        <div>
+                        <section className="border-t border-slate-200 pt-5 sm:pt-6">
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <h3 className="text-sm font-black text-slate-950">Activity history</h3>
-                              <p className="mt-1 text-xs text-slate-500">Status changes and other recorded candidate actions.</p>
+                              <h3 className="text-sm font-black text-slate-950">Interview history</h3>
+                              <p className="mt-1 text-xs text-slate-500">Past and scheduled interviews for this candidate.</p>
                             </div>
                             {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
                           </div>
-
-                          <div className="mt-4 sm:mt-5">
-                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Status history</h4>
-                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
-                              {history.statusHistory.length ? history.statusHistory.map((item) => (
+                          <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100 sm:mt-4">
+                            {!loadingHistory && history.interviews.length === 0 && <p className="py-6 text-xs text-slate-400">No interview history yet.</p>}
+                            {history.interviews.map((item) => {
+                              const total = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + score.points, 0), 0);
+                              const max = item.evaluations.reduce((sum, evaluation) => sum + evaluation.scores.reduce((scoreTotal, score) => scoreTotal + (score.criterion?.maxPoints ?? 0), 0), 0);
+                              return (
                                 <div key={item.id} className="py-4">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <StatusPill value={item.toStatus} />
-                                    <span className="text-[10px] text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                      <p className="text-sm font-bold text-slate-900">{label(item.type)} interview</p>
+                                      <p className="mt-1 text-xs text-slate-500">{new Date(item.scheduledAt).toLocaleString()} · {item.durationMins} min · {item.location ?? 'Location not specified'}</p>
+                                      <p className="mt-1 text-xs text-slate-400">{item.job?.title ?? 'General interview'}</p>
+                                    </div>
+                                    <StatusPill value={item.status} />
                                   </div>
-                                  <p className="mt-2 text-xs text-slate-500">{item.reason ?? 'Status updated.'}</p>
-                                  {item.changedBy && <p className="mt-1 text-[10px] text-slate-400">By {item.changedBy.name}</p>}
+                                  {item.evaluations.length > 0 && <p className="mt-3 text-xs font-bold text-cyan-700">Panel score: {total} / {max} ({max ? Math.round((total / max) * 100) : 0}%)</p>}
                                 </div>
-                              )) : <p className="py-5 text-xs text-slate-400">No status history recorded.</p>}
-                            </div>
+                              );
+                            })}
                           </div>
+                        </section>
+                      </div>
+                    )}
 
-                          <div className="mt-6 sm:mt-7">
-                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Activity log</h4>
-                            <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
-                              {history.auditEvents.length ? history.auditEvents.map((event) => (
-                                <div key={event.id} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                                  <div>
-                                    <p className="text-xs font-bold text-slate-800">{event.summary}</p>
-                                    <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {label(event.action)}</p>
-                                  </div>
-                                  <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                    {activeDetailTab === 'documents' && (
+                      <div>
+                        <h3 className="text-sm font-black text-slate-950">Candidate documents</h3>
+                        <p className="mt-1 text-xs text-slate-500">Manage documents attached to this candidate profile.</p>
+                        <div className="mt-4 sm:mt-5">
+                          <CandidateDocumentsPanel candidateId={candidate.id} apiEnabled={!developmentMode} />
+                        </div>
+                      </div>
+                    )}
+
+                    {activeDetailTab === 'activity' && (
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-black text-slate-950">Activity history</h3>
+                            <p className="mt-1 text-xs text-slate-500">Status changes and other recorded candidate actions.</p>
+                          </div>
+                          {loadingHistory && <span className="text-xs text-slate-400">Loading…</span>}
+                        </div>
+
+                        <div className="mt-4 sm:mt-5">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Status history</h4>
+                          <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+                            {history.statusHistory.length ? history.statusHistory.map((item) => (
+                              <div key={item.id} className="py-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <StatusPill value={item.toStatus} />
+                                  <span className="text-[10px] text-slate-400">{new Date(item.createdAt).toLocaleString()}</span>
                                 </div>
-                              )) : <p className="py-5 text-xs text-slate-400">No candidate activity recorded yet.</p>}
-                            </div>
+                                <p className="mt-2 text-xs text-slate-500">{item.reason ?? 'Status updated.'}</p>
+                                {item.changedBy && <p className="mt-1 text-[10px] text-slate-400">By {item.changedBy.name}</p>}
+                              </div>
+                            )) : <p className="py-5 text-xs text-slate-400">No status history recorded.</p>}
                           </div>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
+
+                        <div className="mt-6 sm:mt-7">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Activity log</h4>
+                          <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+                            {history.auditEvents.length ? history.auditEvents.map((event) => (
+                              <div key={event.id} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800">{event.summary}</p>
+                                  <p className="mt-1 text-[10px] text-slate-400">{event.actor?.name ?? 'System'} · {label(event.action)}</p>
+                                </div>
+                                <p className="shrink-0 text-[10px] text-slate-400">{new Date(event.createdAt).toLocaleString()}</p>
+                              </div>
+                            )) : <p className="py-5 text-xs text-slate-400">No candidate activity recorded yet.</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            </div>
+            </Modal>
           )}
 
         </>
